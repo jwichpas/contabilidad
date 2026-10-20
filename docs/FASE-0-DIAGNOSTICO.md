@@ -21,6 +21,25 @@
 
 **Próxima prioridad F0:** elaborar y aprobar procedimiento de respaldo/recuperación de datos. Existe `backend/scripts/phase0-backup.sh`, que hace `pg_dump` de `public` a un archivo local externo al repo y verifica `pg_restore --list` y SHA-256. **No se ha ejecutado y no garantiza restauración completa de usuarios/roles/configuración fuera de `public`**. El usuario optó anteriormente por no crear un respaldo por ahora; no ejecutar exportaciones ni restauraciones sin autorización.
 
+## Avance F0 — frontend HTTP 401 y recuperación documental (20/10/2026)
+
+**Código nuevo en GitHub/main, NO compilado ni probado en navegador todavía:**
+
+- `frontend/src/shared/auth/sessionInvalidation.ts`: notificación central de HTTP 401 con el Bearer realmente usado; descarta respuestas antiguas si la sesión cambió.
+- `frontend/src/shared/auth/useAuthSession.ts`: invalida token, usuario, empresas y claves de sesión al recibir 401 en listados/servicios o cambio de empresa; muestra aviso de vencimiento (máximo 12 h), no confunde fallo de red con 401, comprueba siempre la vigencia del Bearer al restaurar la pestaña y evita que respuestas asíncronas de un token antiguo sobrescriban un login reciente. En expiración conserva borradores del wizard solo para el mismo usuario; logout explícito descarta el borrador. **No guarda ni publica tokens en logs.**
+- `frontend/src/modules/accounting/api/httpClient.ts`: conecta los clientes de contabilidad, asientos y configuración con la invalidación central al recibir 401; 403 continúa siendo una denegación de permiso, no logout.
+- `frontend/src/App.vue`: pantalla de comprobación antes de montar información contable almacenada localmente.
+- `frontend/src/shared/auth/LoginView.vue`: eliminadas credenciales precargadas y botón para autorrelleno de demostración; el formulario inicia vacío. También se retiró una afirmación visual no verificada de certificación SGSI. **Si la contraseña expuesta en versiones antiguas fue utilizada por un usuario real, se debe rotar por canal seguro; eliminarla del código NO elimina el historial de Git.**
+- `frontend/scripts/auth-session-expiry.test.mjs` y `frontend/package.json`: cinco pruebas unitarias nuevas de gestión de 401, comparación de tokens, ausencia de credenciales precargadas y barrera de inicio; incorporadas al comando `npm run test:unit` sin instalar nuevas dependencias.
+
+**Pendiente de validación por el usuario:** `cd frontend; npm run test:unit; npm run typecheck; npm run build` después de `git pull --ff-only`. NO declarar PASS hasta recibir los resultados. No se ejecutaron despliegues.
+
+**Recuperación:** nuevo documento `docs/FASE-0-PLAN-RECUPERACION.md` con alcances de backups de Supabase, limitaciones de `pg_dump --schema=public`, condiciones de RPO/RTO, restauración exclusivamente en destino aislado autorizado y una comprobación PowerShell de herramientas **sin generar respaldos**. Se respeta la decisión anterior de no crear respaldo. No se ha probado restauración.
+
+**Avisos actuales de seguridad Supabase:** el Security Advisor reporta un aviso `function_search_path_mutable` para **cinco funciones** del esquema `public`, todas sin `SECURITY DEFINER` según el inventario anterior. Requiere análisis individual y eventual migración separada; **no se cambia search_path ni se ejecutan DDL en F0 sin procedimiento de recuperación acordado**. Referencia de remediación: https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable
+
+**Estado:** Fase 0 sigue **EN PROGRESO**. Autenticación y RLS ya verificadas; frontend y recuperación pendientes.
+
 ## Actualización ejecutada en el entorno Laravel — 2026-10-20
 
 **Estado más reciente (prevalece sobre la línea base histórica del 19/10 situada debajo).**
