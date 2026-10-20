@@ -1,7 +1,7 @@
 import { computed, shallowRef } from 'vue';
 import { asCompanyId, type CompanyId } from '@/modules/accounting/types/accountingAccount.types';
 import { COMPANY_ONBOARDING_DRAFT_KEY } from '@/modules/company/types/companyOnboarding.types';
-import { reportUnauthorizedBearer, setUnauthorizedHandler } from './sessionInvalidation';
+import { isCurrentBearer, reportUnauthorizedBearer, setUnauthorizedHandler } from './sessionInvalidation';
 
 export interface AuthUser {
   readonly id: number;
@@ -100,7 +100,7 @@ function clearLocalSession(expired: boolean): void {
 
 // Una respuesta tardía de un token anterior no puede cerrar una sesión nueva.
 setUnauthorizedHandler((requestToken) => {
-  if (requestToken === accessToken.value) {
+  if (isCurrentBearer(accessToken.value, requestToken)) {
     clearLocalSession(true);
   }
 });
