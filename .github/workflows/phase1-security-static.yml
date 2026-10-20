@@ -1,4 +1,4 @@
-name: F1 - Auditoria estatica (sin acceso a bases de datos)
+name: F1 - Seguridad y migraciones PostgreSQL CI
 
 on:
   push:
@@ -145,7 +145,7 @@ jobs:
           PGDATABASE: contabilidad_ci
         run: |
           python3 - <<'PY'
-          import os, subprocess
+          import subprocess
           sql = """
           DO $$
           DECLARE role_ok boolean; rls_total integer;
