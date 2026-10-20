@@ -25,7 +25,7 @@ import type {
   OperationalAccount,
 } from '../types/journalEntry.types';
 import type {
-  CompanyOnboardingResult, PcgeTemplateSummary,
+  CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
 } from '@/modules/company/types/companyOnboarding.types';
 import type {
   CompanyExchangeRatesResponse,
@@ -371,7 +371,7 @@ export class AccountingApiClient {
   }
 
   public async createCompanyFromWizard(
-    payload: ReturnType<typeof import('@/modules/company/types/companyOnboarding.types').companyOnboardingPayload>,
+    payload: CreateCompanyOnboardingPayload,
   ): Promise<CompanyOnboardingResult> {
     const response = await this.request<{ data: CompanyOnboardingResult }>(
       '/api/v1/tenant/companies', {
