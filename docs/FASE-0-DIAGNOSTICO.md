@@ -221,3 +221,23 @@ pnpm build
 **Fuentes de validación del procedimiento:** [Laravel 11 — Migraciones](https://laravel.com/docs/11.x/migrations) y [Artisan](https://laravel.com/docs/11.x/artisan). Los 14 nombres de migraciones GitHub coinciden con los registros de la tabla `public.migrations`; la ausencia de diferencias nominales no prueba equivalencia completa de esquema.
 
 **Próxima comprobación real:** ejecutar el comando Artisan de auditoría y `php artisan migrate:status --database=pgsql_migrations` desde un entorno Laravel con credenciales renovadas, sin modificar tablas. Pruebas Pest y compilación Vue continúan pendientes por acceso a ejecutor/runner y resguardo de credenciales. Hasta entonces **no se declara F0 cerrada**.
+
+## 13. Consolidación F0: herramientas reproducibles y revisión funcional (2026-10-19)
+
+**Documento de evidencia por módulo:** [FASE-0-MATRIZ-FUNCIONAL.md](FASE-0-MATRIZ-FUNCIONAL.md). Se registraron rutas de Laravel, vistas y servicios de Vue, brechas funcionales y módulos todavía no probados.
+
+**Código agregado sin modificar PostgreSQL:**
+- `backend/app/Console/Commands/AuditPhaseZero.php`: validación de conexión al proyecto, transacción `SET TRANSACTION READ ONLY`, conteos de esquema, integridad del Diario y cotejo de migraciones nominales. **No ejecutado todavía como Artisan**.
+- `backend/scripts/phase0-preflight.php`: ocho verificaciones estáticas, sin dependencias y sin conexión a BD. Sintaxis comprobada con PHP local; pruebas con fixture (8/8 pasan con configuración válida y 7/8 tras simular una contraseña en `phpunit.xml`). **No equivale a ejecutar PHPUnit o construir Vue**.
+- `backend/scripts/phase0-backup.sh`: exportación vía `pg_dump` del esquema `public` a una ruta segura **fuera de Git**, con revisión `pg_restore --list` y SHA-256. Sintaxis Bash validada, ejecución sin variables falla cerrada. **Sin ejecución real de respaldo, restauración o creación de otra base**.
+- `.github/workflows/phase0-static-baseline.yml`: incluido paso de preflight estático; ejecución manual mientras no haya runner.
+
+**Hallazgos nuevos para fases posteriores (no ejecutar en F0):**
+1. Frontend `JournalEntryView.vue` ya presenta partidas agregadas en una vista y utiliza `parseFloat`/`toFixed` para conversiones monetarias. En F2 se corregirá precisión de extremo a extremo, sin rehacer la vista por defecto.
+2. `PostJournalEntryService::reverse()` existe; no se encontró endpoint correspondiente en `backend/routes/api.php`. Integración faltante en F2.
+3. `AppSidebar.vue` y `useAuthSession.ts` ya incluyen selector/estado global de empresa. Revisión F4 debe aprovechar esa implementación.
+4. Suite Pest usa `DatabaseTransactions`, pero pruebas de tenancy realizan `SET ROLE` y pruebas de monedas ejecutan `DELETE`; sigue pendiente la validación de contención y rollback.
+
+**Comprobación SQL repetida:** 31 tablas, 14 migraciones registradas, 18 tablas sin RLS, 94 índices, 5 funciones, 6 triggers, 14 políticas; 2 asientos, 4 partidas, 0 descuadrados y 0 huérfanas. Todas consultas `SELECT`.
+
+**Condición de salida F0:** pendiente ejecutar inspección en Laravel sobre la misma base (con credenciales rotadas), verificar archivo de respaldo y posibilidad de recuperación, y completar pruebas frontend/backend. No marcar ninguna tarea terminada aún.
