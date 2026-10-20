@@ -41,6 +41,11 @@ final class AuditPhaseZero extends Command
             $db->statement('SET TRANSACTION READ ONLY');
 
             $schema = $db->selectOne(<<<'SQL'
+                WITH target_sequences AS MATERIALIZED (
+                    SELECT c.oid FROM pg_catalog.pg_class c
+                    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'public' AND c.relkind = 'S'
+                )
                 SELECT
                     (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
                      WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')) AS tables,
@@ -60,12 +65,10 @@ final class AuditPhaseZero extends Command
                     (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
                      WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
                        AND has_table_privilege('authenticated', c.oid, 'SELECT')) AS authenticated_select_grants,
-                    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                     WHERE n.nspname = 'public' AND c.relkind = 'S'
-                       AND has_sequence_privilege('anon', c.oid, 'USAGE')) AS anon_sequences,
-                    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                     WHERE n.nspname = 'public' AND c.relkind = 'S'
-                       AND has_sequence_privilege('authenticated', c.oid, 'USAGE')) AS authenticated_sequences,
+                    (SELECT count(*) FROM target_sequences c
+                     WHERE has_sequence_privilege('anon', c.oid, 'USAGE')) AS anon_sequences,
+                    (SELECT count(*) FROM target_sequences c
+                     WHERE has_sequence_privilege('authenticated', c.oid, 'USAGE')) AS authenticated_sequences,
                     (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                      WHERE n.nspname = 'public'
                        AND has_function_privilege('anon', p.oid, 'EXECUTE')) AS anon_functions,
@@ -147,7 +150,7 @@ final class AuditPhaseZero extends Command
                     ['Pendientes', count($migrations['not_applied'])],
                     ['Sin archivo fuente', count($migrations['not_in_repository'])],
                 ]);
-                $this->warn('RLS y privilegios pendientes de remediación mediante migraciones Laravel; esta auditoría no modifica nada.');
+                $this->warn('Auditoría de solo lectura. Consulte los conteos: el estado F0 requiere además pruebas funcionales y recuperación.');
             }
 
             return self::SUCCESS;
