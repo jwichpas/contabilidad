@@ -9,6 +9,12 @@ on:
       - 'backend/tests/security/**'
       - 'backend/database/migrations/**'
       - 'backend/config/database.php'
+      - 'backend/routes/api.php'
+      - 'backend/app/Http/Middleware/**'
+      - 'backend/app/Support/Tenant/**'
+      - 'backend/app/Providers/**'
+      - 'backend/tests/Feature/Security/CompanyRoleAuthorizationTest.php'
+      - 'backend/tests/Feature/Security/TenantContextNestedTest.php'
   workflow_dispatch:
 
 permissions:
@@ -204,3 +210,13 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-tenant-transactions.sql
       - name: Run isolated Laravel unit tests
         run: ./vendor/bin/pest --testsuite=Unit
+      - name: F1.2-F1.3 real HTTP authorization and nested tenant regressions
+        run: ./vendor/bin/pest tests/Feature/Security/CompanyRoleAuthorizationTest.php tests/Feature/Security/TenantContextNestedTest.php
+      - name: Validate changed security PHP syntax
+        run: |
+          php -l app/Http/Middleware/RequireCompanyRole.php
+          php -l app/Support/Tenant/TenantContext.php
+          php -l app/Providers/AppServiceProvider.php
+          php -l routes/api.php
+          php -l tests/Feature/Security/CompanyRoleAuthorizationTest.php
+          php -l tests/Feature/Security/TenantContextNestedTest.php
