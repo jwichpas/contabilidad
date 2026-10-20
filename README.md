@@ -40,7 +40,9 @@
 
 </div>
 
-> 📌 **Plan maestro y seguimiento del proyecto:** [README-PLAN-MAESTRO.md](README-PLAN-MAESTRO.md) — 9 fases (F0–F8), hoja de ruta estimada, 4 hitos, criterios de aprobación y checklist de 27 actividades. **Fase 0 EN PROGRESO (sin tareas aprobadas).** [Diagnóstico y riesgos](docs/FASE-0-DIAGNOSTICO.md).
+> 📌 **Plan maestro y seguimiento del proyecto:** [README-PLAN-MAESTRO.md](README-PLAN-MAESTRO.md) — 9 fases (F0–F8), hoja de ruta estimada, 4 hitos, criterios de aprobación y checklist de 27 actividades. **Fase 0 EN PROGRESO (sin tareas aprobadas).** Desarrollo exclusivamente sobre la base `contabilidad-database`, sin base aislada. [Diagnóstico y riesgos](docs/FASE-0-DIAGNOSTICO.md).
+
+> ⚠️ **Seguridad de desarrollo:** La contraseña literal incluida anteriormente en `backend/phpunit.xml` fue retirada del archivo actual. **Falta rotarla** en Supabase y actualizar las conexiones; la contraseña anterior permanece potencialmente visible en el historial Git. No guardar contraseñas en el repositorio.
 
 ---
 
@@ -157,7 +159,7 @@ pnpm dev
 ### Planes Contables Matrices Oficiales (`accounting_account_templates`)
 El sistema almacena como catálogos maestros inmutables las dos matrices oficiales del Plan Contable General Empresarial peruano:
 - **PCGE 2019 (Vigente)**: 1,764 cuentas oficiales desde Elemento (Nivel 1) hasta Divisionarias y Subdivisionarias (Niveles 4 a 6). Es la plantilla predeterminada con la que inician todas las empresas.
-- **PCGE 2026 (NIIF 18 / NIIF 19)**: 1,637 cuentas oficiales estructuradas según la Resolución CNC N.° 003-2026-EF/30, lista para adopción inmediata sin disrupción del histórico.
+- **PCGE 2026 (NIIF 18 / NIIF 19)**: 1,637 cuentas cargadas conforme a la documentación del repositorio. Aprobado mediante **Resolución CNC N.° 002-2026-EF/30** (publicada el 04/09/2026); **obligatorio desde el 01/01/2028**, con aplicación anticipada permitida. La adopción debe quedar parametrizada por empresa y ejercicio. [Norma oficial](https://busquedas.elperuano.pe/dispositivo/NL/2550786-1).
 - **Patrón Matriz → Tenant**: Cada empresa clona su propio árbol contable en `accounting_accounts` bajo su `company_id`. Cada empresa es libre de renombrar, crear subdivisionarias (5 y 6 dígitos) o reconfigurar amarres y centros de costos sin afectar a las demás empresas ni a la matriz central del sistema.
 
 ### Tablas Oficiales SUNAT (Resolución de Superintendencia)
@@ -171,7 +173,7 @@ El sistema almacena como catálogos maestros inmutables las dos matrices oficial
 - **Tabla 12**: Tipo de Operación sujeta a Retención o Percepción.
 
 ### Normas Internacionales NIIF y NIC (Resolución CNC N.° 003-2026-EF/30)
-- **18 Normas NIIF**: Incluyendo **NIIF 18** (*Presentación e Información a Revelar en los Estados Financieros*) y **NIIF 19** (*Entidades Subsidiarias sin Obligación Pública de Rendir Cuentas*), vigentes para periodos 2026.
+- **18 Normas NIIF**: Incluyendo **NIIF 18** (*Presentación e Información a Revelar en los Estados Financieros*) y **NIIF 19** (*Subsidiarias sin Obligación Pública de Rendir Cuentas*), con **vigencia internacional general desde 2027**, salvo adopción anticipada; comprobar las disposiciones peruanas correspondientes antes de aplicarlas automáticamente.
 - **24 Normas NIC**: Registro completo de NICs vigentes y registro histórico de la **NIC 1** retirada y sustituida por NIIF 18.
 
 ### Rubros Oficiales de Estados Financieros (SMV / NIIF 18 / PCGE)
