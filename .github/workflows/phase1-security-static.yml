@@ -37,9 +37,15 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, bcmath, pdo_pgsql
           coverage: none
-      - name: Comprobar sintaxis PHP
+      - name: Comprobar sintaxis PHP independiente de la base
         run: |
           php -l backend/scripts/phase1-permissions-audit.php
+          php -l backend/app/Http/Middleware/RequireCompanyRole.php
+          php -l backend/app/Support/Tenant/TenantContext.php
+          php -l backend/app/Providers/AppServiceProvider.php
+          php -l backend/routes/api.php
+          php -l backend/tests/Feature/Security/CompanyRoleAuthorizationTest.php
+          php -l backend/tests/Feature/Security/TenantContextNestedTest.php
       - name: Verificar barreras de seguridad del script
         shell: bash
         run: |
