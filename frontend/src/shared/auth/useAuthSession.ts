@@ -136,8 +136,26 @@ export function useAuthSession() {
       });
 
       if (!response.ok) {
-        const errorJson = await response.json().catch(() => ({}));
-        throw new Error(errorJson.message ?? 'Credenciales de acceso incorrectas.');
+        // Diferenciar credenciales inválidas (422) de fallas reales del API.
+        // No mostrar detalles internos del servidor ni exponer consultas SQL.
+        if (response.status >= 500) {
+          throw new Error('El servidor de autenticación presentó un error interno (HTTP 500). Revisa el backend Laravel.');
+        }
+        if (response.status === 429) {
+          throw new Error('Demasiados intentos de acceso. Espera un minuto antes de intentar nuevamente.');
+        }
+        if (response.status === 422) {
+          const errorJson: unknown = await response.json().catch(() => null);
+          const obj = typeof errorJson === 'object' && errorJson !== null
+            ? errorJson as { message?: unknown }
+            : {};
+          throw new Error(
+            typeof obj.message === 'string'
+              ? obj.message
+              : 'Las credenciales proporcionadas son incorrectas.',
+          );
+        }
+        throw new Error(`No se pudo iniciar sesión (HTTP ${response.status}).`);
       }
 
       const json = await response.json();
