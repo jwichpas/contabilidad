@@ -210,7 +210,10 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-tenant-transactions.sql
       - name: Run isolated Laravel unit tests
         run: ./vendor/bin/pest --testsuite=Unit
-      - name: F1.2-F1.3 real HTTP authorization and nested tenant regressions
+      - name: F1.2-F1.3 HTTP and nested tenant tests as restricted app_backend
+        env:
+          DB_USERNAME: app_backend
+          DB_PASSWORD: temporary-app-ci-only
         run: ./vendor/bin/pest tests/Feature/Security/CompanyRoleAuthorizationTest.php tests/Feature/Security/TenantContextNestedTest.php
       - name: Validate changed security PHP syntax
         run: |
