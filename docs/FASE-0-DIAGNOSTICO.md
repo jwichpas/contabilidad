@@ -185,6 +185,23 @@ El usuario ejecutó `php artisan test tests/Feature/Security/ReadOnlyTenantApiSm
 
 **Pendientes relevantes:** prueba HTTP de login real con rollback, revisión de autorización y rate limiting, verificación de recuperación y respaldo; seguridad completa de tablas globales no se logra sin controles de aplicación y eventual diseño de esquema. Fase 0 continúa en progreso.
 
+## Incidencia F0: auditoría del login sin contexto RLS — 2026-10-20
+
+**Pruebas reales del usuario:**
+- `php -l scripts/phase0-login-rollback.php`: sin errores de sintaxis.
+- `php scripts/phase0-login-rollback.php` (preflight): **OK**, solo lectura.
+- `php scripts/phase0-login-rollback.php --execute`: **FAIL**. La respuesta HTTP de login fue 200, pero una consulta posterior a `personal_access_tokens` falló con `SQLSTATE 25P02` (transacción abortada). Se informó rollback y los conteos finales coincidieron exactamente con la línea base: `companies=1`, `users=1`, `memberships=1`, `tokens=28`, `audits=34`, `entries=2`.
+
+**Diagnóstico confirmado por registros PostgreSQL de Supabase** (consulta agregada sin extraer SQL con credenciales): el primer error fue **SQLSTATE 42501** en una consulta de `audit_logs` que el servidor clasificó como **RLS**; después ocurrió **25P02** en consulta de tokens. La excepción de auditoría fue capturada en `AuditLoggerService` sin revertir antes el error de la transacción que utilizaba el llamador. La salida anterior del script expuso la excepción SQL completa y fue mejorada para mostrar **solo fase y SQLSTATE**.
+
+**Solución preparada y confirmada en código GitHub/main, todavía NO verificada en ejecución:**
+- `backend/app/Services/Security/AuditLoggerService.php`: cada escritura de auditoría se realiza dentro de `DB::transaction` (SAVEPOINT si ya existe una transacción) para impedir que un error deje abortado el bloque externo; cuando `companyId` no es nulo establece `app.current_company_id` únicamente de modo LOCAL y restablece su valor previo, de modo que `INSERT ... RETURNING` cumpla la política RLS SELECT además de INSERT. No cambia las políticas ni privilegios de PostgreSQL. Los logs de errores ya no contienen `QueryException::getMessage()` ni SQL con parámetros.
+- `backend/scripts/phase0-login-rollback.php`: ahora distingue `QueryException` y emite **solo etapa y SQLSTATE** sin mostrar SQL ni contraseña.
+
+**Verificación independiente de datos tras el error:** Supabase reportó `companies=1`, `users=1`, `memberships=1`, `tokens=28`, `audits=34`, `entries=2`, `migrations=18`; las políticas `audit_logs` SELECT e INSERT permanecen presentes.
+
+**Siguiente paso:** `git pull --ff-only`; validación de sintaxis de los dos archivos; ejecutar primero preflight solo lectura del script, después una sola ejecución `--execute`. Criterio PASS: login HTTP 200, token Sanctum, acceso Bearer a empresas propias, fila de auditoría transaccional, ROLLBACK y conteos idénticos. **No se ha logrado PASS de este control aún**. No ejecutar la suite global ni repetir el script sin revisar cualquier error.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
