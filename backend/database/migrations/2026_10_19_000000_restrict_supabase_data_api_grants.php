@@ -6,37 +6,97 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Fase 1 / R01: cerrar el acceso accidental de PostgREST a las tablas Laravel.
+ * R01: la API pública del sistema es Laravel/Sanctum.
  *
- * La API pública del sistema es Laravel Sanctum; el frontend consulta /api/v1/*,
- * NO supabase-js/PostgREST. Los roles anon/authenticated de Supabase no necesitan
- * leer, modificar, truncar ni gestionar secuencias del esquema contable.
+ * El esquema de contabilidad no es una API PostgREST pública. Esta migración
+ * se ejecuta solo desde Artisan con la conexión administrativa independiente:
  *
- * El rol app_backend conserva exactamente sus GRANT explícitos y sus políticas RLS.
- * Ejecución EXCLUSIVA mediante php artisan migrate --database=pgsql_migrations.
+ * php artisan migrate --database=pgsql_migrations
+ *
+ * Nunca ejecutar este SQL en el editor de Supabase ni usar la conexión app_backend
+ * para gestionar permisos. No se toca el esquema de auth/storage u otros proyectos.
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        DB::unprepared(<<<'SQL'
-            REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
-                FROM anon, authenticated;
-            REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
-                FROM anon, authenticated;
+        $db = DB::connection('pgsql_migrations');
+        $config = $db->getConfig();
+        $locator = implode(' ', [
+            (string) ($config['host'] ?? ''),
+            (string) ($config['url'] ?? ''),
+            (string) ($config['username'] ?? ''),
+        ]);
 
-            -- Laravel usa la conexión administrativa postgres para crear tablas.
-            -- Evitar que sus migraciones futuras vuelvan a otorgar permisos Data API.
-            ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-                REVOKE ALL PRIVILEGES ON TABLES FROM anon, authenticated;
-            ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-                REVOKE ALL PRIVILEGES ON SEQUENCES FROM anon, authenticated;
+        if (! str_contains($locator, 'bnjwxphwtkhblvhsnylj')) {
+            throw new \RuntimeException('Conexión administrativa no corresponde a contabilidad-database.');
+        }
+
+        $identity = $db->selectOne('SELECT current_user AS db_role, current_database() AS db_name');
+        if ($identity === null || $identity->db_role !== 'postgres' || $identity->db_name !== 'postgres') {
+            throw new \RuntimeException('La migración exige rol administrador postgres en la base postgres.');
+        }
+
+        // Revocación y comprobación en la MISMA transacción, con rollback si
+        // siguen existiendo permisos públicos o si cambia el acceso de Laravel.
+        $db->transaction(function () use ($db): void {
+            $before = $this->effectiveTablePrivileges($db);
+
+            $db->unprepared(<<<'SQL'
+                REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
+                    FROM anon, authenticated;
+                REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
+                    FROM anon, authenticated;
+
+                ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+                    REVOKE ALL PRIVILEGES ON TABLES FROM anon, authenticated;
+                ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+                    REVOKE ALL PRIVILEGES ON SEQUENCES FROM anon, authenticated;
+                SQL);
+
+            $after = $this->effectiveTablePrivileges($db);
+
+            if ((int) $after->anon_tables !== 0 || (int) $after->authenticated_tables !== 0) {
+                throw new \RuntimeException(
+                    'Persisten permisos públicos efectivos: la migración se revierte automáticamente.'
+                );
+            }
+
+            if ((int) $before->app_backend_tables < 1
+                || (int) $after->app_backend_tables !== (int) $before->app_backend_tables) {
+                throw new \RuntimeException(
+                    'Los permisos de app_backend no coinciden: la migración se revierte automáticamente.'
+                );
+            }
+        });
+    }
+
+    /**
+     * Cuenta privilegios EFECTIVOS, no solo ACL explícitas, para detectar
+     * permisos heredados de roles/grants distintos.
+     */
+    private function effectiveTablePrivileges(\Illuminate\Database\Connection $db): object
+    {
+        return $db->selectOne(<<<'SQL'
+            SELECT
+                count(*) FILTER (
+                    WHERE has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+                ) AS anon_tables,
+                count(*) FILTER (
+                    WHERE has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+                ) AS authenticated_tables,
+                count(*) FILTER (
+                    WHERE has_table_privilege('app_backend', c.oid, 'SELECT')
+                ) AS app_backend_tables
+            FROM pg_catalog.pg_class c
+            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
             SQL);
     }
 
     public function down(): void
     {
-        // No volver a exponer tablas con tokens y datos empresariales al revertir.
-        // Restaurar una ACL histórica requiere inventario y aprobación explícitos.
+        // Reabrir las tablas de tokens y datos contables a los roles públicos
+        // NO es un rollback seguro. Restaurar ACL históricas requiere revisión.
     }
 };
