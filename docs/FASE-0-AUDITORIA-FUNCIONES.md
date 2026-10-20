@@ -2,6 +2,17 @@
 
 **Proyecto:** contabilidad-database · **Fecha:** 2026-10-20 · **Estado:** DIAGNÓSTICO; cambios DDL pendientes de revisión y autorización.
 
+## Validación independiente y propuesta preparada — 20/10/2026
+
+Nueva revisión mediante `get_advisors(security)` y consultas SQL de solo lectura:
+- Las **5 funciones** continúan con `proconfig=NULL`, `SECURITY DEFINER=false` y permiso EXECUTE concedido a `app_backend`, pero **no** a `anon` ni a `authenticated`.
+- Los roles `anon`, `authenticated` y `app_backend` carecen de permiso `CREATE` en el esquema `public`. Este control limita la posibilidad de introducir objetos maliciosos, aunque no corrige el `search_path` mutable.
+- Las tablas internas usadas por los triggers están explícitamente cualificadas como `public.*`; el resto usa funciones y operadores incorporados en PostgreSQL.
+- **Propuesta técnica revisable:** fijar el parámetro de cada función a `search_path = ''`, como aconseja Supabase, preservando sus definiciones, firmas, permisos y `SECURITY INVOKER`; reversión mediante `RESET search_path` a condición de no haber intervenido otras configuraciones. **Borrador completo NO EJECUTADO:** [FASE-0-PROPUESTA-SEARCH-PATH.md](FASE-0-PROPUESTA-SEARCH-PATH.md).
+- Security Advisor también presenta **1 aviso separado** de `auth_leaked_password_protection` para **Supabase Auth**. El ERP usa **Laravel Sanctum**, no Supabase Auth, para iniciar sesión; no atribuir esta advertencia a Sanctum. Si se conserva Supabase Auth para otras aplicaciones, decidir si habilitar protección de contraseñas filtradas. [Documentación de Supabase](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+El proyecto Supabase pertenece a la organización `grupo ichpas` en **plan Free**, por lo que no puede darse por disponible una copia diaria automática. Un cambio DDL sobre la única base sigue **bloqueado** hasta acordar un respaldo verificable. [Plan de recuperación](FASE-0-PLAN-RECUPERACION.md).
+
 ## Evidencia
 
 Consulta únicamente de catálogo: `pg_proc`, `pg_namespace` y `pg_get_functiondef`. El Security Advisor de Supabase marca **cinco funciones de `public`** con `function_search_path_mutable`, según la revisión del 20 de octubre de 2026.
@@ -20,7 +31,7 @@ Se observa que todas las referencias actuales a tablas del aplicativo están cua
 
 ## Propuesta para una fase autorizada (NO APLICADA)
 
-Evaluar fijar el parámetro de función a un valor controlado, por ejemplo `search_path = pg_catalog, public`, mediante migración Laravel nueva e incremental, sin recrear definiciones de funciones, sin permisos adicionales ni deshabilitar RLS.
+Evaluar fijar el parámetro de cada función a **`search_path = ''`**, como aconseja el linter de Supabase, mediante futura migración Laravel nueva e incremental, sin recrear sus definiciones, elevar permisos ni deshabilitar RLS. Todas las referencias del cuerpo a tablas del aplicativo ya usan el esquema `public` explícitamente; debe verificarse la resolución de funciones integradas y la regresión contable antes de ejecutar el cambio.
 
 **El cambio no debe aplicarse aún**: primero se requiere estrategia de recuperación acordada, revisión de dependencias y prueba de regresión de movimientos contables en un entorno apropiado. La reversión debe restituir el estado original (`proconfig=NULL`), manteniendo definición, propietario, permisos y triggers.
 
