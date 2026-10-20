@@ -114,6 +114,8 @@ function setPrimaryEconomicActivity(index: number): void {
 }
 
 function removeEconomicActivity(index: number): void {
+  // El perfil configurado requiere como mínimo una actividad principal.
+  if (formEconomicActivities.value.length <= 1) return;
   formEconomicActivities.value.splice(index, 1);
   if (formEconomicActivities.value.length > 0 &&
       !formEconomicActivities.value.some((activity) => activity.is_primary)) {
@@ -281,7 +283,7 @@ async function handleSaveSettings(): Promise<void> {
       base_currency_id: formBaseCurrencyId.value,
       secondary_currency_ids: formSecondaryCurrencyIds.value,
       tax_regime: formTaxRegime.value,
-      ...(economicProfileReady.value ? {
+      ...(economicProfileReady.value && activeTab.value === 'tax' ? {
         legal_form: formLegalForm.value || null,
         ...(formEconomicActivities.value.length > 0 ? {
           economic_activities: formEconomicActivities.value.map((activity) => ({
@@ -847,7 +849,8 @@ watch(() => props.activeCompanyId, () => {
                   </label>
                   <button
                     type="button"
-                    class="text-xs text-muted underline hover:text-foreground"
+                    :disabled="formEconomicActivities.length <= 1"
+                    class="text-xs text-muted underline hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
                     @click="removeEconomicActivity(index)"
                   >
                     Quitar
