@@ -42,6 +42,8 @@ return new class extends Migration
             $table->string('ciiu_code', 4);
             $table->string('description', 200);
             $table->boolean('is_primary')->default(false);
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestampsTz();
 
             $table->unique(['company_id', 'id'], 'uq_company_economic_activities_tenant_id');
