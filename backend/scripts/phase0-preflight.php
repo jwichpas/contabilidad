@@ -44,6 +44,16 @@ $assert(
     'Conexión de migraciones no hereda DATABASE_URL del tráfico de aplicación'
 );
 $assert(
+    'admin_credentials_not_inherited_from_app',
+    $databaseConfig !== '' &&
+    str_contains($databaseConfig, "'host' => env('DB_MIGRATIONS_HOST')") &&
+    str_contains($databaseConfig, "'username' => env('DB_MIGRATIONS_USERNAME')") &&
+    str_contains($databaseConfig, "'password' => env('DB_MIGRATIONS_PASSWORD')") &&
+    !str_contains($databaseConfig, "env('DB_MIGRATIONS_PASSWORD', env('DB_PASSWORD'"),
+    'La conexión administrativa necesita sus propias variables de host, usuario y contraseña'
+);
+
+$assert(
     'artisan_audit_read_only',
     str_contains($artisanAudit, 'SET TRANSACTION READ ONLY') &&
     str_contains($artisanAudit, "DB::connection('pgsql_migrations')") &&
