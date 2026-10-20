@@ -111,7 +111,7 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 
 **Trabajo:**
 - Inventariar tablas, vistas, índices, funciones, triggers, roles, grants y políticas RLS del proyecto Supabase correcto.
-- Comparar migraciones del repositorio con las 14 migraciones registradas y comprobar reconstrucción de una base vacía.
+- Comparar migraciones del repositorio con las 14 migraciones registradas y verificar **sin destruir datos** restricciones, triggers, RLS y esquema de la única base de desarrollo. Reconstruir desde cero sobre esta base no está permitido.
 - Inventariar controladores, endpoints, servicios, vistas, tests y dependencias.
 - Ejecutar y registrar resultados de `composer test`, análisis estático/lint, `pnpm build` y `pnpm typecheck` (si el entorno lo permite).
 - Verificar posibilidad de respaldo y recuperación de la **única base Supabase de desarrollo** y emplear datos ficticios, pruebas SQL de solo lectura y tests con transacciones/rollback. **No crear base aislada** (decisión del usuario).
@@ -302,7 +302,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | **R10** | **Contraseña de BD versionada en `backend/phpunit.xml`** | **Crítica** | F0: registrar exposición; rotación urgente y retiro del secreto, incluidos rastros de Git, antes de ejecutar pruebas |
 | R11 | Tests usan la base única de desarrollo | Alta | F0: revisar cada test, forzar entorno de pruebas y rollback, confirmar conexión y respaldos antes de ejecutarlos; no crear otra BD |
 | R12 | README cita erróneamente resolución del PCGE 2026 | Media | F0: corregido en README; norma oficial **002-2026-EF/30**, PCGE 2026 obligatorio desde **2028**, adopción anticipada posible |
-| R13 | Falta de workflows CI | Media | F0: registrar bloqueo de baseline; F8: incorporar CI |
+| R13 | Runner GitHub Actions no disponible en primera ejecución | Media | F0: workflow estático ya creado, run [39354337434](https://github.com/jwichpas/contabilidad/actions/runs/39354337434) sin runner ni pasos; ejecución manual hasta resolver disponibilidad |
 
 **Política de manejo:** un riesgo crítico abierto puede bloquear la habilitación de usuarios reales o el despliegue, incluso si el módulo parece funcional.
 
@@ -451,6 +451,14 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Normativa verificada:** [Resolución CNC 002-2026-EF/30](https://busquedas.elperuano.pe/dispositivo/NL/2550786-1), PCGE 2026 obligatorio desde 2028, adopción anticipada posible; README principal corregido.
 - **Evidencias y pendientes:** [Registro actualizado de Fase 0](docs/FASE-0-DIAGNOSTICO.md). F0.1–F0.3 aún abiertas; 0/27 marcadas; F1 no iniciada.
 
+### Actualización 2026-10-19 — Workflow estático de verificación
+
+- Se creó [`phase0-static-baseline.yml`](.github/workflows/phase0-static-baseline.yml) para comprobar Vue y Laravel **sin conexión a Supabase** ni despliegues.
+- El [primer workflow](https://github.com/jwichpas/contabilidad/actions/runs/39354337434) acabó fallido porque no se asignó ningún runner ni se ejecutaron pasos; no es evidencia de error del código.
+- Para evitar fallos repetidos en cada push se mantuvo **solo ejecución manual**, pendiente de resolver disponibilidad de GitHub Actions.
+- Sigue pendiente rotar la credencial real de la BD; `backend/phpunit.xml` ya no tiene contraseña inline.
+- **F0 sigue abierta (0/27)**. Ver [diagnóstico completo](docs/FASE-0-DIAGNOSTICO.md).
+
 ### Actualización 2026-10-19 — Inicio Fase 0
 
 - **Estado:** EN PROGRESO; F0.1, F0.2 y F0.3 con trabajo de inventario en curso, ninguna completada.
@@ -463,6 +471,6 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
 **Estado al 2026-10-19: _FASE 0 EN PROGRESO SOBRE LA BD DE DESARROLLO ÚNICA; 0/27 ACTIVIDADES APROBADAS; HITOS H1–H4 PENDIENTES_.**
