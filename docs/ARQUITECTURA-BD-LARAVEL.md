@@ -96,3 +96,25 @@ El comando conecta a `pgsql_migrations` solo para ejecutar consultas `SELECT` qu
 **Situación actual:** F0 EN PROGRESO; ninguna fase aprobada. La política entra en vigor desde su commit, sin alterar el esquema de Supabase.
 
 Fuentes de referencia: [Laravel 11 — migraciones](https://laravel.com/docs/11.x/migrations), [Laravel 11 — Artisan](https://laravel.com/docs/11.x/artisan).
+
+## 7. Procedimiento de preflight y respaldo sin segunda base
+
+**Sin conexión a PostgreSQL (puede ejecutarse antes de configurar secretos):**
+
+```bash
+php backend/scripts/phase0-preflight.php
+php backend/scripts/phase0-preflight.php --json
+```
+
+**Preparación de respaldo de la única base de desarrollo:** en una consola con `pg_dump` y `pg_restore` de una versión compatible con PostgreSQL 17, exportar `DB_MIGRATIONS_HOST`, `DB_MIGRATIONS_USERNAME`, `DB_MIGRATIONS_DATABASE`, `DB_MIGRATIONS_PORT` y `DB_MIGRATIONS_PASSWORD` mediante variables del entorno seguro, **sin escribir la contraseña en este repositorio**.
+
+```bash
+# La exportación lee la base, no modifica las tablas y no crea otra base.
+bash backend/scripts/phase0-backup.sh
+```
+
+El archivo de respaldo `.dump`, su catálogo `.list` y su huella `.sha256` se generan bajo `~/contabilidad-backups` por defecto, **fuera del repositorio**, con permisos restrictivos. El archivo puede contener datos confidenciales de la empresa: no subirlo a GitHub, chats o CI.
+
+`pg_restore --list` y SHA-256 verifican legibilidad básica e integridad del archivo, **no demuestran recuperabilidad completa**. Dado que el usuario decidió no crear segunda BD, cualquier prueba futura de restauración deberá planificarse expresamente sin sobrescribir ni destruir el entorno activo. Hasta entonces F0.1 seguirá abierta.
+
+**Sin modificar tablas en Supabase:** también está disponible `php artisan contabilidad:auditar-fase0 --json` desde Laravel, conectado a `pgsql_migrations`, protegido mediante `SET TRANSACTION READ ONLY`.
