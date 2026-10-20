@@ -4,6 +4,55 @@
 > Estado al 20/10/2026: **propuesta documental**, sin copia ni restauración realizada.  
 > Regla: **no ejecutar `pg_dump`, `pg_restore`, `migrate:fresh`, `DROP`, `DELETE` masivos, ni restauración de Dashboard** sin autorización expresa y destino separado revisado.
 
+## Autorización nueva y transición futura a PostgreSQL independiente — 20/10/2026
+
+**Decisión explícita del usuario:** autoriza preparar y ejecutar un respaldo de la base Supabase de desarrollo y un simulacro de restauración fuera de la base activa. También establece que **Supabase se usará solo en desarrollo**; producción operará en **PostgreSQL independiente**. **Esto no autoriza ejecutar migraciones destructivas en el entorno de desarrollo ni migrar hoy a producción.**
+
+**Estado real:** scripts creados en GitHub/main, **ningún archivo de respaldo generado en el equipo del usuario desde el chat y ninguna restauración ejecutada todavía**. Para completar la ejecución en Windows hacen falta PostgreSQL client 17 (`pg_dump`, `pg_restore`, `psql`), una carpeta **existente en una unidad cifrada y fuera de Git**, credencial administrativa Supabase introducida directamente en pantalla de manera privada, y Docker Desktop (contenedores Linux) para el ensayo.
+
+### A. Preparación y exportación desde Windows — solo lectura de Supabase
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only
+cd backend
+
+.\scripts\phase0-backup-preflight.ps1 -Destination "D:\RespaldosCifrados\contabilidad"
+
+# SOLO SI el volumen/carpeta existe, tiene cifrado efectivo y acceso restringido:
+.\scripts\phase0-backup-windows.ps1 -Destination "D:\RespaldosCifrados\contabilidad" -EncryptedDestinationConfirmed
+```
+
+La ruta es **un ejemplo**, no se debe crear ni asumir que `D:` existe o está cifrado. El backup usa **puerto 5432** de Supabase (pooler sesión o conexión directa) y el rol administrativo `postgres`; valida proyecto, host, usuario y base, solicita la contraseña mediante `Read-Host -AsSecureString` (sin enviarla a ChatGPT, PowerShell arguments, Git o archivos de proyecto), exporta `public` con `pg_dump --format=custom --no-owner --no-acl` y genera:
+
+- `contabilidad-public-<fecha>.dump`: archivo custom con esquema `public` y datos, **sensibles**.
+- `contabilidad-public-<fecha>.dump.list`: índice legible con `pg_restore --list`.
+- `contabilidad-public-<fecha>.dump.manifest.json`: SHA-256 y conteos fuente obtenidos con SELECT **después** de generar el dump; si la BD cambia durante la captura, dichos conteos pueden no reflejar exactamente el snapshot.
+ 
+**No** ejecutar `pg_dump` desde Docker con credenciales que no conozcas ni introducir la contraseña en línea de comandos o en la conversación. La presencia de hash e índice no equivale a un restore exitoso.
+
+### B. Simulacro sin red y sin alterar Supabase
+
+**Tras obtener el archivo .dump** y su manifiesto, con Docker Desktop encendido:
+
+```powershell
+.\scripts\phase0-restore-rehearsal.ps1 -Archive "D:\RespaldosCifrados\contabilidad\contabilidad-public-AAAA...dump"
+```
+
+El script valida SHA-256, crea un **Docker temporal** `postgres:17-alpine` con `--network none`, **sin publicar puertos**, y un volumen de datos de memoria temporal. En ese servidor aislado crea únicamente roles ficticios sin inicio de sesión para satisfacer políticas RLS exportadas, restaura mediante `pg_restore --no-owner --no-acl --exit-on-error`, compara conteos de empresas, usuarios, membresías, cuentas, asientos, partidas y migraciones, verifica al menos 14 tablas RLS forzadas y 5 funciones `public`. Por último **destruye el contenedor temporal**, incluso si falla. **La única base Supabase nunca es destino del restore.**
+
+La restauración puede fallar si el esquema exportado depende de características exclusivas de Supabase (por ejemplo, extensiones o roles fuera del alcance `public`). Si falla, **no forzar la importación ni relajar la seguridad**: revisar compatibilidad y registrarla antes de declarar éxito. Si otro proceso escribió asientos mientras se hacía el dump, los conteos origen posteriores pueden diferir de la instantánea exportada.
+
+### C. Alcance de la portabilidad a PostgreSQL de producción
+
+La organización usa **Supabase Free**, PostgreSQL **17.11**. Las extensiones instaladas en el servidor de desarrollo incluyen `pgcrypto` y `uuid-ossp` (esquema `extensions`), `pg_stat_statements` y `supabase_vault` (esquema `vault`); ninguna se debe presumir disponible en PostgreSQL externo sin validación. Se detectaron defaults en `public` que utilizan `gen_random_uuid()`, función incluida en PostgreSQL 17.
+
+**No se traslada automáticamente lo siguiente:** Supabase Authentication `auth.users`, Storage y sus objetos, extensiones internas Supabase, contraseñas de roles, GRANTs omitidos por `--no-acl`, secretos ni configuración del pooler Supavisor. El ERP autentica con **Laravel Sanctum** en `public.users`; el entorno de producción requerirá su propia autenticación, aprovisionamiento `app_backend`, GRANTs y RLS, y separación `pgsql` (operacional) / `pgsql_migrations` (administrativo), todo versionado en migraciones/configuración. En PostgreSQL independiente podrán usarse prepared statements nativos: **evaluar** `DB_EMULATE_PREPARES=false` solo tras pruebas de compatibilidad y sin cambiar desarrollo actual.
+
+Una restauración exitosa de `public` constituye **prueba de recuperabilidad de datos y esquema contable**, no certifica todavía continuidad integral de la aplicación (roles reales, autorizaciones de todos los endpoints, secretos, gestión de sesiones ni despliegue productivo).
+
+**Referencia de Supabase para migraciones de plataforma a self-hosted:** https://supabase.com/docs/guides/self-hosting/restore-from-platform . Nuestro destino futuro es PostgreSQL independiente, **no** una réplica self-hosted completa de Supabase.
+
 ## Hallazgo verificado el 20/10/2026 — plan Free, sin garantía de copia administrada
 
 La consulta a la **organización real de Supabase**, `grupo ichpas`, informó `plan=free` / `tier=tier_free`; la API del proyecto confirmó `contabilidad-database` con `status=ACTIVE_HEALTHY`, PostgreSQL `17.11` y región `ca-central-1`. El tamaño total aproximado de PostgreSQL informado por `pg_database_size` fue **17 MB**. Son datos de configuración observados, no un backup.
@@ -22,13 +71,13 @@ cd backend
 # Opcional: -Destination "D:\RespaldosCifrados" (una carpeta ya existente, fuera del repo)
 ```
 
-**Pendiente de decisión explícita:** autorizar una copia lógica de `public` a un destino cifrado fuera de Git y después la prueba de recuperación en una instancia aislada. Esto exige definir responsable, destino y custodia. `public` contiene el ERP pero un `--schema=public` no incluye todo el sistema administrado por Supabase.
+**Autorización concedida el 20/10/2026** para copia lógica y simulacro aislado. Pendiente: verificar que el usuario disponga de unidad cifrada, herramientas y Docker, ejecutar los scripts, conservar evidencia y aprobar custodia/RPO/RTO. `public` contiene el ERP pero un `--schema=public` no incluye todo el sistema administrado por Supabase.
 
 ## 1. Objetivo y alcance
 
 Evitar pérdida accidental de datos y disponer de una ruta de recuperación comprobable antes de hacer nuevas migraciones o pruebas destructivas. Esto **no presupone** que existan copias automáticas; su disponibilidad depende del plan real de Supabase y de su estado de respaldo, aún por confirmar.
 
-El usuario decidió previamente **no crear un respaldo por ahora**. Se respeta esa decisión: esta fase solo documenta la estrategia y valida código. Esta condición impide afirmar que la recuperación está certificada.
+El usuario había decidido no generar respaldos en una fase anterior, pero el **20/10/2026 autorizó explícitamente** preparar y realizar copia de desarrollo y simulacro aislado. Todavía deben ejecutarse en Windows y registrarse sus resultados; no existe una recuperación certificada.
 
 ## 2. Línea base verificable
 
@@ -97,7 +146,7 @@ Si no aparecen herramientas, dejar el control como PENDIENTE; no instalar ni exp
 - [x] Login Sanctum, Bearer, TTL de 12 horas, caducidad 401, revocación, auditoría y rollback.
 - [x] Frontend: compilar, 16/16 pruebas unitarias, TypeScript y build; recorrido principal de navegador confirmado por el usuario (sin validar todos los casos 401/403 manuales).
 - [x] Confirmar plan de Supabase: **Free**, sin copias diarias automáticas garantizadas.\n- [ ] Confirmar en Dashboard si existe alguna copia recuperable por otros mecanismos o generar una exportación externa autorizada.
-- [ ] Definir RPO, RTO, custodia y autorización para generar copia lógica.
-- [ ] Probar restauración completa en entorno aislado si se autoriza.
+- [x] Obtener autorización explícita para respaldo lógico y ensayo aislado (20/10/2026).\n- [ ] Acordar RPO, RTO, custodia y ubicación cifrada y ejecutar copia lógica de public.
+- [ ] Ejecutar y comprobar el ensayo de restauración del esquema public en Docker aislado.\n- [ ] Validar recuperación de la aplicación con roles/GRANTs reales en PostgreSQL independiente antes de producción.
 
-**Estado:** Fase 0 sigue **EN PROGRESO**. Proyecto en plan Free y sin respaldo/restauración verificados. Se mantiene la prohibición de ejecutar operaciones destructivas o DDL sin una recuperación acordada. La decisión anterior de no generar copias no equivale a aprobar la recuperación.
+**Estado:** Fase 0 sigue **EN PROGRESO**. Proyecto en plan Free y sin respaldo/restauración verificados. Se mantiene la prohibición de ejecutar operaciones destructivas o DDL sin una recuperación acordada. La autorización ya está concedida; falta ejecutar y verificar realmente la copia y restauración.
