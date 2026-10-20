@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\Tenant\CompanyOnboardingCapabilityController;
 use App\Http\Controllers\Api\V1\Tenant\CreateCompanyFromWizardController;
 use App\Http\Controllers\Api\V1\Tenant\SwitchActiveCompanyController;
 use App\Http\Middleware\SetTenantContext;
+use App\Http\Middleware\RequireCompanyRole;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -87,13 +88,16 @@ Route::prefix('v1')->group(function (): void {
                     ->name('api.v1.accounting.accounts.operational');
 
                 Route::post('/', CreateAccountingAccountController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
                     ->name('api.v1.accounting.accounts.store');
 
                 Route::put('/{accountId}', UpdateAccountingAccountController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
                     ->whereNumber('accountId')
                     ->name('api.v1.accounting.accounts.update');
 
                 Route::patch('/{accountId}/deactivate', DeactivateAccountingAccountController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
                     ->whereNumber('accountId')
                     ->name('api.v1.accounting.accounts.deactivate');
             });
@@ -107,6 +111,7 @@ Route::prefix('v1')->group(function (): void {
                     ->name('api.v1.accounting.journal-entries.next-number');
 
                 Route::post('/', CreateJournalEntryController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
                     ->name('api.v1.accounting.journal-entries.store');
             });
 
@@ -116,12 +121,14 @@ Route::prefix('v1')->group(function (): void {
                     ->name('api.v1.company.settings.show');
 
                 Route::put('/settings', UpdateCompanySettingsController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
                     ->name('api.v1.company.settings.update');
 
                 Route::get('/exchange-rates', GetCompanyExchangeRatesController::class)
                     ->name('api.v1.company.exchange-rates.show');
 
                 Route::post('/exchange-rates', SaveCompanyExchangeRatesController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
                     ->name('api.v1.company.exchange-rates.store');
 
                 Route::get('/areas', ListCompanyAreasController::class)
@@ -137,6 +144,7 @@ Route::prefix('v1')->group(function (): void {
                     ->name('api.v1.company.entities.index');
 
                 Route::post('/chart-of-accounts/initialize', InitializeCompanyChartOfAccountsController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
                     ->name('api.v1.company.chart-of-accounts.initialize');
             });
         });
