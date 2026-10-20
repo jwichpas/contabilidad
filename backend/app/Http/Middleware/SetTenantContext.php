@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Support\Tenant\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -16,8 +15,9 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
  * Middleware que resuelve la empresa activa para el usuario autenticado, valida su membresía
- * vigente, fija `TenantContext` y ejecuta `set_config('app.current_company_id', ?, true)`
- * dentro de una transacción por petición compatible con Supavisor en modo transacción.
+ * vigente y ejecuta el controlador dentro de TenantContext::run().
+ * El contexto PostgreSQL es LOCAL a la transacción y se revierte al finalizar la petición;
+ * nunca usa set_config(..., false), que persistiría en conexiones reutilizadas.
  */
 final readonly class SetTenantContext
 {
@@ -39,22 +39,21 @@ final readonly class SetTenantContext
 
         $resolvedCompanyId = $this->resolveTargetCompanyId($request, $user);
 
-        $this->tenantContext->setCompanyId($resolvedCompanyId);
+        // La validación de membresía también requiere el RLS de company_user.
+        // Ejecutar la consulta de membresía Y el controlador en una sola transacción
+        // de contexto local evita fugas de tenant por el pool Supavisor.
+        return $this->tenantContext->run(
+            $resolvedCompanyId,
+            function () use ($request, $next, $user, $resolvedCompanyId): Response {
+                if (! $this->userHasActiveMembership($user->id, $resolvedCompanyId)) {
+                    throw new AccessDeniedHttpException(
+                        'No tiene acceso activo a la empresa solicitada o la empresa se encuentra inactiva.'
+                    );
+                }
 
-        try {
-            DB::statement(
-                "SELECT set_config('app.current_company_id', ?, false)",
-                [(string) $resolvedCompanyId]
-            );
-
-            if (! $this->userHasActiveMembership($user->id, $resolvedCompanyId)) {
-                throw new AccessDeniedHttpException('No tiene acceso activo a la empresa solicitada o la empresa se encuentra inactiva.');
+                return $next($request);
             }
-
-            return $next($request);
-        } finally {
-            $this->tenantContext->clear();
-        }
+        );
     }
 
     private function resolveTargetCompanyId(Request $request, User $user): int
@@ -79,29 +78,26 @@ final readonly class SetTenantContext
     }
 
     /**
-     * Verifica la membresía activa del usuario en la empresa dentro de la transacción activa.
-     * Almacena en caché local por 60 segundos para evitar un viaje de red innecesario en cada petición.
+     * Comprueba la membresía en cada petición para que una revocación de acceso
+     * tenga efecto inmediato. Sin caché de autorización que pueda quedar obsoleta.
+     * Esta consulta se ejecuta con el GUC tenant ya fijado LOCAL a la transacción.
      */
     private function userHasActiveMembership(int $userId, int $companyId): bool
     {
-        $cacheKey = "tenant_active_membership:{$userId}:{$companyId}";
+        $row = DB::selectOne(
+            <<<'SQL'
+            SELECT 1
+            FROM public.company_user cu
+            INNER JOIN public.companies c ON c.id = cu.company_id
+            WHERE cu.company_id = ?::bigint
+              AND cu.user_id = ?::bigint
+              AND cu.is_active = true
+              AND c.is_active = true
+            LIMIT 1
+            SQL,
+            [$companyId, $userId]
+        );
 
-        return (bool) Cache::remember($cacheKey, 60, function () use ($companyId, $userId): bool {
-            $row = DB::selectOne(
-                <<<'SQL'
-                SELECT 1
-                FROM public.company_user cu
-                INNER JOIN public.companies c ON c.id = cu.company_id
-                WHERE cu.company_id = ?::bigint
-                  AND cu.user_id = ?::bigint
-                  AND cu.is_active = true
-                  AND c.is_active = true
-                LIMIT 1
-                SQL,
-                [$companyId, $userId]
-            );
-
-            return $row !== null;
-        });
+        return $row !== null;
     }
 }
