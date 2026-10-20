@@ -78,10 +78,27 @@ final class TenantContext
         $this->bypassed = false;
 
         try {
-            return DB::transaction(function () use ($companyId, $callback): mixed {
+            // In CI/commands and nested services, an enclosing transaction may
+            // remain open after this run(). Releasing a SAVEPOINT does NOT reset
+            // SET LOCAL; restore the prior tenant before leaving that savepoint.
+            $nested = DB::transactionLevel() > 0;
+            $previousDatabaseCompanyId = $nested
+                ? (string) (DB::selectOne("SELECT current_setting('app.current_company_id', true) AS tenant_id")?->tenant_id ?? '')
+                : '';
+
+            return DB::transaction(function () use ($companyId, $callback, $nested, $previousDatabaseCompanyId): mixed {
                 DB::select("SELECT set_config('app.current_company_id', ?, true)", [(string) $companyId]);
 
-                return $callback();
+                $result = $callback();
+
+                // On a thrown exception Laravel rolls back the transaction or
+                // savepoint, restoring the old SET LOCAL automatically. Avoid
+                // issuing SQL inside an aborted transaction's finally block.
+                if ($nested) {
+                    DB::select("SELECT set_config('app.current_company_id', ?, true)", [$previousDatabaseCompanyId]);
+                }
+
+                return $result;
             });
         } finally {
             $this->companyId = $previousCompanyId;
