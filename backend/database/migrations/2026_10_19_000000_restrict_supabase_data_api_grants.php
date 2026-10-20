@@ -42,12 +42,21 @@ return new class extends Migration
         $db->transaction(function () use ($db): void {
             $before = $this->effectiveTablePrivileges($db);
             $beforeSequences = $this->effectiveSequencePrivileges($db);
+            $beforeFunctions = $this->effectiveFunctionPrivileges($db);
 
             $db->unprepared(<<<'SQL'
                 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
                     FROM anon, authenticated;
                 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
                     FROM anon, authenticated;
+
+                -- Los privilegios EXECUTE pueden provenir de PUBLIC (no solo
+                -- de concesiones directas a anon y authenticated).
+                REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public
+                    FROM PUBLIC, anon, authenticated;
+                -- Se mantiene el comportamiento existente del rol Laravel:
+                -- ejecutar las cinco funciones actuales (incluidos triggers).
+                GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO app_backend;
 
                 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
                     REVOKE ALL PRIVILEGES ON TABLES FROM anon, authenticated;
@@ -57,6 +66,7 @@ return new class extends Migration
 
             $after = $this->effectiveTablePrivileges($db);
             $afterSequences = $this->effectiveSequencePrivileges($db);
+            $afterFunctions = $this->effectiveFunctionPrivileges($db);
 
             if ((int) $after->anon_tables !== 0 || (int) $after->authenticated_tables !== 0) {
                 throw new \RuntimeException(
@@ -68,6 +78,20 @@ return new class extends Migration
                 || (int) $afterSequences->authenticated_sequences !== 0) {
                 throw new \RuntimeException(
                     'Persisten permisos públicos sobre secuencias: migración revertida automáticamente.'
+                );
+            }
+
+            if ((int) $afterFunctions->anon_functions !== 0
+                || (int) $afterFunctions->authenticated_functions !== 0) {
+                throw new \RuntimeException(
+                    'Persisten permisos RPC públicos: migración revertida automáticamente.'
+                );
+            }
+
+            if ((int) $beforeFunctions->backend_functions < 1
+                || (int) $afterFunctions->backend_functions !== (int) $beforeFunctions->backend_functions) {
+                throw new \RuntimeException(
+                    'Los permisos de ejecución de funciones del backend cambiaron: rollback automático.'
                 );
             }
 
@@ -130,6 +154,28 @@ return new class extends Migration
             FROM pg_catalog.pg_class c
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
             WHERE n.nspname = 'public' AND c.relkind = 'S'
+            SQL);
+    }
+
+    /**
+     * Incluye privilegios PUBLIC heredados: funciones invocables via RPC.
+     */
+    private function effectiveFunctionPrivileges(\Illuminate\Database\Connection $db): object
+    {
+        return $db->selectOne(<<<'SQL'
+            SELECT
+                count(*) FILTER (
+                    WHERE has_function_privilege('anon', p.oid, 'EXECUTE')
+                ) AS anon_functions,
+                count(*) FILTER (
+                    WHERE has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                ) AS authenticated_functions,
+                count(*) FILTER (
+                    WHERE has_function_privilege('app_backend', p.oid, 'EXECUTE')
+                ) AS backend_functions
+            FROM pg_catalog.pg_proc p
+            JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public'
             SQL);
     }
 
