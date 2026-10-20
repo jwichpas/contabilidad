@@ -229,3 +229,11 @@ jobs:
           php -l routes/api.php
           php -l tests/Feature/Security/CompanyRoleAuthorizationTest.php
           php -l tests/Feature/Security/TenantContextNestedTest.php
+      - name: Ensayar search_path seguro de las cinco funciones y revertirlo
+        env:
+          PGPASSWORD: temporary-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: contabilidad_ci
+        run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-search-path-rehearsal.sql
