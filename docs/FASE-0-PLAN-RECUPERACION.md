@@ -4,6 +4,27 @@
 > Estado al 20/10/2026: **propuesta documental**, sin copia ni restauración realizada.  
 > Regla: **no ejecutar `pg_dump`, `pg_restore`, `migrate:fresh`, `DROP`, `DELETE` masivos, ni restauración de Dashboard** sin autorización expresa y destino separado revisado.
 
+## Evidencia de respaldo generado en Windows — 20/10/2026
+
+**Salida local aportada por el usuario:** se ejecutó `backend/scripts/phase0-backup-windows.ps1 -Destination "C:\CONTA" -EncryptedDestinationConfirmed`. El script informó **`[PASS]`** en `pg_dump` (PostgreSQL cliente 17), creación de inventario con `pg_restore --list`, huella SHA-256 y manifiesto. Esta evidencia es del equipo del usuario; **no tenemos acceso desde aquí a los bytes ni al archivo local**.
+
+- Archivo origen: `C:\CONTA\contabilidad-public-20261020T210205261Z.dump`
+- Índice: `C:\CONTA\contabilidad-public-20261020T210205261Z.dump.list`
+- Manifiesto: `C:\CONTA\contabilidad-public-20261020T210205261Z.dump.manifest.json`
+- SHA-256 comunicado: `8896DCC5F0B10279F95D6C8F55E32BD9278F217676C7953E7D2E081E617E423E`
+
+**Estado de control:** **BACKUP CREADO / RESTAURACIÓN NO PROBADA**. El flag `-EncryptedDestinationConfirmed` requiere una afirmación manual: no verifica BitLocker ni permisos ACL. Verificar protección real de la unidad `C:`, acceso restringido a `C:\CONTA` y custodia del respaldo sin compartir los archivos en GitHub ni en el chat. No asumir que una carpeta ordinaria está cifrada.
+
+**Próximo paso operativo autorizado, sin conexión a Supabase ni escritura en origen:**
+
+```powershell
+cd C:\Proyectos\contabilidad\backend
+docker info --format '{{.OSType}}'
+.\scripts\phase0-restore-rehearsal.ps1 -Archive "C:\CONTA\contabilidad-public-20261020T210205261Z.dump"
+```
+
+El segundo comando necesita Docker Desktop con contenedores Linux e imagen `postgres:17-alpine`. Solo creará/restaurará un contenedor temporal aislado por `--network none`, sin puertos publicados; el respaldo local no se altera. Si faltan herramientas o ocurre un error, no reintentar con otra BD: registrar salida y diagnosticar primero. **No se ha recibido todavía resultado de restauración**.
+
 ## Autorización nueva y transición futura a PostgreSQL independiente — 20/10/2026
 
 **Decisión explícita del usuario:** autoriza preparar y ejecutar un respaldo de la base Supabase de desarrollo y un simulacro de restauración fuera de la base activa. También establece que **Supabase se usará solo en desarrollo**; producción operará en **PostgreSQL independiente**. **Esto no autoriza ejecutar migraciones destructivas en el entorno de desarrollo ni migrar hoy a producción.**
