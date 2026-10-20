@@ -198,6 +198,7 @@ export function useAuthSession() {
         },
       });
 
+      if (accessToken.value !== token) return userCompanies.value;
       if (response.ok) {
         const json = await response.json();
         const companies = (json.data as UserCompany[]).map((c) => ({
@@ -277,6 +278,7 @@ export function useAuthSession() {
         body: JSON.stringify({ company_id: Number(newCompanyId) }),
       });
 
+      if (accessToken.value !== token) return false;
       if (response.status === 401) {
         reportUnauthorizedBearer(token);
         return false;
