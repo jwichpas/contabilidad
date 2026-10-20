@@ -84,3 +84,9 @@ Se implementó el middleware `RequireCompanyRole` y se aplicó a las mutaciones 
 La suite CI ahora incorpora pruebas HTTP con empresas ficticias y membresías ADMIN/AUDITOR/ACCOUNTANT/DATA_ENTRY, comprobando prohibición interempresa y revocación de permisos, y pruebas de transacciones anidadas/rollback. Ver [matriz de roles F1.3](FASE-1-AUTORIZACION-ROLES.md). Se corrigieron errores de formato SQL en el contrato RLS y las declaraciones PL/pgSQL de las pruebas. **Todos estos cambios están publicados; no se ha confirmado que GitHub Actions haya terminado en verde.**
 
 La validación debe ejecutarse únicamente en el PostgreSQL efímero de CI. La base Supabase de desarrollo no fue modificada desde estos cambios. Pruebas pendientes: roles con conexión real `app_backend` sin privilegios de superusuario, rol en todas las demás rutas, políticas completas y configuraciones específicas de producción.
+
+## F1.1 — Ensayo de endurecimiento de funciones sin persistencia
+
+Agregado `backend/tests/security/phase1-search-path-rehearsal.sql` y ejecutor en GitHub Actions. El test usa las **cinco funciones reales** de Laravel, fija provisionalmente `search_path=''` con `ALTER FUNCTION` dentro de una transacción, verifica `proconfig`, `SECURITY INVOKER` y que `app_current_company_id()` continúe funcionando con tenant válido y ausente. Finaliza con `ROLLBACK`: no deja DDL persistido ni conecta con Supabase. Requiere que el job de migraciones Laravel funcione en PostgreSQL 17 temporal.
+
+**Puerta siguiente:** validar CI y revisar los triggers de jerarquía/asientos con el cambio temporal antes de elaborar una migración incremental aplicable al entorno activo. Este ensayo por sí mismo no corrige los avisos actuales de Supabase y no constituye aprobación F1.
