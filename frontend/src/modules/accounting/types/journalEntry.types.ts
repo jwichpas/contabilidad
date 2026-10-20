@@ -62,10 +62,10 @@ export interface JournalEntryResponse {
 export interface CreateJournalEntryLinePayload {
   readonly accounting_account_id: number;
   readonly description?: string | null;
-  readonly debit_local: number;
-  readonly credit_local: number;
-  readonly debit_foreign: number;
-  readonly credit_foreign: number;
+  readonly debit_local: string;
+  readonly credit_local: string;
+  readonly debit_foreign: string;
+  readonly credit_foreign: string;
 }
 
 export interface CreateJournalEntryPayload {
@@ -73,13 +73,13 @@ export interface CreateJournalEntryPayload {
   readonly entry_number?: string;
   readonly entry_type?: EntryType;
   readonly currency: CurrencyCode;
-  readonly exchange_rate: number;
+  readonly exchange_rate: string;
   readonly exchange_rate_type?: ExchangeRateType;
   readonly exchange_rates?: ReadonlyArray<{
     readonly currency: string;
-    readonly rate: number;
-    readonly buy_rate?: number;
-    readonly sell_rate?: number;
+    readonly rate: string;
+    readonly buy_rate?: string;
+    readonly sell_rate?: string;
   }>;
   readonly description: string;
   readonly lines: readonly CreateJournalEntryLinePayload[];
