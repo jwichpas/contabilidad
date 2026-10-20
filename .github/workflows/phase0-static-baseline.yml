@@ -28,6 +28,8 @@ jobs:
           version: '10.17.1'
           run_install: false
       - run: pnpm install --frozen-lockfile
+      - name: Exact Decimal smoke tests (no DB)
+        run: node --experimental-strip-types --test scripts/decimal-smoke.test.mjs
       - run: pnpm typecheck
       - run: pnpm build
 
