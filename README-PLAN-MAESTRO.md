@@ -68,7 +68,7 @@ Esta información se documenta para no perder los hallazgos, **no** como certifi
 
 ## 3. Hoja de ruta general
 
-Duración indicativa: **32 semanas (~8 meses) para un equipo pequeño**, con solapamientos controlados. No son fechas de entrega comprometidas. Las semanas se cuentan desde la aprobación del inicio; **aún no hay fecha de inicio de Fase 0**.
+Duración indicativa: **32 semanas (~8 meses) para un equipo pequeño**, con solapamientos controlados. No son fechas comprometidas. La **Fase 0 comenzó el 2026-10-19**; las ventanas S1–S32 son estimaciones y se reajustarán según los resultados.
 
 | Fase | Nombre | Prioridad | Ventana estimada | Duración | Estado |
 |---|---|---|---|---|---|
@@ -114,13 +114,13 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 - Comparar migraciones del repositorio con las 14 migraciones registradas y comprobar reconstrucción de una base vacía.
 - Inventariar controladores, endpoints, servicios, vistas, tests y dependencias.
 - Ejecutar y registrar resultados de `composer test`, análisis estático/lint, `pnpm build` y `pnpm typecheck` (si el entorno lo permite).
-- Establecer backup verificable, recuperación y entorno aislado con datos ficticios.
+- Verificar posibilidad de respaldo y recuperación de la **única base Supabase de desarrollo** y emplear datos ficticios, pruebas SQL de solo lectura y tests con transacciones/rollback. **No crear base aislada** (decisión del usuario).
 - Revisar vigencia normativa del PCGE 2019/2026, NIIF 18/19, PLE y SIRE en fuentes oficiales.
 - Clasificar funcionalidades en **implementadas y probadas / implementadas sin validar / parciales / pendientes**.
 
 **Entregable:** diagnóstico versionado, matriz de riesgos, línea base de tests, inventario de datos y orden de correcciones.
 
-**Puerta F0:** arquitectura y riesgos críticos identificados, respaldo verificable, dependencias aclaradas y baseline reproducible. **No ejecutar remediaciones de F1 durante el diagnóstico salvo autorización específica y justificación de emergencia.**
+**Puerta F0:** arquitectura y riesgos críticos identificados, recuperación evaluada y baseline reproducible no destructivo en la **base de desarrollo única**. No ejecutar migraciones destructivas, `migrate:fresh` ni borrados en la base activa. Las medidas urgentes de manejo de secretos pueden adelantarse si son necesarias para reducir exposición.
 
 ### FASE 1 — Seguridad, autenticación y aislamiento multiempresa (2 semanas)
 
@@ -300,8 +300,8 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | R08 | Cobertura de pruebas limitada o no verificada | Alta | F0 baseline; controles continuos F1–F8 |
 | R09 | Acoplamiento de módulos / regresiones UX | Media | F3/F4: contratos, tests y diseño modular |
 | **R10** | **Contraseña de BD versionada en `backend/phpunit.xml`** | **Crítica** | F0: registrar exposición; rotación urgente y retiro del secreto, incluidos rastros de Git, antes de ejecutar pruebas |
-| R11 | Tests apuntan a base de desarrollo compartida | Alta | F0: no correr tests hasta disponer de BD aislada y respaldo |
-| R12 | PCGE 2026 declarado oficial sin respaldo primario confirmado | Alta | F0: validar resolución, fecha de entrada en vigencia y contenido antes de adoptar |
+| R11 | Tests usan la base única de desarrollo | Alta | F0: revisar cada test, forzar entorno de pruebas y rollback, confirmar conexión y respaldos antes de ejecutarlos; no crear otra BD |
+| R12 | README cita erróneamente resolución del PCGE 2026 | Media | F0: corregido en README; norma oficial **002-2026-EF/30**, PCGE 2026 obligatorio desde **2028**, adopción anticipada posible |
 | R13 | Falta de workflows CI | Media | F0: registrar bloqueo de baseline; F8: incorporar CI |
 
 **Política de manejo:** un riesgo crítico abierto puede bloquear la habilitación de usuarios reales o el despliegue, incluso si el módulo parece funcional.
@@ -438,23 +438,31 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | Fases aprobadas | **0/9** | Registrar puerta de calidad y evidencia de sección 8 |
 | Hitos aprobados | **0/4** | Registrar aprobación de H1–H4 |
 | Fase actual | **F0 — EN PROGRESO, sin aprobaciones** | [Registro de diagnóstico](docs/FASE-0-DIAGNOSTICO.md) |
-| Bloqueos críticos conocidos | **R01, R02, R10** | Actualizar matriz de riesgos y evidencia |
-| Próxima acción prioritaria | **Rotar credencial versionada, aislar pruebas y verificar respaldo** | F0/seguridad: ver diagnóstico y autorizaciones necesarias |
+| Bloqueos críticos conocidos | **R01, R02, R10 (contraseña antigua aún pendiente de rotación)** | Actualizar matriz de riesgos y evidencia |
+| Próxima acción prioritaria | **Rotar contraseña expuesta, revisar tests transaccionales y verificar recuperación** | Se usará exclusivamente la BD de desarrollo actual |
 
 ---
+
+### Continuación 2026-10-19 — Base única de desarrollo
+
+- **Decisión de trabajo:** `contabilidad-database` es la única base durante el desarrollo; no se creará BD aislada ni nueva rama. Se permiten pruebas transaccionales y verificaciones SQL controladas; **no** se permiten `migrate:fresh`, `db:wipe`, truncados ni seeders destructivos sobre los datos existentes.
+- **Cambio aplicado en GitHub:** contraseña literal retirada de `backend/phpunit.xml` en commit [cc363a17](https://github.com/jwichpas/contabilidad/commit/cc363a17a351114bc61c3a29f1901f127b095b16). **Pendiente crítico:** rotar la contraseña real y actualizar conexiones; retirar del HEAD no borra el historial.
+- **Base validada mediante SELECT:** 2 asientos, 4 partidas, cero descuadres MN/ME, cero orfandades verificadas; 1,212 cuentas operativas y solo 21 de seis dígitos. Ninguna prueba automatizada ejecutada aún.
+- **Normativa verificada:** [Resolución CNC 002-2026-EF/30](https://busquedas.elperuano.pe/dispositivo/NL/2550786-1), PCGE 2026 obligatorio desde 2028, adopción anticipada posible; README principal corregido.
+- **Evidencias y pendientes:** [Registro actualizado de Fase 0](docs/FASE-0-DIAGNOSTICO.md). F0.1–F0.3 aún abiertas; 0/27 marcadas; F1 no iniciada.
 
 ### Actualización 2026-10-19 — Inicio Fase 0
 
 - **Estado:** EN PROGRESO; F0.1, F0.2 y F0.3 con trabajo de inventario en curso, ninguna completada.
 - **Evidencias:** [docs/FASE-0-DIAGNOSTICO.md](docs/FASE-0-DIAGNOSTICO.md).
 - **Descubrimientos críticos:** R10 (contraseña de BD en PHPUnit), R11 (tests apuntan a BD compartida), R01/R02 reconfirmados.
-- **Puerta pendiente:** backup y recuperación, reconstrucción de migraciones en sandbox, ejecución real de tests y validación normativa.
+- **Puerta pendiente:** controles de respaldo/recuperación de la BD existente, comparación no destructiva de migraciones, ejecución real de tests y validación restante de PLE/SIRE.
 
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
-**Estado al 2026-10-19: _FASE 0 EN PROGRESO; 0/27 ACTIVIDADES APROBADAS; HITOS H1–H4 PENDIENTES_.**
+**Estado al 2026-10-19: _FASE 0 EN PROGRESO SOBRE LA BD DE DESARROLLO ÚNICA; 0/27 ACTIVIDADES APROBADAS; HITOS H1–H4 PENDIENTES_.**
