@@ -10,6 +10,7 @@ use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Services\Accounting\PostJournalEntryService;
 use App\Services\Security\AuditLoggerService;
+use App\Support\Math\Decimal;
 use App\Support\Tenant\TenantContext;
 use Carbon\CarbonImmutable;
 use DomainException;
@@ -38,21 +39,21 @@ final readonly class CreateJournalEntryController
             'entry_number' => ['nullable', 'string', 'max:30'],
             'entry_type' => ['sometimes', 'string', Rule::in(['STANDARD', 'OPENING', 'ADJUSTMENT', 'CLOSING'])],
             'currency' => ['required', 'string'],
-            'exchange_rate' => ['nullable', 'numeric', 'gt:0'],
+            'exchange_rate' => ['nullable', 'numeric', 'gt:0', 'regex:/^\\d+(?:\\.\\d{1,6})?$/'],
             'exchange_rate_type' => ['sometimes', 'string', Rule::in(['BUY', 'SELL', 'PARITY'])],
             'exchange_rates' => ['sometimes', 'array'],
             'exchange_rates.*.currency' => ['required_with:exchange_rates', 'string'],
-            'exchange_rates.*.buy_rate' => ['nullable', 'numeric', 'gt:0'],
-            'exchange_rates.*.sell_rate' => ['nullable', 'numeric', 'gt:0'],
-            'exchange_rates.*.rate' => ['nullable', 'numeric', 'gt:0'],
+            'exchange_rates.*.buy_rate' => ['nullable', 'numeric', 'gt:0', 'regex:/^\\d+(?:\\.\\d{1,6})?$/'],
+            'exchange_rates.*.sell_rate' => ['nullable', 'numeric', 'gt:0', 'regex:/^\\d+(?:\\.\\d{1,6})?$/'],
+            'exchange_rates.*.rate' => ['nullable', 'numeric', 'gt:0', 'regex:/^\\d+(?:\\.\\d{1,6})?$/'],
             'description' => ['required', 'string', 'max:350'],
             'lines' => ['required', 'array', 'min:2'],
             'lines.*.accounting_account_id' => ['required', 'integer', 'min:1'],
             'lines.*.description' => ['nullable', 'string', 'max:250'],
-            'lines.*.debit_local' => ['required', 'numeric', 'min:0'],
-            'lines.*.credit_local' => ['required', 'numeric', 'min:0'],
-            'lines.*.debit_foreign' => ['required', 'numeric', 'min:0'],
-            'lines.*.credit_foreign' => ['required', 'numeric', 'min:0'],
+            'lines.*.debit_local' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
+            'lines.*.credit_local' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
+            'lines.*.debit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
+            'lines.*.credit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
         ]);
 
         $companyId = $this->tenantContext->requireCompanyId(JournalEntry::class);
@@ -100,9 +101,9 @@ final readonly class CreateJournalEntryController
                 $rateVal = $rateItem['rate'] ?? $rateItem['sell_rate'] ?? $rateItem['buy_rate'] ?? null;
                 if ($rateVal !== null) {
                     $inputRatesByCode[$code] = [
-                        'rate' => (float) $rateVal,
-                        'buy_rate' => (float) ($rateItem['buy_rate'] ?? $rateVal),
-                        'sell_rate' => (float) ($rateItem['sell_rate'] ?? $rateVal),
+                        'rate' => Decimal::ofExchangeRate((string) $rateVal)->toString(),
+                        'buy_rate' => Decimal::ofExchangeRate((string) ($rateItem['buy_rate'] ?? $rateVal))->toString(),
+                        'sell_rate' => Decimal::ofExchangeRate((string) ($rateItem['sell_rate'] ?? $rateVal))->toString(),
                     ];
                 }
             }
@@ -112,11 +113,11 @@ final readonly class CreateJournalEntryController
         if (isset($validated['exchange_rate']) && $secondaryCurrencies->count() === 1) {
             $singleSecCode = $secondaryCurrencies->first()->currency->code;
             if (! isset($inputRatesByCode[$singleSecCode])) {
-                $rateFloat = (float) $validated['exchange_rate'];
+                $rateExact = Decimal::ofExchangeRate((string) $validated['exchange_rate'])->toString();
                 $inputRatesByCode[$singleSecCode] = [
-                    'rate' => $rateFloat,
-                    'buy_rate' => $rateFloat,
-                    'sell_rate' => $rateFloat,
+                    'rate' => $rateExact,
+                    'buy_rate' => $rateExact,
+                    'sell_rate' => $rateExact,
                 ];
             }
         }
@@ -125,7 +126,7 @@ final readonly class CreateJournalEntryController
         foreach ($secondaryCompanyCurrencies = $secondaryCurrencies as $secCurrency) {
             $code = $secCurrency->currency->code;
 
-            $hasInputRate = isset($inputRatesByCode[$code]) && $inputRatesByCode[$code]['rate'] > 0;
+            $hasInputRate = isset($inputRatesByCode[$code]) && Decimal::ofExchangeRate($inputRatesByCode[$code]['rate'])->isPositive();
             $hasDbRate = ExchangeRate::query()
                 ->where('company_id', $companyId)
                 ->where('rate_date', $entryDate->toDateString())
@@ -156,8 +157,8 @@ final readonly class CreateJournalEntryController
                         'target_currency' => $baseCurrencyCode,
                     ],
                     [
-                        'buy_rate' => number_format($inputRatesByCode[$code]['buy_rate'], 6, '.', ''),
-                        'sell_rate' => number_format($inputRatesByCode[$code]['sell_rate'], 6, '.', ''),
+                        'buy_rate' => $inputRatesByCode[$code]['buy_rate'],
+                        'sell_rate' => $inputRatesByCode[$code]['sell_rate'],
                     ]
                 );
             }
@@ -165,12 +166,12 @@ final readonly class CreateJournalEntryController
 
         // Determinar la tasa efectiva del voucher para el campo exchange_rate
         $voucherCurrency = strtoupper(trim((string) $validated['currency']));
-        $effectiveRate = 1.000000;
+        $effectiveRate = '1.000000';
 
         if ($voucherCurrency !== $baseCurrencyCode && isset($inputRatesByCode[$voucherCurrency])) {
             $effectiveRate = $inputRatesByCode[$voucherCurrency]['rate'];
-        } elseif (isset($validated['exchange_rate']) && (float) $validated['exchange_rate'] > 0) {
-            $effectiveRate = (float) $validated['exchange_rate'];
+        } elseif (isset($validated['exchange_rate']) && Decimal::ofExchangeRate((string) $validated['exchange_rate'])->isPositive()) {
+            $effectiveRate = Decimal::ofExchangeRate((string) $validated['exchange_rate'])->toString();
         } else {
             // Buscar en base de datos para la moneda secundaria
             $recordedRate = ExchangeRate::query()
@@ -180,7 +181,7 @@ final readonly class CreateJournalEntryController
                 ->first();
 
             if ($recordedRate) {
-                $effectiveRate = (float) $recordedRate->sell_rate;
+                $effectiveRate = (string) $recordedRate->sell_rate;
             } elseif ($voucherCurrency === $baseCurrencyCode && $secondaryCurrencies->isNotEmpty()) {
                 // Si el voucher es en moneda base, tomar la tasa de la primera moneda secundaria para la conversión
                 $firstSec = $secondaryCurrencies->first()->currency->code;
@@ -189,7 +190,9 @@ final readonly class CreateJournalEntryController
                     ->where('rate_date', $entryDate->toDateString())
                     ->where('source_currency', $firstSec)
                     ->first();
-                $effectiveRate = $secRate ? (float) $secRate->sell_rate : (float) ($validated['exchange_rate'] ?? 1.0);
+                $effectiveRate = $secRate
+                    ? (string) $secRate->sell_rate
+                    : Decimal::ofExchangeRate((string) ($validated['exchange_rate'] ?? '1'))->toString();
             }
         }
 
@@ -206,10 +209,10 @@ final readonly class CreateJournalEntryController
             return [
                 'accounting_account_id' => (int) $line['accounting_account_id'],
                 'description' => $line['description'] ?? $validated['description'],
-                'debit_local' => number_format((float) $line['debit_local'], 4, '.', ''),
-                'credit_local' => number_format((float) $line['credit_local'], 4, '.', ''),
-                'debit_foreign' => number_format((float) $line['debit_foreign'], 4, '.', ''),
-                'credit_foreign' => number_format((float) $line['credit_foreign'], 4, '.', ''),
+                'debit_local' => Decimal::ofMonetary((string) $line['debit_local'])->toString(),
+                'credit_local' => Decimal::ofMonetary((string) $line['credit_local'])->toString(),
+                'debit_foreign' => Decimal::ofMonetary((string) $line['debit_foreign'])->toString(),
+                'credit_foreign' => Decimal::ofMonetary((string) $line['credit_foreign'])->toString(),
             ];
         }, $validated['lines']);
 
@@ -220,7 +223,7 @@ final readonly class CreateJournalEntryController
                 'entry_date' => $entryDate->toDateString(),
                 'entry_type' => $validated['entry_type'] ?? 'STANDARD',
                 'currency' => $voucherCurrency,
-                'exchange_rate' => number_format($effectiveRate, 6, '.', ''),
+                'exchange_rate' => $effectiveRate,
                 'exchange_rate_type' => $validated['exchange_rate_type'] ?? 'SELL',
                 'description' => $validated['description'],
                 'created_by_user_id' => $user->id,
