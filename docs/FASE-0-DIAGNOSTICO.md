@@ -5,6 +5,20 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## Frontend compilado y pruebas 16/16 aprobadas — 2026-10-20
+
+**Validación real ejecutada por el usuario en Windows PowerShell** (`C:\Proyectos\contabilidad\frontend`), después de sincronizar los cambios con `main`:
+
+- `npm run test:unit` → **16 pruebas aprobadas, 0 fallos, 0 omitidas**. Incluye cinco pruebas nuevas de sesión HTTP 401 / no exposición de credenciales / protección ante respuestas tardías, seis validaciones del asistente de creación de empresas y cinco controles de decimales contables.
+- `npm run typecheck` → `vue-tsc --noEmit`, **finalizó sin errores**.
+- `npm run build` → `vue-tsc -b && vite build`, **PASS**; Vite 6.4.4 transformó **1.615 módulos** y compiló en **2,66 segundos**; `dist/index.html` y recursos CSS/JS generados satisfactoriamente.
+
+**Puerta frontend cerrada para:** pruebas automatizadas existentes, tipos TypeScript, build de producción. **No afirmar prueba E2E/navegador ni despliegue**: queda pendiente inspeccionar desde una pestaña real que 401 muestre login y aviso, que 403 no cierre sesión, que se conserven borradores al caducar y se descarten al cambiar de usuario. Si se prueba manualmente, no pegar tokens ni contraseñas en la conversación.
+
+**Seguridad PostgreSQL:** inspección `SELECT` de `pg_proc` sobre las cinco funciones reportadas por Supabase confirma `SECURITY DEFINER=false` y `proconfig=NULL`; las referencias actuales a tablas usan nombres de esquema explícitos. Auditoría individual y propuesta sin ejecución: [FASE-0-AUDITORIA-FUNCIONES.md](FASE-0-AUDITORIA-FUNCIONES.md). No se ejecutó DDL.
+
+**Estado F0:** pendientes comprobación visual en navegador, estrategia de recuperación/respaldo aprobada y eventual remediación segura de advertencias SQL; permanece EN PROGRESO.
+
 ## Validación final de TTL Sanctum 12 h — APROBADA (2026-10-20)
 
 **Resultado real informado por el usuario en PowerShell, tras sincronizar código de `main`:**
