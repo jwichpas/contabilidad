@@ -1,0 +1,66 @@
+name: Phase 0 - Static baseline (no database changes)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/phase0-static-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase0-static-main
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Vue - typecheck and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.17.1'
+          run_install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  backend:
+    name: Laravel - static checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, pdo_pgsql, xml, curl, zip
+          coverage: none
+      - run: composer validate --no-check-publish
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Check database password is not hardcoded in PHPUnit
+        run: |
+          if grep -Eq 'name="DB_PASSWORD" +value="' phpunit.xml; then
+            echo "The PHPUnit XML contains a hardcoded database password."
+            exit 1
+          fi
+      - run: composer lint
+      - name: Check PHP syntax without invoking the database
+        run: |
+          find app routes config database tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+# Database remains Supabase contabilidad-database for integration tests.
+# No PostgreSQL access, migrations, seeders, new test database or deployments here.
