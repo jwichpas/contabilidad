@@ -31,6 +31,8 @@ export interface CompanyOnboardingResult {
   id: number;
   tax_id: string;
   business_name: string;
+  legal_address: string;
+  uuid: string;
   plan_version: PcgeVersion;
   plan_accounts_created: number;
 }
