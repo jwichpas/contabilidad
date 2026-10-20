@@ -4,11 +4,12 @@ import AccountingCatalogView from './modules/accounting/views/AccountingCatalogV
 import JournalEntryView from './modules/accounting/views/JournalEntryView.vue';
 import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue';
 import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
+import CompanyOnboardingWizard from './modules/company/views/CompanyOnboardingWizard.vue';
 import LoginView from './shared/auth/LoginView.vue';
 import AppSidebar from './shared/layout/AppSidebar.vue';
 import AppHeader from './shared/layout/AppHeader.vue';
 import type { ActiveCompanyInfo, NavigationModule } from './shared/layout/navigation.types';
-import type { CompanyId } from './modules/accounting/types/accountingAccount.types';
+import { asCompanyId, type CompanyId } from './modules/accounting/types/accountingAccount.types';
 import { useAuthSession } from './shared/auth/useAuthSession';
 import { SystemDecimal } from './shared/types/numeric.types';
 
@@ -21,6 +22,7 @@ const {
   isLiveConnected,
   switchCompany,
   ensureAuthenticated,
+  fetchUserCompanies,
   logout,
 } = useAuthSession();
 
@@ -55,6 +57,7 @@ const sunatSpread = sunatSellRate.subtract(sunatBuyRate);
 function resolveModuleFromHash(): NavigationModule {
   if (typeof window === 'undefined') return 'journal';
   const hash = window.location.hash.toLowerCase();
+  if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('diario') || hash.includes('asiento') || hash.includes('voucher')) {
     return 'journal';
   } else if (hash.includes('plan') || hash.includes('cuentas') || hash.includes('catalogo')) {
@@ -84,12 +87,20 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#tipo-cambio';
   } else if (mod === 'company') {
     window.location.hash = '#empresa';
+  } else if (mod === 'company-create') {
+    window.location.hash = '#nueva-empresa';
   }
   isMobileDrawerOpen.value = false;
 }
 
 function handleSwitchCompany(newCompanyId: CompanyId): void {
   void switchCompany(newCompanyId);
+}
+
+async function handleCompanyCreated(companyId: number): Promise<void> {
+  await fetchUserCompanies();
+  const switched = await switchCompany(asCompanyId(companyId));
+  if (switched) handleNavigate('company');
 }
 
 onMounted(async () => {
@@ -175,6 +186,13 @@ watch(
           :key="`rates-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+        />
+        <CompanyOnboardingWizard
+          v-else-if="currentModule === 'company-create'"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          @cancel="handleNavigate('company')"
+          @created="handleCompanyCreated"
         />
         <CompanySettingsView
           v-else-if="currentModule === 'company'"
