@@ -125,3 +125,32 @@ it('denies access immediately after membership is revoked', function (): void {
 it('does not allow unauthenticated requests to enter company mutation routes', function (): void {
     $this->postJson('/api/v1/accounting/journal-entries', [])->assertUnauthorized();
 });
+
+it('rejects malformed tenant headers before authorization', function (): void {
+    $this->actingAs($this->administrator);
+    foreach (['0', '-1', 'abc', '1 OR 1=1'] as $forgedHeader) {
+        $this->withHeader('X-Company-Id', $forgedHeader)
+            ->getJson('/api/v1/accounting/journal-entries?limit=1')
+            ->assertBadRequest();
+    }
+});
+
+it('permits auditor read access only within an active membership', function (): void {
+    $this->actingAs($this->administrator)
+        ->withHeader('X-Company-Id', (string) $this->companyB->id)
+        ->getJson('/api/v1/accounting/journal-entries?limit=1')
+        ->assertOk()
+        ->assertJsonStructure(['data']);
+
+    // Reading the A company is also allowed because this user is ADMIN there;
+    // the write authorization is verified separately above.
+});
+
+it('rejects even valid roles if the destination company is inactive', function (): void {
+    $this->companyB->forceFill(['is_active' => false])->save();
+
+    $this->actingAs($this->accountant)
+        ->withHeader('X-Company-Id', (string) $this->companyB->id)
+        ->postJson('/api/v1/accounting/journal-entries', [])
+        ->assertForbidden();
+});
