@@ -31,6 +31,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 $execute = in_array('--execute', $argv, true);
 if (count($argv) > 2 || (count($argv) === 2 && ! $execute)) {
@@ -85,6 +86,12 @@ try {
 
     $baseline = array_map('intval', (array) $admin->selectOne($countsSql));
     echo '[PREFLIGHT] Conteos: ', json_encode($baseline, JSON_THROW_ON_ERROR), PHP_EOL;
+    if (config('sanctum.expiration') !== 720) {
+        throw new RuntimeException('La configuracion de Sanctum no limita los tokens a 720 minutos. '
+            .'Revise codigo/config cacheada antes de ejecutar escrituras.');
+    }
+    echo '[OK] Sanctum aplica una duracion maxima de 720 minutos (12 horas).', PHP_EOL;
+
     if ($baseline['companies'] !== 1 || $baseline['users'] !== 1
         || $baseline['memberships'] !== 1) {
         throw new RuntimeException('Se esperaba una sola empresa, usuario y membresia de desarrollo.');
@@ -197,14 +204,21 @@ try {
     unset($data, $password, $request, $response);
 
     $phase = 'verificar_token';
-    $tokenCount = (int) $application->selectOne(
-        'SELECT count(*) AS total FROM public.personal_access_tokens WHERE tokenable_id = ?::bigint',
-        [$userId]
-    )->total;
-    if ($tokenCount !== 1) {
-        throw new RuntimeException('La emision de Sanctum no creo exactamente un token transitorio.');
+    $tokenExpiry = $application->selectOne(<<<'SQL'
+        SELECT count(*) AS total,
+            count(*) FILTER (
+                WHERE expires_at IS NOT NULL
+                  AND expires_at > now()
+                  AND extract(epoch from (expires_at - created_at)) BETWEEN 43140 AND 43260
+            ) AS expires_in_12h
+        FROM public.personal_access_tokens
+        WHERE tokenable_id = ?::bigint
+        SQL, [$userId]);
+    if ((int) $tokenExpiry->total !== 1
+        || (int) $tokenExpiry->expires_in_12h !== 1) {
+        throw new RuntimeException('La emision Sanctum no guardo expires_at a 12 horas.');
     }
-    echo '[CHECK] Login 200: token Sanctum y empresa autorizada obtenidos sin imprimir secretos.', PHP_EOL;
+    echo '[CHECK] Login 200: token Sanctum emitido con expires_at de 12 horas.', PHP_EOL;
 
     $application->selectOne("SELECT set_config('app.current_company_id', '', true)");
     $application->selectOne("SELECT set_config('app.current_user_id', '', true)");
@@ -220,8 +234,66 @@ try {
     if (! in_array($companyId, array_map('intval', array_column($authedData['data'] ?? [], 'id')), true)) {
         throw new RuntimeException('Bearer no permitio consultar la empresa propia.');
     }
-    unset($token, $authedRequest, $authedResponse, $authedData);
+    unset($authedRequest, $authedResponse, $authedData);
     echo '[CHECK] Bearer autentica GET /tenant/companies de la empresa autorizada.', PHP_EOL;
+
+    // Simula la caducidad de un token de MAS de 12 horas: solo cambia la
+    // fecha de creacion del token sintetico, dentro del ROLLBACK obligatorio.
+    // expires_at sigue siendo futuro para demostrar el limite global de edad.
+    $phase = 'token_caducado';
+    $application->update(<<<'SQL'
+        UPDATE public.personal_access_tokens
+        SET created_at = now() - interval '13 hours'
+        WHERE tokenable_id = ?::bigint
+        SQL, [$userId]);
+    Auth::forgetGuards();
+    $expiredRequest = Request::create('/api/v1/tenant/companies', 'GET');
+    $expiredRequest->headers->set('Accept', 'application/json');
+    $expiredRequest->headers->set('Authorization', 'Bearer '.$token);
+    $expiredResponse = $http->handle($expiredRequest);
+    if ($expiredResponse->getStatusCode() !== 401) {
+        throw new RuntimeException('Token mayor a 12 h no devolvio 401 (HTTP '
+            .$expiredResponse->getStatusCode().').');
+    }
+    unset($expiredRequest, $expiredResponse);
+    echo '[CHECK] Token con antiguedad simulada de 13 horas rechazado con HTTP 401.', PHP_EOL;
+
+    // Recupera vigencia UNICAMENTE del token de prueba para verificar logout.
+    $application->update(<<<'SQL'
+        UPDATE public.personal_access_tokens
+        SET created_at = now()
+        WHERE tokenable_id = ?::bigint
+        SQL, [$userId]);
+    Auth::forgetGuards();
+    $phase = 'logout';
+    $logoutRequest = Request::create('/api/v1/auth/logout', 'POST');
+    $logoutRequest->headers->set('Accept', 'application/json');
+    $logoutRequest->headers->set('Authorization', 'Bearer '.$token);
+    $logoutResponse = $http->handle($logoutRequest);
+    if ($logoutResponse->getStatusCode() !== 200) {
+        throw new RuntimeException('Logout no devolvio HTTP 200 (HTTP '
+            .$logoutResponse->getStatusCode().').');
+    }
+    $revokedCount = (int) $application->selectOne(
+        'SELECT count(*) AS total FROM public.personal_access_tokens WHERE tokenable_id = ?::bigint',
+        [$userId]
+    )->total;
+    if ($revokedCount !== 0) {
+        throw new RuntimeException('Logout no revoco el token sintetico.');
+    }
+    unset($logoutRequest, $logoutResponse);
+
+    // El mismo Bearer revocado no debe autorizar nuevas consultas.
+    Auth::forgetGuards();
+    $revokedRequest = Request::create('/api/v1/tenant/companies', 'GET');
+    $revokedRequest->headers->set('Accept', 'application/json');
+    $revokedRequest->headers->set('Authorization', 'Bearer '.$token);
+    $revokedResponse = $http->handle($revokedRequest);
+    if ($revokedResponse->getStatusCode() !== 401) {
+        throw new RuntimeException('Token revocado no fue rechazado con HTTP 401.');
+    }
+    unset($revokedRequest, $revokedResponse, $token);
+    echo '[CHECK] Logout revoca token; reutilizacion del Bearer devuelve HTTP 401.', PHP_EOL;
 
     $application->selectOne('SELECT set_config(?, ?, true)', ['app.current_company_id', (string) $companyId]);
     $phase = 'auditoria';
@@ -229,10 +301,14 @@ try {
         "SELECT count(*) AS total FROM public.audit_logs WHERE user_id = ?::bigint AND event_type = 'AUTH_LOGIN'",
         [$userId]
     )->total;
-    if ($successAudit !== 1) {
-        throw new RuntimeException('No se registro exactamente una auditoria AUTH_LOGIN.');
+    $logoutAudit = (int) $application->selectOne(
+        "SELECT count(*) AS total FROM public.audit_logs WHERE user_id = ?::bigint AND event_type = 'AUTH_LOGOUT'",
+        [$userId]
+    )->total;
+    if ($successAudit !== 1 || $logoutAudit !== 1) {
+        throw new RuntimeException('No se registraron las auditorias AUTH_LOGIN y AUTH_LOGOUT.');
     }
-    echo '[CHECK] Auditoria AUTH_LOGIN creada dentro de la transaccion.', PHP_EOL;
+    echo '[CHECK] Auditorias AUTH_LOGIN y AUTH_LOGOUT dentro de la transaccion.', PHP_EOL;
     $ok = true;
 } catch (QueryException $e) {
     // QueryException incluye las consultas SQL y bindings en su mensaje.
@@ -277,7 +353,7 @@ try {
 
     if ($execute) {
         $ok = $ok && $rollbackOk;
-        echo $ok ? '[PASS] Login+Bearer+auditoria con ROLLBACK confirmado.'.PHP_EOL
+        echo $ok ? '[PASS] Login+Bearer+TTL 12h+logout+auditoria con ROLLBACK confirmado.'.PHP_EOL
             : '[FAIL] Login no aprobado; revisar antes de reintentar.'.PHP_EOL;
     }
 }
