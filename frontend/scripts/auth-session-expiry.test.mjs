@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import {
   isCurrentBearer,
   reportUnauthorizedBearer,
@@ -32,4 +33,19 @@ test('401 notifications ignore missing tokens and never print credentials', () =
 test('unregistered listener safely ignores late unauthorized responses', () => {
   setUnauthorizedHandler(null);
   assert.doesNotThrow(() => reportUnauthorizedBearer('old-session-token'));
+});
+
+test('login form starts without an embedded password or demo credential autofill', () => {
+  const login = readFileSync(new URL('../src/shared/auth/LoginView.vue', import.meta.url), 'utf8');
+  assert.match(login, /const password = ref\(''\)/);
+  assert.match(login, /const email = ref\(''\)/);
+  assert.doesNotMatch(login, /fillDemoCredentials/);
+});
+
+test('the accounting API reports 401 and App verifies restored Bearers before showing data', () => {
+  const client = readFileSync(new URL('../src/modules/accounting/api/httpClient.ts', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8');
+  assert.match(client, /response\.status === 401/);
+  assert.match(client, /reportUnauthorizedBearer\(requestToken\)/);
+  assert.match(app, /v-if="!isSessionVerifiedOnLoad"/);
 });
