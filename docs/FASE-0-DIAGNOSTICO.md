@@ -5,6 +5,14 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## Fase 0 — Recorrido principal validado en navegador (2026-10-20)
+
+**Confirmación funcional directa del usuario:** puede **iniciar sesión**, **seleccionar una empresa**, **consultar el Plan de Cuentas** y **abrir el editor de asientos sin errores** en el frontend local conectado a Laravel. Se marca **APROBADO el recorrido manual principal de lectura y navegación**. Este resultado complementa la suite HTTP 7/7 y las 16 pruebas de frontend, pero **no acredita pruebas E2E automatizadas**, todos los casos de permisos/roles ni la contabilización efectiva de un asiento nuevo.
+
+Se da por resuelta para ese recorrido la incidencia visible `SQLSTATE[42883]` que afectaba al listado de cuentas operativas. Queda pendiente verificar por separado el flujo de **guardar/contabilizar/extornar asientos** en un entorno y con un procedimiento de prueba autorizado, puesto que la única base de Supabase contiene datos importantes.
+
+**F0 sigue EN PROGRESO** por: (a) respaldo y restauración probada en destino aislado, aún no autorizados; (b) decisiones/remediación de cinco avisos PostgreSQL `function_search_path_mutable`, sin tocar DDL; (c) revisión de permisos y flujos no cubiertos (incluyendo respuestas 401/403 del navegador). El alta opcional de una segunda cuenta Laravel es una incidencia de acceso pendiente, no debe confundirse con un bloqueo del login que el usuario acaba de validar.
+
 ## Incidencia SQLSTATE 42883 boolean=integer — regresión aprobada (2026-10-20)
 
 El usuario ejecutó `php -l` sin errores en `ListOperationalAccountsController.php`, `AccountingAccount.php` y `ReadOnlyTenantApiSmokeTest.php`, seguido de:
