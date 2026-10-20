@@ -151,6 +151,34 @@ export class SystemDecimal {
     return new SystemDecimal(this.scaledUnits - other.scaledUnits, this.scale);
   }
 
+  /**
+   * División decimal exacta con BigInt y redondeo half-up.
+   * Se utiliza para convertir importes (4 decimales) con tipos de cambio (6).
+   * No se convierten importes ni tasas a number o float.
+   */
+  public divideBy(divisor: SystemDecimal, targetScale: number = this.scale): SystemDecimal {
+    if (divisor.scaledUnits === 0n) {
+      throw new RangeError('Tipo de cambio cero: no se puede realizar la conversión.');
+    }
+    if (targetScale < 0 || targetScale > 12) {
+      throw new RangeError('Escala decimal fuera de rango.');
+    }
+    const numerator = this.scaledUnits * (10n ** BigInt(divisor.scale + targetScale));
+    const denominator = divisor.scaledUnits * (10n ** BigInt(this.scale));
+    let quotient = numerator / denominator;
+    const remainder = numerator % denominator;
+    const absRemainder = remainder < 0n ? -remainder : remainder;
+    const absDenominator = denominator < 0n ? -denominator : denominator;
+    if (absRemainder * 2n >= absDenominator) {
+      quotient += (numerator < 0n) !== (denominator < 0n) ? -1n : 1n;
+    }
+    return new SystemDecimal(quotient, targetScale);
+  }
+
+  public abs(): SystemDecimal {
+    return new SystemDecimal(this.scaledUnits < 0n ? -this.scaledUnits : this.scaledUnits, this.scale);
+  }
+
   public equals(other: SystemDecimal): boolean {
     this.assertSameScale(other);
     return this.scaledUnits === other.scaledUnits;
