@@ -7,6 +7,8 @@ on:
       - 'backend/scripts/phase1-*.php'
       - '.github/workflows/phase1-security-static.yml'
       - 'backend/tests/security/**'
+      - 'backend/database/migrations/**'
+      - 'backend/config/database.php'
   workflow_dispatch:
 
 permissions:
@@ -82,3 +84,83 @@ jobs:
           PGUSER: postgres
           PGDATABASE: f1_contract
         run: psql -v ON_ERROR_STOP=1 -f backend/tests/security/phase1-rls-contract.sql
+
+  laravel-real-migrations:
+    name: Laravel real migrations - isolated PostgreSQL 17
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: temporary-ci-only
+          POSTGRES_DB: contabilidad_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d contabilidad_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      APP_ENV: testing
+      APP_KEY: "base64:XQ9v12345678901234567890123456789012345678="
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_DATABASE: contabilidad_ci
+      DB_USERNAME: postgres
+      DB_PASSWORD: temporary-ci-only
+      DB_SSLMODE: disable
+      DB_MIGRATIONS_HOST: 127.0.0.1
+      DB_MIGRATIONS_PORT: '5432'
+      DB_MIGRATIONS_DATABASE: contabilidad_ci
+      DB_MIGRATIONS_USERNAME: postgres
+      DB_MIGRATIONS_PASSWORD: temporary-ci-only
+      DB_MIGRATIONS_SSLMODE: disable
+      DB_APP_BACKEND_ROLE_PASSWORD: temporary-app-ci-only
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, pdo_pgsql, xml, curl, zip
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Migrar esquema real Laravel en PostgreSQL CI
+        run: php artisan migrate --database=pgsql_migrations --force --no-interaction
+      - name: Verificar rol app_backend y RLS reales
+        working-directory: .
+        env:
+          PGPASSWORD: temporary-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: contabilidad_ci
+        run: |
+          python3 - <<'PY'
+          import os, subprocess
+          sql = """
+          DO $$
+          DECLARE role_ok boolean; rls_total integer;
+          BEGIN
+            SELECT rolcanlogin AND NOT rolsuper AND NOT rolbypassrls
+              INTO role_ok FROM pg_roles WHERE rolname='app_backend';
+            IF NOT COALESCE(role_ok,false) THEN
+              RAISE EXCEPTION 'app_backend is missing or privileged';
+            END IF;
+            SELECT count(*) INTO rls_total FROM pg_class c
+              JOIN pg_namespace n ON c.relnamespace=n.oid
+              WHERE n.nspname='public' AND c.relrowsecurity AND c.relforcerowsecurity;
+            IF rls_total < 1 THEN RAISE EXCEPTION 'no real RLS tables found'; END IF;
+            RAISE NOTICE 'PASS: % real tables with FORCE RLS',rls_total;
+          END $$;
+          """
+          subprocess.run(["psql","-v","ON_ERROR_STOP=1","-c",sql],check=True)
+          PY
