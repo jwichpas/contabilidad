@@ -5,6 +5,22 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## Incidencia de login HTTP 500 en desarrollo — 2026-10-20
+
+**Síntoma reportado:** el navegador (Vue/Vite en localhost:5180) recibe `POST /api/v1/auth/login` con **HTTP 500** al tener Laravel activo en `0.0.0.0:8010`. El comando `php artisan tinker` no está disponible (el paquete de Tinker no figura en `composer.json`), por lo que no debe instalarse únicamente para diagnosticar.
+
+**Diagnóstico respaldado por evidencia:** `backend/routes/api.php` protege login con `throttle:10,1`; `backend/config/cache.php` no existe (se aplican valores de Laravel 11); el archivo de ejemplo de entorno no definía `CACHE_STORE`; un **SELECT** de Supabase confirmó `public.cache=false` y `public.cache_locks=false`. Si el backend local utiliza `CACHE_STORE=database` (valor habitual por defecto), el limitador de intentos puede fallar con HTTP 500 al acceder a una tabla de caché ausente. **Causa probable, NO confirmada aún**: falta comprobar el valor efectivo de `CACHE_STORE` y la excepción concreta del entorno local. No presumir que el correo/contraseña son incorrectos a partir de HTTP 500.
+
+**Acciones implementadas en GitHub/main (NO ejecutadas en equipo del usuario):**
+
+- `backend/.env.example`: documenta `CACHE_STORE=file` para desarrollo, `APP_URL=http://localhost:8010`. No modifica `backend/.env` local ni tokens, datos o política RLS.
+- `backend/scripts/phase0-login-diagnostics.php`: comando PHP CLI con bootstrap Laravel, **solo SELECT**, verifica driver cache/limitador, rol `app_backend`, presencia de tabla `public.cache` y presencia opcional de un correo sin imprimirlo, sin hashes ni contraseñas. Uso: `php scripts/phase0-login-diagnostics.php [correo]`.
+- `frontend/src/shared/auth/useAuthSession.ts`: diferencia HTTP **500**, **429** y **422**, sin mostrar errores SQL internos ni atribuir los 500 a credenciales.
+
+**Procedimiento recomendado:** actualizar `main` con `git pull --ff-only`, confirmar/ajustar manualmente `CACHE_STORE=file` en `backend/.env`, ejecutar `php artisan config:clear`, reiniciar el servidor Laravel en 8010 y probar login una vez. Si persiste, ejecutar `php -l scripts/phase0-login-diagnostics.php` y `php scripts/phase0-login-diagnostics.php "correo@ejemplo.com"` para obtener diagnóstico sin Tinker; compartir solo la salida no sensible. El correo de la cuenta y la contraseña **no deben registrarse en Git** ni enviarse en capturas posteriores.
+
+**Estado:** pendiente verificar en Windows/servidor. No ejecutar migraciones, Tinker/paquetes adicionales, seeds, reseteos de usuario ni cambios DB. El preflight frontend anterior sigue aprobado, pero la nueva UX HTTP 500 requiere revalidación. Fase 0 continúa en progreso.
+
 ## Frontend compilado y pruebas 16/16 aprobadas — 2026-10-20
 
 **Validación real ejecutada por el usuario en Windows PowerShell** (`C:\Proyectos\contabilidad\frontend`), después de sincronizar los cambios con `main`:
