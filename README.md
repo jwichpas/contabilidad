@@ -44,7 +44,7 @@
 
 > 🔎 **Fase 0:** [Matriz funcional y módulos ya existentes](docs/FASE-0-MATRIZ-FUNCIONAL.md) · [Preflight estático](backend/scripts/phase0-preflight.php) · [Respaldo de desarrollo no destructivo](backend/scripts/phase0-backup.sh). **Las pruebas y el respaldo real continúan pendientes.**
 
-> 🏢 **Perfil empresarial (F3, código preparado):** Laravel y Vue ya incluyen forma jurídica, macrosector y actividades CIIU principal/secundarias. [Ver especificación y pendientes](docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md). **Requiere migración Laravel aún sin ejecutar**; wizard de alta y cálculo automático de libros SUNAT permanecen pendientes.
+> 🏢 **Fase 3 — Asistente Vue de alta implementado en código:** [cinco pasos para crear una empresa](frontend/src/modules/company/views/CompanyOnboardingWizard.vue), con API Laravel, revisión de RUC/CIIU, monedas y copia privada del PCGE. [Especificación y estado](docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md). **Las migraciones y pruebas E2E siguen pendientes**; el cálculo automático de libros SUNAT aún no está implementado.
 
 > 📌 **Plan maestro y seguimiento del proyecto:** [README-PLAN-MAESTRO.md](README-PLAN-MAESTRO.md) — 9 fases (F0–F8), hoja de ruta estimada, 4 hitos, criterios de aprobación y checklist de 27 actividades. **Fase 0 EN PROGRESO (sin tareas aprobadas).** Desarrollo exclusivamente sobre la base `contabilidad-database`, sin base aislada. [Diagnóstico y riesgos](docs/FASE-0-DIAGNOSTICO.md).
 
