@@ -28,8 +28,8 @@ final readonly class ListOperationalAccountsController
 
         $accounts = Cache::remember($cacheKey, 3600, function () {
             return AccountingAccount::query()
-                ->where('is_operational', true)
-                ->where('is_active', true)
+                ->whereRaw('accounting_accounts.is_operational IS TRUE')
+                ->whereRaw('accounting_accounts.is_active IS TRUE')
                 ->select([
                     'id',
                     'uuid',

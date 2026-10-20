@@ -87,7 +87,7 @@ final readonly class CreateJournalEntryController
         $companyCurrencies = CompanyCurrency::query()
             ->where('company_id', $companyId)
             ->with('currency')
-            ->where('is_active', true)
+            ->whereRaw('company_currencies.is_active IS TRUE')
             ->get();
 
         $baseCurrencyCode = $companyCurrencies->firstWhere('is_base', true)?->currency?->code ?? 'PEN';

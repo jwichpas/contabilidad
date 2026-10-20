@@ -16,7 +16,7 @@ final readonly class ListCurrenciesController
     public function __invoke(Request $request): JsonResponse
     {
         $currencies = Currency::query()
-            ->where('is_active', true)
+            ->whereRaw('currencies.is_active IS TRUE')
             ->orderBy('id')
             ->get();
 

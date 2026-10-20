@@ -40,7 +40,7 @@ final readonly class ListSunatCatalogController
         };
 
         $items = $modelClass::query()
-            ->where('is_active', true)
+            ->whereRaw('is_active IS TRUE')
             ->orderBy('code')
             ->get();
 

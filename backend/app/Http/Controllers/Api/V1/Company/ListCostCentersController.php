@@ -17,7 +17,7 @@ final readonly class ListCostCentersController
     {
         $costCenters = CostCenter::query()
             ->with(['destinationDebitAccount', 'destinationCreditAccount'])
-            ->where('is_active', true)
+            ->whereRaw('cost_centers.is_active IS TRUE')
             ->orderBy('code')
             ->get();
 

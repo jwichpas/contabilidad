@@ -34,7 +34,7 @@ final readonly class GetCompanyExchangeRatesController
         $companyCurrencies = CompanyCurrency::query()
             ->where('company_id', $companyId)
             ->with('currency')
-            ->where('is_active', true)
+            ->whereRaw('company_currencies.is_active IS TRUE')
             ->orderByDesc('is_base')
             ->orderBy('id')
             ->get();

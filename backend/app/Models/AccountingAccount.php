@@ -187,7 +187,7 @@ final class AccountingAccount extends Model
      */
     public function scopeOperationalActive(Builder $query): Builder
     {
-        return $query->where('is_operational', true)->where('is_active', true);
+        return $query->whereRaw('accounting_accounts.is_operational IS TRUE')->whereRaw('accounting_accounts.is_active IS TRUE');
     }
 
     /**

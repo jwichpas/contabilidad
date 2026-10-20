@@ -15,7 +15,7 @@ final readonly class ListCashFlowAreasController
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $query = CashFlowArea::query()->where('is_active', true);
+        $query = CashFlowArea::query()->whereRaw('cash_flow_areas.is_active IS TRUE');
 
         if ($category = $request->query('activity_category')) {
             $query->where('activity_category', strtoupper((string) $category));

@@ -15,7 +15,7 @@ final readonly class ListFinancialStatementRubricsController
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $query = FinancialStatementRubricModel::query()->where('is_active', true);
+        $query = FinancialStatementRubricModel::query()->whereRaw('financial_statement_rubrics.is_active IS TRUE');
 
         if ($statementType = $request->query('statement_type')) {
             $query->where('statement_type', strtoupper((string) $statementType));

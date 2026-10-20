@@ -75,7 +75,7 @@ final readonly class InitializeCompanyChartOfAccountsService
         // 3. Obtener las plantillas oficiales del catálogo matriz
         $templates = AccountingAccountTemplate::query()
             ->where('plan_version', $planVersion)
-            ->where('is_active', true)
+            ->whereRaw('accounting_account_templates.is_active IS TRUE')
             ->orderBy('level')
             ->orderBy('code')
             ->get();

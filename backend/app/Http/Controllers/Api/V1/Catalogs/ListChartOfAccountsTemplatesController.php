@@ -21,7 +21,7 @@ final readonly class ListChartOfAccountsTemplatesController
         if (is_string($version) && in_array($version, ['PCGE_2019', 'PCGE_2026'], true)) {
             $accounts = AccountingAccountTemplate::query()
                 ->where('plan_version', $version)
-                ->where('is_active', true)
+                ->whereRaw('accounting_account_templates.is_active IS TRUE')
                 ->orderBy('level')
                 ->orderBy('code')
                 ->get();

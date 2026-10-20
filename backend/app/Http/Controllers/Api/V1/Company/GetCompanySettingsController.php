@@ -71,7 +71,7 @@ final readonly class GetCompanySettingsController
         $companyCurrencies = CompanyCurrency::query()
             ->where('company_id', $companyId)
             ->with('currency')
-            ->where('is_active', true)
+            ->whereRaw('is_active IS TRUE')
             ->orderByDesc('is_base')
             ->orderBy('id')
             ->get();
@@ -101,14 +101,14 @@ final readonly class GetCompanySettingsController
             $companyCurrencies = CompanyCurrency::query()
                 ->where('company_id', $companyId)
                 ->with('currency')
-                ->where('is_active', true)
+                ->whereRaw('is_active IS TRUE')
                 ->orderByDesc('is_base')
                 ->orderBy('id')
                 ->get();
         }
 
         // Catálogo de todas las monedas del sistema
-        $allCurrencies = Currency::query()->where('is_active', true)->orderBy('id')->get();
+        $allCurrencies = Currency::query()->whereRaw('is_active IS TRUE')->orderBy('id')->get();
 
         $settingsArray = $settings ? $settings->toArray() : [];
 

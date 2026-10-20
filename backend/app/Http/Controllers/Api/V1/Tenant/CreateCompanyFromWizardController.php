@@ -104,7 +104,7 @@ final readonly class CreateCompanyFromWizardController
             ]);
         }
         $currencyMap = Currency::query()
-            ->where('is_active', true)
+            ->whereRaw('currencies.is_active IS TRUE')
             ->whereIn('code', $currencyCodes)
             ->get()->keyBy('code');
 

@@ -16,7 +16,7 @@ final readonly class ListCompanyAreasController
     public function __invoke(Request $request): JsonResponse
     {
         $areas = CompanyArea::query()
-            ->where('is_active', true)
+            ->whereRaw('company_areas.is_active IS TRUE')
             ->orderBy('code')
             ->get();
 

@@ -31,8 +31,8 @@ final readonly class CompanyOnboardingGuard
                 ->where('company_user.company_id', $companyId)
                 ->where('company_user.user_id', $user->id)
                 ->where('company_user.role', 'ADMIN')
-                ->where('company_user.is_active', true)
-                ->where('companies.is_active', true)
+                ->whereRaw('company_user.is_active IS TRUE')
+                ->whereRaw('companies.is_active IS TRUE')
                 ->exists();
         });
 

@@ -15,26 +15,26 @@ final readonly class ListEntitiesController
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $query = Entity::query()->where('is_active', true);
+        $query = Entity::query()->whereRaw('entities.is_active IS TRUE');
 
         if ($request->boolean('is_client')) {
-            $query->where('is_client', true);
+            $query->whereRaw('entities.is_client IS TRUE');
         }
 
         if ($request->boolean('is_supplier')) {
-            $query->where('is_supplier', true);
+            $query->whereRaw('entities.is_supplier IS TRUE');
         }
 
         if ($request->boolean('is_employee')) {
-            $query->where('is_employee', true);
+            $query->whereRaw('entities.is_employee IS TRUE');
         }
 
         if ($request->boolean('is_financial_institution')) {
-            $query->where('is_financial_institution', true);
+            $query->whereRaw('entities.is_financial_institution IS TRUE');
         }
 
         if ($request->boolean('is_tax_authority')) {
-            $query->where('is_tax_authority', true);
+            $query->whereRaw('entities.is_tax_authority IS TRUE');
         }
 
         if ($search = $request->query('search')) {

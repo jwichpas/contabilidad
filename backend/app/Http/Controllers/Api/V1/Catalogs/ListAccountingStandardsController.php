@@ -15,7 +15,7 @@ final readonly class ListAccountingStandardsController
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $query = AccountingStandard::query()->where('is_active', true);
+        $query = AccountingStandard::query()->whereRaw('accounting_standards.is_active IS TRUE');
 
         if ($type = $request->query('type')) {
             $query->where('standard_type', strtoupper((string) $type));

@@ -27,7 +27,7 @@ final readonly class DeactivateAccountingAccountController
 
         $hasActiveChildren = AccountingAccount::query()
             ->where('path', 'LIKE', $account->path . '.%')
-            ->where('is_active', true)
+            ->whereRaw('accounting_accounts.is_active IS TRUE')
             ->exists();
 
         if ($hasActiveChildren) {

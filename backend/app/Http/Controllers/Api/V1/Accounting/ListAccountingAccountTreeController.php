@@ -24,7 +24,7 @@ final readonly class ListAccountingAccountTreeController
         $query = AccountingAccount::query()->orderBy('code');
 
         if ($onlyActive) {
-            $query->where('is_active', true);
+            $query->whereRaw('accounting_accounts.is_active IS TRUE');
         }
 
         if (is_string($prefix) && $prefix !== '') {
