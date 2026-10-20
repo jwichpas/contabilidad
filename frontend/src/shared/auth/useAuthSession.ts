@@ -201,6 +201,7 @@ export function useAuthSession() {
       if (accessToken.value !== token) return userCompanies.value;
       if (response.ok) {
         const json = await response.json();
+        if (accessToken.value !== token) return userCompanies.value;
         const companies = (json.data as UserCompany[]).map((c) => ({
           ...c,
           id: asCompanyId(c.id),
@@ -239,6 +240,8 @@ export function useAuthSession() {
    */
   async function logout(): Promise<void> {
     const token = accessToken.value;
+    // No dejar visibles datos privados mientras se espera la revocación HTTP.
+    clearLocalSession(false);
     if (token) {
       try {
         await fetch('/api/v1/auth/logout', {
@@ -253,8 +256,6 @@ export function useAuthSession() {
         // Silencioso ante fallo de red durante logout
       }
     }
-
-    clearLocalSession(false);
   }
 
   /**
