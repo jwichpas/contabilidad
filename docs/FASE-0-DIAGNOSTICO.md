@@ -62,6 +62,16 @@ El usuario ejecutó en Windows/PowerShell, desde `C:\\Proyectos\\contabilidad\\b
 
 **Pendiente:** comprobar autenticación real vía Laravel `pgsql` contra Supavisor 6543 con la nueva contraseña y ejecutar `php artisan test tests/Feature/Security/PublicDataApiPrivilegesTest.php`. No afirmar que ya se confirmó la conexión de la aplicación. Después de las comprobaciones y de actualizar cualquier despliegue, eliminar del `.env` la variable temporal `DB_APP_BACKEND_NEW_PASSWORD` manteniendo `DB_PASSWORD`. La Fase 0 permanece abierta.
 
+## Persistencia del fallo Supavisor tras la rotación — 2026-10-20
+
+El usuario confirmó que `php scripts/phase0-check-test-connection.php` identifica `testing`, `pgsql`, host pooler correcto, puerto 6543, usuario `app_backend.bnjwxphwtkhblvhsnylj`, sin URL prioritaria. Sin embargo, `php artisan test tests/Feature/Security/PublicDataApiPrivilegesTest.php` sigue fallando en autenticación de `app_backend`, con **0 aserciones**. No se debe interpretar como fallo RLS/GRANT.
+
+Supabase verificó por SQL de solo lectura que `app_backend` tiene un verificador de contraseña **SCRAM-SHA-256** configurado, permite LOGIN, no está vencido y carece de `BYPASSRLS` y privilegios de superusuario. No se extrajo ninguna contraseña ni verificador.
+
+Según la [documentación oficial Supavisor](https://supabase.com/docs/guides/troubleshooting/supavisor-error-password-authentication-failed-after-password-rotation), la caché de credenciales del pooler compartido puede conservar la clave anterior tras una rotación. La **verificación por conexión directa** permitiría distinguir caché de un fallo real de la clave; la conexión directa exige IPv6 en las condiciones normales del proyecto.
+
+Se agregó `backend/scripts/phase0-diagnose-app-backend-auth.php` para comprobar de forma local que `DB_PASSWORD` coincide con `DB_APP_BACKEND_NEW_PASSWORD` (sin imprimir secretos), y solo si coinciden probar un `SELECT current_user` con conexión PostgreSQL **directa** como `app_backend` (sin proyecto añadido al nombre del rol). Los resultados `[OK]`, `[FALLO_AUTH_DIRECTA]` y `[SIN_CONCLUSION_DIRECTA]` determinan el camino de diagnóstico. No ejecutar nuevas migraciones ni rotaciones hasta tener este resultado. Evitar reintentos continuos del pooler por el interruptor de seguridad (circuit breaker).
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
