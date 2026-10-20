@@ -22,7 +22,23 @@ final class AuditPhaseZero extends Command
     public function handle(): int
     {
         try {
+            // Este diagnóstico no debe ejecutarse accidentalmente sobre otro proyecto PostgreSQL.
+            // El identificador no es secreto: pertenece al entorno DEV de contabilidad.
+            $connection = config('database.connections.pgsql_migrations', []);
+            $locator = implode(' ', array_map('strval', [
+                $connection['host'] ?? '',
+                $connection['url'] ?? '',
+                $connection['username'] ?? '',
+            ]));
+            if (! str_contains($locator, 'bnjwxphwtkhblvhsnylj')) {
+                $this->error('La conexión pgsql_migrations no identifica contabilidad-database. Revise su .env.');
+                return self::FAILURE;
+            }
+
             $db = DB::connection('pgsql_migrations');
+            $db->beginTransaction();
+            // Se aplica al comienzo de la transacción; PostgreSQL impedirá toda escritura accidental.
+            $db->statement('SET TRANSACTION READ ONLY');
 
             $schema = $db->selectOne(<<<'SQL'
                 SELECT
@@ -69,12 +85,36 @@ final class AuditPhaseZero extends Command
                 FROM entries
                 SQL);
 
+            $migrationFiles = glob(database_path('migrations').'/*.php') ?: [];
+            $expectedMigrations = array_map(
+                static fn (string $file): string => pathinfo($file, PATHINFO_FILENAME),
+                $migrationFiles
+            );
+            $registeredMigrations = array_map(
+                static fn (object $row): string => (string) $row->migration,
+                $db->select('SELECT migration FROM public.migrations ORDER BY migration')
+            );
+            sort($expectedMigrations);
+            sort($registeredMigrations);
+
+            // No se ejecuta ningún migrador. Comparación estrictamente por nombre.
+            $migrations = [
+                'files' => count($expectedMigrations),
+                'applied' => count($registeredMigrations),
+                'not_applied' => array_values(array_diff($expectedMigrations, $registeredMigrations)),
+                'not_in_repository' => array_values(array_diff($registeredMigrations, $expectedMigrations)),
+                'note' => 'NAME_COMPARISON_ONLY_NO_SCHEMA_REBUILD',
+            ];
+
+            $db->commit();
+
             $result = [
                 'phase' => 'F0',
                 'mode' => 'READ_ONLY',
                 'database' => (string) $db->getDatabaseName(),
                 'schema' => array_map('intval', (array) $schema),
                 'ledger' => array_map('intval', (array) $ledger),
+                'migrations' => $migrations,
                 'status' => 'DIAGNOSTIC_ONLY_NOT_PHASE_APPROVAL',
             ];
 
@@ -86,12 +126,27 @@ final class AuditPhaseZero extends Command
                     ->map(fn (int $value, string $name): array => [$name, $value])->values()->all());
                 $this->table(['Integridad contable', 'Valor'], collect($result['ledger'])
                     ->map(fn (int $value, string $name): array => [$name, $value])->values()->all());
-                $this->warn('Los permisos/RLS requieren remediación en una futura migración Laravel; este comando no cambia nada.');
+                $this->table(['Migraciones Laravel', 'Resultado'], [
+                    ['Archivos', $migrations['files']],
+                    ['Aplicadas', $migrations['applied']],
+                    ['Pendientes', count($migrations['not_applied'])],
+                    ['Sin archivo fuente', count($migrations['not_in_repository'])],
+                ]);
+                $this->warn('RLS y privilegios pendientes de remediación mediante migraciones Laravel; esta auditoría no modifica nada.');
             }
 
             return self::SUCCESS;
-        } catch (Throwable $e) {
-            $this->error('No fue posible obtener la línea base: '.$e->getMessage());
+         } catch (Throwable $e) {
+            // No imprimir excepciones PDO: pueden incluir identificadores de conexión o SQL sensible.
+            try {
+                $connection = DB::connection('pgsql_migrations');
+                if ($connection->transactionLevel() > 0) {
+                    $connection->rollBack();
+                }
+            } catch (Throwable) {
+                // El rollback es de mejor esfuerzo si la conexión falló.
+            }
+            $this->error('No fue posible obtener la línea base. Revise la conexión y los logs seguros de Laravel.');
             return self::FAILURE;
         }
     }
