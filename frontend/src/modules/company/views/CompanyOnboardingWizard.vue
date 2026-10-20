@@ -18,7 +18,7 @@ const props = defineProps<{
   readonly getAccessToken: () => string | null;
 }>();
 const emit = defineEmits<{
-  (event: 'created', companyId: number): void;
+  (event: 'created', result: CompanyOnboardingResult): void;
   (event: 'cancel'): void;
 }>();
 
@@ -204,7 +204,7 @@ async function createCompany(): Promise<void> {
     const result = await api.createCompanyFromWizard(companyOnboardingPayload(draft));
     success.value = result;
     sessionStorage.removeItem(COMPANY_ONBOARDING_DRAFT_KEY);
-    emit('created', result.id);
+    emit('created', result);
   } catch (exception) {
     if (exception instanceof ApiHttpError) {
       error.value = exception.message;
