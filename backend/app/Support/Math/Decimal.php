@@ -17,11 +17,11 @@ use Stringable;
  */
 final readonly class Decimal implements JsonSerializable, Stringable
 {
-    public const int MONETARY_SCALE = 4;
+    public const MONETARY_SCALE = 4;
 
-    public const int EXCHANGE_RATE_SCALE = 6;
+    public const EXCHANGE_RATE_SCALE = 6;
 
-    public const int INTERNAL_CALCULATION_SCALE = 8;
+    public const INTERNAL_CALCULATION_SCALE = 8;
 
     private string $value;
 
