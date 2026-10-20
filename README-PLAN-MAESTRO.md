@@ -519,6 +519,14 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Bloqueos abiertos:** rotar contraseña expuesta y actualizar entorno Laravel; disponer de runner para `composer test`, `php artisan contabilidad:auditar-fase0` y `pnpm build`; aplicar la migración de permisos **solo mediante Artisan**, no desde Supabase. No se ha aplicado una nueva migración ni alterado tablas.
 - **Estado:** F0 sigue `EN PROGRESO`; **F2 tiene correcciones en código sin aprobación**. No marcar tareas completas hasta ejecutar y registrar resultados.
 
+### Verificación adicional de seguridad — 2026-10-19
+
+- Migración Laravel pendiente `2026_10_19_000000_restrict_supabase_data_api_grants.php`: controla permisos de tablas, secuencias y ejecución de funciones `public`, preservando acceso de `app_backend`.
+- Se corrigió una consulta PostgreSQL de secuencias mediante una CTE `MATERIALIZED`; comprobación por `SELECT` correcta. [Commit](https://github.com/jwichpas/contabilidad/commit/8e4c580d9e99fd5fb4f3eceb993d37f40ff89d80).
+- Archivo PHP exacto de GitHub verificado por SHA de objeto Git, sintaxis PHP válida, **7/7 escenarios simulados** (aceptación, rechazo de proyecto/rol, y rollback por permisos persistentes o pérdida de acceso del backend). **No son pruebas sobre la base real**.
+- La base Supabase reporta **14 migraciones aplicadas; la migración de seguridad aún no figura en `public.migrations`**. El script no se ha ejecutado con Artisan.
+- Bloqueo real: ausencia de un ejecutor Laravel operativo y de conexión administrativa con credenciales renovadas. No ejecutar DDL desde el editor de Supabase, no dar la seguridad por aprobada y mantener F0/F1 abiertas.
+
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
