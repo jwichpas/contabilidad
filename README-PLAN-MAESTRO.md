@@ -163,13 +163,14 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 **Objetivo:** configurar una empresa sin scripts manuales.
 
 **Trabajo:**
-- Wizard de empresa: identificación fiscal, régimen, periodo, parámetros, moneda funcional y secundarias.
+- Wizard de empresa: identificación fiscal, **persona natural/jurídica y forma legal**, **régimen NRUS/RER/RMT/General según elegibilidad**, **sector/subsector y CIIU Rev. 4** (una actividad principal y varias secundarias), ejercicio, ingresos/UIT, parámetros, moneda funcional y secundarias. Especificación: [perfil de empresa y libros SUNAT](docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md).
 - Selección y copia de plantilla PCGE por empresa, manteniendo matrices globales inmutables.
 - Cuentas agrupadoras sin movimiento y cuentas operativas con granularidad de 6 dígitos o superior configurable.
 - Reglas por cuenta: requerir o no entidad, área, centro de costos, banco, cuenta bancaria, medio de pago y documento.
 - Maestros de clientes, proveedores, bancos, trabajadores, entidades, áreas, centros de costos y subdiarios.
 - Control de adopción/migración entre versiones del PCGE y mapeos trazables.
-- Pruebas con empresas ficticias e independencia entre configuraciones.
+- Pruebas con empresas ficticias **comercial, servicios, industrial, agrícola, ganadera, construcción, extractiva y transporte/logística**, incluyendo mezcla de actividades y separación de perfiles tributarios por empresa.
+- Mantener **historial de regímenes tributarios** y perfiles de ingresos/UIT por ejercicio. Normalizar el alias ambiguo `ESPECIAL` existente sin romper registros históricos ni confundirlo con `RER`.
 
 **Entregable:** asistente funcional y empresa apta para iniciar registros.
 
@@ -198,12 +199,13 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 **Objetivo:** habilitar el ciclo contable mensual con saldos trazables.
 
 **Trabajo:**
-- Libro Diario, Libro Mayor y Balance de Comprobación (movimientos y saldos).
+- Libro Diario (incluido formato simplificado donde aplique), Libro Mayor y Balance de Comprobación (movimientos y saldos). Disponibilidad de reportes separada de su obligatoriedad tributaria.
 - Auxiliares por entidad/documento; cuentas por cobrar, cuentas por pagar y aplicación de cobros/pagos.
 - Caja y bancos, cuentas 104xxx, medios de pago y conciliación bancaria.
 - Apertura, ajustes, regularizaciones, cierres y reapertura autorizada.
 - Reportes PDF/Excel y vistas imprimibles con filtros y origen verificable.
 - Reconciliación del mayor y saldos con el Libro Diario, fuente de verdad.
+- Catálogo de **tipos de libros contables** y estados de obligación por empresa/ejercicio; calcular los mínimos desde reglas versionadas SUNAT, no únicamente desde un booleano.
 - Evitar saldos editables manualmente desligados del ledger.
 
 **Entregable:** ciclo contable operativo para una empresa ficticia de punta a punta.
@@ -216,6 +218,8 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 
 **Trabajo:**
 - Versionar tablas SUNAT de **libros electrónicos** por formato, código y vigencia; no confundir con catálogos de emisión electrónica.
+- Determinar libros obligatorios según **régimen tributario, ingresos anuales brutos/netos según norma, tramo UIT del ejercicio (300/500/1700), fecha de vigencia y actividad**, cubriendo NRUS, RER, RMT y General, así como contabilidad completa y registros adicionales.
+- Diferenciar el libro obligatorio del **medio de llevado** (PLE, SIRE, físico/electrónico); gestionar fecha de inicio de obligatoriedad, rectificaciones, cambios de régimen y sustento legal por empresa. No depender de `is_sire_obliged`/`is_ple_obliged` manuales como único dato.
 - Registro de Compras y Registro de Ventas con comprobantes, serie, número, fechas, RUC, IGV y moneda.
 - Generación/validación de archivos PLE y de libros sujetos a obligación.
 - Flujos de importación, comparación y conciliación para RCE/RVIE y SIRE, conforme a interfaces oficiales disponibles.
@@ -527,11 +531,20 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - La base Supabase reporta **14 migraciones aplicadas; la migración de seguridad aún no figura en `public.migrations`**. El script no se ha ejecutado con Artisan.
 - Bloqueo real: ausencia de un ejecutor Laravel operativo y de conexión administrativa con credenciales renovadas. No ejecutar DDL desde el editor de Supabase, no dar la seguridad por aprobada y mantener F0/F1 abiertas.
 
+### Incorporación de perfil empresarial, sectores y obligaciones SUNAT — 2026-10-19
+
+- **Origen:** solicitud de contemplar los cuatro regímenes que aparecen en la imagen informativa, más segmentación de empresas por actividad (comercio, servicios, ganadería, industria, etc.).
+- **Diagnóstico confirmado:** `company_settings.tax_regime` ya existe con `GENERAL`, `MYPE_TRIBUTARIO`, `RER` y `ESPECIAL`; Vue presenta selector tributario y booleanos SIRE/PLE. **No están implementados** forma jurídica, sector/CIIU, perfiles de ingresos/UIT ni motor de libros exigibles.
+- **Requerimiento obligatorio añadido a F3/F5/F6:** [docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md](docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md). Separar naturaleza legal, régimen tributario, segmento económico y nivel de ingresos/obligaciones anuales, con reglas por vigencia SUNAT.
+- **Normativa:** https://emprender.sunat.gob.pe/comprobantes-libros/registros-libros-electronicos/libros-registros-contables-obligatorios y régimen General: https://emprender.sunat.gob.pe/ruc/regimenes-tributarios-mype/regimen-general-renta-rg.
+- **Ejecución:** especificación comprometida en `main`, **sin nueva migración ejecutada ni cambios a Supabase**. La migración pendiente de seguridad continúa pendiente de Artisan.
+
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
 - **Política obligatoria de esquema Laravel:** [docs/ARQUITECTURA-BD-LARAVEL.md](docs/ARQUITECTURA-BD-LARAVEL.md).
 - **Matriz funcional F0:** [docs/FASE-0-MATRIZ-FUNCIONAL.md](docs/FASE-0-MATRIZ-FUNCIONAL.md).
+- **Requerimiento vinculante empresa/sector/libros SUNAT:** [docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md](docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md).
 - **Preflight y respaldo F0:** `php backend/scripts/phase0-preflight.php` y `backend/scripts/phase0-backup.sh` (este último no ejecutado aún).
 - **Comando de diagnóstico F0:** `php artisan contabilidad:auditar-fase0` (solo lectura; sin mutaciones).
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
