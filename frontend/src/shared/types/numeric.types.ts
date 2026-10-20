@@ -133,6 +133,10 @@ export class SystemDecimal {
       );
     }
 
+    if ((match[3] ?? '').length > scale) {
+      throw new RangeError(`El importe tiene más de ${scale} decimales permitidos.`);
+    }
+
     const sign = match[1] === '-' ? -1n : 1n;
     const integerPart = match[2] ?? '0';
     const fractionPart = (match[3] ?? '').padEnd(scale, '0').slice(0, scale);
