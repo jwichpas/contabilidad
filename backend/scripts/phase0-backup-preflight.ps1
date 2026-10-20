@@ -26,7 +26,7 @@ $repo = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $repo = $repo.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
 $missing = @()
 
-foreach ($tool in @('pg_dump', 'pg_restore')) {
+foreach ($tool in @('pg_dump', 'pg_restore', 'psql')) {
     $found = Get-Command $tool -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($null -eq $found) {
         Report 'PENDIENTE' ("No se encuentra {0} en PATH." -f $tool)
@@ -39,6 +39,7 @@ foreach ($tool in @('pg_dump', 'pg_restore')) {
     }
 }
 
+Report 'INFO' 'La exportacion PowerShell pide la clave por pantalla sin eco; variables DB_MIGRATIONS_* son opcionales.'
 foreach ($key in @('DB_MIGRATIONS_HOST','DB_MIGRATIONS_USERNAME','DB_MIGRATIONS_PASSWORD')) {
     $present = ![string]::IsNullOrEmpty([Environment]::GetEnvironmentVariable($key,'Process'))
     if ($present) { Report 'OK' ("Variable {0}: definida (valor oculto)." -f $key) }
@@ -68,6 +69,9 @@ if ([string]::IsNullOrWhiteSpace($Destination)) {
     }
 }
 
+$docker = Get-Command docker -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -ne $docker) { Report 'OK' 'Docker localizado (para ensayo aislado posterior).' }
+else { Report 'PENDIENTE' 'Docker Desktop no disponible: ensayo de restauracion aislada aun no podra ejecutarse.' }
 Report 'INFO' 'pg_dump --schema=public no equivale a una copia completa de Supabase/Auth/Storage/roles.'
 Report 'INFO' 'Inventario pg_restore --list no sustituye una restauracion en destino aislado.'
 Report 'OK' 'Preflight finalizado: 0 conexiones SQL, 0 archivos creados, 0 respaldos generados.'
