@@ -194,3 +194,30 @@ pnpm build
 - Primera ejecución [39354337434](https://github.com/jwichpas/contabilidad/actions/runs/39354337434): **failure** en ambos jobs; en el resultado de API, `steps: []` y `runner_id: 0`. **No se ejecutó ningún paso**; no atribuirlo a fallo de PHP/Vue. Motivo de no asignación de runner por esclarecer en GitHub.
 - Se dejó temporalmente el workflow en modo **`workflow_dispatch`** para evitar ejecuciones fallidas en cada push hasta contar con runners disponibles.
 - F0.3 sigue EN PROGRESO. No se ha certificado compilación ni ejecución del suite Laravel.
+
+## 12. Regla de esquema Laravel y continuación técnica (2026-10-19)
+
+**Instrucción obligatoria del usuario:** creación/modificación de tablas y cualquier DDL mediante **migraciones Laravel**; Supabase se usa como PostgreSQL administrado y para consultas/advisories de solo lectura. Ver [política formal](ARQUITECTURA-BD-LARAVEL.md).
+
+**Cambios versionados en `main` sin mutar la base:**
+- Nuevo `backend/app/Console/Commands/AuditPhaseZero.php`: comando Artisan `contabilidad:auditar-fase0` con `SELECT` de inventario e integridad. Sintaxis PHP revisada mediante `php -l` local (correcta); **ejecución real en Laravel pendiente**.
+- `backend/config/database.php`: la conexión administrativa `pgsql_migrations` ya no hereda `DATABASE_URL` del backend normal, que podría usar el rol equivocado.
+- `backend/phpunit.xml`: se eliminaron las configuraciones de host, puerto, nombre y usuario de DB fijadas en el XML; se obtienen del entorno no versionado. La contraseña real anterior **no se ha rotado**.
+- `backend/.env.example`: ejemplo actualizado para separar rol de aplicación restringido y rol administrativo que migrará desde Artisan.
+- La migración inicial del rol `app_backend` contiene un **fallback de contraseña por defecto**; riesgo **R15**, por corregir sin editar destructivamente migraciones ya ejecutadas.
+
+**Inventario adicional directamente verificado en PostgreSQL** (todas las consultas fueron `SELECT`):
+
+| Objeto | Cantidad |
+|---|---:|
+| Tablas `public` | 31 |
+| Índices | 94 |
+| Funciones | 5 |
+| Triggers no internos | 6 |
+| Políticas RLS | 14 |
+| Migraciones Laravel aplicadas, sin nombres duplicados | 14 (5 lotes) |
+| Tablas sin RLS | 18 |
+
+**Fuentes de validación del procedimiento:** [Laravel 11 — Migraciones](https://laravel.com/docs/11.x/migrations) y [Artisan](https://laravel.com/docs/11.x/artisan). Los 14 nombres de migraciones GitHub coinciden con los registros de la tabla `public.migrations`; la ausencia de diferencias nominales no prueba equivalencia completa de esquema.
+
+**Próxima comprobación real:** ejecutar el comando Artisan de auditoría y `php artisan migrate:status --database=pgsql_migrations` desde un entorno Laravel con credenciales renovadas, sin modificar tablas. Pruebas Pest y compilación Vue continúan pendientes por acceso a ejecutor/runner y resguardo de credenciales. Hasta entonces **no se declara F0 cerrada**.
