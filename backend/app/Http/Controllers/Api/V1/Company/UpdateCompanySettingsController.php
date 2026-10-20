@@ -132,7 +132,7 @@ final readonly class UpdateCompanySettingsController
         $effectiveLegalForm = $validated['legal_form'] ?? $settings->legal_form;
         CompanyEconomicProfile::assertTaxRegimeEligibility($effectiveRegime, $effectiveLegalForm);
 
-        DB::transaction(function () use ($company, $settings, $validated, $companyId): void {
+        DB::transaction(function () use ($company, $settings, $validated, $companyId, $request): void {
             // 1. Actualizar datos de Company
             $companyUpdates = array_intersect_key($validated, array_flip(['business_name', 'legal_address', 'tax_id']));
             if (! empty($companyUpdates)) {
@@ -208,14 +208,20 @@ final readonly class UpdateCompanySettingsController
                 $validCodes = [];
                 foreach ($validated['economic_activities'] as $activity) {
                     $validCodes[] = $activity['ciiu_code'];
-                    CompanyEconomicActivity::query()->updateOrCreate(
-                        ['company_id' => $companyId, 'ciiu_code' => $activity['ciiu_code']],
-                        [
-                            'sector_code' => $activity['sector_code'],
-                            'description' => trim($activity['description']),
-                            'is_primary' => (bool) $activity['is_primary'],
-                        ]
-                    );
+                    $record = CompanyEconomicActivity::query()->firstOrNew([
+                        'company_id' => $companyId,
+                        'ciiu_code' => $activity['ciiu_code'],
+                    ]);
+                    if (! $record->exists) {
+                        $record->created_by = $request->user()?->id;
+                    }
+                    $record->fill([
+                        'sector_code' => $activity['sector_code'],
+                        'description' => trim($activity['description']),
+                        'is_primary' => (bool) $activity['is_primary'],
+                        'updated_by' => $request->user()?->id,
+                    ]);
+                    $record->save();
                 }
 
                 CompanyEconomicActivity::query()
