@@ -3,8 +3,9 @@
 \set ON_ERROR_STOP on
 SET ROLE app_backend;
 DO $audit$
-DECLARE t record;
-DECLARE n bigint;
+DECLARE
+  t record;
+  n bigint;
 BEGIN
   IF public.app_current_company_id() IS NOT NULL THEN RAISE EXCEPTION 'Unexpected session tenant at start'; END IF;
   FOR t IN
