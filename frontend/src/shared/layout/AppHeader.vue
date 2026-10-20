@@ -103,7 +103,9 @@ const activeCompanyIdString = computed<string>({
           {{
             currentModule === 'journal'
               ? 'Libro Diario Bimoneda (Vouchers Contables)'
-              : currentModule === 'company'
+              : currentModule === 'company-create'
+                ? 'Nueva empresa · Asistente de creación'
+                : currentModule === 'company'
                 ? 'Configuración de Empresa & Monedas'
                 : currentModule === 'exchange-rates'
                   ? 'Tipos de Cambio Diarios (SUNAT & SBS)'
