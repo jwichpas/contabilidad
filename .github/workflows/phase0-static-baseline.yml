@@ -1,12 +1,7 @@
 name: Phase 0 - Static baseline (no database changes)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - '.github/workflows/phase0-static-baseline.yml'
+  # Manual until GitHub Actions has runners available; avoids repeated failed runs.
   workflow_dispatch:
 
 permissions:
