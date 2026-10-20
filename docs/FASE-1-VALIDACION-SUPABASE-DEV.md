@@ -19,3 +19,7 @@ Esta comprobación solo determina las propiedades del catálogo PostgreSQL y los
 Próximo paso: ejecutar una batería de diagnóstico controlada con el rol real `app_backend` y contexto de tenant, primero solo lectura y luego transacciones reversibles sobre registros ficticios, con protección contra efectos externos. Preparar la migración Laravel incremental para las cinco funciones una vez probado su impacto en triggers y aprobado el cambio. Docker seguirá reservado para restauraciones y pruebas destructivas.
 
 Referencia del aviso: https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable
+
+## Ampliación comprobada de permisos DML — 20/10/2026
+
+Consulta real de solo lectura sobre las 32 tablas de `public`, usando `has_table_privilege` para `anon` y `authenticated`: **0 tablas** con permiso efectivo `INSERT`, **0** con `UPDATE` y **0** con `DELETE` para cualquiera de esos dos roles. Combinado con la comprobación SELECT anterior, **0 de 32 tablas** presentan permisos efectivos DML públicos para esos roles. Esto no valida privilegios sobre secuencias, funciones, vistas ni políticas ejecutadas bajo `app_backend` y no sustituye pruebas HTTP. No hubo escrituras a Supabase.
