@@ -39,3 +39,9 @@ Solo ejecutar estas pruebas sobre PostgreSQL efímero preparado por el workflow 
 ## Puerta pendiente
 
 La publicación de código no es evidencia de que CI esté verde. Faltan logs verificables de GitHub Actions, confirmar compatibilidad de todas las migraciones en PostgreSQL independiente, probar políticas RLS sin privilegios de superusuario y revisar rutas no incluidas en esta matriz. Ninguno de estos cambios aplica DDL contra Supabase.
+
+## Ampliación de regresiones F1.3
+
+Las pruebas HTTP se ejecutan en CI **con la conexión de aplicación real `app_backend`** sobre PostgreSQL 17 independiente, tras aplicar migraciones con la conexión administrativa efímera. Los datos ficticios se crean y revocan dentro de `TenantContext::run()` para respetar RLS; Pest revierte cada caso al terminar.
+
+Se comprueban: administrador de A que es auditor de B, rol contable permitido para validar asientos pero no administrar PCGE, digitador sin permiso de contabilizar, acceso a empresa sin membresía, revocación inmediata, empresa desactivada, encabezados `X-Company-Id` inválidos, lectura del auditor y 401 sin autenticación. Todo ello **está implementado, pero sin un run exitoso verificado**. Antes de liberar F1 se requiere que el workflow termine satisfactoriamente y que el código de rollback/estados HTTP sea revisado en los logs.
