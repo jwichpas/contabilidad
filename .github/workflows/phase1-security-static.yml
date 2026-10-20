@@ -193,3 +193,14 @@ jobs:
           PGUSER: postgres
           PGDATABASE: contabilidad_ci
         run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-schema-audit.sql
+
+      - name: Check tenant-local transaction isolation
+        env:
+          PGPASSWORD: temporary-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: contabilidad_ci
+        run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-tenant-transactions.sql
+      - name: Run isolated Laravel unit tests
+        run: ./vendor/bin/pest --testsuite=Unit
