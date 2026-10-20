@@ -30,6 +30,7 @@ const {
 const isDarkMode = shallowRef(false);
 const isSidebarCollapsed = shallowRef(false);
 const isMobileDrawerOpen = shallowRef(false);
+const isSessionVerifiedOnLoad = shallowRef(false);
 
 const activeCompany = computed<ActiveCompanyInfo>(() => {
   const found = userCompanies.value.find((c) => c.id === activeCompanyId.value);
@@ -114,7 +115,11 @@ async function handleCompanyCreated(result: CompanyOnboardingResult): Promise<vo
 onMounted(async () => {
   syncHashWithModule();
   window.addEventListener('hashchange', syncHashWithModule);
-  await ensureAuthenticated();
+  try {
+    await ensureAuthenticated();
+  } finally {
+    isSessionVerifiedOnLoad.value = true;
+  }
 });
 
 onUnmounted(() => {
@@ -132,8 +137,16 @@ watch(
 </script>
 
 <template>
+  <!-- No mostrar datos en caché hasta validar la sesión restaurada. -->
+  <div
+    v-if="!isSessionVerifiedOnLoad"
+    class="flex min-h-screen items-center justify-center bg-background p-6 text-sm text-muted"
+    role="status"
+  >
+    Verificando sesión segura…
+  </div>
   <LoginView
-    v-if="!isAuthenticated"
+    v-else-if="!isAuthenticated"
     :is-dark-mode="isDarkMode"
     @toggle-dark="isDarkMode = !isDarkMode"
   />
