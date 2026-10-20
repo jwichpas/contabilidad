@@ -54,3 +54,9 @@ php scripts/phase1-permissions-audit.php
 
 **Estado:** código publicado, **no ejecutado aquí** contra Supabase ni aprobado por ejecución local. Se requiere observar los resultados antes de redactar migraciones de privilegios o tocar funciones. Si la conexión no cumple los parámetros exactos del entorno de desarrollo, falla cerrado.
 
+
+## Integración continua F1 (20/10/2026)
+
+Se agregó el workflow [`phase1-security-static.yml`](../.github/workflows/phase1-security-static.yml) y el contrato SQL [`phase1-rls-contract.sql`](../backend/tests/security/phase1-rls-contract.sql). GitHub Actions realiza controles estáticos del auditor y, en un PostgreSQL 17 **efímero, con datos ficticios**, comprueba: falta de contexto, lectura interempresa, escritura interempresa rechazada y ausencia de SELECT anónimo. Se activa en pushes de archivos de F1 o manualmente.
+
+**Límite importante:** el SQL es una política de contrato simplificada y aislada, no las migraciones exactas del ERP; no acredita que la base Supabase actual esté correctamente configurada. Para cerrar F1 deben agregarse pruebas con migraciones/roles reales y auditar permisos efectivos del entorno de desarrollo con acceso de solo lectura y credenciales restringidas. Las ejecuciones de GitHub Actions todavía necesitan verificación; no dar PASS sin logs.
