@@ -1,6 +1,6 @@
 # Fase 0 — SQLSTATE 42883: boolean = integer en PostgreSQL
 
-**Estado:** corrección de código prevista en `main`; **aún sin pruebas locales confirmadas**. Sin migraciones ni escrituras sobre la base de datos.
+**Estado al 2026-10-20:** **PASS** de pruebas locales confirmadas por el usuario (7 pruebas, 29 aserciones, 19.56 s); sin migraciones ni escrituras sobre la base de datos efectuadas por este cambio de código. La verificación manual en navegador sigue pendiente.
 
 ## Error confirmado
 
@@ -21,9 +21,9 @@ Ejemplo:
 ```
 No se interpolan datos del usuario en estos SQL fijos. No se cambió PDO, la seguridad RLS ni las políticas de Supabase.
 
-## Verificación pendiente
+## Validación automática aprobada; comprobación visual pendiente
 
-Se añadieron dos pruebas HTTP de regresión a `ReadOnlyTenantApiSmokeTest.php` (ahora 7), exclusivamente GET.
+Se añadieron dos pruebas HTTP de regresión a `ReadOnlyTenantApiSmokeTest.php` (ahora 7), exclusivamente GET. **El usuario ejecutó la suite y reportó PASS: 7 pruebas / 29 aserciones / 19.56 segundos.** Las comprobaciones `php -l` sobre el controlador, modelo y pruebas también pasaron sin errores.
 
 ```powershell
 cd C:\Proyectos\contabilidad
@@ -37,4 +37,4 @@ php artisan test tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php
 
 Después comprobar carga de cuentas en Libro Diario con Laravel puerto 8010 y Vite 5180. **No ejecutar migraciones, seeders ni suite global sobre la única base compartida.**
 
-Criterio PASS: 7 pruebas aprobadas, GET operacional responde 200, se conserva el número de cuentas/asientos. Actualizar diagnóstico cuando el usuario confirme resultados.
+**Resultado:** 7 pruebas aprobadas y la solicitud HTTP del catálogo operacional devolvió 200. En consulta independiente SELECT a Supabase: 1 empresa, 1 usuario, 1 membresía, 1.764 cuentas, 2 asientos, 4 líneas y 18 migraciones. El número de tokens pasó a 29 y el de auditorías a 40 respecto de líneas base anteriores (28/39), por actividad de autenticación; no atribuir esos cambios a la suite GET sin evidencia adicional. **Queda pendiente la validación visual del editor en navegador.**
