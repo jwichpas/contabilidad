@@ -4,6 +4,26 @@
 > Estado al 20/10/2026: **propuesta documental**, sin copia ni restauración realizada.  
 > Regla: **no ejecutar `pg_dump`, `pg_restore`, `migrate:fresh`, `DROP`, `DELETE` masivos, ni restauración de Dashboard** sin autorización expresa y destino separado revisado.
 
+## Hallazgo verificado el 20/10/2026 — plan Free, sin garantía de copia administrada
+
+La consulta a la **organización real de Supabase**, `grupo ichpas`, informó `plan=free` / `tier=tier_free`; la API del proyecto confirmó `contabilidad-database` con `status=ACTIVE_HEALTHY`, PostgreSQL `17.11` y región `ca-central-1`. El tamaño total aproximado de PostgreSQL informado por `pg_database_size` fue **17 MB**. Son datos de configuración observados, no un backup.
+
+Según [la documentación oficial de Supabase](https://supabase.com/docs/guides/platform/backups), las copias diarias automáticas se ofrecen en **Pro, Team y Enterprise**; en **Free** Supabase recomienda exportaciones externas periódicas. **NO hay evidencia de una copia recuperable** para este proyecto. La capacidad o no de restauración debe comprobarse en el [Dashboard > Database > Backups](https://supabase.com/dashboard/project/bnjwxphwtkhblvhsnylj/database/backups/scheduled) o por una exportación autorizada y probada.
+
+**Consecuencia:** no marcar F0 como aprobada por tener un script `pg_dump` escrito o por los rollbacks de pruebas. Tampoco ejecutar migraciones de seguridad (p. ej. endurecimiento de `search_path`) hasta definir y verificar una recuperación real. El tamaño de ~17 MB no incluye objetos externos que puedan estar en Storage.
+
+**Herramienta Windows incorporada en GitHub/main:** `backend/scripts/phase0-backup-preflight.ps1`. Se limita a inspeccionar presencia y versión de `pg_dump`/`pg_restore`, existencia (sin imprimir valor) de variables administrativas y carpeta externa propuesta; **no conecta a la BD, no genera archivos ni ejecuta backup**.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only
+cd backend
+.\scripts\phase0-backup-preflight.ps1
+# Opcional: -Destination "D:\RespaldosCifrados" (una carpeta ya existente, fuera del repo)
+```
+
+**Pendiente de decisión explícita:** autorizar una copia lógica de `public` a un destino cifrado fuera de Git y después la prueba de recuperación en una instancia aislada. Esto exige definir responsable, destino y custodia. `public` contiene el ERP pero un `--schema=public` no incluye todo el sistema administrado por Supabase.
+
 ## 1. Objetivo y alcance
 
 Evitar pérdida accidental de datos y disponer de una ruta de recuperación comprobable antes de hacer nuevas migraciones o pruebas destructivas. Esto **no presupone** que existan copias automáticas; su disponibilidad depende del plan real de Supabase y de su estado de respaldo, aún por confirmar.
@@ -75,9 +95,9 @@ Si no aparecen herramientas, dejar el control como PENDIENTE; no instalar ni exp
 - [x] Pruebas RLS SQL entre empresas A/B con rollback y conteos sin cambios.
 - [x] Pruebas HTTP de acceso, listado y asientos autorizados.
 - [x] Login Sanctum, Bearer, TTL de 12 horas, caducidad 401, revocación, auditoría y rollback.
-- [ ] Frontend: compilar y ejecutar pruebas unitarias de manejo de 401 y restauración segura de sesión.
-- [ ] Confirmar disponibilidad real de backups en Supabase Dashboard.
+- [x] Frontend: compilar, 16/16 pruebas unitarias, TypeScript y build; recorrido principal de navegador confirmado por el usuario (sin validar todos los casos 401/403 manuales).
+- [x] Confirmar plan de Supabase: **Free**, sin copias diarias automáticas garantizadas.\n- [ ] Confirmar en Dashboard si existe alguna copia recuperable por otros mecanismos o generar una exportación externa autorizada.
 - [ ] Definir RPO, RTO, custodia y autorización para generar copia lógica.
 - [ ] Probar restauración completa en entorno aislado si se autoriza.
 
-**Estado:** Fase 0 sigue **EN PROGRESO**. La decisión de no generar copias no debe confundirse con la aprobación de recuperación.
+**Estado:** Fase 0 sigue **EN PROGRESO**. Proyecto en plan Free y sin respaldo/restauración verificados. Se mantiene la prohibición de ejecutar operaciones destructivas o DDL sin una recuperación acordada. La decisión anterior de no generar copias no equivale a aprobar la recuperación.
