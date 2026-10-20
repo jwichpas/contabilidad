@@ -40,6 +40,8 @@
 
 </div>
 
+> 📌 **Plan maestro y seguimiento del proyecto:** [README-PLAN-MAESTRO.md](README-PLAN-MAESTRO.md) — 9 fases (F0–F8), hoja de ruta estimada, 4 hitos, criterios de aprobación y checklist de 27 actividades. **Fase 0 todavía no iniciada.**
+
 ---
 
 ## ⚡ Quick Start / Instalación Rápida
