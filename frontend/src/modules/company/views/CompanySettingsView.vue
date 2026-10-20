@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef } from 'vue';
+import { computed, onMounted, ref, shallowRef, watch } from 'vue';
 import {
   AlertTriangle,
   Building2,
@@ -146,12 +146,16 @@ const availableSecondaryCurrencies = computed<readonly CurrencyItem[]>(() =>
   allCurrencies.value.filter((c) => c.id !== formBaseCurrencyId.value),
 );
 
+let latestLoadId = 0;
+
 async function loadCompanyData(): Promise<void> {
+  const loadId = ++latestLoadId;
   isLoading.value = true;
   errorMessage.value = null;
 
   try {
     const data = await apiClient.value.fetchCompanySettings();
+    if (loadId !== latestLoadId) return;
     companyData.value = data.company;
     settingsData.value = data.settings;
     allCurrencies.value = data.all_currencies;
@@ -193,10 +197,12 @@ async function loadCompanyData(): Promise<void> {
     formChiefAccountantName.value = data.settings.chief_accountant_name ?? '';
     formChiefAccountantCpc.value = data.settings.chief_accountant_cpc_number ?? '';
   } catch (e) {
-    errorMessage.value =
-      e instanceof Error ? e.message : 'Error al cargar la configuración de la empresa.';
+    if (loadId === latestLoadId) {
+      errorMessage.value =
+        e instanceof Error ? e.message : 'Error al cargar la configuración de la empresa.';
+    }
   } finally {
-    isLoading.value = false;
+    if (loadId === latestLoadId) isLoading.value = false;
   }
 }
 
@@ -299,7 +305,9 @@ async function handleSaveSettings(): Promise<void> {
       chief_accountant_cpc_number: formChiefAccountantCpc.value.trim() || undefined,
     };
 
+    const savingCompanyId = props.activeCompanyId;
     const response = await apiClient.value.updateCompanySettings(payload);
+    if (savingCompanyId !== props.activeCompanyId) return;
     successMessage.value = '¡Parámetros de empresa y régimen de divisas actualizados con éxito!';
     companyData.value = response.data.company;
     settingsData.value = response.data.settings;
@@ -324,6 +332,16 @@ async function handleSaveSettings(): Promise<void> {
 }
 
 onMounted(() => {
+  void loadCompanyData();
+});
+
+watch(() => props.activeCompanyId, () => {
+  // Evita mostrar datos de otra empresa tras cambiar de tenant en el sidebar.
+  companyData.value = null;
+  settingsData.value = null;
+  economicProfileReady.value = false;
+  formEconomicActivities.value = [];
+  formLegalForm.value = '';
   void loadCompanyData();
 });
 </script>
