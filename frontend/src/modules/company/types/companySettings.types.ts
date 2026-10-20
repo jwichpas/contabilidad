@@ -1,5 +1,20 @@
 import type { CurrencyItem } from '@/modules/accounting/types/catalogs.types';
 
+export type LegalForm =
+  | 'PERSONA_NATURAL' | 'EIRL' | 'SAC' | 'SRL' | 'SA' | 'SAA' | 'SACS' | 'OTRA';
+
+export type EconomicSector =
+  | 'COMERCIAL' | 'SERVICIOS' | 'INDUSTRIAL' | 'AGRICOLA' | 'GANADERIA'
+  | 'PESCA' | 'CONSTRUCCION' | 'EXTRACTIVA' | 'TRANSPORTE_LOGISTICA' | 'OTROS';
+
+export interface CompanyEconomicActivity {
+  readonly id?: number;
+  readonly sector_code: EconomicSector;
+  readonly ciiu_code: string;
+  readonly description: string;
+  readonly is_primary: boolean;
+}
+
 export interface CompanyInfo {
   readonly id: number;
   readonly uuid?: string;
@@ -23,7 +38,8 @@ export interface CompanySettingDetails {
   readonly company_id: number;
   readonly base_currency_id: number;
   readonly secondary_currency_id?: number | null;
-  readonly tax_regime: 'GENERAL' | 'MYPE_TRIBUTARIO' | 'RER' | 'ESPECIAL';
+  readonly tax_regime: 'GENERAL' | 'MYPE_TRIBUTARIO' | 'RER' | 'ESPECIAL' | 'NRUS';
+  readonly legal_form?: LegalForm | null;
   readonly default_vat_rate: string;
   readonly is_retention_agent: boolean;
   readonly is_perception_agent: boolean;
@@ -50,6 +66,10 @@ export interface CompanySettingsData {
   readonly settings: CompanySettingDetails;
   readonly company_currencies: readonly CompanyCurrencyItem[];
   readonly all_currencies: readonly CurrencyItem[];
+  readonly economic_profile_ready?: boolean;
+  readonly economic_activities?: readonly CompanyEconomicActivity[];
+  readonly economic_sectors?: readonly EconomicSector[];
+  readonly legal_forms?: readonly LegalForm[];
 }
 
 export interface UpdateCompanySettingsPayload {
@@ -59,6 +79,8 @@ export interface UpdateCompanySettingsPayload {
   readonly base_currency_id?: number;
   readonly secondary_currency_ids?: readonly number[];
   readonly tax_regime?: string;
+  readonly legal_form?: LegalForm | null;
+  readonly economic_activities?: readonly Omit<CompanyEconomicActivity, 'id'>[];
   readonly default_vat_rate?: number;
   readonly is_retention_agent?: boolean;
   readonly is_perception_agent?: boolean;
