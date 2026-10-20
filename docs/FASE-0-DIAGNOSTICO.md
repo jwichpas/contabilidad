@@ -50,6 +50,18 @@ El usuario ejecutó en Windows/PowerShell, desde `C:\\Proyectos\\contabilidad\\b
 - Tras aplicar se debe permitir actualización de caché del shared pooler, confirmar conexión `pgsql` real, repetir únicamente prueba de privilegios y retirar la variable temporal `DB_APP_BACKEND_NEW_PASSWORD`. Coordinar credenciales de cualquier backend desplegado para no interrumpirlo.
 - Prueba Pest de privilegios se reforzó con una comprobación del usuario efectivo `current_user='app_backend'`, para evitar aprobar erróneamente una ejecución bajo `postgres`. **F0 sigue abierta**; credencial y pruebas pendientes.
 
+## Rotación ejecutada en PostgreSQL — 2026-10-20
+
+**El usuario ejecutó por Artisan** `php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_20_000000_rotate_app_backend_credential.php --force` y reportó `DONE` (1 s). Se verificó por SELECT directo en Supabase:
+
+- `public.migrations`: **17 aplicadas**, `2026_10_20_000000_rotate_app_backend_credential` registrada en **batch 8**.
+- Rol `app_backend`: `rolcanlogin = true`, `rolbypassrls = false`, `rolsuper = false`, sin caducidad. No se consultó ni reveló contraseña ni verificador.
+- Roles `anon` y `authenticated`: **0 tablas, 0 secuencias y 0 funciones** con privilegios efectivos en `public`.
+- `app_backend`: **31 tablas con SELECT, 20 secuencias con USAGE y 5 funciones con EXECUTE**; sin cambios con respecto a validación previa.
+- Datos preservados: **1 empresa, 2 asientos contables y 4 líneas**.
+
+**Pendiente:** comprobar autenticación real vía Laravel `pgsql` contra Supavisor 6543 con la nueva contraseña y ejecutar `php artisan test tests/Feature/Security/PublicDataApiPrivilegesTest.php`. No afirmar que ya se confirmó la conexión de la aplicación. Después de las comprobaciones y de actualizar cualquier despliegue, eliminar del `.env` la variable temporal `DB_APP_BACKEND_NEW_PASSWORD` manteniendo `DB_PASSWORD`. La Fase 0 permanece abierta.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
