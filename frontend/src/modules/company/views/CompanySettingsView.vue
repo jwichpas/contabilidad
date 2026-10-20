@@ -810,7 +810,7 @@ watch(() => props.activeCompanyId, () => {
             <div v-if="!economicProfileReady" class="flex items-start gap-2 text-xs text-muted border border-line rounded-md p-3 bg-soft">
               <AlertTriangle class="w-4 h-4 shrink-0" />
               <span>
-                Perfil pendiente de habilitación. Mañana, al ejecutar las migraciones Laravel,
+                Perfil pendiente de habilitación. Después de ejecutar las migraciones Laravel,
                 esta sección permitirá guardar actividades y sectores. Los demás parámetros
                 pueden seguir modificándose.
               </span>
