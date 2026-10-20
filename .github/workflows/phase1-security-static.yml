@@ -6,6 +6,7 @@ on:
     paths:
       - 'backend/scripts/phase1-*.php'
       - '.github/workflows/phase1-security-static.yml'
+      - 'backend/tests/security/**'
   workflow_dispatch:
 
 permissions:
@@ -51,3 +52,33 @@ jobs:
           PY
       - name: Resumen de alcance
         run: echo "PASS - sintaxis y controles estaticos. No se ejecutaron consultas SQL ni pruebas RLS contra Supabase."
+
+  postgres-rls-contract:
+    name: PostgreSQL 17 - RLS negativo en contenedor temporal
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: temporary-ci-only
+          POSTGRES_DB: f1_contract
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d f1_contract"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Probar barreras RLS en datos ficticios
+        env:
+          PGPASSWORD: temporary-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: f1_contract
+        run: psql -v ON_ERROR_STOP=1 -f backend/tests/security/phase1-rls-contract.sql
