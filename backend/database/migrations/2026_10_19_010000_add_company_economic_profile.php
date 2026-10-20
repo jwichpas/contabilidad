@@ -33,6 +33,12 @@ return new class extends Migration
         Schema::connection('pgsql_migrations')->table('company_settings', function (Blueprint $table): void {
             // Nulo hasta que el contador identifique/valide la naturaleza jurídica.
             $table->string('legal_form', 32)->nullable();
+            // Datos de apertura. Nulos para empresas existentes; se completan al
+            // usar el asistente, sin alterar ejercicios o saldos anteriores.
+            $table->unsignedSmallInteger('initial_fiscal_year')->nullable();
+            $table->unsignedSmallInteger('income_reference_year')->nullable();
+            $table->decimal('annual_income', 16, 2)->nullable();
+            $table->string('initial_pcge_version', 16)->nullable();
         });
 
         Schema::connection('pgsql_migrations')->create('company_economic_activities', function (Blueprint $table): void {
@@ -57,6 +63,21 @@ return new class extends Migration
                 CHECK (legal_form IS NULL OR legal_form IN (
                     'PERSONA_NATURAL', 'EIRL', 'SAC', 'SRL', 'SA', 'SAA', 'SACS', 'OTRA'
                 ));
+
+            ALTER TABLE public.company_settings
+                ADD CONSTRAINT chk_company_settings_initial_pcge
+                CHECK (initial_pcge_version IS NULL OR initial_pcge_version IN ('PCGE_2019', 'PCGE_2026'));
+            ALTER TABLE public.company_settings
+                ADD CONSTRAINT chk_company_settings_years
+                CHECK (
+                    (initial_fiscal_year IS NULL OR initial_fiscal_year BETWEEN 2000 AND 2100)
+                    AND (income_reference_year IS NULL OR income_reference_year BETWEEN 2000 AND 2100)
+                    AND (income_reference_year IS NULL OR initial_fiscal_year IS NULL
+                         OR income_reference_year <= initial_fiscal_year)
+                );
+            ALTER TABLE public.company_settings
+                ADD CONSTRAINT chk_company_settings_annual_income
+                CHECK (annual_income IS NULL OR annual_income >= 0);
 
             ALTER TABLE public.company_economic_activities
                 ADD CONSTRAINT chk_company_economic_activities_sector
