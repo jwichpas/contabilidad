@@ -179,6 +179,10 @@ El usuario ejecutó `php artisan test tests/Feature/Security/ReadOnlyTenantApiSm
 **Preparación siguiente, código en GitHub/main SIN ejecutar en Supabase:**
 `backend/scripts/phase0-login-rollback.php`: por defecto **solo lectura** (preflight de proyecto/roles/RLS/conteos); con `--execute` explícito crea un **usuario y membresía sintéticos** dentro de una transacción `pgsql`, prueba el login HTTP 200, emisión de token Sanctum, Bearer de acceso a la propia empresa y auditoría `AUTH_LOGIN`, ejecuta siempre `ROLLBACK` y compara los conteos desde la conexión administrativa. Usa IDs explícitos también para tokens y auditoría para evitar adelantar secuencias. No toca usuarios existentes ni imprime contraseñas/tokens. **El login HTTP completo y el modo --execute NO se han probado aún**, no declarar PASS anticipadamente. Una transacción no garantiza revertir efectos externos futuros, como mensajes enviados por listeners; se evita finalizar kernel y el entorno es local.
 
+**Seguridad de auditoría global (hallazgo para revisión):** el SELECT agregado detectó 2 eventos de auditoría globales (`company_id IS NULL`) y 32 eventos asociados a empresa. La política de lectura de `audit_logs` permite filas globales a `app_backend` aun sin empresa; no se localizaron accesos directos públicos y no se consultó ningún contenido sensible. Antes de exponer auditoría vía API hay que definir permisos explícitos por usuario y finalidad.
+
+**Preflight adicional:** `users`, `company_user`, `personal_access_tokens` y `audit_logs` no tienen triggers propios no internos actualmente, según catálogo PG. La ejecución opcional del script de login configura caché, rate limiting y sesión en memoria (`array`) para minimizar efectos externos. No es prueba de ausencia universal de efectos de eventos/librerías.
+
 **Pendientes relevantes:** prueba HTTP de login real con rollback, revisión de autorización y rate limiting, verificación de recuperación y respaldo; seguridad completa de tablas globales no se logra sin controles de aplicación y eventual diseño de esquema. Fase 0 continúa en progreso.
 
 ## 1. Objetivo y alcance de este registro
