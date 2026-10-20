@@ -229,6 +229,14 @@ php scripts/phase0-login-rollback.php --execute
 
 **Pendientes de F0:** verificación documentada de respaldos y recuperación; revisión de comportamientos de expiración/revocación de tokens y de autorización de tablas globales (sin aplicar RLS indiscriminado), pruebas del resto de endpoints HTTP y preflight estático para decidir qué partes de la suite con escritura son seguras. No ejecutar la suite global en la única base compartida hasta revisar ese riesgo.
 
+## Hallazgo de seguridad: tokens Sanctum sin vencimiento — 2026-10-20
+
+**Comprobación por SQL de solo lectura:** `personal_access_tokens=28`; **28/28** filas tienen `expires_at IS NULL`; **0** registran vencimiento futuro o pasado; **9/28** no tienen `last_used_at` registrado. Los tokens se emitieron entre 2026-10-19 y 2026-10-20. **No se consultaron valores ni hashes de tokens.**
+
+**Revisión de código:** `backend/config/sanctum.php` establece `'expiration' => null` y `'last_used_at' => env('SANCTUM_TRACK_LAST_USED_AT', false)`; `LoginController` llama `$user->createToken($deviceName)` sin vencimiento por token. En esta configuración los Bearer tokens no expiran automáticamente por edad o columna `expires_at`, salvo revocación explícita. `LogoutController` revoca el token en cierre de sesión, pero falta validar el flujo con token real y la política de invalidez por usuario, baja o inactividad.
+
+**Acción recomendada (NO implementada, decisión pendiente):** acordar duración máxima de token y política de sesiones (por ejemplo 8–12 horas para personal de contabilidad; diferente para integraciones servidor-servidor). Proponer control `SANCTUM_TOKEN_EXPIRATION_MINUTES`, vencimiento de tokens nuevos, pruebas de expiración/revocación y plan de transición para los 28 tokens actuales. **No activar un vencimiento global sin autorización y sin prever desconexión de usuarios existentes.** La revisión no modificó datos ni configuración.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
