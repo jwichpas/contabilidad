@@ -452,6 +452,15 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Normativa verificada:** [Resolución CNC 002-2026-EF/30](https://busquedas.elperuano.pe/dispositivo/NL/2550786-1), PCGE 2026 obligatorio desde 2028, adopción anticipada posible; README principal corregido.
 - **Evidencias y pendientes:** [Registro actualizado de Fase 0](docs/FASE-0-DIAGNOSTICO.md). F0.1–F0.3 aún abiertas; 0/27 marcadas; F1 no iniciada.
 
+### Actualización 2026-10-19 — F0: preflight, respaldo y matriz funcional
+
+- Se agregó [preflight estático de F0](backend/scripts/phase0-preflight.php), independiente de Laravel/Composer/PostgreSQL. Validada su sintaxis en PHP 8.4 y ensayados dos casos simulados: 8 verificaciones satisfactorias y detección de contraseña inline. **Aún no se ejecutó sobre un checkout completo del repositorio con credenciales reales.**
+- Se agregó [script protegido de respaldo](backend/scripts/phase0-backup.sh): exporta `public` en formato custom de `pg_dump`, genera catálogo con `pg_restore --list` y SHA-256 fuera del repositorio. Sintaxis Bash comprobada; **no se ha ejecutado contra la BD ni se ha hecho prueba de restauración**.
+- [Matriz de estado funcional de F0](docs/FASE-0-MATRIZ-FUNCIONAL.md): inventario por módulo con evidencia, rutas ya existentes y ausencias localizadas. Precaución: Vue ya incluye selector global de empresa y un editor de asientos; **no rehacer sin pruebas**.
+- [Comando Artisan F0](backend/app/Console/Commands/AuditPhaseZero.php) mejorado: comprueba el proyecto correcto, abre transacción de solo lectura y compara nombres de migraciones.
+- Nuevos hallazgos para **F2**: frontend `JournalEntryView.vue` usa `parseFloat`/`toFixed`; motor de extornos disponible como servicio, pero sin ruta API localizada.
+- **Sin modificación de esquema**, migraciones o datos en Supabase. F0.1, F0.2 y F0.3 siguen **EN PROGRESO** (0/27 tareas aprobadas).
+
 ### Actualización 2026-10-19 — Laravel como único gestor de esquema
 
 - **Regla obligatoria:** las tablas, índices, restricciones, triggers, políticas RLS y demás cambios DDL se crean o modifican desde **migraciones Laravel**, jamás desde el editor SQL de Supabase. Las verificaciones `SELECT` y advisories de Supabase continúan permitidas.
@@ -480,9 +489,11 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
 - **Política obligatoria de esquema Laravel:** [docs/ARQUITECTURA-BD-LARAVEL.md](docs/ARQUITECTURA-BD-LARAVEL.md).
+- **Matriz funcional F0:** [docs/FASE-0-MATRIZ-FUNCIONAL.md](docs/FASE-0-MATRIZ-FUNCIONAL.md).
+- **Preflight y respaldo F0:** `php backend/scripts/phase0-preflight.php` y `backend/scripts/phase0-backup.sh` (este último no ejecutado aún).
 - **Comando de diagnóstico F0:** `php artisan contabilidad:auditar-fase0` (solo lectura; sin mutaciones).
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
 **Estado al 2026-10-19: _FASE 0 EN PROGRESO SOBRE LA BD DE DESARROLLO ÚNICA; 0/27 ACTIVIDADES APROBADAS; HITOS H1–H4 PENDIENTES_.**
