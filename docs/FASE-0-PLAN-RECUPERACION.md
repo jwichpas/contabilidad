@@ -4,6 +4,27 @@
 > Estado al 20/10/2026: **propuesta documental**, sin copia ni restauración realizada.  
 > Regla: **no ejecutar `pg_dump`, `pg_restore`, `migrate:fresh`, `DROP`, `DELETE` masivos, ni restauración de Dashboard** sin autorización expresa y destino separado revisado.
 
+## Primer ensayo de recuperación y corrección de inicialización (20/10/2026)
+
+El usuario comprobó que Docker opera con motor Linux. El ensayo confirmó la huella SHA-256 y pudo crear un contenedor PostgreSQL 17 `--network none`; falló al ejecutar el `CREATE SCHEMA public;` del dump porque el esquema `public` ya viene creado en una base PostgreSQL recién inicializada. La limpieza `docker rm --force` terminó correctamente. **La restauración NO se completó.**
+
+Se corrigió `backend/scripts/phase0-restore-rehearsal.ps1` en commit `86d1688`: una vez iniciado el contenedor aislado, elimina **solo `public` vacío** mediante `docker exec ... DROP SCHEMA public RESTRICT;` (sin CASCADE) para que lo recree el dump. El cambio **solo se aplica dentro del contenedor temporal sin red/puertos**, nunca en Supabase ni en el equipo local. Reintento aún pendiente.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only
+cd backend
+.\scripts\phase0-restore-rehearsal.ps1 -Archive "C:\CONTA\contabilidad-public-20261020T210205261Z.dump"
+```
+
+La comprobación `Get-BitLockerVolume -MountPoint "C:"` **no pudo obtener el estado del volumen** (acceso CIM denegado y mensaje de volumen BitLocker no asociado). Para verificar desde terminal con permisos administrativos:
+
+```powershell
+manage-bde -status C:
+```
+
+La información de `Protection Status` / `Conversion Status` determina si BitLocker protege `C:`. En Windows con Cifrado de dispositivo, verificar adicionalmente su interfaz de Configuración. **No asumir cifrado activo por haber pasado `-EncryptedDestinationConfirmed`**. Si C: no está cifrada, custodiar los tres archivos del respaldo en un volumen cifrado fuera de Git. El ensayo de Docker no certifica esta protección.
+
 ## Evidencia de respaldo generado en Windows — 20/10/2026
 
 **Salida local aportada por el usuario:** se ejecutó `backend/scripts/phase0-backup-windows.ps1 -Destination "C:\CONTA" -EncryptedDestinationConfirmed`. El script informó **`[PASS]`** en `pg_dump` (PostgreSQL cliente 17), creación de inventario con `pg_restore --list`, huella SHA-256 y manifiesto. Esta evidencia es del equipo del usuario; **no tenemos acceso desde aquí a los bytes ni al archivo local**.
