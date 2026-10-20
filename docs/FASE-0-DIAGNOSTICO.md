@@ -202,6 +202,33 @@ El usuario ejecutó `php artisan test tests/Feature/Security/ReadOnlyTenantApiSm
 
 **Siguiente paso:** `git pull --ff-only`; validación de sintaxis de los dos archivos; ejecutar primero preflight solo lectura del script, después una sola ejecución `--execute`. Criterio PASS: login HTTP 200, token Sanctum, acceso Bearer a empresas propias, fila de auditoría transaccional, ROLLBACK y conteos idénticos. **No se ha logrado PASS de este control aún**. No ejecutar la suite global ni repetir el script sin revisar cualquier error.
 
+## Fase 0 — Login HTTP + Bearer + auditoría aprobado con rollback — 2026-10-20
+
+**Resultado real ejecutado por el usuario tras el ajuste de `AuditLoggerService`:**
+
+```text
+php -l app/Services/Security/AuditLoggerService.php
+No syntax errors detected in app/Services/Security/AuditLoggerService.php
+php -l scripts/phase0-login-rollback.php
+No syntax errors detected in scripts/phase0-login-rollback.php
+
+php scripts/phase0-login-rollback.php
+[PREFLIGHT] Conteos: {"companies":1,"users":1,"memberships":1,"tokens":28,"audits":34,"entries":2}
+[OK] Preflight solo lectura. No se crearon usuarios, tokens ni auditorias.
+
+php scripts/phase0-login-rollback.php --execute
+[PREFLIGHT] Conteos: {"companies":1,"users":1,"memberships":1,"tokens":28,"audits":34,"entries":2}
+[CHECK] Login 200: token Sanctum y empresa autorizada obtenidos sin imprimir secretos.
+[CHECK] Bearer autentica GET /tenant/companies de la empresa autorizada.
+[CHECK] Auditoria AUTH_LOGIN creada dentro de la transaccion.
+[VERIFY] Conteos finales: {"companies":1,"users":1,"memberships":1,"tokens":28,"audits":34,"entries":2}
+[PASS] Login+Bearer+auditoria con ROLLBACK confirmado.
+```
+
+**Confirmación independiente por SELECT en Supabase:** `companies=1`, `users=1`, `memberships=1`, `tokens=28`, `audits=34`, `entries=2`, `lines=4`, `migrations=18`. Los datos quedaron preservados. **Se cierra el incidente 42501 → 25P02** del ensayo anterior y el control puntual de login HTTP/consulta autorizada por token/auditoría. No extrapolarlo a todas las funcionalidades de Sanctum ni a una aprobación general de F0.
+
+**Pendientes de F0:** verificación documentada de respaldos y recuperación; revisión de comportamientos de expiración/revocación de tokens y de autorización de tablas globales (sin aplicar RLS indiscriminado), pruebas del resto de endpoints HTTP y preflight estático para decidir qué partes de la suite con escritura son seguras. No ejecutar la suite global en la única base compartida hasta revisar ese riesgo.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
