@@ -5,6 +5,20 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## F0 — Autorización de respaldo y futura BD PostgreSQL independiente (20/10/2026)
+
+**Decisión explícita del usuario:** `contabilidad-database` (Supabase) seguirá siendo únicamente el ambiente de **desarrollo**. La producción futura usará **PostgreSQL independiente**, con backend Laravel y RLS. El usuario aprobó preparar y ejecutar una copia lógica con validación de restauración **en un entorno separado**. Esto cambia la decisión anterior de no generar backups, pero **no constituye evidencia de ejecución**.
+
+**Artefactos versionados en rama principal:**
+1. `backend/scripts/phase0-backup-preflight.ps1`: chequeo local sin conexiones ni archivos generados, ahora revisa pg_dump, pg_restore, psql y Docker.
+2. `backend/scripts/phase0-backup-windows.ps1`: `pg_dump` custom solo de `public` desde Supabase PostgreSQL 17; destino preexistente cifrado fuera del repositorio, sesión administrativa 5432, contraseña solicitada de forma privada; índice, SHA256, manifiesto de conteos leídos por SELECT. **Todavía no ejecutado en Windows**.
+3. `backend/scripts/phase0-restore-rehearsal.ps1`: Docker `postgres:17-alpine`, `--network none`, sin puertos ni acceso al origen, `pg_restore` y verificación de 7 conteos estables/funciones/RLS, eliminación del contenedor. **Todavía no ejecutado**.
+4. [Plan de recuperación actualizado](FASE-0-PLAN-RECUPERACION.md) y [contrato de PostgreSQL producción](PORTABILIDAD-POSTGRESQL-PRODUCCION.md).
+
+**Evidencia de catálogo adicional:** extensiones fuente `pg_stat_statements` (`extensions`), `pgcrypto` (`extensions`), `uuid-ossp` (`extensions`), `supabase_vault` (`vault`) y `plpgsql` (`pg_catalog`). Defaults UUID de las tablas ERP de `public` usan `gen_random_uuid()`. Una restauración del esquema `public` **NO** valida recuperación de Supabase Auth, Storage, roles de producción o GRANTs suprimidos en `pg_dump --no-acl`. Tampoco está lista la infraestructura productiva.
+
+**Siguiente evidencia requerida:** usuario ejecuta scripts en su PC con PostgreSQL client 17, carpeta local cifrada y Docker Linux; comparte SOLO salida de estado (sin credenciales, dump, email/hash). Primero confirmar backup, luego restauración aislada. Cualquier error detiene el procedimiento: no aplicar cambios DDL hasta revisión.
+
 ## Cierre de Fase 0 — revisión Free/seguridad y plan de respaldo pendiente (2026-10-20)
 
 **Verificación independiente mediante Supabase (consultas de solo lectura):**
