@@ -27,6 +27,7 @@ $console->bootstrap();
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -72,6 +73,7 @@ $baseline = null;
 $txnStarted = false;
 $ok = false;
 $rollbackOk = false;
+$phase = 'preflight';
 
 try {
     $appRole = $application->selectOne('SELECT current_user AS role_name, current_database() AS db');
@@ -135,6 +137,7 @@ try {
 
     $application->beginTransaction();
     $txnStarted = true;
+    $phase = 'crear_usuario_transitorio';
 
     // Como Eloquent/Sanctum normalmente usa BIGSERIAL, fijamos los IDs
     // solo para esta ejecucion, antes del INSERT, sin consumir secuencias.
@@ -176,6 +179,7 @@ try {
         ['email' => $email, 'password' => $password, 'device_name' => 'phase0-rollback']
     );
     $request->headers->set('Accept', 'application/json');
+    $phase = 'login_http';
     $response = $http->handle($request);
     if ($response->getStatusCode() !== 200) {
         throw new RuntimeException('El login sintetico no devolvio HTTP 200 (recibido: '
@@ -192,6 +196,7 @@ try {
     }
     unset($data, $password, $request, $response);
 
+    $phase = 'verificar_token';
     $tokenCount = (int) $application->selectOne(
         'SELECT count(*) AS total FROM public.personal_access_tokens WHERE tokenable_id = ?::bigint',
         [$userId]
@@ -206,6 +211,7 @@ try {
     $authedRequest = Request::create('/api/v1/tenant/companies', 'GET');
     $authedRequest->headers->set('Accept', 'application/json');
     $authedRequest->headers->set('Authorization', 'Bearer '.$token);
+    $phase = 'bearer_http';
     $authedResponse = $http->handle($authedRequest);
     if ($authedResponse->getStatusCode() !== 200) {
         throw new RuntimeException('La llamada por token Bearer no devolvio HTTP 200.');
@@ -218,6 +224,7 @@ try {
     echo '[CHECK] Bearer autentica GET /tenant/companies de la empresa autorizada.', PHP_EOL;
 
     $application->selectOne('SELECT set_config(?, ?, true)', ['app.current_company_id', (string) $companyId]);
+    $phase = 'auditoria';
     $successAudit = (int) $application->selectOne(
         "SELECT count(*) AS total FROM public.audit_logs WHERE user_id = ?::bigint AND event_type = 'AUTH_LOGIN'",
         [$userId]
@@ -227,8 +234,15 @@ try {
     }
     echo '[CHECK] Auditoria AUTH_LOGIN creada dentro de la transaccion.', PHP_EOL;
     $ok = true;
+} catch (QueryException $e) {
+    // QueryException incluye las consultas SQL y bindings en su mensaje.
+    // Nunca imprimirlo: el login maneja contrasenas y tokens.
+    $rawCode = (string) $e->getCode();
+    $sqlstate = preg_match('/^[0-9A-Z]{5}$/', $rawCode) ? $rawCode : 'UNKNOWN';
+    fwrite(STDERR, '[ERROR_SQL] Etapa='.$phase.' SQLSTATE='.$sqlstate
+        .'; se efectuara ROLLBACK.'.PHP_EOL);
 } catch (RuntimeException $e) {
-    fwrite(STDERR, '[BLOQUEO] '.$e->getMessage().PHP_EOL);
+    fwrite(STDERR, '[BLOQUEO] Etapa='.$phase.' '. $e->getMessage().PHP_EOL);
 } catch (Throwable $e) {
     // No imprimir excepciones SQL: pueden incluir campos privados o secretos.
     fwrite(STDERR, '[ERROR] La prueba de login no se completo ('
