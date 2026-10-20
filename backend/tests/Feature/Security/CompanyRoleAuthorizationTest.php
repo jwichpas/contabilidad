@@ -48,12 +48,20 @@ beforeEach(function (): void {
     ]);
 
     $now = now();
-    DB::table('company_user')->insert([
-        ['company_id' => $this->companyA->id, 'user_id' => $this->administrator->id, 'role' => 'ADMIN', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-        ['company_id' => $this->companyB->id, 'user_id' => $this->administrator->id, 'role' => 'AUDITOR', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-        ['company_id' => $this->companyB->id, 'user_id' => $this->accountant->id, 'role' => 'ACCOUNTANT', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-        ['company_id' => $this->companyB->id, 'user_id' => $this->operator->id, 'role' => 'DATA_ENTRY', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-    ]);
+    $tenantContext = app(\App\Support\Tenant\TenantContext::class);
+    $tenantContext->run($this->companyA->id, function () use ($now): void {
+        DB::table('company_user')->insert([
+            'company_id' => $this->companyA->id, 'user_id' => $this->administrator->id,
+            'role' => 'ADMIN', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+    });
+    $tenantContext->run($this->companyB->id, function () use ($now): void {
+        DB::table('company_user')->insert([
+            ['company_id' => $this->companyB->id, 'user_id' => $this->administrator->id, 'role' => 'AUDITOR', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['company_id' => $this->companyB->id, 'user_id' => $this->accountant->id, 'role' => 'ACCOUNTANT', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['company_id' => $this->companyB->id, 'user_id' => $this->operator->id, 'role' => 'DATA_ENTRY', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+        ]);
+    });
 });
 
 it('denies writes to auditors even if they are administrators of another company', function (): void {
@@ -101,10 +109,12 @@ it('checks membership and role for the requested tenant, not the default tenant'
 });
 
 it('denies access immediately after membership is revoked', function (): void {
-    DB::table('company_user')
-        ->where('company_id', $this->companyB->id)
-        ->where('user_id', $this->accountant->id)
-        ->update(['is_active' => false]);
+    app(\App\Support\Tenant\TenantContext::class)->run($this->companyB->id, function (): void {
+        DB::table('company_user')
+            ->where('company_id', $this->companyB->id)
+            ->where('user_id', $this->accountant->id)
+            ->update(['is_active' => false]);
+    });
 
     $this->actingAs($this->accountant)
         ->withHeader('X-Company-Id', (string) $this->companyB->id)
