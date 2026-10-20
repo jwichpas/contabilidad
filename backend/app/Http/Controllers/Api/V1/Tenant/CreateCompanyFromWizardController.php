@@ -133,7 +133,7 @@ final readonly class CreateCompanyFromWizardController
                 // Si falla algún paso o el PCGE, la transacción EXTERNA revierte
                 // empresa, membresía, monedas, actividades y todas sus cuentas.
                 $plan = $this->tenantContext->run($companyId, function () use (
-                    $company, $companyId, $validated, $currencyMap, $currencyCodes, $user, $request
+                    $company, $companyId, $validated, $currencyMap, $currencyCodes, $taxId, $user, $request
                 ): array {
                     $now = now();
                     DB::table('company_user')->insert([
