@@ -166,6 +166,17 @@ export function useAuthSession() {
   }
 
   /**
+   * Incorpora al selector la empresa recién confirmada por el backend.
+   * No crea una empresa localmente: exige respuesta del endpoint POST autenticado.
+   */
+  function registerCreatedCompany(company: UserCompany): void {
+    if (!isAuthenticated.value) return;
+    const rest = userCompanies.value.filter(existing => existing.id !== company.id);
+    userCompanies.value = [...rest, company];
+    sessionStorage.setItem(STORAGE_COMPANIES_KEY, JSON.stringify(userCompanies.value));
+  }
+
+  /**
    * Cierre de sesión y revocación del token en base de datos
    */
   async function logout(): Promise<void> {
@@ -269,5 +280,6 @@ export function useAuthSession() {
     switchCompany,
     ensureAuthenticated,
     fetchUserCompanies,
+    registerCreatedCompany,
   };
 }
