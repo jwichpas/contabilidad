@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Api\V1\Company;
 
 use App\Models\Company;
 use App\Models\CompanyCurrency;
+use App\Models\CompanyEconomicActivity;
+use App\Support\Company\CompanyEconomicProfile;
 use App\Models\CompanySetting;
 use App\Models\Currency;
 use App\Services\Security\AuditLoggerService;
@@ -14,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 /**
  * Endpoint para actualizar los datos de la empresa, su configuración de divisas (moneda base y secundarias)
@@ -30,6 +33,8 @@ final readonly class UpdateCompanySettingsController
     {
         $companyId = $this->tenantContext->requireCompanyId(CompanySetting::class);
 
+        $economicProfileReady = CompanyEconomicProfile::isReady();
+
         $validated = $request->validate([
             // Datos generales de la empresa
             'business_name' => ['sometimes', 'required', 'string', 'max:200'],
@@ -42,7 +47,14 @@ final readonly class UpdateCompanySettingsController
             'secondary_currency_ids.*' => ['integer', 'exists:currencies,id'],
 
             // Parámetros tributarios SUNAT
-            'tax_regime' => ['sometimes', 'required', 'string', 'in:GENERAL,MYPE_TRIBUTARIO,RER,ESPECIAL'],
+            'tax_regime' => ['sometimes', 'required', 'string', 'in:GENERAL,MYPE_TRIBUTARIO,RER,ESPECIAL,NRUS'],
+            'legal_form' => ['sometimes', 'nullable', 'string', Rule::in(CompanyEconomicProfile::LEGAL_FORMS)],
+            'economic_activities' => ['sometimes', 'required', 'array', 'min:1', 'max:10'],
+            'economic_activities.*' => ['required', 'array:sector_code,ciiu_code,description,is_primary'],
+            'economic_activities.*.sector_code' => ['required', 'string', Rule::in(CompanyEconomicProfile::SECTORS)],
+            'economic_activities.*.ciiu_code' => ['required', 'string', 'regex:/^[0-9]{4}$/'],
+            'economic_activities.*.description' => ['required', 'string', 'max:200'],
+            'economic_activities.*.is_primary' => ['required', 'boolean'],
             'default_vat_rate' => ['sometimes', 'required', 'numeric', 'min:0', 'max:100'],
             'is_retention_agent' => ['sometimes', 'boolean'],
             'is_perception_agent' => ['sometimes', 'boolean'],
@@ -65,6 +77,36 @@ final readonly class UpdateCompanySettingsController
             'cost_absorption_account_id' => ['nullable', 'integer', 'exists:accounting_accounts,id'],
             'retained_earnings_account_id' => ['nullable', 'integer', 'exists:accounting_accounts,id'],
         ]);
+
+        // Los campos nuevos no deben disparar errores SQL antes de ejecutar
+        // la migración Laravel pendiente sobre la única base de desarrollo.
+        $profileRequested = array_key_exists('legal_form', $validated)
+            || array_key_exists('economic_activities', $validated);
+
+        if ($profileRequested && ! $economicProfileReady) {
+            throw ValidationException::withMessages([
+                'economic_activities' => [
+                    'El perfil económico aún no está habilitado. Ejecute primero las migraciones Laravel pendientes.',
+                ],
+            ]);
+        }
+
+        if (array_key_exists('economic_activities', $validated)) {
+            $activities = $validated['economic_activities'];
+            $primaryCount = count(array_filter(
+                $activities,
+                static fn (array $activity): bool => (bool) $activity['is_primary']
+            ));
+            $ciiuCodes = array_column($activities, 'ciiu_code');
+
+            if ($primaryCount !== 1 || count($ciiuCodes) !== count(array_unique($ciiuCodes))) {
+                throw ValidationException::withMessages([
+                    'economic_activities' => [
+                        'Debe indicar exactamente una actividad principal y no repetir códigos CIIU.',
+                    ],
+                ]);
+            }
+        }
 
         // Validación de no duplicidad entre moneda base y secundarias
         if (isset($validated['base_currency_id'], $validated['secondary_currency_ids'])) {
@@ -93,6 +135,19 @@ final readonly class UpdateCompanySettingsController
 
         $oldCompanyValues = $company->only(['business_name', 'legal_address', 'tax_id']);
         $oldSettingValues = $settings->toArray();
+        if ($economicProfileReady && array_key_exists('economic_activities', $validated)) {
+            $oldSettingValues['economic_activities'] = CompanyEconomicActivity::query()
+                ->where('company_id', $companyId)->get()->toArray();
+        }
+
+        // NRUS corresponde solamente a una persona natural elegible.
+        $effectiveRegime = $validated['tax_regime'] ?? $settings->tax_regime;
+        $effectiveLegalForm = $validated['legal_form'] ?? $settings->legal_form;
+        if ($effectiveRegime === 'NRUS' && $effectiveLegalForm !== 'PERSONA_NATURAL') {
+            throw ValidationException::withMessages([
+                'tax_regime' => ['Nuevo RUS requiere una persona natural elegible y la validación de sus actividades.'],
+            ]);
+        }
 
         DB::transaction(function () use ($company, $settings, $validated, $companyId): void {
             // 1. Actualizar datos de Company
@@ -136,6 +191,7 @@ final readonly class UpdateCompanySettingsController
                 'base_currency_id',
                 'secondary_currency_id',
                 'tax_regime',
+                'legal_form',
                 'default_vat_rate',
                 'is_retention_agent',
                 'is_perception_agent',
@@ -158,7 +214,39 @@ final readonly class UpdateCompanySettingsController
             if (! empty($settingUpdates)) {
                 $settings->update($settingUpdates);
             }
+
+            // Una transacción engloba TODOS los cambios de clasificación;
+            // nunca quedan dos actividades principales, incluso si un paso falla.
+            if (array_key_exists('economic_activities', $validated)) {
+                CompanyEconomicActivity::query()
+                    ->where('company_id', $companyId)
+                    ->update(['is_primary' => false]);
+
+                $validCodes = [];
+                foreach ($validated['economic_activities'] as $activity) {
+                    $validCodes[] = $activity['ciiu_code'];
+                    CompanyEconomicActivity::query()->updateOrCreate(
+                        ['company_id' => $companyId, 'ciiu_code' => $activity['ciiu_code']],
+                        [
+                            'sector_code' => $activity['sector_code'],
+                            'description' => trim($activity['description']),
+                            'is_primary' => (bool) $activity['is_primary'],
+                        ]
+                    );
+                }
+
+                CompanyEconomicActivity::query()
+                    ->where('company_id', $companyId)
+                    ->whereNotIn('ciiu_code', $validCodes)
+                    ->delete();
+            }
         });
+
+        $newSettingValues = $settings->fresh()->toArray();
+        if ($economicProfileReady && array_key_exists('economic_activities', $validated)) {
+            $newSettingValues['economic_activities'] = CompanyEconomicActivity::query()
+                ->where('company_id', $companyId)->get()->toArray();
+        }
 
         // Auditoría ISO/IEC 27001
         $this->auditLogger->log(
@@ -168,7 +256,7 @@ final readonly class UpdateCompanySettingsController
             auditableType: CompanySetting::class,
             auditableId: (string) $settings->id,
             oldValues: array_merge($oldCompanyValues, $oldSettingValues),
-            newValues: array_merge($company->only(['business_name', 'legal_address', 'tax_id']), $settings->fresh()->toArray()),
+            newValues: array_merge($company->only(['business_name', 'legal_address', 'tax_id']), $newSettingValues),
             request: $request,
             severity: 'INFO',
         );
@@ -196,6 +284,11 @@ final readonly class UpdateCompanySettingsController
                     'retainedEarningsAccount',
                 ]),
                 'company_currencies' => $companyCurrencies,
+                'economic_profile_ready' => $economicProfileReady,
+                'economic_activities' => $economicProfileReady
+                    ? CompanyEconomicActivity::query()->where('company_id', $companyId)
+                        ->orderByDesc('is_primary')->orderBy('id')->get()
+                    : [],
             ],
         ]);
     }
