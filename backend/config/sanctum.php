@@ -62,7 +62,10 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Politica F0 aprobada: 12 horas como duracion MAXIMA de cada Bearer.
+    // Sanctum valida tambien la antiguedad de tokens antiguos sin expires_at.
+    // No cambia sesiones web/cookie de Laravel: aplica a API Bearer Sanctum.
+    'expiration' => 720,
 
     /*
     |--------------------------------------------------------------------------
