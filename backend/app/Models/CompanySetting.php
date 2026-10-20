@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $company_id
  * @property int $base_currency_id
  * @property int|null $secondary_currency_id
+ * @property string|null $legal_form
  * @property string $tax_regime
  * @property string $default_vat_rate
  * @property bool $is_retention_agent
@@ -45,6 +46,7 @@ class CompanySetting extends Model
         'base_currency_id',
         'secondary_currency_id',
         'tax_regime',
+        'legal_form',
         'default_vat_rate',
         'is_retention_agent',
         'is_perception_agent',
