@@ -1,6 +1,7 @@
 import { computed, shallowRef } from 'vue';
 import { asCompanyId, type CompanyId } from '@/modules/accounting/types/accountingAccount.types';
 import { COMPANY_ONBOARDING_DRAFT_KEY } from '@/modules/company/types/companyOnboarding.types';
+import { reportUnauthorizedBearer, setUnauthorizedHandler } from './sessionInvalidation';
 
 export interface AuthUser {
   readonly id: number;
@@ -29,6 +30,7 @@ export interface LoginResponseData {
 const STORAGE_TOKEN_KEY = 'erp_auth_token_iso27001';
 const STORAGE_USER_KEY = 'erp_auth_user_iso27001';
 const STORAGE_COMPANIES_KEY = 'erp_auth_companies_iso27001';
+const STORAGE_DRAFT_OWNER_KEY = 'erp_company_onboarding_draft_owner';
 
 const accessToken = shallowRef<string | null>(sessionStorage.getItem(STORAGE_TOKEN_KEY));
 const currentUser = shallowRef<AuthUser | null>(
@@ -66,6 +68,42 @@ const isLoading = shallowRef(false);
 const authError = shallowRef<string | null>(null);
 const isLiveConnected = shallowRef(false);
 const lastAuditTimestamp = shallowRef<string | null>(null);
+const sessionNotice = shallowRef<string | null>(null);
+
+/**
+ * El vencimiento de Bearer es distinto del logout deliberado.
+ * Un borrador puede conservarse solo para el mismo usuario autenticado.
+ */
+function clearLocalSession(expired: boolean): void {
+  const previousUserId = currentUser.value?.id;
+  if (expired && previousUserId && sessionStorage.getItem(COMPANY_ONBOARDING_DRAFT_KEY)) {
+    sessionStorage.setItem(STORAGE_DRAFT_OWNER_KEY, String(previousUserId));
+  } else if (!expired) {
+    sessionStorage.removeItem(COMPANY_ONBOARDING_DRAFT_KEY);
+    sessionStorage.removeItem(STORAGE_DRAFT_OWNER_KEY);
+  }
+
+  accessToken.value = null;
+  currentUser.value = null;
+  userCompanies.value = [];
+  activeCompanyId.value = asCompanyId(1);
+  isLiveConnected.value = false;
+  lastAuditTimestamp.value = null;
+  isLoading.value = false;
+  sessionStorage.removeItem(STORAGE_TOKEN_KEY);
+  sessionStorage.removeItem(STORAGE_USER_KEY);
+  sessionStorage.removeItem(STORAGE_COMPANIES_KEY);
+  sessionNotice.value = expired
+    ? 'Tu sesión de 12 horas venció o fue revocada. Inicia sesión nuevamente para continuar.'
+    : null;
+}
+
+// Una respuesta tardía de un token anterior no puede cerrar una sesión nueva.
+setUnauthorizedHandler((requestToken) => {
+  if (requestToken === accessToken.value) {
+    clearLocalSession(true);
+  }
+});
 
 /**
  * Gestor de Sesión y Autenticación Segura (ISO/IEC 27001:2023 Control 8.5).
@@ -105,8 +143,16 @@ export function useAuthSession() {
       const json = await response.json();
       const data = json.data as LoginResponseData;
 
+      // Nunca exponer el borrador de una persona a otro usuario.
+      const draftOwner = sessionStorage.getItem(STORAGE_DRAFT_OWNER_KEY);
+      if (sessionStorage.getItem(COMPANY_ONBOARDING_DRAFT_KEY)
+        && draftOwner !== String(data.user.id)) {
+        sessionStorage.removeItem(COMPANY_ONBOARDING_DRAFT_KEY);
+      }
+      sessionStorage.removeItem(STORAGE_DRAFT_OWNER_KEY);
       accessToken.value = data.token;
       currentUser.value = data.user;
+      sessionNotice.value = null;
       activeCompanyId.value = asCompanyId(data.user.current_company_id ?? 1);
       isLiveConnected.value = true;
       lastAuditTimestamp.value = new Date().toISOString();
@@ -118,6 +164,9 @@ export function useAuthSession() {
         }));
         userCompanies.value = parsed;
         sessionStorage.setItem(STORAGE_COMPANIES_KEY, JSON.stringify(parsed));
+      } else {
+        userCompanies.value = [];
+        sessionStorage.removeItem(STORAGE_COMPANIES_KEY);
       }
 
       sessionStorage.setItem(STORAGE_TOKEN_KEY, data.token);
@@ -157,10 +206,17 @@ export function useAuthSession() {
         }));
         userCompanies.value = companies;
         sessionStorage.setItem(STORAGE_COMPANIES_KEY, JSON.stringify(companies));
+        isLiveConnected.value = true;
         return companies;
       }
+      if (response.status === 401) {
+        reportUnauthorizedBearer(token);
+        return [];
+      }
+      isLiveConnected.value = false;
     } catch {
-      // Mantiene el estado en caso de fallo transitorio de red
+      // Un problema de red no implica que el Bearer haya caducado.
+      isLiveConnected.value = false;
     }
 
     return userCompanies.value;
@@ -197,14 +253,7 @@ export function useAuthSession() {
       }
     }
 
-    accessToken.value = null;
-    currentUser.value = null;
-    userCompanies.value = [];
-    isLiveConnected.value = false;
-    sessionStorage.removeItem(STORAGE_TOKEN_KEY);
-    sessionStorage.removeItem(STORAGE_USER_KEY);
-    sessionStorage.removeItem(STORAGE_COMPANIES_KEY);
-    sessionStorage.removeItem(COMPANY_ONBOARDING_DRAFT_KEY);
+    clearLocalSession(false);
   }
 
   /**
@@ -228,6 +277,10 @@ export function useAuthSession() {
         body: JSON.stringify({ company_id: Number(newCompanyId) }),
       });
 
+      if (response.status === 401) {
+        reportUnauthorizedBearer(token);
+        return false;
+      }
       if (!response.ok) {
         throw new Error('No fue posible conmutar la empresa activa.');
       }
@@ -256,11 +309,9 @@ export function useAuthSession() {
    */
   async function ensureAuthenticated(): Promise<boolean> {
     if (isAuthenticated.value && accessToken.value) {
-      isLiveConnected.value = true;
-      if (userCompanies.value.length === 0) {
-        await fetchUserCompanies();
-      }
-      return true;
+      // El caché no demuestra que el Bearer continúe vigente en Sanctum.
+      await fetchUserCompanies();
+      return isAuthenticated.value;
     }
 
     isLiveConnected.value = false;
@@ -277,6 +328,7 @@ export function useAuthSession() {
     authError,
     isLiveConnected,
     lastAuditTimestamp,
+    sessionNotice,
     login,
     logout,
     switchCompany,
