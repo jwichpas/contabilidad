@@ -3,11 +3,11 @@
 > **Proyecto:** `jwichpas/contabilidad` · **Base:** Supabase `contabilidad-database` (`bnjwxphwtkhblvhsnylj`) · **Rama:** `main`  
 > **Fecha:** 2026-10-19 (America/Lima) · **Estado:** **EN PROGRESO**, no aprobada  
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
-> **Tipo de revisión:** solo lectura en Supabase y código; cambios únicamente a archivos Markdown en GitHub. No se ejecutaron migraciones, tests que escriban BD, cambios de permisos, cambios de código ni despliegues.
+> **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
 ## 1. Objetivo y alcance de este registro
 
-Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente respaldo recuperable, pruebas efectivamente ejecutadas y verificación de migración desde cero.
+Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
 
 ## 2. Inventario del repositorio
 
@@ -81,12 +81,12 @@ Se contrastaron **14 nombres** de archivos de `backend/database/migrations/` con
 | R04 — Carrera de correlativos | ALTA | Controlador genera número vía `count() + 1` | F2: contador transaccional o estrategia segura e idempotente |
 | R06 — `search_path` mutable | ALTA | 5 funciones reportadas por asesor Supabase | F1: revisión función por función |
 | R12 — Error de cita legal del PCGE 2026 | MEDIA | Resolución correcta **002-2026-EF/30**, obligatoria desde 2028 | Corregir README y respetar vigencias en F3/F7 |
-| R13 — Ausencia de CI en GitHub | MEDIA | Ningún archivo en `.github/workflows/` | F0: ejecutar baseline aislado; F8: CI automatizada |
+| R13 — GitHub Actions no asigna runner | MEDIA | Workflow `phase0-static-baseline.yml` creado; primer run finalizó sin pasos ejecutados ni runner asignado | Revisar disponibilidad de GitHub Actions; workflow dejado en disparo manual para evitar ejecuciones fallidas repetidas |
 | R14 — Artefacto de caché de PHPUnit versionado | BAJA | `backend/.phpunit.cache/test-results` en Git | Posteriormente excluirlo del control de versiones |
 
 ### Precaución especial por R10/R11
 
-La configuración de PHPUnit contiene un valor literal que parece una credencial real de base de datos. Se omite **intencionalmente** en toda la documentación y en mensajes. Que el repositorio sea privado **no hace segura** la inclusión del secreto. La rotación y el retiro del secreto son prioritarios, pero **no se han realizado** durante F0. El mecanismo `DatabaseTransactions` de Pest reduce cierto riesgo de persistencia de datos de prueba, **no garantiza por sí mismo** aislamiento, ausencia de efectos colaterales ni seguridad para ejecución contra la base compartida.
+La credencial de PostgreSQL se retiró del archivo HEAD `backend/phpunit.xml` en commit `cc363a17`. **La rotación real permanece pendiente**: el valor antiguo puede seguir funcionando y permanecer en el historial de Git. Nunca copiar la contraseña en mensajes, issues o documentación. `DatabaseTransactions` reduce efectos persistentes pero no garantiza por sí mismo ausencia de efectos colaterales.
 
 ## 5. Revisión normativa inicial (no sustituye validación legal completa)
 
@@ -103,13 +103,13 @@ La configuración de PHPUnit contiene un valor literal que parece una credencial
 | Prueba / salvaguarda | Estado | Motivo |
 |---|---|---|
 | Descubrimiento de suites Pest | **INSPECCIONADA** | 7 archivos funcionales |
-| Ejecución `composer test` | **NO EJECUTADA** | Código disponible vía conector, sin checkout/runner; PHPUnit apunta a BD compartida y contiene credencial versionada |
-| Ejecución `pnpm typecheck` | **NO EJECUTADA** | Sin checkout de frontend o runner CI en esta sesión |
-| Ejecución `pnpm build` | **NO EJECUTADA** | Sin checkout de frontend o runner CI en esta sesión |
-| Aplicar todas las migraciones desde cero | **NO EJECUTADA** | Requiere BD aislada para ensayo |
+| Ejecución `composer test` | **NO EJECUTADA** | Aún no se ha validado un runner con credenciales renovadas; contraseña inline retirada del XML |
+| Ejecución `pnpm typecheck` | **NO EJECUTADA** | Primer workflow GitHub Actions falló sin asignar runner; no hubo pasos de compilación |
+| Ejecución `pnpm build` | **NO EJECUTADA** | Primer workflow GitHub Actions falló sin asignar runner; no hubo pasos de compilación |
+| Ejecutar `migrate:fresh` | **NO SE EJECUTARÁ** | Destructivo para la única base; sustituido por catálogo SQL y `migrate:status` |
 | Backup completo y prueba de restauración | **NO VERIFICADOS** | El conector accesible no ofrece flujo confirmado para exportación/restauración; no inferir disponibilidad de respaldo |
-| Test aislamiento empresas A/B | **NO EJECUTADA** | Requiere entorno de pruebas separado |
-| Test del POST y concurrencia | **NO EJECUTADA** | Requiere entorno de pruebas separado |
+| Test aislamiento empresas A/B | **NO EJECUTADA** | Pendiente de ejecución transaccional con rollback verificado sobre la base de desarrollo |
+| Test del POST y concurrencia | **NO EJECUTADA** | Pendiente de fixture de desarrollo reversible y pruebas de concurrencia seguras |
 | Deploy / preview | **NO REALIZADO** | Fuera del diagnóstico de F0 |
 
 **No emitir un «passed» sin registro de salida real.** Existen suites de prueba, pero eso no constituye evidencia de ejecución.
@@ -136,7 +136,7 @@ pnpm build
 | Actividad | Estado | Avance verificable | Qué falta para `[x]` |
 |---|---|---|---|
 | **F0.1** Inventario y respaldo | **EN PROGRESO** | Inventario de tablas, RLS, permisos, roles, índices y funciones | Verificar respaldo recuperable para la misma base de desarrollo; no crear otra BD de trabajo |
-| **F0.2** Código y migraciones | **EN PROGRESO** | 14/14 migraciones por nombre; inventario de API, frontend, 7 suites | Reconstrucción de esquema y verificación funcional real |
+| **F0.2** Código y migraciones | **EN PROGRESO** | 14/14 migraciones por nombre; inventario de API, frontend, 7 suites | Comparación no destructiva del esquema y verificación funcional real |
 | **F0.3** Baseline y normativa | **EN PROGRESO** | Identificados test runners y discrepancias normativas a confirmar | Ejecutar tests seguros, builds, revisión normativa completa |
 
 **Indicadores del plan permanecen en 0/27 actividades aprobadas y 0/9 fases aprobadas.** La Fase 0 se encuentra *iniciada*, no *terminada*.
@@ -186,3 +186,11 @@ pnpm build
 **Verificación normativa:** fuente oficial [El Peruano, Resolución CNC 002-2026-EF/30](https://busquedas.elperuano.pe/dispositivo/NL/2550786-1) (04-09-2026): PCGE 2026 obligatorio a partir del 01-01-2028, anticipado permitido. IFRS Foundation confirma vigencia general NIIF 18 y 19 desde 2027; se verificará la oficialización local.
 
 **Estado:** F0.1–F0.3 continúan EN PROGRESO, sin pruebas automáticas ejecutadas, sin respaldo/recuperación comprobados y sin cierre de fase. Este registro no inicia F1.
+
+## 11. Primer intento de CI estática — GitHub Actions
+
+- Se creó [`.github/workflows/phase0-static-baseline.yml`](../.github/workflows/phase0-static-baseline.yml) en `main`: `pnpm typecheck`, `pnpm build`, `composer validate`, `composer lint`, sintaxis PHP, control de contraseña hardcodeada.
+- Workflow **sin acceso a Supabase**: no usa secretos, migraciones, seeders ni despliegue.
+- Primera ejecución [39354337434](https://github.com/jwichpas/contabilidad/actions/runs/39354337434): **failure** en ambos jobs; en el resultado de API, `steps: []` y `runner_id: 0`. **No se ejecutó ningún paso**; no atribuirlo a fallo de PHP/Vue. Motivo de no asignación de runner por esclarecer en GitHub.
+- Se dejó temporalmente el workflow en modo **`workflow_dispatch`** para evitar ejecuciones fallidas en cada push hasta contar con runners disponibles.
+- F0.3 sigue EN PROGRESO. No se ha certificado compilación ni ejecución del suite Laravel.
