@@ -72,6 +72,7 @@ final readonly class CreateCompanyFromWizardController
             'secondary_currency_codes.*' => ['required', 'string', 'max:3', 'distinct'],
             'pcge_version' => ['required', Rule::in(['PCGE_2019', 'PCGE_2026'])],
             'confirm_early_adoption' => ['sometimes', 'boolean'],
+            'confirm_legal_data' => ['required', 'accepted'],
         ])->validate();
 
         CompanyEconomicProfile::assertValidActivities($validated['economic_activities']);
