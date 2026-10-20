@@ -19,6 +19,8 @@ import type {
   CompanyCurrencyItem,
   CompanyInfo,
   CompanySettingDetails,
+  type EconomicSector,
+  type LegalForm,
 } from '../types/companySettings.types';
 
 const props = defineProps<{
@@ -62,7 +64,62 @@ const formBaseCurrencyId = ref<number>(1);
 const formSecondaryCurrencyIds = ref<number[]>([2]);
 
 // Parámetros tributarios
-const formTaxRegime = ref<'GENERAL' | 'MYPE_TRIBUTARIO' | 'RER' | 'ESPECIAL'>('GENERAL');
+const formTaxRegime = ref<'GENERAL' | 'MYPE_TRIBUTARIO' | 'RER' | 'ESPECIAL' | 'NRUS'>('GENERAL');
+const economicProfileReady = ref(false);
+const formLegalForm = ref<LegalForm | ''>('');
+interface EditingEconomicActivity {
+  sector_code: EconomicSector;
+  ciiu_code: string;
+  description: string;
+  is_primary: boolean;
+}
+const formEconomicActivities = ref<EditingEconomicActivity[]>([]);
+const economicSectorOptions: readonly { code: EconomicSector; label: string }[] = [
+  { code: 'COMERCIAL', label: 'Comercial / Distribución' },
+  { code: 'SERVICIOS', label: 'Servicios' },
+  { code: 'INDUSTRIAL', label: 'Industrial / Manufactura' },
+  { code: 'AGRICOLA', label: 'Agricultura' },
+  { code: 'GANADERIA', label: 'Ganadería' },
+  { code: 'PESCA', label: 'Pesca' },
+  { code: 'CONSTRUCCION', label: 'Construcción' },
+  { code: 'EXTRACTIVA', label: 'Extractivas / Minería' },
+  { code: 'TRANSPORTE_LOGISTICA', label: 'Transporte y Logística' },
+  { code: 'OTROS', label: 'Otras actividades' },
+];
+const legalFormOptions: readonly { code: LegalForm; label: string }[] = [
+  { code: 'PERSONA_NATURAL', label: 'Persona natural con negocio' },
+  { code: 'EIRL', label: 'E.I.R.L.' },
+  { code: 'SAC', label: 'S.A.C.' },
+  { code: 'SRL', label: 'S.R.L.' },
+  { code: 'SA', label: 'S.A.' },
+  { code: 'SAA', label: 'S.A.A.' },
+  { code: 'SACS', label: 'S.A.C.S.' },
+  { code: 'OTRA', label: 'Otra forma jurídica' },
+];
+
+function addEconomicActivity(): void {
+  if (formEconomicActivities.value.length >= 10) return;
+  formEconomicActivities.value.push({
+    sector_code: 'COMERCIAL',
+    ciiu_code: '',
+    description: '',
+    is_primary: formEconomicActivities.value.length === 0,
+  });
+}
+
+function setPrimaryEconomicActivity(index: number): void {
+  formEconomicActivities.value.forEach((activity, i) => {
+    activity.is_primary = index === i;
+  });
+}
+
+function removeEconomicActivity(index: number): void {
+  formEconomicActivities.value.splice(index, 1);
+  if (formEconomicActivities.value.length > 0 &&
+      !formEconomicActivities.value.some((activity) => activity.is_primary)) {
+    formEconomicActivities.value[0]!.is_primary = true;
+  }
+}
 const formDefaultVatRate = ref<number>(18.0);
 const formIsRetentionAgent = ref(false);
 const formIsPerceptionAgent = ref(false);
@@ -115,6 +172,14 @@ async function loadCompanyData(): Promise<void> {
       secondaryIds.length > 0 ? secondaryIds : [2]; // USD por defecto
 
     formTaxRegime.value = data.settings.tax_regime ?? 'GENERAL';
+    economicProfileReady.value = data.economic_profile_ready ?? false;
+    formLegalForm.value = data.settings.legal_form ?? '';
+    formEconomicActivities.value = (data.economic_activities ?? []).map((activity) => ({
+      sector_code: activity.sector_code,
+      ciiu_code: activity.ciiu_code,
+      description: activity.description,
+      is_primary: activity.is_primary,
+    }));
     formDefaultVatRate.value = parseFloat(data.settings.default_vat_rate) || 18.0;
     formIsRetentionAgent.value = data.settings.is_retention_agent ?? false;
     formIsPerceptionAgent.value = data.settings.is_perception_agent ?? false;
@@ -186,6 +251,21 @@ async function handleSaveSettings(): Promise<void> {
     return;
   }
 
+  if (formTaxRegime.value === 'NRUS' && formLegalForm.value !== 'PERSONA_NATURAL') {
+    errorMessage.value = 'El Nuevo RUS exige identificar una persona natural elegible.';
+    return;
+  }
+
+  if (economicProfileReady.value && formEconomicActivities.value.length > 0) {
+    const activities = formEconomicActivities.value;
+    if (activities.filter((activity) => activity.is_primary).length !== 1 ||
+        activities.some((activity) => !/^\d{4}$/.test(activity.ciiu_code) || !activity.description.trim()) ||
+        new Set(activities.map((activity) => activity.ciiu_code)).size !== activities.length) {
+      errorMessage.value = 'Registre CIIU de 4 dígitos, descripción y exactamente una actividad principal, sin duplicados.';
+      return;
+    }
+  }
+
   isSaving.value = true;
   try {
     const payload = {
@@ -195,6 +275,17 @@ async function handleSaveSettings(): Promise<void> {
       base_currency_id: formBaseCurrencyId.value,
       secondary_currency_ids: formSecondaryCurrencyIds.value,
       tax_regime: formTaxRegime.value,
+      ...(economicProfileReady.value ? {
+        legal_form: formLegalForm.value || null,
+        ...(formEconomicActivities.value.length > 0 ? {
+          economic_activities: formEconomicActivities.value.map((activity) => ({
+            sector_code: activity.sector_code,
+            ciiu_code: activity.ciiu_code.trim(),
+            description: activity.description.trim(),
+            is_primary: activity.is_primary,
+          })),
+        } : {}),
+      } : {}),
       default_vat_rate: formDefaultVatRate.value,
       is_retention_agent: formIsRetentionAgent.value,
       is_perception_agent: formIsPerceptionAgent.value,
@@ -213,6 +304,15 @@ async function handleSaveSettings(): Promise<void> {
     companyData.value = response.data.company;
     settingsData.value = response.data.settings;
     companyCurrencies.value = response.data.company_currencies;
+    if (response.data.economic_profile_ready) {
+      economicProfileReady.value = true;
+      formEconomicActivities.value = (response.data.economic_activities ?? []).map((activity) => ({
+        sector_code: activity.sector_code,
+        ciiu_code: activity.ciiu_code,
+        description: activity.description,
+        is_primary: activity.is_primary,
+      }));
+    }
 
     emit('company-updated', response.data.company);
   } catch (e) {
