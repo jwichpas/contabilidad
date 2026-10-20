@@ -92,20 +92,7 @@ final readonly class UpdateCompanySettingsController
         }
 
         if (array_key_exists('economic_activities', $validated)) {
-            $activities = $validated['economic_activities'];
-            $primaryCount = count(array_filter(
-                $activities,
-                static fn (array $activity): bool => (bool) $activity['is_primary']
-            ));
-            $ciiuCodes = array_column($activities, 'ciiu_code');
-
-            if ($primaryCount !== 1 || count($ciiuCodes) !== count(array_unique($ciiuCodes))) {
-                throw ValidationException::withMessages([
-                    'economic_activities' => [
-                        'Debe indicar exactamente una actividad principal y no repetir códigos CIIU.',
-                    ],
-                ]);
-            }
+            CompanyEconomicProfile::assertValidActivities($validated['economic_activities']);
         }
 
         // Validación de no duplicidad entre moneda base y secundarias
@@ -143,11 +130,7 @@ final readonly class UpdateCompanySettingsController
         // NRUS corresponde solamente a una persona natural elegible.
         $effectiveRegime = $validated['tax_regime'] ?? $settings->tax_regime;
         $effectiveLegalForm = $validated['legal_form'] ?? $settings->legal_form;
-        if ($effectiveRegime === 'NRUS' && $effectiveLegalForm !== 'PERSONA_NATURAL') {
-            throw ValidationException::withMessages([
-                'tax_regime' => ['Nuevo RUS requiere una persona natural elegible y la validación de sus actividades.'],
-            ]);
-        }
+        CompanyEconomicProfile::assertTaxRegimeEligibility($effectiveRegime, $effectiveLegalForm);
 
         DB::transaction(function () use ($company, $settings, $validated, $companyId): void {
             // 1. Actualizar datos de Company
