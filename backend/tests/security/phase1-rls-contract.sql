@@ -28,13 +28,18 @@ DO $$ BEGIN
  IF (SELECT count(*) FROM f1_contract.ledger) <> 1 THEN RAISE EXCEPTION 'tenant 101 count invalid'; END IF;
  IF (SELECT count(*) FROM f1_contract.ledger WHERE company_id=202) <> 0 THEN RAISE EXCEPTION 'cross tenant read'; END IF;
 END $$;
-DO $$ BEGIN
+DO $
+DECLARE rejected boolean := false;
+BEGIN
  BEGIN
    INSERT INTO f1_contract.ledger VALUES(3,202,1.0000);
-   RAISE EXCEPTION 'cross tenant insert unexpectedly allowed';
- EXCEPTION WHEN insufficient_privilege THEN NULL;
+ EXCEPTION WHEN insufficient_privilege THEN
+   rejected := true;
  END;
-END $$;
+ IF NOT rejected THEN
+   RAISE EXCEPTION 'cross tenant insert unexpectedly allowed';
+ END IF;
+END $;
 RESET ROLE;
 -- Anonymous role must not see records, even with tenant header set.
 SET ROLE f1_anon;
