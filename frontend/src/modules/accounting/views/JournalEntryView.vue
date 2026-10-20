@@ -27,6 +27,7 @@ import {
   Trash2,
 } from 'lucide-vue-next';
 import { AccountingApiClient } from '../api/httpClient';
+import { SystemDecimal } from '../../../shared/types/numeric.types';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type {
   CurrencyCode,
@@ -156,17 +157,21 @@ function updateRateForCurrency(code: string, field: 'buy_rate' | 'sell_rate', va
   }
 }
 
+function convertLocalToForeign(raw: string): string {
+  try {
+    const amount = SystemDecimal.parseMonetary(raw);
+    const rate = SystemDecimal.parseExchangeRate(exchangeRate.value.trim() || '1');
+    return rate.isPositive() ? amount.divideBy(rate).toString() : '';
+  } catch {
+    // Mientras el usuario escribe, una entrada parcial no debe producir NaN.
+    return '';
+  }
+}
+
 function recalculateForeignAmounts(): void {
-  const tc = parseFloat(exchangeRate.value) || 1;
   for (const line of lines.value) {
-    if (line.debitLocal) {
-      const localVal = parseFloat(line.debitLocal) || 0;
-      line.debitForeign = (localVal / tc).toFixed(4);
-    }
-    if (line.creditLocal) {
-      const localVal = parseFloat(line.creditLocal) || 0;
-      line.creditForeign = (localVal / tc).toFixed(4);
-    }
+    line.debitForeign = line.debitLocal ? convertLocalToForeign(line.debitLocal) : '';
+    line.creditForeign = line.creditLocal ? convertLocalToForeign(line.creditLocal) : '';
   }
 }
 
@@ -234,41 +239,37 @@ const expandedEntryIds = shallowRef<Set<number>>(new Set());
 // CÁLCULOS Y TOTALES EN VIVO (PARTIDA DOBLE)
 // ==========================================
 
-function parseAmount(val: string): number {
-  const n = parseFloat(val);
-  return isNaN(n) ? 0 : n;
+function parseAmount(val: string): SystemDecimal {
+  try {
+    return SystemDecimal.parseMonetary(val.trim() || '0');
+  } catch {
+    return SystemDecimal.zero();
+  }
 }
 
 const totalDebitLocal = computed(() =>
-  lines.value.reduce((acc, l) => acc + parseAmount(l.debitLocal), 0),
+  lines.value.reduce((acc, l) => acc.add(parseAmount(l.debitLocal)), SystemDecimal.zero()),
 );
-
 const totalCreditLocal = computed(() =>
-  lines.value.reduce((acc, l) => acc + parseAmount(l.creditLocal), 0),
+  lines.value.reduce((acc, l) => acc.add(parseAmount(l.creditLocal)), SystemDecimal.zero()),
 );
-
 const totalDebitForeign = computed(() =>
-  lines.value.reduce((acc, l) => acc + parseAmount(l.debitForeign), 0),
+  lines.value.reduce((acc, l) => acc.add(parseAmount(l.debitForeign)), SystemDecimal.zero()),
 );
-
 const totalCreditForeign = computed(() =>
-  lines.value.reduce((acc, l) => acc + parseAmount(l.creditForeign), 0),
+  lines.value.reduce((acc, l) => acc.add(parseAmount(l.creditForeign)), SystemDecimal.zero()),
 );
-
 const diffLocal = computed(() =>
-  Math.abs(totalDebitLocal.value - totalCreditLocal.value),
+  totalDebitLocal.value.subtract(totalCreditLocal.value).abs(),
 );
-
 const diffForeign = computed(() =>
-  Math.abs(totalDebitForeign.value - totalCreditForeign.value),
+  totalDebitForeign.value.subtract(totalCreditForeign.value).abs(),
 );
-
-const isBalanced = computed(
-  () =>
-    lines.value.length >= 2 &&
-    totalDebitLocal.value > 0 &&
-    diffLocal.value < 0.001 &&
-    diffForeign.value < 0.001,
+const isBalanced = computed(() =>
+  lines.value.length >= 2 &&
+  totalDebitLocal.value.isPositive() &&
+  diffLocal.value.isZero() &&
+  diffForeign.value.isZero(),
 );
 
 // ==========================================
@@ -294,14 +295,11 @@ function removeLine(index: number): void {
 }
 
 function onAmountChange(line: EditingLine, side: 'debit' | 'credit'): void {
-  const tc = parseFloat(exchangeRate.value) || 1;
-
   if (side === 'debit') {
     if (line.debitLocal) {
       line.creditLocal = '';
       line.creditForeign = '';
-      const localVal = parseFloat(line.debitLocal) || 0;
-      line.debitForeign = (localVal / tc).toFixed(4);
+      line.debitForeign = convertLocalToForeign(line.debitLocal);
     } else {
       line.debitForeign = '';
     }
@@ -309,8 +307,7 @@ function onAmountChange(line: EditingLine, side: 'debit' | 'credit'): void {
     if (line.creditLocal) {
       line.debitLocal = '';
       line.debitForeign = '';
-      const localVal = parseFloat(line.creditLocal) || 0;
-      line.creditForeign = (localVal / tc).toFixed(4);
+      line.creditForeign = convertLocalToForeign(line.creditLocal);
     } else {
       line.creditForeign = '';
     }
@@ -321,33 +318,24 @@ function onAmountChange(line: EditingLine, side: 'debit' | 'credit'): void {
  * Cuadre automático: calcula la diferencia y la asigna a la última línea o agrega una nueva
  */
 function autoBalance(): void {
-  const tc = parseFloat(exchangeRate.value) || 1;
-  const dLocal = totalDebitLocal.value;
-  const cLocal = totalCreditLocal.value;
+  const diff = totalDebitLocal.value.subtract(totalCreditLocal.value);
+  if (diff.isZero()) return;
 
-  if (dLocal === cLocal && dLocal > 0) return;
-
-  const diff = dLocal - cLocal;
-  if (Math.abs(diff) < 0.0001) return;
-
-  // Si la última línea está vacía en importes, usarla; si no, agregar una nueva
   let target = lines.value[lines.value.length - 1];
   if (!target || target.debitLocal || target.creditLocal) {
     addLine();
     target = lines.value[lines.value.length - 1]!;
   }
 
-  if (diff > 0) {
-    // Falta en el Haber
-    target.creditLocal = diff.toFixed(4);
-    target.creditForeign = (diff / tc).toFixed(4);
+  const amount = diff.abs().toString();
+  if (diff.isPositive()) {
+    target.creditLocal = amount;
+    target.creditForeign = convertLocalToForeign(amount);
     target.debitLocal = '';
     target.debitForeign = '';
   } else {
-    // Falta en el Debe
-    const absDiff = Math.abs(diff);
-    target.debitLocal = absDiff.toFixed(4);
-    target.debitForeign = (absDiff / tc).toFixed(4);
+    target.debitLocal = amount;
+    target.debitForeign = convertLocalToForeign(amount);
     target.creditLocal = '';
     target.creditForeign = '';
   }
@@ -1027,16 +1015,16 @@ onMounted(() => {
                   Totales Asiento:
                 </td>
                 <td class="py-2.5 px-3 text-right font-semibold num text-foreground">
-                  {{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toFixed(2) }}
+                  {{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(2) }}
                 </td>
                 <td class="py-2.5 px-3 text-right font-semibold num text-foreground">
-                  {{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toFixed(2) }}
+                  {{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(2) }}
                 </td>
                 <td class="py-2.5 px-3 text-right text-muted font-medium num text-[11px]">
-                  {{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toFixed(2) }}
+                  {{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(2) }}
                 </td>
                 <td class="py-2.5 px-3 text-right text-muted font-medium num text-[11px]">
-                  {{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toFixed(2) }}
+                  {{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(2) }}
                 </td>
                 <td></td>
               </tr>
@@ -1049,16 +1037,16 @@ onMounted(() => {
                 <td
                   colspan="2"
                   class="py-2 px-3 text-center font-bold num"
-                  :class="diffLocal < 0.001 ? 'text-pos' : 'text-neg'"
+                  :class="diffLocal.isZero() ? 'text-pos' : 'text-neg'"
                 >
-                  {{ diffLocal < 0.001 ? `${baseCurrencyInfo.symbol} 0.00 (Cuadrado)` : `${baseCurrencyInfo.symbol} ${diffLocal.toFixed(2)} (Descuadre)` }}
+                  {{ diffLocal.isZero() ? `${baseCurrencyInfo.symbol} 0.00 (Cuadrado)` : `${baseCurrencyInfo.symbol} ${diffLocal.toDisplay(2)} (Descuadre)` }}
                 </td>
                 <td
                   colspan="2"
                   class="py-2 px-3 text-center font-bold num text-[11px]"
-                  :class="diffForeign < 0.001 ? 'text-pos' : 'text-neg'"
+                  :class="diffForeign.isZero() ? 'text-pos' : 'text-neg'"
                 >
-                  {{ diffForeign < 0.001 ? `${activeForeignCurrency.symbol} 0.00` : `${activeForeignCurrency.symbol} ${diffForeign.toFixed(2)}` }}
+                  {{ diffForeign.isZero() ? `${activeForeignCurrency.symbol} 0.00` : `${activeForeignCurrency.symbol} ${diffForeign.toDisplay(2)}` }}
                 </td>
                 <td></td>
               </tr>
