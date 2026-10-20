@@ -21,7 +21,7 @@
 **Principios obligatorios:**
 1. Preservar el proyecto existente y mejorar incrementalmente; no reescribir Laravel/Vue sin una justificación documentada.
 2. Usar `main` como rama de trabajo solicitada; no crear ramas por defecto. Los cambios deben ser pequeños, probados y trazables.
-3. Toda modificación de esquema debe estar versionada en una migración reproducible y contar con plan de respaldo/reversión.
+3. **Laravel es el único gestor del esquema:** toda creación o modificación de tablas, columnas, índices, constraints, triggers, vistas, RLS y funciones SQL debe vivir en una migración nueva de `backend/database/migrations/`, ejecutada con Artisan y con plan de respaldo/reversión. **No hacer DDL de cambios funcionales directamente en Supabase.** Consultar [política de BD](docs/ARQUITECTURA-BD-LARAVEL.md).
 4. Aislamiento estricto por empresa en consultas, relaciones y accesos. Nada de secretos o tokens privilegiados en el frontend.
 5. Libro Diario como fuente de verdad; toda rectificación contable mediante flujo autorizado y trazable, no por edición destructiva.
 6. Precisión monetaria decimal exacta de extremo a extremo; nada de `float`/`double` para importes o tipos de cambio.
@@ -274,7 +274,7 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 
 - **API:** Laravel; controladores delgados, FormRequest/DTO, servicios de dominio e interfaces bien definidas.
 - **Frontend:** Vue 3 + TypeScript + Tailwind; módulos funcionales, composables, estado tenant global, formularios y tablas accesibles.
-- **BD:** Supabase/PostgreSQL; transacciones, `NUMERIC`, claves foráneas compuestas, triggers contables, RLS donde corresponda.
+- **BD:** Supabase/PostgreSQL como servidor; **DDL exclusivamente mediante migraciones de Laravel** con conexión `pgsql_migrations`, sin cambios de esquema desde el editor SQL de Supabase. Transacciones, `NUMERIC`, claves foráneas compuestas, triggers contables y RLS según corresponda.
 - **Seguridad:** Sanctum, autorización por empresa/rol, privilegios mínimos, secretos fuera del cliente y auditoría.
 - **Contabilidad:** ledger inmutable para POST, borradores separados cuando aplique, correlativos concurrentes, idempotencia y ajustes con trazabilidad.
 - **Normativa:** catálogos vigentes con versión, fuentes y fecha de aplicación; EEFF y libros por reglas verificables.
@@ -303,6 +303,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | R11 | Tests usan la base única de desarrollo | Alta | F0: revisar cada test, forzar entorno de pruebas y rollback, confirmar conexión y respaldos antes de ejecutarlos; no crear otra BD |
 | R12 | README cita erróneamente resolución del PCGE 2026 | Media | F0: corregido en README; norma oficial **002-2026-EF/30**, PCGE 2026 obligatorio desde **2028**, adopción anticipada posible |
 | R13 | Runner GitHub Actions no disponible en primera ejecución | Media | F0: workflow estático ya creado, run [39354337434](https://github.com/jwichpas/contabilidad/actions/runs/39354337434) sin runner ni pasos; ejecución manual hasta resolver disponibilidad |
+| R15 | Rol `app_backend` con contraseña predeterminada posible en instalación nueva | Alta | F0: revisar migración original y secretos; F1: evitar valores de contraseña por defecto y rotar credenciales expuestas mediante flujo seguro |
 
 **Política de manejo:** un riesgo crítico abierto puede bloquear la habilitación de usuarios reales o el despliegue, incluso si el módulo parece funcional.
 
@@ -451,6 +452,15 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Normativa verificada:** [Resolución CNC 002-2026-EF/30](https://busquedas.elperuano.pe/dispositivo/NL/2550786-1), PCGE 2026 obligatorio desde 2028, adopción anticipada posible; README principal corregido.
 - **Evidencias y pendientes:** [Registro actualizado de Fase 0](docs/FASE-0-DIAGNOSTICO.md). F0.1–F0.3 aún abiertas; 0/27 marcadas; F1 no iniciada.
 
+### Actualización 2026-10-19 — Laravel como único gestor de esquema
+
+- **Regla obligatoria:** las tablas, índices, restricciones, triggers, políticas RLS y demás cambios DDL se crean o modifican desde **migraciones Laravel**, jamás desde el editor SQL de Supabase. Las verificaciones `SELECT` y advisories de Supabase continúan permitidas.
+- Política formal: [docs/ARQUITECTURA-BD-LARAVEL.md](docs/ARQUITECTURA-BD-LARAVEL.md). Se mantendrá exclusivamente la base de desarrollo `contabilidad-database` y la rama `main`.
+- Nuevo comando `php artisan contabilidad:auditar-fase0` en `backend/app/Console/Commands/AuditPhaseZero.php`, que realiza consultas de solo lectura en la conexión administrativa Laravel. **La sintaxis PHP fue comprobada localmente, pero el comando todavía no se ha ejecutado desde el proyecto desplegado.**
+- `backend/config/database.php`: `pgsql_migrations` ya no hereda el `DATABASE_URL` de la conexión de aplicación; `backend/phpunit.xml` dejó de fijar host y usuario privilegiado; `backend/.env.example` diferencia roles y puertos.
+- Catálogo PostgreSQL confirmado por SQL de solo lectura: **31 tablas, 94 índices, 5 funciones, 6 triggers no internos, 14 políticas y 14 migraciones Laravel**.
+- F0.1–F0.3 siguen abiertas por respaldos sin verificar, ejecución de tests bloqueada y revisión funcional incompleta. **Fase 1 no iniciada.**
+
 ### Actualización 2026-10-19 — Workflow estático de verificación
 
 - Se creó [`phase0-static-baseline.yml`](.github/workflows/phase0-static-baseline.yml) para comprobar Vue y Laravel **sin conexión a Supabase** ni despliegues.
@@ -469,8 +479,10 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
+- **Política obligatoria de esquema Laravel:** [docs/ARQUITECTURA-BD-LARAVEL.md](docs/ARQUITECTURA-BD-LARAVEL.md).
+- **Comando de diagnóstico F0:** `php artisan contabilidad:auditar-fase0` (solo lectura; sin mutaciones).
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
 **Estado al 2026-10-19: _FASE 0 EN PROGRESO SOBRE LA BD DE DESARROLLO ÚNICA; 0/27 ACTIVIDADES APROBADAS; HITOS H1–H4 PENDIENTES_.**
