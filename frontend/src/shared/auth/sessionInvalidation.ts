@@ -19,3 +19,11 @@ export function reportUnauthorizedBearer(requestToken: string | null): void {
     unauthorizedHandler?.(requestToken);
   }
 }
+
+/**
+ * Protección contra carreras: un 401 de una petición antigua no debe cerrar
+ * una sesión que ya ha iniciado con otro Bearer.
+ */
+export function isCurrentBearer(currentToken: string | null, requestToken: string): boolean {
+  return requestToken.trim().length > 0 && currentToken === requestToken;
+}
