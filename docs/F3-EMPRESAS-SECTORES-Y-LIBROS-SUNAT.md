@@ -107,7 +107,17 @@ Resumen operativo de las guías oficiales SUNAT; comprobar fecha de obligatoried
 
 ## 7. Estado de ejecución
 
-**Implementado hoy:** columna `tax_regime`, controles manuales SIRE/PLE y configuración tributaria básica.  
-**Pendiente:** forma jurídica, sectores/CIIU, perfiles anuales, históricos tributarios, reglas versionadas de libros, detección de obligatoriedad, wizard y pruebas.  
-**Planificación:** F3 para clasificación y perfil; F5 para generar libros; F6 para libros electrónicos/SUNAT, conciliaciones y vigencias.  
-**No se han creado ni modificado tablas al incorporar esta especificación.**
+**Disponible previamente en la base:** `company_settings.tax_regime`, controles SIRE/PLE y configuración tributaria básica.
+
+**Nuevo código preparado en GitHub (migración todavía NO ejecutada):**
+- `backend/database/migrations/2026_10_19_010000_add_company_economic_profile.php`: campo `legal_form` y tabla multiempresa `company_economic_activities`, sector y CIIU, actividad principal/varias secundarias, aislamiento RLS y controles PostgreSQL.
+- `backend/app/Models/CompanyEconomicActivity.php`, `backend/app/Support/Company/CompanyEconomicProfile.php`: entidad tenant y validaciones reutilizables.
+- `GetCompanySettingsController` y `UpdateCompanySettingsController`: consulta y persistencia transaccional con auditoría; comprobación de disponibilidad del esquema para no fallar antes de migrar.
+- `frontend/src/modules/company/views/CompanySettingsView.vue`: interfaz para forma jurídica, sectores, CIIU y varias actividades. Muestra aviso de migración pendiente si aún no existen las columnas/tablas.
+- `backend/tests/Unit/CompanyEconomicProfileTest.php`: cinco grupos de pruebas unitarias listos para ejecutar.
+
+**Pendiente de implementar:** wizard completo de alta de empresas (hoy se integra en configuración existente), historial de régimen, perfil anual de ingresos/UIT, catálogo oficial completo de CIIU, reglas versionadas de libros, detección de obligatoriedad SIRE/PLE y pruebas E2E.
+
+**Pendiente de validar:** ejecutar migraciones **solo con Artisan**, respetando primero la migración de permisos públicos; compilar Vue, pasar PHPUnit y comprobar aislamiento multiempresa.
+
+**No se ha creado ni modificado ninguna tabla directamente desde Supabase.**
