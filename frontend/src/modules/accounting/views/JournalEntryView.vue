@@ -239,6 +239,24 @@ const expandedEntryIds = shallowRef<Set<number>>(new Set());
 // CÁLCULOS Y TOTALES EN VIVO (PARTIDA DOBLE)
 // ==========================================
 
+function isValidPositiveExchangeRate(value: string): boolean {
+  if (!/^\\d+(?:\\.\\d{1,6})?$/.test(value.trim())) return false;
+  try {
+    return SystemDecimal.parseExchangeRate(value).isPositive();
+  } catch {
+    return false;
+  }
+}
+
+function formatPostedAmount(value: string, prefix = ''): string {
+  try {
+    const exact = SystemDecimal.parseMonetary(value);
+    return exact.isPositive() ? prefix + exact.toDisplay(2) : '—';
+  } catch {
+    return '—';
+  }
+}
+
 function parseAmount(val: string): SystemDecimal {
   try {
     return SystemDecimal.parseMonetary(val.trim() || '0');
@@ -437,9 +455,8 @@ async function handleSubmit(): Promise<void> {
 
   // Validar obligatoriedad de tipos de cambio para CADA moneda secundaria configurada
   for (const secRate of requiredCurrencyRates.value) {
-    const buy = parseFloat(secRate.buy_rate);
-    const sell = parseFloat(secRate.sell_rate);
-    if (isNaN(buy) || buy <= 0 || isNaN(sell) || sell <= 0) {
+    if (!isValidPositiveExchangeRate(secRate.buy_rate) ||
+        !isValidPositiveExchangeRate(secRate.sell_rate)) {
       errorMessage.value = `Es obligatorio registrar el Tipo de Cambio (Compra y Venta mayor a 0) para la moneda ${secRate.code} (${secRate.name}) en la fecha ${entryDate.value}.`;
       return;
     }
@@ -452,9 +469,9 @@ async function handleSubmit(): Promise<void> {
       errorMessage.value = `Seleccione una cuenta contable operativa en la línea #${i + 1}.`;
       return;
     }
-    const d = parseFloat(l.debitLocal) || 0;
-    const c = parseFloat(l.creditLocal) || 0;
-    if (d === 0 && c === 0) {
+    const d = parseAmount(l.debitLocal);
+    const c = parseAmount(l.creditLocal);
+    if (d.isZero() && c.isZero()) {
       errorMessage.value = `La línea #${i + 1} debe contener un importe mayor a cero.`;
       return;
     }
@@ -1242,16 +1259,16 @@ onMounted(() => {
                             </td>
                             <td class="py-1.5 px-3 text-muted text-xs">{{ l.description || entry.description }}</td>
                             <td class="py-1.5 px-3 text-right font-medium num">
-                              {{ parseFloat(l.debit_local) > 0 ? parseFloat(l.debit_local).toFixed(2) : '—' }}
+                              {{ formatPostedAmount(l.debit_local) }}
                             </td>
                             <td class="py-1.5 px-3 text-right font-medium num">
-                              {{ parseFloat(l.credit_local) > 0 ? parseFloat(l.credit_local).toFixed(2) : '—' }}
+                              {{ formatPostedAmount(l.credit_local) }}
                             </td>
                             <td class="py-1.5 px-3 text-right text-muted num text-[11px]">
-                              {{ parseFloat(l.debit_foreign) > 0 ? `$ ${parseFloat(l.debit_foreign).toFixed(2)}` : '—' }}
+                              {{ formatPostedAmount(l.debit_foreign, '$ ') }}
                             </td>
                             <td class="py-1.5 px-3 text-right text-muted num text-[11px]">
-                              {{ parseFloat(l.credit_foreign) > 0 ? `$ ${parseFloat(l.credit_foreign).toFixed(2)}` : '—' }}
+                              {{ formatPostedAmount(l.credit_foreign, '$ ') }}
                             </td>
                           </tr>
                         </tbody>
