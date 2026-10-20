@@ -237,6 +237,22 @@ php scripts/phase0-login-rollback.php --execute
 
 **Acción recomendada (NO implementada, decisión pendiente):** acordar duración máxima de token y política de sesiones (por ejemplo 8–12 horas para personal de contabilidad; diferente para integraciones servidor-servidor). Proponer control `SANCTUM_TOKEN_EXPIRATION_MINUTES`, vencimiento de tokens nuevos, pruebas de expiración/revocación y plan de transición para los 28 tokens actuales. **No activar un vencimiento global sin autorización y sin prever desconexión de usuarios existentes.** La revisión no modificó datos ni configuración.
 
+## Política de sesión Sanctum aprobada — máximo 12 horas (2026-10-20)
+
+El usuario **aprobó explícitamente 12 horas** como duración máxima de las sesiones del personal. Implementación en `main`:
+
+1. `backend/config/sanctum.php`: `'expiration' => 720` (minutos). Sanctum aplica antigüedad máxima de 720 minutos a **todos los tokens Bearer**, incluidos los emitidos previamente con `expires_at IS NULL`; no significa que las cookies de sesión `web` queden configuradas con esa misma duración.
+2. `backend/app/Http/Controllers/Api/V1/Auth/LoginController.php`: `createToken($deviceName, ['*'], now()->addHours(12))` para guardar también fecha individual `expires_at` en **tokens nuevos**. El límite es absoluto desde la emisión, **no se renueva por actividad**.
+3. `backend/scripts/phase0-login-rollback.php`: ahora verifica en preflight que la configuración efectiva sea 720, confirma que el token sintético tiene `expires_at` a ~12 h, prueba el Bearer vigente (HTTP 200), modifica **solo el created_at del token sintético dentro de la transacción** para simular 13 h de antigüedad (esperado 401), luego lo restablece, prueba `POST /auth/logout`, verifica que se revoque el token y que su reutilización sea rechazada (401), verifica ambas auditorías y el `ROLLBACK` final. El script no imprime contraseñas, tokens ni hashes ni modifica cuentas persistentes.
+
+**Estado de aplicación:** el código está confirmado en GitHub/main, **pendiente de sincronizar y ejecutar en el equipo local/deploy**. **No declarar pruebas PASS ni expiración activa del despliegue sin confirmación.** No se ejecutaron migraciones, limpieza ni revocación masiva.
+
+**Impacto al activar la actualización:** los tokens existentes creados hace más de 12 horas serán rechazados en futuras solicitudes aunque la columna `expires_at` siga NULL, y se requerirá volver a iniciar sesión. Los tokens existentes **no se borran por el mero vencimiento**; revocación/limpieza física es un proceso distinto. Documentar el comportamiento HTTP 401 del frontend.
+
+**Consulta SQL independiente posterior a la edición del código:** 28 tokens en total, 28 con `expires_at IS NULL`, 1 empresa, 1 usuario, 34 auditorías y 18 migraciones, todos sin cambios. No se han consultado valores de token ni hashes.
+
+**Procedimiento seguro pendiente:** `git pull --ff-only`; `php -l` en los tres archivos modificados; `php artisan config:clear` solo si Laravel mantiene configuración local cacheada; `php scripts/phase0-login-rollback.php` sin argumentos, luego **una sola** ejecución con `--execute`, verificando PASS y conteos idénticos. Si falla, no repetir ni ejecutar toda la suite antes de diagnosticar.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
