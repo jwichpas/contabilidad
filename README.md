@@ -1,3 +1,5 @@
+> ✅ **Fase 0 — restauración de desarrollo comprobada (20/10/2026):** se verificó SHA256 y restauración aislada de `public` sobre PostgreSQL 17, conteos de 7 entidades, 14 tablas con RLS forzado, 5 funciones y eliminación del contenedor. **No es una recuperación completa de Supabase ni una certificación de producción.** El usuario aplazó el cifrado de respaldos hasta producción (disco C: sin BitLocker). [README de cierre condicionado y tareas previas a producción](docs/README-FASE-0-CIERRE-Y-PRODUCCION.md). Se puede comenzar Fase 1 mientras se atienden las observaciones de seguridad restantes.
+
 <div align="center">
 
 # Sistema de Gestión Contable y Financiero Bimonetario (ERP Clean Room)
