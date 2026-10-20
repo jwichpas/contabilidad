@@ -66,3 +66,9 @@ Se agregó el workflow [`phase1-security-static.yml`](../.github/workflows/phase
 Se añadió el job `laravel-real-migrations` al workflow F1: aprovisiona PostgreSQL 17 efímero, instala Composer, ejecuta **las migraciones reales del backend Laravel** con `--database=pgsql_migrations` y comprueba que exista `app_backend` sin `SUPERUSER/BYPASSRLS` y que haya tablas `public` con `ENABLE + FORCE ROW LEVEL SECURITY`. Usa contraseñas ficticias de CI y no utiliza ninguna credencial ni conexión de Supabase.
 
 **Estado:** commit publicado; ejecución de GitHub Actions **pendiente de confirmación**. No se marca PASS hasta comprobar logs. Si falla una migración por dependencias de Supabase o supuestos ambientales, el job debe permanecer rojo y el error corregirse de forma reproducible; no reemplazarlo por un chequeo que simule las migraciones. La prueba no valida todavía todas las autorizaciones de cada ruta API ni el diseño completo de recuperación.
+
+## Endurecimiento adicional de CI
+
+Se corrigió una aserción negativa del contrato RLS: ahora registra explícitamente si PostgreSQL rechazó la inserción interempresa y falla si no la rechazó. También se agregó [`phase1-real-tenant-context.sql`](../backend/tests/security/phase1-real-tenant-context.sql), que se ejecuta **después de las migraciones Laravel** contra PostgreSQL 17 temporal para comprobar `public.app_current_company_id()`: sin tenant, tenant válido, tenant no numérico y tenant vacío. La identidad invocadora es `app_backend`.
+
+Estos cambios **no requieren intervención local ni acceso a Supabase**. Los archivos están publicados; los jobs siguen sin confirmación de resultado, por lo que no se consideran pruebas aprobadas hasta observar una ejecución exitosa en GitHub Actions.
