@@ -5,6 +5,16 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## Alta ERP aprobada para preparación; escritura pendiente — 2026-10-20
+
+El usuario autorizó preparar el alta de `elcontador@gmail.com` en Laravel, ligado a la empresa ficticia existente. **No autorizó aún el rol y nombre final ni la escritura sin confirmación; no se ejecutó ningún INSERT/UPDATE.** La cuenta aparece en la pantalla de Supabase Auth (`auth.users`), pero el script local de Laravel confirmó `[USUARIO] Correo NO registrado en la BD de Laravel` (`public.users`). El limitador de login ya usa `CACHE_STORE=file`.
+
+**SQL SELECT independiente:** empresa ID=1 activa, razón social `Corporación Peruana de Distribución S.A.C.`; 1 usuario, 1 membresía activa con rol `CHIEF_ACCOUNTANT`, 28 tokens, 2 asientos, 18 migraciones. El conteo de auditorías ahora es 39 (no usar 34 como baseline permanente). Privilegios `app_backend`: SELECT/INSERT/UPDATE para `users` y `company_user`, USAGE en secuencias; `company_user` tiene ENABLE/FORCE RLS; los roles permitidos son ADMIN, CHIEF_ACCOUNTANT, ACCOUNTANT, DATA_ENTRY y AUDITOR. La FK compuesta obliga a crear primero usuario sin empresa activa, después membresía bajo contexto RLS LOCAL, después establecer `current_company_id`.
+
+**Código preparado en main:** `backend/scripts/phase0-provision-erp-user.php` con preflight de solo lectura predeterminado, validación de empresa fija 1, email único, rol explícito, base contada con RLS correcto y guardias de contexto; modo `--apply` exige dos variables de entorno específicas, contraseña fuerte nueva distinta de Supabase Auth, transacción y comprobación antes de COMMIT. El script no toca los usuarios existentes y no importa `auth.users`. No hay evidencia de `php -l`/preflight local aún. Más detalles en [FASE-0-ALTA-USUARIO-ERP.md](FASE-0-ALTA-USUARIO-ERP.md).
+
+**Próxima puerta:** solicitar aprobación concreta de rol `ACCOUNTANT` y nombre visible provisional `Contador de Desarrollo`; luego ejecutar preflight local y, por último, dar instrucciones de aplicación controlada. No ejecutar seeders/migraciones ni resetear el usuario antiguo.
+
 ## Incidencia de login HTTP 500 en desarrollo — 2026-10-20
 
 **Síntoma reportado:** el navegador (Vue/Vite en localhost:5180) recibe `POST /api/v1/auth/login` con **HTTP 500** al tener Laravel activo en `0.0.0.0:8010`. El comando `php artisan tinker` no está disponible (el paquete de Tinker no figura en `composer.json`), por lo que no debe instalarse únicamente para diagnosticar.
