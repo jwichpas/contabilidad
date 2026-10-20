@@ -105,6 +105,7 @@ $db = DB::connection('pgsql');
 $started = false;
 $committed = false;
 $phase = 'preflight';
+$failed = false;
 try {
     $identity = $db->selectOne('SELECT current_user AS role_name, current_database() AS db_name');
     if ($identity?->role_name !== 'app_backend' || $identity?->db_name !== 'postgres') {
@@ -249,12 +250,12 @@ try {
     $state = preg_match('/^[0-9A-Z]{5}$/', $raw) ? $raw : 'UNKNOWN';
     fwrite(STDERR, '[ERROR] Etapa='.$phase.' SQLSTATE='.$state.'; '
         .'no se muestran consultas ni contrasenas.'.PHP_EOL);
-    exit(1);
+    $failed = true;
 } catch (Throwable $e) {
     fwrite(STDERR, '[BLOQUEO] Etapa='.$phase.' '.(
         $e instanceof RuntimeException ? $e->getMessage() : 'Error no previsto; revisar localmente.'
     ).PHP_EOL);
-    exit(1);
+    $failed = true;
 } finally {
     if ($started && ! $committed && $db->transactionLevel() > 0) {
         try {
@@ -264,4 +265,8 @@ try {
             fwrite(STDERR, '[ALERTA] No se pudo confirmar rollback: verificar conteos antes de seguir.'.PHP_EOL);
         }
     }
+}
+
+if ($failed) {
+    exit(1);
 }
