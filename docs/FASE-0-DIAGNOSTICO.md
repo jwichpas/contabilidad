@@ -5,6 +5,31 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## Actualización ejecutada en el entorno Laravel — 2026-10-20
+
+**Estado más reciente (prevalece sobre la línea base histórica del 19/10 situada debajo).**
+
+El usuario ejecutó en Windows/PowerShell, desde `C:\\Proyectos\\contabilidad\\backend`, tras sincronizar `main` con GitHub:
+
+- `php scripts/phase0-preflight.php` → **9 OK, 0 fallidas**, con tres advertencias sobre contraseña predeterminada de migración inicial, uso de `SET ROLE` en pruebas y uso de `DELETE` en pruebas de monedas. **Preflight estático sin conexión a BD**, no constituye prueba funcional.
+- `php artisan contabilidad:auditar-fase0` → **finalizó** usando conexión `pgsql_migrations` y una transacción `READ ONLY`. Confirmó **32 tablas, 18 sin RLS, 99 índices, 5 funciones, 6 triggers, 15 políticas y 16 migraciones**.
+- **Control de acceso:** `anon_select_grants=0`, `authenticated_select_grants=0`, `anon_sequences=0`, `authenticated_sequences=0`, `anon_functions=0`, `authenticated_functions=0`.
+- **Integridad del libro:** `entries=2`, `lines=4`, `invalid_entries=0`, `orphan_lines=0`, `invalid_account_references=0`.
+- **Inventario de migraciones:** archivos=16; aplicadas=16; pendientes=0; aplicadas sin archivo fuente=0. La seguridad se migró en el batch 6 y el perfil económico en el batch 7.
+- **El `git status --short` previo al `git pull --ff-only` mostraba dos PDFs PCGE eliminados en el equipo:** `PLAN CONTABLE GENERAL EMPRESARIAL 2019 - CUENTAS.pdf` y `PLAN CONTABLE GENERAL EMPRESARIAL 2026 - CUENTAS.pdf`. El `pull` fue fast-forward y **no restauró ni eliminó esos archivos**. Debe consultarse al usuario antes de descartarlos, restaurarlos o confirmarlos en un commit.
+
+### Clasificación de las 18 tablas sin RLS (revisada por consulta SQL de solo lectura)
+
+- **14 catálogos/maestros de referencia**, de solo lectura para `app_backend`: `accounting_account_templates`, `accounting_standards`, `currencies`, `financial_statement_rubrics`, nueve `sunat_table_*` y `tax_calendar_deadlines`. El acceso público directo se revocó, pero debe garantizarse que la API Laravel no exponga endpoints indebidos.
+- **4 tablas globales/sensibles:** `companies`, `users`, `personal_access_tokens`, `migrations`. `app_backend` mantiene SELECT/INSERT/UPDATE en `companies` y `users`, y también DELETE en `personal_access_tokens`; no tiene acceso a `migrations`. **No aplicar RLS genérico sin rediseñar altas, autenticación y navegación multiempresa.** Probar el control de acceso a través de Laravel y definir políticas por finalidad; proteger especialmente tokens.
+- En ninguna de las 18 se detectó SELECT de `anon`. El resto de tablas tiene RLS y permisos sectorizados que aún necesitan pruebas de aislamiento.
+
+**Acciones F0 aún pendientes:** realizar prueba no destructiva y autorizada de recuperación/respaldo, ejecutar la prueba **solo lectura** de privilegios `backend/tests/Feature/Security/PublicDataApiPrivilegesTest.php`, revisar funciones/RLS y autenticar la API con `app_backend`, efectuar aislamiento multiempresa en entorno controlado, resolver advertencias de seguridad y registrar resultados. Las pruebas de `TenantIsolationTest.php` crean empresas/usuarios y utilizan `SET ROLE`; `CompanyCurrencyConfigurationTest.php` modifica/elimina datos; **no ejecutar toda la suite contra la base compartida sin revisión**.
+
+**Resultado:** diagnóstico ejecutado con éxito; F0.1, F0.2 y F0.3 siguen abiertos hasta validar las puertas de calidad. No se ejecutaron nuevas modificaciones de BD durante esta revisión del documento.
+
+---
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
