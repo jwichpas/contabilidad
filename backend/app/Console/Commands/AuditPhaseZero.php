@@ -54,9 +54,24 @@ final class AuditPhaseZero extends Command
                      WHERE n.nspname = 'public' AND NOT t.tgisinternal) AS triggers,
                     (SELECT count(*) FROM pg_policies WHERE schemaname = 'public') AS policies,
                     (SELECT count(*) FROM public.migrations) AS laravel_migrations,
-                    (SELECT count(DISTINCT table_name) FROM information_schema.role_table_grants
-                     WHERE table_schema = 'public' AND grantee = 'anon'
-                       AND privilege_type = 'SELECT') AS anon_select_grants
+                    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+                       AND has_table_privilege('anon', c.oid, 'SELECT')) AS anon_select_grants,
+                    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+                       AND has_table_privilege('authenticated', c.oid, 'SELECT')) AS authenticated_select_grants,
+                    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE n.nspname = 'public' AND c.relkind = 'S'
+                       AND has_sequence_privilege('anon', c.oid, 'USAGE')) AS anon_sequences,
+                    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE n.nspname = 'public' AND c.relkind = 'S'
+                       AND has_sequence_privilege('authenticated', c.oid, 'USAGE')) AS authenticated_sequences,
+                    (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                     WHERE n.nspname = 'public'
+                       AND has_function_privilege('anon', p.oid, 'EXECUTE')) AS anon_functions,
+                    (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                     WHERE n.nspname = 'public'
+                       AND has_function_privilege('authenticated', p.oid, 'EXECUTE')) AS authenticated_functions
                 SQL);
 
             $ledger = $db->selectOne(<<<'SQL'
