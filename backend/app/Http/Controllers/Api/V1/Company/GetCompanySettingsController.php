@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Api\V1\Company;
 
 use App\Models\Company;
 use App\Models\CompanyCurrency;
+use App\Models\CompanyEconomicActivity;
+use App\Support\Company\CompanyEconomicProfile;
 use App\Models\CompanySetting;
 use App\Models\Currency;
 use App\Support\Tenant\TenantContext;
@@ -110,12 +112,27 @@ final readonly class GetCompanySettingsController
 
         $settingsArray = $settings ? $settings->toArray() : [];
 
+        // Un despliegue de frontend puede llegar antes de la migración Laravel.
+        // En ese caso no consultar tablas/columnas que aún no existen.
+        $economicProfileReady = CompanyEconomicProfile::isReady();
+        $economicActivities = $economicProfileReady
+            ? CompanyEconomicActivity::query()
+                ->where('company_id', $companyId)
+                ->orderByDesc('is_primary')
+                ->orderBy('id')
+                ->get()
+            : [];
+
         return response()->json([
             'data' => array_merge($settingsArray, [
                 'company' => $company,
                 'settings' => $settings,
                 'company_currencies' => $companyCurrencies,
                 'all_currencies' => $allCurrencies,
+                'economic_profile_ready' => $economicProfileReady,
+                'economic_activities' => $economicActivities,
+                'economic_sectors' => CompanyEconomicProfile::SECTORS,
+                'legal_forms' => CompanyEconomicProfile::LEGAL_FORMS,
             ]),
         ]);
     }
