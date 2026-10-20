@@ -1,6 +1,74 @@
+<div align="center">
+
 # Sistema de Gestión Contable y Financiero Bimonetario (ERP Clean Room)
 
-Sistema transaccional de alta precisión para la gestión contable y financiera bajo normativa peruana e internacional vigente al **2026** (PCGE, NIIF 18, NIIF 19, NIC y Resoluciones de SUNAT). Diseñado desde cero bajo metodología **Clean Room**, con integridad referencial absoluta a nivel de motor de base de datos, tipado numérico fuerte anti-flotantes y optimizado para digitación intensiva por teclado (*high-speed data entry*).
+### Transaccionalidad de Alta Precisión · Normativa Oficial SUNAT, PCGE 2026 y NIIF 18 / NIIF 19
+**Aislamiento Multi-Tenant de Dos Capas con PostgreSQL Row Level Security (RLS) y Tipado Numérico Fuerte Anti-Flotantes.**
+
+<br />
+
+<p align="center">
+  <a href="https://laravel.com"><img src="https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 11" /></a>
+  <a href="https://www.php.net"><img src="https://img.shields.io/badge/PHP-8.3+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.3+" /></a>
+  <a href="https://vuejs.org"><img src="https://img.shields.io/badge/Vue.js-3.5-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white" alt="Vue 3" /></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_15+-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase PostgreSQL" /></a>
+  <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" /></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/SUNAT-PCGE_2026_%2F_2019-003366?style=flat-square" alt="PCGE 2026" />
+  <img src="https://img.shields.io/badge/Normativa-NIIF_18_%2F_NIC_7-023e55?style=flat-square" alt="NIIF 18" />
+  <img src="https://img.shields.io/badge/Seguridad-ISO%2FIEC_27001-blueviolet?style=flat-square" alt="ISO 27001" />
+  <img src="https://img.shields.io/badge/Aislamiento-PostgreSQL_RLS-10b981?style=flat-square" alt="PostgreSQL RLS" />
+  <img src="https://img.shields.io/badge/Precisión-BCMath_/_NUMERIC(14,4)-f59e0b?style=flat-square" alt="Precisión Numérica" />
+  <img src="https://img.shields.io/badge/Licencia-MIT-22c55e?style=flat-square" alt="Licencia MIT" />
+</p>
+
+<p align="center">
+  <a href="#-quick-start--instalación-rápida"><b>Quick Start</b></a> •
+  <a href="#1-stack-tecnológico-y-arquitectura"><b>Arquitectura</b></a> •
+  <a href="#2-principios-contables-inmutables-del-sistema"><b>Principios Contables</b></a> •
+  <a href="#3-catálogos-y-parámetros-sembrados-en-base-de-datos"><b>Catálogos SUNAT</b></a> •
+  <a href="#6-endpoints-principales-de-la-api-restful-apiv1"><b>API RESTful</b></a> •
+  <a href="#7-sistema-de-gestión-de-seguridad-de-la-información-isoiec-270012023"><b>Seguridad ISO 27001</b></a>
+</p>
+
+<p align="center">
+  <code>git clone https://github.com/jwichpas/contabilidad.git</code>
+</p>
+
+</div>
+
+---
+
+## ⚡ Quick Start / Instalación Rápida
+
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/jwichpas/contabilidad.git
+cd contabilidad
+```
+
+### 2. Configurar y levantar el Backend (Laravel 11)
+```bash
+cd backend
+composer install
+cp .env.example .env
+# Configura tus credenciales PostgreSQL / Supabase en .env
+php artisan key:generate
+php artisan migrate
+php artisan db:seed
+php artisan serve --port=8000
+```
+
+### 3. Configurar y levantar el Frontend (Vue 3 + Vite)
+```bash
+cd ../frontend
+pnpm install
+pnpm dev
+# Accede a http://localhost:5181
+```
 
 ---
 
@@ -44,7 +112,8 @@ Sistema transaccional de alta precisión para la gestión contable y financiera 
 - **Rol de Aplicación Restringido (`app_backend`)**:
   - Creado explícitamente con `NOBYPASSRLS` y privilegios mínimos (`SELECT`, `INSERT`, `UPDATE`).
   - Prohibido el privilegio `DELETE` sobre tablas de journaling e historial contable inmutable.
-  - La función `public.app_current_company_id()` evalúa `current_setting('app.current_company_id', true)` y retorna `NULL` ante cualquier anomalía, garantizando denegación por defecto.
+  - La función SQL optimizada `public.app_current_company_id()` evalúa `current_setting('app.current_company_id', true)` y retorna `NULL` ante cualquier anomalía, garantizando denegación por defecto.
+  - Todas las políticas RLS utilizan subplan estático `(SELECT app_current_company_id())` según directrices oficiales de Supabase Postgres Best Practices.
 - **Integridad entre Tenants**: Todas las relaciones foráneas entre tablas con tenant son compuestas `(company_id, parent_id) → (company_id, id)`, imposibilitando que una empresa referencie registros de otra a nivel de motor.
 
 ### Backend (Laravel 11+)
@@ -54,7 +123,7 @@ Sistema transaccional de alta precisión para la gestión contable y financiera 
   - `StronglyTypedLongId` / `AccountId` / `CompanyId`: Identificadores nominales inmutables de 64 bits (`Int64`).
   - `AccountLevelShort`: Estructura nominal de 16 bits (`Int16` / `short`) restringida a los niveles jerárquicos 1..4 del PCGE.
   - `Decimal`: Value object basado puramente en **BCMath**, eliminando de raíz cualquier error de redondeo de punto flotante.
-- **Autenticación**: Laravel Sanctum con tokens personales stateless. La tabla `users` es administrada por Laravel para independizar el ciclo de vida del usuario del proveedor cloud.
+- **Autenticación**: Laravel Sanctum con tokens personales stateless.
 
 ### Frontend (Vue 3 + Vite + Tailwind CSS)
 - **Modularidad SPA**: Vue 3 con Composition API, `<script setup lang="ts">` y TypeScript estricto.
@@ -109,21 +178,6 @@ El sistema almacena como catálogos maestros inmutables las dos matrices oficial
 - **ERN (Estado de Resultados por Naturaleza)**: Compras, Gastos de Personal, Servicios de Terceros, Cargas Imputables (79).
 - **EFE (Estado de Flujos de Efectivo - NIC 7)**: Actividades de Operación, Inversión y Financiamiento.
 
-### Monedas del Sistema
-- `PEN` (Soles · Moneda funcional local).
-- `USD` (Dólares americanos · Moneda extranjera).
-- `EUR` (Euros · Moneda extranjera).
-
-### Cronograma de Vencimientos Tributarios SUNAT 2026
-- Cronograma mensual completo para Libros Electrónicos (SIRE / RVIE / RCE) y Declaraciones Juradas Mensuales (PDT 621 / IGV-Renta) para los dígitos **0 al 9** y **Buenos Contribuyentes**.
-
-### Estructura Empresarial Multi-Tenant
-- `company_settings`: Configuración de moneda funcional, versión del plan contable y ejercicio fiscal.
-- `company_areas`: Áreas funcionales (Contabilidad, Tesorería, Facturación, Almacén, Administración).
-- `cost_centers`: Centros de costos con asignación de cuentas automáticas de amarre (9411 / 9511 contra 7911).
-- `cash_flow_areas`: Áreas de flujo de efectivo por categoría de actividad según la NIC 7.
-- `entities`: Directorio maestro de entidades y anexos (Bancos, SUNAT, Clientes y Proveedores) con validación RUC/DNI.
-
 ---
 
 ## 4. Estructura del Repositorio
@@ -146,9 +200,10 @@ contabilidad/
 │   │       ├── Math/                      # Decimal Value Object basado en BCMath
 │   │       ├── Tenant/                    # TenantContext (coordinador de tenant seguro)
 │   │       └── Types/                     # Tipos fuertemente tipados (Int64, Int16)
-│   ├── config/database.php                # Configuración dual (Supavisor puerto 6543 / Directa 5432)
+│   ├── config/database.php                # Configuración de base de datos PostgreSQL y RLS
+│   ├── config/sanctum.php                 # Autenticación stateless y optimización de latencia
 │   ├── database/
-│   │   ├── migrations/                    # 10 migraciones con RLS, triggers y constraints nativos
+│   │   ├── migrations/                    # Migraciones con RLS, triggers y constraints nativos
 │   │   └── seeders/                       # Seeders oficiales de catálogos y empresa demo
 │   └── tests/
 │       └── Feature/                       # Pruebas con Pest (14 pruebas / 140 aserciones)
@@ -165,8 +220,10 @@ contabilidad/
 │   │   │   ├── composables/               # useAccountTree, useAccountingCatalogs
 │   │   │   ├── schemas/                   # Esquemas de validación Zod con tipado C#
 │   │   │   ├── types/                     # Tipos e interfaces de dominio contable
-│   │   │   └── views/                     # AccountingCatalogView (estación de trabajo PCGE)
+│   │   │   └── views/                     # AccountingCatalogView, JournalEntryView, ExchangeRatesView
+│   │   ├── modules/company/               # CompanySettingsView (parámetros y monedas)
 │   │   └── shared/
+│   │       ├── layout/                    # AppHeader, AppSidebar con navegación por módulos
 │   │       ├── types/numeric.types.ts     # SystemDecimal, Int64, Int16 con branding nominal
 │   │       └── ui/UiSelect.vue            # Select corporativo accesible y personalizado
 │   └── vite.config.ts                     # Configuración de Vite con Tailwind CSS v4
@@ -179,83 +236,7 @@ contabilidad/
 
 ---
 
-## 5. Guía de Instalación y Puesta en Marcha
-
-### Requisitos Previos
-- **PHP 8.2 o superior** con extensiones: `pdo_pgsql`, `bcmath`, `curl`, `mbstring`.
-- **Composer** 2.7+.
-- **Node.js** 20+ y **pnpm** 9+.
-- Instancia de **PostgreSQL 15+** (Supabase recomendada).
-
-### Configuración del Backend
-
-1. Acceder al directorio `backend`:
-   ```bash
-   cd backend
-   ```
-
-2. Configurar el archivo de entorno `.env`:
-   ```env
-   APP_NAME="ERP Contable"
-   APP_ENV=local
-   APP_KEY=base64:...
-   APP_DEBUG=true
-
-   # Tráfico de aplicación con RLS bajo rol app_backend
-   DB_CONNECTION=pgsql
-   DB_HOST=aws-1-ca-central-1.pooler.supabase.com
-   DB_PORT=5432
-   DB_DATABASE=postgres
-   DB_USERNAME=postgres.bnjwxphwtkhblvhsnylj
-   DB_PASSWORD=********
-   DB_SSLMODE=require
-   DB_EMULATE_PREPARES=false
-
-   # Conexión administrativa para DDL, migraciones y RLS policies
-   DB_MIGRATIONS_HOST=aws-1-ca-central-1.pooler.supabase.com
-   DB_MIGRATIONS_PORT=5432
-   DB_MIGRATIONS_DATABASE=postgres
-   DB_MIGRATIONS_USERNAME=postgres.bnjwxphwtkhblvhsnylj
-   DB_MIGRATIONS_PASSWORD=********
-   DB_MIGRATIONS_SSLMODE=require
-   ```
-
-3. Ejecutar las migraciones y sembrar los catálogos en Supabase:
-   ```bash
-   php artisan migrate --database=pgsql_migrations
-   php artisan db:seed
-   ```
-
-4. Ejecutar la suite completa de pruebas:
-   ```bash
-   php artisan test
-   ```
-
-### Configuración del Frontend
-
-1. Acceder al directorio `frontend`:
-   ```bash
-   cd frontend
-   ```
-
-2. Instalar dependencias con `pnpm`:
-   ```bash
-   pnpm install
-   ```
-
-3. Compilar y verificar el tipado estricto con TypeScript:
-   ```bash
-   pnpm build
-   ```
-
-4. Iniciar el servidor de desarrollo:
-   ```bash
-   pnpm dev
-   ```
-
----
-
-## 6. Endpoints Principales de la API RESTful (`/api/v1`)
+## 5. Endpoints Principales de la API RESTful (`/api/v1`)
 
 | Método | Endpoint | Descripción | Requiere Tenant |
 |---|---|---|:---:|
@@ -267,6 +248,8 @@ contabilidad/
 | `GET` | `/api/v1/accounting/journal-entries/next-number` | Precalcula el siguiente correlativo del voucher en el periodo | Sí (`X-Company-Id`) |
 | `GET` | `/api/v1/accounting/journal-entries` | Lista asientos del Libro Diario bimoneda con líneas y cuentas | Sí (`X-Company-Id`) |
 | `POST` | `/api/v1/accounting/journal-entries` | Registra y asienta un voucher contable bimoneda (Partida Doble) | Sí (`X-Company-Id`) |
+| `GET` | `/api/v1/company/exchange-rates` | Tipos de cambio diarios obligatorios según régimen de monedas | Sí (`X-Company-Id`) |
+| `POST` | `/api/v1/company/exchange-rates` | Guarda o actualiza tipos de cambio de compra y venta | Sí (`X-Company-Id`) |
 | `GET` | `/api/v1/catalogs/currencies` | Catálogo oficial de monedas (PEN, USD, EUR) | No |
 | `GET` | `/api/v1/catalogs/sunat/{tableNumber}` | Tablas oficiales de SUNAT (01, 02, 03, 05, 06, etc.) | No |
 | `GET` | `/api/v1/catalogs/accounting-standards` | Normas contables vigentes (NIIF 18, NIIF 19, NICs) | No |
@@ -283,7 +266,7 @@ contabilidad/
 
 ---
 
-## 7. Sistema de Gestión de Seguridad de la Información (ISO/IEC 27001:2023)
+## 6. Sistema de Gestión de Seguridad de la Información (ISO/IEC 27001:2023)
 
 El sistema ha sido diseñado e implementado incorporando controles normativos de **ISO/IEC 27001:2023** para garantizar confidencialidad, integridad y trazabilidad inmutable en todas las capas:
 
@@ -291,11 +274,10 @@ El sistema ha sido diseñado e implementado incorporando controles normativos de
 |---|---|---|
 | **Control 8.15 (Registro y Auditoría)** | Tabla `audit_logs` inmutable. El rol `app_backend` únicamente cuenta con permisos `INSERT` y `SELECT`, con revocación estricta de `UPDATE` y `DELETE` a nivel de motor PostgreSQL. RLS forzado por tenant. Servicio `AuditLoggerService` que audita inicios de sesión (exitosos y fallidos), cambios de tenant, altas, modificaciones y desactivaciones de cuentas contables. | PostgreSQL / Laravel |
 | **Control 8.11 (Enmascaramiento de Datos)** | Método `maskSensitiveData()` que intercepta y sanitiza recursivamente cualquier payload antes de registrar eventos, reemplazando contraseñas, tokens de acceso, secretos y números bancarios por `***MASKED_CONFIDENTIAL***`. | Backend (`AuditLoggerService`) |
-| **Control 8.24 y 8.26 (Seguridad en Aplicaciones y Criptografía)** | `SecurityHeadersMiddleware` inyecta de forma global encabezados HTTP estrictos: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, y `Cache-Control: no-store, no-cache, must-revalidate` para endpoints API. Soporte de HSTS para túneles HTTPS. | Middleware Global |
-| **Control 8.5 (Autenticación Segura y Mitigación de Fuerza Bruta)** | Rate limiting estricto (`throttle:10,1`) en `/api/v1/auth/login` que bloquea intentos automatizados de fuerza bruta con HTTP 429 tras 10 intentos. Tokens personales stateless emitidos por Laravel Sanctum almacenados en `sessionStorage` (destrucción automática al cerrar el navegador o pestaña). | API / Frontend (`useAuthSession`) |
+| **Control 8.24 y 8.26 (Seguridad en Aplicaciones y Criptografía)** | `SecurityHeadersMiddleware` inyecta de forma global encabezados HTTP estrictos: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, y `Cache-Control: no-store, no-cache, must-revalidate` para endpoints API. | Middleware Global |
+| **Control 8.5 (Autenticación Segura y Mitigación de Fuerza Bruta)** | Rate limiting estricto (`throttle:10,1`) en `/api/v1/auth/login` que bloquea intentos automatizados de fuerza bruta con HTTP 429 tras 10 intentos. Tokens personales stateless emitidos por Laravel Sanctum almacenados en `sessionStorage` (destrucción automática al cerrar la sesión). | API / Frontend (`useAuthSession`) |
 
 ---
 
-## 8. Licencia y Metodología
+## 7. Licencia y Metodología
 Desarrollado bajo principios de arquitectura **Clean Room**, con especificaciones abiertas, no propietarias y fundamentadas estrictamente en la normativa contable estándar y la legislación tributaria peruana vigente al ejercicio 2026.
-
