@@ -126,20 +126,30 @@ try {
         throw new RuntimeException('El usuario ya existe: no crear duplicados ni restablecer contrasenas.');
     }
 
-    $baseline = (array) $db->selectOne(<<<'SQL'
+    // El rol app_backend NO tiene permiso SELECT en migrations; NO consultar
+    // esa tabla desde la conexion operacional. La membresia y los asientos
+    // tienen RLS y deben contarse con contexto LOCAL de tenant.
+    $globalBaseline = (array) $db->selectOne(<<<'SQL'
         SELECT
           (SELECT count(*) FROM public.companies) AS companies,
           (SELECT count(*) FROM public.users) AS users,
-          (SELECT count(*) FROM public.company_user) AS memberships,
-          (SELECT count(*) FROM public.personal_access_tokens) AS tokens,
-          (SELECT count(*) FROM public.journal_entries) AS entries,
-          (SELECT count(*) FROM public.migrations) AS migrations
+          (SELECT count(*) FROM public.personal_access_tokens) AS tokens
         SQL);
-    $baseline = array_map('intval', $baseline);
+    $tenantBaseline = $db->transaction(function () use ($db, $companyId): array {
+        $db->selectOne(
+            "SELECT set_config('app.current_company_id', ?, true)",
+            [(string) $companyId]
+        );
+        return (array) $db->selectOne(<<<'SQL'
+            SELECT
+              (SELECT count(*) FROM public.company_user) AS memberships,
+              (SELECT count(*) FROM public.journal_entries) AS entries
+            SQL);
+    });
+    $baseline = array_map('intval', array_merge($globalBaseline, $tenantBaseline));
     if ($baseline['companies'] !== 1
         || $baseline['users'] !== 1
-        || $baseline['memberships'] !== 1
-        || $baseline['migrations'] !== 18) {
+        || $baseline['memberships'] !== 1) {
         throw new RuntimeException('La linea base cambio; detener alta y revisar cambios concurrentes.');
     }
 
@@ -226,16 +236,14 @@ try {
           (SELECT count(*) FROM public.users) AS users,
           (SELECT count(*) FROM public.company_user) AS memberships,
           (SELECT count(*) FROM public.personal_access_tokens) AS tokens,
-          (SELECT count(*) FROM public.journal_entries) AS entries,
-          (SELECT count(*) FROM public.migrations) AS migrations
+          (SELECT count(*) FROM public.journal_entries) AS entries
         SQL);
     $after = array_map('intval', $after);
     if ($after['users'] !== $baseline['users'] + 1
         || $after['memberships'] !== $baseline['memberships'] + 1
         || $after['companies'] !== $baseline['companies']
         || $after['entries'] !== $baseline['entries']
-        || $after['tokens'] !== $baseline['tokens']
-        || $after['migrations'] !== $baseline['migrations']) {
+        || $after['tokens'] !== $baseline['tokens']) {
         throw new RuntimeException('Conteos no corresponden exclusivamente al alta prevista.');
     }
 
