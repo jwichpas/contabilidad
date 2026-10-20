@@ -72,6 +72,22 @@ Según la [documentación oficial Supavisor](https://supabase.com/docs/guides/tr
 
 Se agregó `backend/scripts/phase0-diagnose-app-backend-auth.php` para comprobar de forma local que `DB_PASSWORD` coincide con `DB_APP_BACKEND_NEW_PASSWORD` (sin imprimir secretos), y solo si coinciden probar un `SELECT current_user` con conexión PostgreSQL **directa** como `app_backend` (sin proyecto añadido al nombre del rol). Los resultados `[OK]`, `[FALLO_AUTH_DIRECTA]` y `[SIN_CONCLUSION_DIRECTA]` determinan el camino de diagnóstico. No ejecutar nuevas migraciones ni rotaciones hasta tener este resultado. Evitar reintentos continuos del pooler por el interruptor de seguridad (circuit breaker).
 
+## Conexión operacional restablecida; prueba de permisos aprobada — 2026-10-20
+
+**Resultado informado por el usuario:**
+
+```text
+PASS Tests\\Feature\\Security\\PublicDataApiPrivilegesTest
+Tests: 1 passed (11 assertions)
+Duration: 2.53s
+```
+
+La prueba Pest se ejecutó por Laravel desde `backend/` con el rol operacional `app_backend` autenticado a través del pooler Supavisor de puerto 6543, tras aplicar la rotación. La prueba comprueba `current_user = 'app_backend'` y permisos efectivos de `anon`, `authenticated` y `app_backend` sobre tablas, secuencias y funciones de `public`. **Se cierra la incidencia de autenticación operacional y el control puntual de permisos.** No extrapolar el resultado al aislamiento funcional completo ni a cierre general de F0.
+
+Se añadió `backend/scripts/phase0-audit-tenant-read-only.php` como **siguiente control seguro, todavía no ejecutado por el usuario**: desde `pgsql`, exige `current_user='app_backend'`; inicia transacción `READ ONLY`, comprueba visibilidad de `accounting_accounts` y `journal_entries` sin `app.current_company_id`, con ID de empresa inexistente y con ID de empresa real; hace `ROLLBACK` siempre, sin realizar operaciones de escritura. El control prueba `fail-closed` sobre las dos tablas y visibilidad de registros de referencia, pero **no sustituye una prueba entre dos empresas reales**.
+
+**Higiene pendiente:** retirar la variable temporal `DB_APP_BACKEND_NEW_PASSWORD` del archivo local, conservar `DB_PASSWORD`, coordinar valores secretos de cualquier backend desplegado. No ejecutar suite completa que crea empresas, usa `SET ROLE` o hace `DELETE` sobre base compartida hasta validar seguridad transaccional. Prohibido divulgar secretos en documentación y logs.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
