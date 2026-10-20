@@ -41,6 +41,7 @@ return new class extends Migration
         // siguen existiendo permisos públicos o si cambia el acceso de Laravel.
         $db->transaction(function () use ($db): void {
             $before = $this->effectiveTablePrivileges($db);
+            $beforeSequences = $this->effectiveSequencePrivileges($db);
 
             $db->unprepared(<<<'SQL'
                 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public
@@ -55,10 +56,25 @@ return new class extends Migration
                 SQL);
 
             $after = $this->effectiveTablePrivileges($db);
+            $afterSequences = $this->effectiveSequencePrivileges($db);
 
             if ((int) $after->anon_tables !== 0 || (int) $after->authenticated_tables !== 0) {
                 throw new \RuntimeException(
                     'Persisten permisos públicos efectivos: la migración se revierte automáticamente.'
+                );
+            }
+
+            if ((int) $afterSequences->anon_sequences !== 0
+                || (int) $afterSequences->authenticated_sequences !== 0) {
+                throw new \RuntimeException(
+                    'Persisten permisos públicos sobre secuencias: migración revertida automáticamente.'
+                );
+            }
+
+            if ((int) $beforeSequences->backend_sequences < 1
+                || (int) $afterSequences->backend_sequences !== (int) $beforeSequences->backend_sequences) {
+                throw new \RuntimeException(
+                    'Cambió el acceso del backend a secuencias: migración revertida automáticamente.'
                 );
             }
 
@@ -91,6 +107,29 @@ return new class extends Migration
             FROM pg_catalog.pg_class c
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
             WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+            SQL);
+    }
+
+    /**
+     * Las secuencias también pueden exponerse vía Data API y deben conservar
+     * el acceso del backend de Laravel.
+     */
+    private function effectiveSequencePrivileges(\Illuminate\Database\Connection $db): object
+    {
+        return $db->selectOne(<<<'SQL'
+            SELECT
+                count(*) FILTER (
+                    WHERE has_sequence_privilege('anon', c.oid, 'USAGE, SELECT, UPDATE')
+                ) AS anon_sequences,
+                count(*) FILTER (
+                    WHERE has_sequence_privilege('authenticated', c.oid, 'USAGE, SELECT, UPDATE')
+                ) AS authenticated_sequences,
+                count(*) FILTER (
+                    WHERE has_sequence_privilege('app_backend', c.oid, 'USAGE')
+                ) AS backend_sequences
+            FROM pg_catalog.pg_class c
+            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind = 'S'
             SQL);
     }
 
