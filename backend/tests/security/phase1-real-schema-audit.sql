@@ -38,6 +38,8 @@ BEGIN
       OR has_table_privilege('authenticated',c.oid,'UPDATE')
       OR has_table_privilege('authenticated',c.oid,'DELETE')
     );
+  -- Coverage includes write privileges, not only the public SELECT check.
+  -- Keep the gate conservative: this ERP exposes data via Laravel, not PostgREST.
   IF exposed_count <> 0 THEN
     RAISE EXCEPTION 'Unexpected anon/authenticated table privileges: %',exposed_count;
   END IF;
