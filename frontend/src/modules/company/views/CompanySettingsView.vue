@@ -19,8 +19,8 @@ import type {
   CompanyCurrencyItem,
   CompanyInfo,
   CompanySettingDetails,
-  type EconomicSector,
-  type LegalForm,
+  EconomicSector,
+  LegalForm,
 } from '../types/companySettings.types';
 
 const props = defineProps<{
@@ -730,6 +730,7 @@ onMounted(() => {
                 class="w-full px-3 py-2 rounded-md text-xs bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand font-medium"
               >
                 <option value="GENERAL">Régimen General (PRICO / MEPECO)</option>
+                <option value="NRUS">Nuevo RUS — solo persona natural elegible</option>
                 <option value="MYPE_TRIBUTARIO">Régimen MYPE Tributario</option>
                 <option value="RER">Régimen Especial de Renta (RER)</option>
                 <option value="ESPECIAL">Otros Regímenes Especiales</option>
@@ -777,6 +778,112 @@ onMounted(() => {
               <span class="text-xs text-foreground font-medium">Libros Electrónicos PLE</span>
             </label>
           </div>
+
+          <!-- Perfil económico: habilitado únicamente tras migración Laravel F3. -->
+          <section class="rounded-lg border border-line p-4 space-y-4" aria-label="Perfil económico empresarial">
+            <div class="flex flex-col gap-1">
+              <h3 class="text-sm font-semibold text-foreground">Naturaleza jurídica y actividades económicas</h3>
+              <p class="text-xs text-muted">
+                Clasificación independiente del régimen tributario. La actividad principal se identifica
+                con su código CIIU de cuatro dígitos y puede tener actividades secundarias.
+              </p>
+            </div>
+
+            <div v-if="!economicProfileReady" class="flex items-start gap-2 text-xs text-muted border border-line rounded-md p-3 bg-soft">
+              <AlertTriangle class="w-4 h-4 shrink-0" />
+              <span>
+                Perfil pendiente de habilitación. Mañana, al ejecutar las migraciones Laravel,
+                esta sección permitirá guardar actividades y sectores. Los demás parámetros
+                pueden seguir modificándose.
+              </span>
+            </div>
+
+            <template v-else>
+              <div>
+                <label class="block text-xs font-semibold text-muted mb-1" for="legal-form">
+                  Forma jurídica de la empresa
+                </label>
+                <select
+                  id="legal-form"
+                  v-model="formLegalForm"
+                  class="w-full px-3 py-2 rounded-md text-xs bg-surf border border-line text-foreground"
+                >
+                  <option value="">Seleccionar forma jurídica</option>
+                  <option v-for="form in legalFormOptions" :key="form.code" :value="form.code">
+                    {{ form.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div v-for="(activity, index) in formEconomicActivities" :key="index"
+                class="rounded-md border border-line bg-surf p-3 space-y-3">
+                <div class="flex justify-between items-center gap-2">
+                  <label class="flex items-center gap-2 text-xs font-semibold text-foreground">
+                    <input
+                      type="radio"
+                      name="economic-activity-primary"
+                      :checked="activity.is_primary"
+                      @change="setPrimaryEconomicActivity(index)"
+                    />
+                    Actividad {{ index + 1 }} {{ activity.is_primary ? '(principal)' : '(secundaria)' }}
+                  </label>
+                  <button
+                    type="button"
+                    class="text-xs text-muted underline hover:text-foreground"
+                    @click="removeEconomicActivity(index)"
+                  >
+                    Quitar
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-muted mb-1">Sector económico</label>
+                    <select
+                      v-model="activity.sector_code"
+                      class="w-full px-3 py-2 rounded-md text-xs bg-soft border border-line text-foreground"
+                    >
+                      <option v-for="sector in economicSectorOptions" :key="sector.code" :value="sector.code">
+                        {{ sector.label }}
+                      </option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-muted mb-1">CIIU Rev. 4 (cuatro dígitos)</label>
+                    <input
+                      v-model="activity.ciiu_code"
+                      inputmode="numeric"
+                      maxlength="4"
+                      placeholder="Ej. 4752"
+                      class="w-full px-3 py-2 rounded-md text-xs bg-soft border border-line text-foreground"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-muted mb-1">Descripción de la actividad</label>
+                  <input
+                    v-model="activity.description"
+                    maxlength="200"
+                    placeholder="Ej. Venta minorista de productos para ferretería y pintura"
+                    class="w-full px-3 py-2 rounded-md text-xs bg-soft border border-line text-foreground"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                :disabled="formEconomicActivities.length >= 10"
+                class="inline-flex gap-2 items-center rounded-md border border-line px-3 py-2 text-xs text-foreground hover:bg-soft disabled:opacity-50"
+                @click="addEconomicActivity"
+              >
+                <span class="font-bold text-base">+</span> Agregar actividad económica
+              </button>
+              <p class="text-xs text-muted">
+                Esta clasificación no determina automáticamente libros ni beneficios tributarios.
+                La evaluación de ingresos, UIT y obligatoriedad SUNAT está programada para fases 5 y 6.
+              </p>
+            </template>
+          </section>
 
           <div class="flex justify-end pt-2">
             <button
