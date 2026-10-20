@@ -5,6 +5,22 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## Validación final de TTL Sanctum 12 h — APROBADA (2026-10-20)
+
+**Resultado real informado por el usuario en PowerShell, tras sincronizar código de `main`:**
+
+- `php -l config/sanctum.php`, `php -l app/Http/Controllers/Api/V1/Auth/LoginController.php`, `php -l scripts/phase0-login-rollback.php`: **sin errores de sintaxis**.
+- `php scripts/phase0-login-rollback.php`: **preflight OK**, Sanctum configura **720 minutos (12 horas)**; comprobación solo lectura.
+- `php scripts/phase0-login-rollback.php --execute`: **PASS**. Login HTTP 200 emitió token con `expires_at` a 12 horas; Bearer autorizó `GET /tenant/companies`; simular un token de 13 horas devolvió **HTTP 401**; logout revocó el token; reutilizar el Bearer revocado devolvió **HTTP 401**; los eventos `AUTH_LOGIN` y `AUTH_LOGOUT` se registraron dentro de la transacción; **ROLLBACK confirmado**.
+
+**Conteos antes y después en ejecución local:** `companies=1`, `users=1`, `memberships=1`, `tokens=28`, `audits=34`, `entries=2`.
+
+**Verificación adicional independiente por SELECT Supabase:** `companies=1`, `users=1`, `memberships=1`, `accounts=1764`, `tokens=28`, `audits=34`, `entries=2`, `lines=4`, `applied_migrations=18`. Los **28 tokens antiguos** continúan con `expires_at=NULL`; el cambio a `sanctum.expiration=720` los rechazará por antigüedad al usar un backend con esa configuración, aunque no se borren físicamente.
+
+**Puerta de calidad cerrada:** autenticación de API Bearer, emisión y vencimiento a 12 h, token expirado 401, logout y token revocado 401, auditoría, preservación de registros al terminar. **No implica que todos los despliegues hayan actualizado la configuración ni que sesiones web/cookie tengan el mismo límite**. Tampoco acredita aún controles de recuperación, backup completo, autorización de todos los endpoints ni la suite global. Fase 0 continúa EN PROGRESO.
+
+**Próxima prioridad F0:** elaborar y aprobar procedimiento de respaldo/recuperación de datos. Existe `backend/scripts/phase0-backup.sh`, que hace `pg_dump` de `public` a un archivo local externo al repo y verifica `pg_restore --list` y SHA-256. **No se ha ejecutado y no garantiza restauración completa de usuarios/roles/configuración fuera de `public`**. El usuario optó anteriormente por no crear un respaldo por ahora; no ejecutar exportaciones ni restauraciones sin autorización.
+
 ## Actualización ejecutada en el entorno Laravel — 2026-10-20
 
 **Estado más reciente (prevalece sobre la línea base histórica del 19/10 situada debajo).**
