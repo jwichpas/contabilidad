@@ -76,3 +76,11 @@ Estos cambios **no requieren intervención local ni acceso a Supabase**. Los arc
 ## Incidencia de CI corregida (20/10/2026)
 
 La prueba SQL `phase1-rls-contract.sql` tenía un bloque `DO` con delimitadores `$` en lugar de `$$`. Se corrigió en `main` (commit `053f5bd`). Este defecto habría impedido ejecutar la prueba de inserción interempresa. **La corrección aún no equivale a un workflow verde**. La consulta de runs accesible al conector solo devuelve ejecuciones ligadas a PR, por lo que no permite confirmar las ejecuciones `push` de `main`; no declarar resultados aprobados sin logs.
+
+## F1.2/F1.3 — Implementación de autorización multiempresa (20/10/2026)
+
+Se implementó el middleware `RequireCompanyRole` y se aplicó a las mutaciones de cuentas, asientos, ajustes de empresa, tipos de cambio e inicialización del PCGE. La autorización revisa cada vez la membresía **activa del usuario para el tenant solicitado**; una función/rol del frontend no concede permisos. El contenedor Laravel ahora registra `TenantContext` con ciclo de vida `scoped`, no `singleton`. Además `TenantContext::run()` repone `SET LOCAL app.current_company_id` en el éxito de una transacción anidada, evitando herencia del tenant al liberar un SAVEPOINT.
+
+La suite CI ahora incorpora pruebas HTTP con empresas ficticias y membresías ADMIN/AUDITOR/ACCOUNTANT/DATA_ENTRY, comprobando prohibición interempresa y revocación de permisos, y pruebas de transacciones anidadas/rollback. Ver [matriz de roles F1.3](FASE-1-AUTORIZACION-ROLES.md). Se corrigieron errores de formato SQL en el contrato RLS y las declaraciones PL/pgSQL de las pruebas. **Todos estos cambios están publicados; no se ha confirmado que GitHub Actions haya terminado en verde.**
+
+La validación debe ejecutarse únicamente en el PostgreSQL efímero de CI. La base Supabase de desarrollo no fue modificada desde estos cambios. Pruebas pendientes: roles con conexión real `app_backend` sin privilegios de superusuario, rol en todas las demás rutas, políticas completas y configuraciones específicas de producción.
