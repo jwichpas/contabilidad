@@ -485,6 +485,14 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Descubrimientos críticos:** R10 (contraseña de BD en PHPUnit), R11 (tests apuntan a BD compartida), R01/R02 reconfirmados.
 - **Puerta pendiente:** controles de respaldo/recuperación de la BD existente, comparación no destructiva de migraciones, ejecución real de tests y validación restante de PLE/SIRE.
 
+### Correcciones implementadas en código — aún sin aplicar a PostgreSQL (2026-10-19)
+
+- **Middleware multiempresa:** `backend/app/Http/Middleware/SetTenantContext.php` ahora usa `TenantContext::run()` para ejecutar verificación de membresía y controlador en una misma transacción; evita el contexto de sesión persistente y elimina la caché de autorizaciones de 60 s. Commit [2bb34d6](https://github.com/jwichpas/contabilidad/commit/2bb34d6b98a3d7bd6ffe57609de00410d4fd7cfa). **Integración PostgreSQL pendiente de probar**.
+- **Migración Laravel de protección de tablas:** `backend/database/migrations/2026_10_19_000000_restrict_supabase_data_api_grants.php` retira los accesos de tablas y secuencias a los roles públicos `anon` y `authenticated`, manteniendo los permisos de `app_backend`. Commit [75a6407](https://github.com/jwichpas/contabilidad/commit/75a64070aad34fe68c6cc272bd78232fae903304). **Pendiente de ejecutar desde Artisan; no se ejecutó ninguna migración desde Supabase.**
+- **Pruebas incorporadas:** `backend/tests/Unit/SetTenantContextMiddlewareTest.php` y `backend/tests/Feature/Security/PublicDataApiPrivilegesTest.php`. Se amplió `phpunit.xml` para registrar el suite Unit y el workflow para ejecutarlo cuando haya runner. **Resultados de ejecución pendientes**.
+- **Último SELECT de validación de riesgo:** 14 migraciones aplicadas, 31 tablas, 18 sin RLS, y ambas funciones public API continúan con privilegio SELECT sobre 31 tablas. No indicar que la vulnerabilidad está cerrada hasta aplicar la migración Laravel y ejecutar su prueba.
+- **Estado de gobernanza:** Fase 0 continúa EN PROGRESO; reparaciones críticas de Fase 1 iniciadas a nivel de código, no aprobadas ni aplicadas. Checklist sigue en 0/27 completadas.
+
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
