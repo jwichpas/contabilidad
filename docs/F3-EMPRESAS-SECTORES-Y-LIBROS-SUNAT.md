@@ -116,7 +116,9 @@ Resumen operativo de las guías oficiales SUNAT; comprobar fecha de obligatoried
 - `frontend/src/modules/company/views/CompanySettingsView.vue`: interfaz para forma jurídica, sectores, CIIU y varias actividades. Muestra aviso de migración pendiente si aún no existen las columnas/tablas.
 - `backend/tests/Unit/CompanyEconomicProfileTest.php`: cinco grupos de pruebas unitarias listos para ejecutar.
 
-**Pendiente de implementar:** wizard completo de alta de empresas (hoy se integra en configuración existente), historial de régimen, perfil anual de ingresos/UIT, catálogo oficial completo de CIIU, reglas versionadas de libros, detección de obligatoriedad SIRE/PLE y pruebas E2E.
+**Wizard de alta desarrollado en código:** `frontend/src/modules/company/views/CompanyOnboardingWizard.vue` (cinco pasos, validación RUC, CIIU, régimen, monedas/PCGE y revisión final), rutas integradas al sidebar, y API Laravel `GET /api/v1/tenant/company-onboarding/capabilities` / `POST /api/v1/tenant/companies`. La API dispone de transacción para crear empresa, membresía ADMIN, parámetros fiscales, actividades y copia independiente del PCGE. **No está validado en ejecución ni habilitado hasta aplicar migraciones.**
+
+**Pendiente de implementar:** historia/versionado de régimen, perfiles por ejercicio más allá de datos iniciales, catálogo oficial completo CIIU, reglas SUNAT versionadas de libros y detección automatizada de obligatoriedad SIRE/PLE.
 
 **Pendiente de validar:** ejecutar migraciones **solo con Artisan**, respetando primero la migración de permisos públicos; compilar Vue, pasar PHPUnit y comprobar aislamiento multiempresa.
 
