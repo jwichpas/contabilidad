@@ -44,6 +44,8 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, bcmath, pdo_pgsql, xml, curl, zip
           coverage: none
+      - name: Phase 0 repository preflight (no PostgreSQL)
+        run: php scripts/phase0-preflight.php
       - run: composer validate --no-check-publish
       - run: composer install --no-interaction --no-progress --prefer-dist
       - name: Check database password is not hardcoded in PHPUnit
