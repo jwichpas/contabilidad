@@ -54,6 +54,8 @@ jobs:
             echo "The PHPUnit XML contains a hardcoded database password."
             exit 1
           fi
+      - name: Middleware unit tests (no database access)
+        run: ./vendor/bin/pest --testsuite=Unit
       - run: composer lint
       - name: Check PHP syntax without invoking the database
         run: |
