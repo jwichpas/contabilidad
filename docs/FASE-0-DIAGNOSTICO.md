@@ -165,6 +165,22 @@ Antes de ello se verificó sintaxis PHP sin errores y preflight de solo lectura 
 
 **Pendiente inmediato:** ejecutar `php -l` sobre los tres archivos modificados y `php artisan test tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php` (esperado 5 PASS, aserciones aún por verificar). **No ejecutar la suite de login completa** porque genera tokens, auditoría y otras escrituras; requiere revisión específica bajo aislamiento. Otros pendientes generales F0: estrategia de recuperación, pruebas funcionales autenticadas y revisión de tablas globales sin RLS.
 
+## Fase 0 — 5/5 pruebas de lectura aprobadas; revisión de tablas globales — 2026-10-20
+
+El usuario ejecutó `php artisan test tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php` tras unificar `ListUserCompaniesService` y los controladores: **PASS (5 pruebas, 9 aserciones, 11.57 s)**. La quinta verifica que el servicio devuelva las empresas del usuario sin emitir ni modificar tokens. **Esto no ejecuta POST /auth/login ni crea un token; ese control sigue pendiente.**
+
+**Auditoría SQL independiente de Supabase (solo SELECT, sin mutar):**
+- **18 tablas** de `public` sin RLS. **14 catálogos**: `app_backend` solo tiene `SELECT`, no escritura, y los roles `anon` y `authenticated` no tienen SELECT.
+- **4 tablas globales/sensibles:** `companies` y `users` conceden SELECT/INSERT/UPDATE (sin DELETE) a `app_backend`; `personal_access_tokens` concede SELECT/INSERT/UPDATE/DELETE a `app_backend`, necesario para Sanctum pero exige controles en Laravel; `migrations` no concede SELECT/INSERT/UPDATE/DELETE a `app_backend`.
+- En las 18, `anon` y `authenticated` tienen `SELECT=false`. No se debe interpretar ausencia de permiso público como RLS habilitado.
+- En `public`, las cinco funciones inspeccionadas muestran `SECURITY DEFINER=false`; `anon` no tiene EXECUTE; los cinco EXECUTE de `app_backend` son los propios de tenant/triggers. No se modificó ninguna política.
+- Línea base adicional: `personal_access_tokens=28` filas, `audit_logs=34` filas, **18 migraciones**. No se consultaron valores de tokens ni contraseñas.
+
+**Preparación siguiente, código en GitHub/main SIN ejecutar en Supabase:**
+`backend/scripts/phase0-login-rollback.php`: por defecto **solo lectura** (preflight de proyecto/roles/RLS/conteos); con `--execute` explícito crea un **usuario y membresía sintéticos** dentro de una transacción `pgsql`, prueba el login HTTP 200, emisión de token Sanctum, Bearer de acceso a la propia empresa y auditoría `AUTH_LOGIN`, ejecuta siempre `ROLLBACK` y compara los conteos desde la conexión administrativa. Usa IDs explícitos también para tokens y auditoría para evitar adelantar secuencias. No toca usuarios existentes ni imprime contraseñas/tokens. **El login HTTP completo y el modo --execute NO se han probado aún**, no declarar PASS anticipadamente. Una transacción no garantiza revertir efectos externos futuros, como mensajes enviados por listeners; se evita finalizar kernel y el entorno es local.
+
+**Pendientes relevantes:** prueba HTTP de login real con rollback, revisión de autorización y rate limiting, verificación de recuperación y respaldo; seguridad completa de tablas globales no se logra sin controles de aplicación y eventual diseño de esquema. Fase 0 continúa en progreso.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
