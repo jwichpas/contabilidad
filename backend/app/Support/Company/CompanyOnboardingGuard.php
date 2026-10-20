@@ -27,10 +27,12 @@ final readonly class CompanyOnboardingGuard
 
         $isAdmin = $this->tenantContext->run($companyId, static function () use ($companyId, $user): bool {
             return DB::table('company_user')
-                ->where('company_id', $companyId)
-                ->where('user_id', $user->id)
-                ->where('role', 'ADMIN')
-                ->where('is_active', true)
+                ->join('companies', 'companies.id', '=', 'company_user.company_id')
+                ->where('company_user.company_id', $companyId)
+                ->where('company_user.user_id', $user->id)
+                ->where('company_user.role', 'ADMIN')
+                ->where('company_user.is_active', true)
+                ->where('companies.is_active', true)
                 ->exists();
         });
 
