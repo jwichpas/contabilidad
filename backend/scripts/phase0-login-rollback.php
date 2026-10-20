@@ -116,6 +116,15 @@ try {
         exit(0);
     }
 
+    // Evita persistencia de rate limiting/cache/sesion fuera de la transaccion.
+    // Las solicitudes HTTP de prueba utilizaran almacenamiento solo en memoria.
+    config([
+        'cache.default' => 'array',
+        'cache.limiter' => 'array',
+        'session.driver' => 'array',
+        'queue.default' => 'sync',
+    ]);
+
     $userId = random_int(110000000000, 119999999999);
     $membershipId = random_int(120000000000, 129999999999);
     $tokenId = random_int(130000000000, 139999999999);
