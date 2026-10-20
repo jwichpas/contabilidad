@@ -12,16 +12,12 @@ use Illuminate\Support\Facades\DB;
 it('does not expose public accounting tables to Supabase anon or authenticated roles', function (): void {
     $result = DB::selectOne(<<<'SQL'
         SELECT
-          (SELECT count(*)
-           FROM information_schema.role_table_grants
-           WHERE table_schema = 'public' AND grantee = 'anon') AS anon_grants,
-          (SELECT count(*)
-           FROM information_schema.role_table_grants
-           WHERE table_schema = 'public' AND grantee = 'authenticated') AS authenticated_grants,
-          (SELECT count(*)
-           FROM information_schema.role_table_grants
-           WHERE table_schema = 'public' AND grantee = 'app_backend'
-             AND privilege_type = 'SELECT') AS backend_read_grants
+          count(*) FILTER (WHERE has_table_privilege('anon', c.oid, 'SELECT')) AS anon_grants,
+          count(*) FILTER (WHERE has_table_privilege('authenticated', c.oid, 'SELECT')) AS authenticated_grants,
+          count(*) FILTER (WHERE has_table_privilege('app_backend', c.oid, 'SELECT')) AS backend_read_grants
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
         SQL);
 
     expect((int) $result->anon_grants)->toBe(0)
