@@ -264,7 +264,7 @@ async function handleSaveSettings(): Promise<void> {
     return;
   }
 
-  if (economicProfileReady.value && formEconomicActivities.value.length > 0) {
+  if (economicProfileReady.value && activeTab.value === 'tax' && formEconomicActivities.value.length > 0) {
     const activities = formEconomicActivities.value;
     if (activities.filter((activity) => activity.is_primary).length !== 1 ||
         activities.some((activity) => !/^\d{4}$/.test(activity.ciiu_code) || !activity.description.trim()) ||
