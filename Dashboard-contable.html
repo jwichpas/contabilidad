@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard contable · Perú</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#fff;--surf:#fff;--ink:#0b1b3f;--mut:#5a6683;--line:#dce2ee;--brand:#002a8d;--brandtx:#fff;--pos:#1f7a4d;--warn:#b85400;--neg:#c8102e;--soft:#e8edf8;--bar2:#ff7800;--accent:#ff7800}
+
+:root[data-theme="dark"]{--bg:#0a1230;--surf:#101b42;--ink:#e8edfa;--mut:#9aa8cf;--line:#223062;--brand:#2f5fd6;--brandtx:#fff;--pos:#5fd09a;--warn:#ffa14a;--neg:#ff6b7f;--soft:#182654;--bar2:#ff8a1f;--accent:#ff8a1f}
+*,*:before,*:after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:500}
+.app{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+nav{background:var(--brand);color:var(--brandtx);padding:20px 14px;position:sticky;top:0;align-self:start;height:100vh}
+nav h1{font-size:15px;margin:0 8px 2px;font-weight:600}
+nav small{display:block;margin:0 8px 18px;opacity:.75}
+nav a{display:block;padding:8px;border-radius:6px;color:inherit;text-decoration:none;opacity:.8}
+nav a:hover,nav a.on{background:rgba(255,255,255,.14);opacity:1}
+nav a.on{box-shadow:inset 3px 0 0 var(--accent)}
+.liq>div:last-child b{color:#ffb066}
+button#th{border-color:var(--accent)}
+nav a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--neg);outline-offset:2px}
+main{padding:22px;min-width:0;max-width:1180px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+header h2{margin:0;font-size:20px;font-weight:600}
+header p{margin:0;color:var(--mut)}
+.ctl{display:flex;gap:8px;flex-wrap:wrap}
+select,button{font:inherit;color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 10px;cursor:pointer}
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+.panel h3{margin:0 0 12px;font-size:15px;font-weight:600}
+.liq{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.liq>div{padding:14px 16px;border-right:1px solid var(--line)}
+.liq>div:last-child{border-right:0;background:var(--brand);color:var(--brandtx)}
+.liq span{display:block;font-size:12px;opacity:.8}
+.liq b{font-size:22px;display:block;margin-top:2px}
+.sec{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:16px 0}
+.kpi{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.kpi span{color:var(--mut);font-size:12px}
+.kpi b{display:block;font-size:18px;margin:2px 0}
+.up{color:var(--pos)}.dn{color:var(--neg)}
+.cols{display:grid;grid-template-columns:3fr 2fr;gap:16px}
+.cols>*{min-width:0}
+.chart{display:flex;align-items:flex-end;gap:14px;height:170px;border-bottom:1px solid var(--line);padding:0 4px}
+.chart div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.chart .p{display:flex;align-items:flex-end;gap:4px;width:100%;height:100%}
+.chart i{flex:1;border-radius:3px 3px 0 0;background:var(--brand)}
+.chart i.c{background:var(--bar2)}
+.lab{display:flex;gap:14px;padding:6px 4px;color:var(--mut);font-size:12px}
+.lab span{flex:1;text-align:center}
+.leg{display:flex;gap:14px;color:var(--mut);font-size:12px;margin-bottom:8px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;background:var(--brand)}
+.leg i.c{background:var(--bar2)}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:440px}
+th{font-weight:500;color:var(--mut);text-align:left;font-size:12px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line)}
+td.r,th.r{text-align:right}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid currentColor}
+.ok{color:var(--pos)}.wa{color:var(--warn)}.er{color:var(--neg)}
+ul.al{list-style:none;margin:0;padding:0}
+ul.al li{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+ul.al li:last-child{border-bottom:0}
+ul.al b{font-weight:600}
+ul.al .d{width:8px;height:8px;border-radius:50%;margin-top:7px;flex:none;background:currentColor}
+.prog{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;margin:4px 0 10px}
+.prog i{display:block;height:100%;background:var(--brand)}
+.note{color:var(--mut);font-size:12px;margin:4px 0 0}
+@media(max-width:820px){.app{grid-template-columns:1fr}nav{position:static;height:auto;display:flex;flex-wrap:wrap;gap:4px;padding:12px}nav h1,nav small{width:100%;margin-bottom:2px}.cols{grid-template-columns:1fr}main{padding:14px}.liq>div{border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav aria-label="Principal">
+<h1>ContaPerú</h1><small>Demo con datos ficticios</small>
+<a class="on" href="#resumen">Resumen</a><a href="#impuestos">Impuestos y vencimientos</a><a href="#comprobantes">Comprobantes</a><a href="#libros">Libros electrónicos</a><a href="#alertas">Alertas</a>
+</nav>
+<main>
+<header id="resumen">
+<div><h2>Inversiones Andina S.A.C.</h2><p>RUC 20512345675 · Régimen General · Moneda S/</p></div>
+<div class="ctl">
+<select id="per" aria-label="Periodo"></select>
+<button id="th" type="button">Tema</button>
+</div>
+</header>
+
+<section class="panel" id="impuestos" aria-labelledby="liqt">
+<h3 id="liqt">Liquidación mensual del IGV y renta (PDT 621)</h3>
+<div class="liq" id="liq"></div>
+<p class="note">IGV 18% (16% + 2% IPM). Pago a cuenta de renta calculado con el 1.5% de los ingresos netos, como ejemplo.</p>
+<div class="sec" id="kpis"></div>
+</section>
+
+<div class="cols">
+<section class="panel" aria-labelledby="gt">
+<h3 id="gt">Ventas y compras, últimos 6 meses</h3>
+<div class="leg"><span><i></i>Ventas</span><span><i class="c"></i>Compras</span></div>
+<div class="chart" id="chart" role="img" aria-label="Gráfico de barras de ventas y compras mensuales"></div>
+<div class="lab" id="lab"></div>
+</section>
+<section class="panel" id="alertas" aria-labelledby="at">
+<h3 id="at">Requiere atención</h3>
+<ul class="al" id="al"></ul>
+</section>
+</div>
+
+<div class="cols">
+<section class="panel" aria-labelledby="vt">
+<h3 id="vt">Próximos vencimientos SUNAT</h3>
+<div class="wrap"><table><thead><tr><th>Obligación</th><th>Periodo</th><th>Vence</th><th class="r">Monto</th><th>Estado</th></tr></thead><tbody id="ven"></tbody></table></div>
+<p class="note">Las fechas dependen del último dígito del RUC. Confirma siempre con el cronograma oficial de SUNAT.</p>
+</section>
+<section class="panel" id="libros" aria-labelledby="lt">
+<h3 id="lt">Cumplimiento de libros (PLE) y registros</h3>
+<div id="lib"></div>
+<h3 style="margin-top:14px">Tipo de cambio SBS</h3>
+<div class="num" id="tc"></div>
+</section>
+</div>
+
+<section class="panel" id="comprobantes" aria-labelledby="ct">
+<h3 id="ct">Comprobantes electrónicos recientes</h3>
+<div class="wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Serie-Número</th><th>Cliente / Proveedor</th><th class="r">Total S/</th><th>SUNAT</th></tr></thead><tbody id="cp"></tbody></table></div>
+</section>
+</main>
+</div>
+<script>
+const f=n=>n.toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const D={
+"Setiembre 2026":{v:248600,c:171300,m:["Abr","May","Jun","Jul","Ago","Set"],sv:[182,205,219,231,240,249],sc:[130,142,160,158,166,171]},
+"Agosto 2026":{v:240100,c:166200,m:["Mar","Abr","May","Jun","Jul","Ago"],sv:[170,182,205,219,231,240],sc:[121,130,142,160,158,166]}
+};
+const per=document.getElementById("per");
+Object.keys(D).forEach(k=>per.add(new Option(k,k)));
+function draw(){
+const d=D[per.value],igvV=d.v*.18,igvC=d.c*.18,igv=igvV-igvC,ren=d.v*.015,tot=igv+ren;
+document.getElementById("liq").innerHTML=
+`<div><span>Ventas gravadas (base)</span><b class="num">${f(d.v)}</b></div>
+<div><span>IGV de ventas</span><b class="num">${f(igvV)}</b></div>
+<div><span>− Crédito fiscal (compras)</span><b class="num">${f(igvC)}</b></div>
+<div><span>IGV por pagar</span><b class="num">${f(igv)}</b></div>
+<div><span>Total a pagar con renta</span><b class="num">${f(tot)}</b></div>`;
+const k=[["Utilidad bruta estimada",f(d.v-d.c),"+8.4% vs mes anterior","up"],["Pago a cuenta de renta",f(ren),"1.5% de ingresos","mut"],["Saldo de detracciones (BN)",f(18420.5),"Disponible para pagar tributos","up"],["Cuentas por cobrar",f(96340),"S/ 31,200 vencidas","dn"]];
+document.getElementById("kpis").innerHTML=k.map(x=>`<div class="kpi"><span>${x[0]}</span><b class="num">S/ ${x[1]}</b><span class="${x[3]}">${x[2]}</span></div>`).join("");
+const mx=Math.max(...d.sv);
+document.getElementById("chart").innerHTML=d.sv.map((v,i)=>`<div><div class="p"><i style="height:${v/mx*100}%" title="Ventas S/ ${v}k"></i><i class="c" style="height:${d.sc[i]/mx*100}%" title="Compras S/ ${d.sc[i]}k"></i></div></div>`).join("");
+document.getElementById("lab").innerHTML=d.m.map(m=>`<span>${m}</span>`).join("");
+}
+per.onchange=draw;draw();
+const al=[["er","IGV: ficha de detracción pendiente","3 facturas de servicios superan S/ 700 sin depósito en Banco de la Nación."],["wa","Facturas por cobrar vencidas","Corporación Sur S.A. acumula S/ 31,200 con más de 30 días."],["wa","Compras sin sustento electrónico","2 comprobantes de proveedores no figuran en SIRE."],["ok","Planilla electrónica (PLAME)","Presentada. Aportes a EsSalud y AFP/ONP conciliados."]];
+document.getElementById("al").innerHTML=al.map(a=>`<li class="${a[0]}"><span class="d"></span><div style="color:var(--ink)"><b>${a[1]}</b><br><span style="color:var(--mut)">${a[2]}</span></div></li>`).join("");
+const ve=[["PDT 621 IGV-Renta","Set 2026","16 Oct 2026",null,"wa","Vence hoy"],["PLAME","Set 2026","16 Oct 2026",null,"ok","Presentado"],["Libros electrónicos (PLE)","Set 2026","Según RUC",null,"ok","En plazo"],["Detracciones","Set 2026","5.º día hábil",3180,"er","Por pagar"],["PDT 621 IGV-Renta","Oct 2026","Nov 2026",null,"ok","En curso"]];
+document.getElementById("ven").innerHTML=ve.map(v=>`<tr><td>${v[0]}</td><td>${v[1]}</td><td>${v[2]}</td><td class="r num">${v[3]?f(v[3]):"—"}</td><td><span class="tag ${v[4]}">${v[5]}</span></td></tr>`).join("");
+const li=[["Registro de Ventas e Ingresos",100],["Registro de Compras",92],["Libro Diario",85],["Libro Mayor",85],["Inventarios y Balances",60]];
+document.getElementById("lib").innerHTML=li.map(l=>`<div style="display:flex;justify-content:space-between"><span>${l[0]}</span><span class="num">${l[1]}%</span></div><div class="prog"><i style="width:${l[1]}%"></i></div>`).join("");
+document.getElementById("tc").innerHTML="USD compra 3.712 · venta 3.725<br><span class='note' style='font-family:inherit'>Valor de ejemplo. Conecta la fuente oficial de la SBS.</span>";
+const cp=[["18/10","Factura","F001-001254","Corporación Sur S.A.",14750,"ok","Aceptado"],["17/10","Boleta","B001-008812","Cliente varios",236.5,"ok","Aceptado"],["17/10","Nota de crédito","FC01-000031","Minera Tacna S.A.C.",-1180,"ok","Aceptado"],["16/10","Factura","F001-001251","Agroexport Sur E.I.R.L.",8260,"wa","Con observación"],["15/10","Factura","E001-000417","Distribuidora Norte S.A.",5900,"er","Rechazado"]];
+document.getElementById("cp").innerHTML=cp.map(c=>`<tr><td>${c[0]}</td><td>${c[1]}</td><td class="num">${c[2]}</td><td>${c[3]}</td><td class="r num">${f(c[4])}</td><td><span class="tag ${c[5]}">${c[6]}</span></td></tr>`).join("");
+document.getElementById("th").onclick=()=>{const r=document.documentElement,dk=r.dataset.theme==="dark";r.dataset.theme=dk?"light":"dark"};
+</script>
+</body>
+</html>
