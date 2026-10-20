@@ -207,6 +207,7 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 - Reconciliación del mayor y saldos con el Libro Diario, fuente de verdad.
 - Catálogo de **tipos de libros contables** y estados de obligación por empresa/ejercicio; calcular los mínimos desde reglas versionadas SUNAT, no únicamente desde un booleano.
 - Evitar saldos editables manualmente desligados del ledger.
+- Conciliar mensualmente débito IGV local, crédito fiscal admitido/no admitido, prorrata si corresponde y **SFE aplicado a IGV local**, sin mezclar SFMB, solicitudes de devolución ni caja; referencia: [módulo SFE/SFMB](docs/F6-IGV-SFE-SFMB-EXPORTADORES.md).
 
 **Entregable:** ciclo contable operativo para una empresa ficticia de punta a punta.
 
@@ -225,6 +226,8 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 - Flujos de importación, comparación y conciliación para RCE/RVIE y SIRE, conforme a interfaces oficiales disponibles.
 - Reglas de duplicados, observaciones, rectificaciones, periodos y control documentario.
 - Pruebas con casos peruanos (gravado, exonerado, inafecto, notas, diferencias).
+- Incorporar **SFE y SFMB de exportadores de bienes/servicios**, incluyendo empresas mixtas con ventas nacionales, límite por exportaciones computables (FOB/DAM, facturas de servicios, notas), arrastre, PDB Exportadores, compensación y devolución, con pruebas por periodo y rastreo SUNAT. La exportación calificada es **inafecta** al IGV, no gravada con tasa cero. [Especificación normativa](docs/F6-IGV-SFE-SFMB-EXPORTADORES.md).
+- Separar crédito fiscal arrastrable de empresas locales, SFE, SFMB determinado, límite disponible, compensaciones, solicitudes pendientes y cobro real; no reconocer dinero en bancos por el cálculo ni crear solicitudes automáticas sin constancia oficial.
 - Validación de formato contra especificaciones SUNAT vigentes y muestras aceptadas.
 
 **Entregable:** registros y exportaciones validadas, conciliadas con asientos y documentos.
@@ -424,6 +427,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - [ ] **F6.1** Versionar catálogos SUNAT y generar archivos PLE aplicables.
 - [ ] **F6.2** Incorporar registros RCE/RVIE y flujos de conciliación SIRE.
 - [ ] **F6.3** Validar formatos, duplicidades, observaciones y conciliación.
+- [ ] **F6.4** Implementar y probar SFE/SFMB (exportaciones bienes/servicios y empresas mixtas): origen del crédito, aplicación a IGV local, límites/arrastres, PDB, compensación/devolución y trazabilidad. [Documento de diseño](docs/F6-IGV-SFE-SFMB-EXPORTADORES.md).
 
 ### Fase 7 — NIIF y EEFF
 - [ ] **F7.1** Implementar EEFF y matrices de rubros trazables.
@@ -568,6 +572,14 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Corrección multiempresa:** el formulario recarga al cambiar `activeCompanyId` y descarta respuestas atrasadas de otra empresa.
 - **Mañana:** las migraciones se ejecutan **en orden desde Artisan**, primero la de seguridad `2026_10_19_000000_restrict_supabase_data_api_grants`, después `2026_10_19_010000_add_company_economic_profile`. Verificar tablas/permisos y ejecutar pruebas con la única base `contabilidad-database`.
 - **Estado formal:** F3.1 **en implementación, no aprobada**. F0/F1/F2/F3 no han superado sus puertas de calidad; el checklist maestro permanece sin marcas hasta contar con evidencias reales.
+
+### Análisis tributario SUNAT — SFE y SFMB exportadores (2026-10-20)
+
+- **Especificación vinculante F3/F5/F6:** [docs/F6-IGV-SFE-SFMB-EXPORTADORES.md](docs/F6-IGV-SFE-SFMB-EXPORTADORES.md), derivada de los arts. 33–35 del TUO del IGV, reglamento DS 126-94-EF y orientación oficial SUNAT de compensación/devolución.
+- **Corrección jurídica:** exportaciones calificadas son operaciones **inafectas** IGV, no gravadas al «0 %». El SFE de crédito fiscal admitido se deduce del IGV bruto de ventas locales; el remanente SFMB no implica autorización automática de compensación/devolución.
+- **Empresas mixtas y de cualquier sector:** sector económico, régimen, actividad exportadora y operaciones validadas son dimensiones diferentes. El SFMB requiere sustentos de periodo; una empresa solo local mantiene saldo ordinario arrastrable salvo otros supuestos normativos.
+- **Hito F6.4 agregado:** motor mensual, límite tasa IGV+IPM sobre exportación computable, arrastres entre periodos, diferencias entre factura y embarque, registro de servicios cuando corresponda, PDB, estados de solicitudes, compensación y caja.
+- **Estado:** exclusivamente análisis/arquitectura y criterios de pruebas registrados en GitHub; **no se ha desarrollado aún el motor SFMB, migraciones específicas, UI fiscal ni modificaciones de tablas.** No declarar F6.4 completo hasta pruebas comparadas con casos SUNAT y conciliación contable.
 
 ## 11. Referencias y control documental
 
