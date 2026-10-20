@@ -539,6 +539,16 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Normativa:** https://emprender.sunat.gob.pe/comprobantes-libros/registros-libros-electronicos/libros-registros-contables-obligatorios y régimen General: https://emprender.sunat.gob.pe/ruc/regimenes-tributarios-mype/regimen-general-renta-rg.
 - **Ejecución:** especificación comprometida en `main`, **sin nueva migración ejecutada ni cambios a Supabase**. La migración pendiente de seguridad continúa pendiente de Artisan.
 
+### Avance en código de Fase 3 — Perfil económico multiempresa (2026-10-19)
+
+- **Preparado en `main` (NO aplicado en PostgreSQL):** [migración Laravel `2026_10_19_010000_add_company_economic_profile.php`](backend/database/migrations/2026_10_19_010000_add_company_economic_profile.php), que incorpora `company_settings.legal_form` y `company_economic_activities` con códigos sectoriales/CIIU, una actividad principal, varias secundarias, validaciones SQL, RLS forzado y permisos exclusivos de `app_backend`. No modifica las migraciones antiguas ni los registros existentes.
+- **Backend desarrollado:** modelo tenant [`CompanyEconomicActivity`](backend/app/Models/CompanyEconomicActivity.php), catálogo y reglas [`CompanyEconomicProfile`](backend/app/Support/Company/CompanyEconomicProfile.php), consultas GET y guardado PUT transaccional en controladores de configuración; rechaza perfiles inválidos, códigos CIIU duplicados y NRUS en personas jurídicas.
+- **Frontend desarrollado:** [`CompanySettingsView.vue`](frontend/src/modules/company/views/CompanySettingsView.vue) muestra forma jurídica, macrosector, CIIU, principal/secundaria y permite añadir hasta diez actividades. **Compatibilidad con despliegue antes de migrar:** API envía `economic_profile_ready=false`; Vue muestra aviso y no intenta consultar ni guardar columnas/tablas faltantes.
+- **Pruebas preparadas:** [`CompanyEconomicProfileTest.php`](backend/tests/Unit/CompanyEconomicProfileTest.php) contiene cinco grupos de casos de validación sin necesitar base de datos. **Pendiente ejecutar PHPUnit y compilar Vue**; GitHub Actions sigue sin runner disponible.
+- **Corrección multiempresa:** el formulario recarga al cambiar `activeCompanyId` y descarta respuestas atrasadas de otra empresa.
+- **Mañana:** las migraciones se ejecutan **en orden desde Artisan**, primero la de seguridad `2026_10_19_000000_restrict_supabase_data_api_grants`, después `2026_10_19_010000_add_company_economic_profile`. Verificar tablas/permisos y ejecutar pruebas con la única base `contabilidad-database`.
+- **Estado formal:** F3.1 **en implementación, no aprobada**. F0/F1/F2/F3 no han superado sus puertas de calidad; el checklist maestro permanece sin marcas hasta contar con evidencias reales.
+
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
