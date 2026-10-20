@@ -141,6 +141,12 @@ return new class extends Migration
     private function effectiveSequencePrivileges(\Illuminate\Database\Connection $db): object
     {
         return $db->selectOne(<<<'SQL'
+            WITH target_sequences AS MATERIALIZED (
+                SELECT c.oid
+                FROM pg_catalog.pg_class c
+                JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relkind = 'S'
+            )
             SELECT
                 count(*) FILTER (
                     WHERE has_sequence_privilege('anon', c.oid, 'USAGE, SELECT, UPDATE')
@@ -151,9 +157,7 @@ return new class extends Migration
                 count(*) FILTER (
                     WHERE has_sequence_privilege('app_backend', c.oid, 'USAGE')
                 ) AS backend_sequences
-            FROM pg_catalog.pg_class c
-            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public' AND c.relkind = 'S'
+            FROM target_sequences c
             SQL);
     }
 
