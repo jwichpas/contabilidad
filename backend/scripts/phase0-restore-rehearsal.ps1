@@ -80,6 +80,19 @@ try {
     & docker cp $full ($dockerName + ':/tmp/contabilidad-public.dump') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo copiar el dump al contenedor aislado.' }
 
+    # PostgreSQL crea 'public' por defecto, y pg_dump -n public incluye
+    # CREATE SCHEMA public. Suprimir SOLO el esquema vacio del contenedor
+    # temporal antes de restaurar. RESTRICT (sin CASCADE) aborta si el
+    # esquema contiene cualquier objeto: nunca tocar datos preexistentes.
+    # El destino es SIEMPRE este contenedor --network none/--tmpfs; no hay
+    # parametros para host o puerto de Supabase.
+    Write-Host '[PREPARACION] Eliminando public vacio SOLO en Docker efimero (RESTRICT, sin CASCADE).'
+    & docker exec $dockerName psql -U postgres -d postgres -X -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public RESTRICT;' 1>$null
+    if ($LASTEXITCODE -ne 0) {
+        throw 'No se pudo preparar el esquema public vacio en Docker. No utilizar CASCADE ni tocar Supabase.'
+    }
+    Write-Host '[OK] PostgreSQL podra recrear public desde el dump original.'
+
     Write-Host '[RESTAURACION] pg_restore en postgres:17-alpine, dentro del Docker aislado.'
     & docker exec $dockerName pg_restore -U postgres -d postgres --exit-on-error --no-owner --no-acl /tmp/contabilidad-public.dump
     if ($LASTEXITCODE -ne 0) { throw 'pg_restore fallo: incompatibilidad u objeto faltante. NO aprobado.' }
