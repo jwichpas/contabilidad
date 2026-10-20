@@ -36,3 +36,10 @@ it('does not accept scientific notation or floats masquerading as exact strings'
         ->and(fn () => Decimal::of('NaN'))->toThrow(InvalidArgumentException::class)
         ->and(fn () => Decimal::of('12,34'))->toThrow(InvalidArgumentException::class);
 });
+
+it('never silently truncates nonzero decimal digits beyond the accounting scale', function (): void {
+    expect(fn () => Decimal::ofMonetary('10.99995'))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => Decimal::ofExchangeRate('3.7123459'))->toThrow(InvalidArgumentException::class)
+        ->and(Decimal::ofMonetary('10.999900')->toString())->toBe('10.9999')
+        ->and(Decimal::ofExchangeRate('3.7123450')->toString())->toBe('3.712345');
+});
