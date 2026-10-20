@@ -5,6 +5,14 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## F0 — Copia lógica de `public` creada en el equipo del usuario (20/10/2026)
+
+Según salida de PowerShell facilitada por el usuario, `phase0-backup-windows.ps1` terminó con `[PASS]`, generó el archivo `C:\CONTA\contabilidad-public-20261020T210205261Z.dump`, índice y manifiesto, e informó SHA-256 `8896DCC5F0B10279F95D6C8F55E32BD9278F217676C7953E7D2E081E617E423E`. Herramientas PostgreSQL 17 disponibles. El script exportó **solo `public`**; no copió los objetos Storage ni las tablas internas Supabase Auth. El archivo existe **según la salida local**, no se ha leído ni transferido desde ChatGPT.
+
+**Control parcial aprobado:** generación de la copia lógica, inventario y hash reportados. **NO APROBADO AÚN:** restaurabilidad en PostgreSQL 17 aislado, verificación real de cifrado de `C:`, custodia/ACL y continuidad funcional del ERP en servidor productivo. El flag `-EncryptedDestinationConfirmed` no implica que se haya verificado BitLocker.
+
+Próxima instrucción: ejecutar `phase0-restore-rehearsal.ps1 -Archive "C:\CONTA\contabilidad-public-20261020T210205261Z.dump"` únicamente con Docker Linux, `--network none`. **Nunca restaurar sobre la instancia Supabase original**. Fase 0 permanece EN PROGRESO.
+
 ## F0 — Autorización de respaldo y futura BD PostgreSQL independiente (20/10/2026)
 
 **Decisión explícita del usuario:** `contabilidad-database` (Supabase) seguirá siendo únicamente el ambiente de **desarrollo**. La producción futura usará **PostgreSQL independiente**, con backend Laravel y RLS. El usuario aprobó preparar y ejecutar una copia lógica con validación de restauración **en un entorno separado**. Esto cambia la decisión anterior de no generar backups, pero **no constituye evidencia de ejecución**.
