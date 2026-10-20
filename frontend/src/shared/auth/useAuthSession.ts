@@ -1,5 +1,6 @@
 import { computed, shallowRef } from 'vue';
 import { asCompanyId, type CompanyId } from '@/modules/accounting/types/accountingAccount.types';
+import { COMPANY_ONBOARDING_DRAFT_KEY } from '@/modules/company/types/companyOnboarding.types';
 
 export interface AuthUser {
   readonly id: number;
@@ -203,6 +204,7 @@ export function useAuthSession() {
     sessionStorage.removeItem(STORAGE_TOKEN_KEY);
     sessionStorage.removeItem(STORAGE_USER_KEY);
     sessionStorage.removeItem(STORAGE_COMPANIES_KEY);
+    sessionStorage.removeItem(COMPANY_ONBOARDING_DRAFT_KEY);
   }
 
   /**
