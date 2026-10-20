@@ -72,3 +72,7 @@ Se añadió el job `laravel-real-migrations` al workflow F1: aprovisiona Postgre
 Se corrigió una aserción negativa del contrato RLS: ahora registra explícitamente si PostgreSQL rechazó la inserción interempresa y falla si no la rechazó. También se agregó [`phase1-real-tenant-context.sql`](../backend/tests/security/phase1-real-tenant-context.sql), que se ejecuta **después de las migraciones Laravel** contra PostgreSQL 17 temporal para comprobar `public.app_current_company_id()`: sin tenant, tenant válido, tenant no numérico y tenant vacío. La identidad invocadora es `app_backend`.
 
 Estos cambios **no requieren intervención local ni acceso a Supabase**. Los archivos están publicados; los jobs siguen sin confirmación de resultado, por lo que no se consideran pruebas aprobadas hasta observar una ejecución exitosa en GitHub Actions.
+
+## Incidencia de CI corregida (20/10/2026)
+
+La prueba SQL `phase1-rls-contract.sql` tenía un bloque `DO` con delimitadores `$` en lugar de `$$`. Se corrigió en `main` (commit `053f5bd`). Este defecto habría impedido ejecutar la prueba de inserción interempresa. **La corrección aún no equivale a un workflow verde**. La consulta de runs accesible al conector solo devuelve ejecuciones ligadas a PR, por lo que no permite confirmar las ejecuciones `push` de `main`; no declarar resultados aprobados sin logs.
