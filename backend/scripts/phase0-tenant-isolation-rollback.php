@@ -35,6 +35,28 @@ if (count($argv) > 2 || (count($argv) === 2 && ! $execute)) {
     exit(2);
 }
 
+$operationalConfig = (array) config('database.connections.pgsql', []);
+$adminConfig = (array) config('database.connections.pgsql_migrations', []);
+$operationalHost = (string) ($operationalConfig['host'] ?? '');
+$operationalUser = (string) ($operationalConfig['username'] ?? '');
+$adminHost = (string) ($adminConfig['host'] ?? '');
+$adminUser = (string) ($adminConfig['username'] ?? '');
+$operationalUrl = trim((string) ($operationalConfig['url'] ?? ''));
+$adminUrl = trim((string) ($adminConfig['url'] ?? ''));
+
+if ($operationalUrl !== '' || $adminUrl !== ''
+    || $operationalHost !== 'aws-1-ca-central-1.pooler.supabase.com'
+    || $operationalUser !== 'app_backend.bnjwxphwtkhblvhsnylj'
+    || ! in_array($adminHost, [
+        'aws-1-ca-central-1.pooler.supabase.com',
+        'db.bnjwxphwtkhblvhsnylj.supabase.co',
+    ], true)
+    || ! in_array($adminUser, ['postgres.bnjwxphwtkhblvhsnylj', 'postgres'], true)) {
+    fwrite(STDERR, '[BLOQUEO] El proyecto o las credenciales configuradas no corresponden '
+        .'a las conexiones aprobadas para contabilidad-database DEV.'.PHP_EOL);
+    exit(2);
+}
+
 $application = DB::connection('pgsql');
 $admin = DB::connection('pgsql_migrations');
 
