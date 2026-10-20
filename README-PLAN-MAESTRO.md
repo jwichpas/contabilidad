@@ -548,6 +548,17 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Tests sin conexión:** cinco casos `backend/tests/Unit/CompanyEconomicProfileTest.php` para invariantes; falta ejecutar Pest y `pnpm typecheck/build` por indisponibilidad del runner. No considerar las pruebas aprobadas sin resultados.
 - **Alcance pendiente:** esto es la **edición del perfil de empresa existente**, NO el wizard de alta completo ni el motor de libros obligatorios; esos continúan en F3/F5/F6. No se ha efectuado despliegue ni DDL por Supabase.
 
+### Avance en Vue y API — Asistente de alta de empresas (2026-10-20)
+
+- **Interfaz Vue terminada en código:** [`CompanyOnboardingWizard.vue`](frontend/src/modules/company/views/CompanyOnboardingWizard.vue) con cinco pasos (identificación → actividad económica/CIIU → tributación → monedas/PCGE → confirmación), progreso, errores por campo, edición de actividades principal/secundarias, resumen final y borrador de sesión.
+- **Integración real en la navegación:** [`App.vue`](frontend/src/App.vue), [sidebar](frontend/src/shared/layout/AppSidebar.vue), encabezado y módulo `company-create` con URL `#nueva-empresa`. Una creación confirmada por la API se incorpora al selector de empresas y se activa.
+- **API Laravel preparada:** `GET /api/v1/tenant/company-onboarding/capabilities` y `POST /api/v1/tenant/companies`, protegidos con Sanctum y membresía activa `ADMIN`, con validación RUC, CIIU, régimen, ejercicio, ingresos, monedas y adopción PCGE.
+- **Alta transaccional:** al ejecutarse el POST se prevé crear empresa, membresía ADMIN, `company_settings`, monedas, actividades y copia privada de la plantilla PCGE como una sola unidad; en caso de error, rollback. Auditoría del evento registrada en el flujo. **Sin ejecución real todavía**.
+- **Nueva migración Laravel pendiente (actualizada sin aplicar):** `2026_10_19_010000_add_company_economic_profile.php` ahora incorpora `initial_fiscal_year`, `income_reference_year`, `annual_income` e `initial_pcge_version`, además de forma jurídica y actividades.
+- **Control de habilitación:** el asistente puede consultarse y guardar borradores antes de migrar, pero la confirmación de alta permanece deshabilitada hasta que `CompanyOnboardingGuard` confirme que existe el esquema y que el usuario es ADMIN. No se simulan catálogos de monedas ni plantillas PCGE.
+- **Pruebas preparadas:** [`company-onboarding.test.mjs`](frontend/scripts/company-onboarding.test.mjs) (6 casos), [`CompanyOnboardingRulesTest.php`](backend/tests/Unit/CompanyOnboardingRulesTest.php) y existentes de perfil. Ejecutar `npm run test:unit`, `npm run typecheck`/`npm run build` en frontend y pruebas Pest Laravel cuando dispongamos de runner.
+- **Estado honesto:** IMPLEMENTADO EN CÓDIGO; **no desplegado, no compilado ni probado end-to-end**. Supabase se conserva sin DDL. F3.1 sigue **EN VALIDACIÓN/PARCIAL** y no se marca `[x]` hasta crear empresa ficticia y registrar primer asiento desde UI.
+
 ### Avance en código de Fase 3 — Perfil económico multiempresa (2026-10-19)
 
 - **Preparado en `main` (NO aplicado en PostgreSQL):** [migración Laravel `2026_10_19_010000_add_company_economic_profile.php`](backend/database/migrations/2026_10_19_010000_add_company_economic_profile.php), que incorpora `company_settings.legal_form` y `company_economic_activities` con códigos sectoriales/CIIU, una actividad principal, varias secundarias, validaciones SQL, RLS forzado y permisos exclusivos de `app_backend`. No modifica las migraciones antiguas ni los registros existentes.
