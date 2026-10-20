@@ -17,6 +17,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $base_currency_id
  * @property int|null $secondary_currency_id
  * @property string|null $legal_form
+ * @property int|null $initial_fiscal_year
+ * @property int|null $income_reference_year
+ * @property string|null $annual_income
+ * @property string|null $initial_pcge_version
  * @property string $tax_regime
  * @property string $default_vat_rate
  * @property bool $is_retention_agent
@@ -47,6 +51,10 @@ class CompanySetting extends Model
         'secondary_currency_id',
         'tax_regime',
         'legal_form',
+        'initial_fiscal_year',
+        'income_reference_year',
+        'annual_income',
+        'initial_pcge_version',
         'default_vat_rate',
         'is_retention_agent',
         'is_perception_agent',
@@ -70,6 +78,9 @@ class CompanySetting extends Model
     {
         return [
             'base_currency_id' => 'integer',
+            'initial_fiscal_year' => 'integer',
+            'income_reference_year' => 'integer',
+            'annual_income' => 'string',
             'secondary_currency_id' => 'integer',
             'default_vat_rate' => 'string', // Decimal exacto
             'is_retention_agent' => 'boolean',
