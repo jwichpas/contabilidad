@@ -20,13 +20,8 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="pgsql"/>
-        <env name="DB_HOST" value="aws-1-ca-central-1.pooler.supabase.com"/>
-        <env name="DB_PORT" value="5432"/>
-        <env name="DB_DATABASE" value="postgres"/>
-        <env name="DB_USERNAME" value="postgres.bnjwxphwtkhblvhsnylj"/>
 
-        <!-- DB_PASSWORD must be supplied through an untracked backend/.env.testing or environment variable. Never store database passwords in versioned XML. -->
-        <env name="DB_SSLMODE" value="require"/>
+        <!-- DB_HOST, DB_USERNAME, DB_PASSWORD y demás variables de conexión se cargan desde el entorno o backend/.env no versionado. Usar solo contabilidad-database. No colocar contraseñas aquí. -->
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
