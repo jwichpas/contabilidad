@@ -493,6 +493,23 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Último SELECT de validación de riesgo:** 14 migraciones aplicadas, 31 tablas, 18 sin RLS, y ambas funciones public API continúan con privilegio SELECT sobre 31 tablas. No indicar que la vulnerabilidad está cerrada hasta aplicar la migración Laravel y ejecutar su prueba.
 - **Estado de gobernanza:** Fase 0 continúa EN PROGRESO; reparaciones críticas de Fase 1 iniciadas a nivel de código, no aprobadas ni aplicadas. Checklist sigue en 0/27 completadas.
 
+### Ejecución de correcciones de código — 2026-10-19
+
+**Se realizaron cambios funcionales en `main`, no solo documentación.** Sin cambiar directamente el esquema de Supabase.
+
+| Área | Cambio en código | Evidencia y límites |
+|---|---|---|
+| Seguridad multiempresa | `SetTenantContext` ejecuta el flujo en una transacción con contexto local y comprueba la membresía por petición (sin caché de 60 s) | [Commit 2bb34d6](https://github.com/jwichpas/contabilidad/commit/2bb34d6b98a3d7bd6ffe57609de00410d4fd7cfa); pruebas de integración aún pendientes |
+| Permisos de datos | Nueva migración **Laravel**, `2026_10_19_000000_restrict_supabase_data_api_grants.php`, retira GRANT de roles públicos; prueba ajustada para usar `pg_catalog.has_table_privilege` | [Migración](backend/database/migrations/2026_10_19_000000_restrict_supabase_data_api_grants.php). **No aplicada**. La BD todavía expone SELECT a ambos roles públicos en 31 tablas |
+| Precisión backend | `CreateJournalEntryController` elimina todos los casts a `float` y `number_format`, valida 4/6 decimales y utiliza el objeto BCMath `Decimal` | [Controlador](backend/app/Http/Controllers/Api/V1/Accounting/CreateJournalEntryController.php), commit `e605d0e`; falta prueba Laravel real |
+| Compatibilidad PHP | `Decimal.php` ya no usa constantes tipadas de PHP 8.3; así respeta el mínimo PHP 8.2 de Composer | [Objeto decimal](backend/app/Support/Math/Decimal.php), commit `2d3bacb` |
+| Precisión frontend | Vue serializa montos y tasas como **strings**, calcula totales/conversiones/correcciones con `SystemDecimal` / `BigInt` y compara saldos a 4 decimales sin `parseFloat` | [Editor](frontend/src/modules/accounting/views/JournalEntryView.vue), [utilidad](frontend/src/shared/types/numeric.types.ts). Compilación y pruebas E2E pendientes |
+| Pruebas preparadas | Unitarias de middleware y Decimal en Laravel; pruebas de `BigInt` en Node; workflow actualizado para incluirlas | [Backend Unit](backend/tests/Unit/DecimalExactnessTest.php) y [Frontend smoke](frontend/scripts/decimal-smoke.test.mjs). GitHub Actions sigue sin runner verificado |
+
+**Verificación de PostgreSQL por SQL de solo lectura:** 14 migraciones registradas; 31 tablas; 18 sin RLS; 2 asientos / 4 partidas; el acceso SELECT de `anon` y `authenticated` sigue vigente en las 31 tablas. **No marcar R01 solucionado** hasta ejecutar la migración con Artisan en la misma BD, comprobar que se mantienen los permisos `app_backend` y pasar los tests.
+
+**Avance parcial de F1/F2 en código:** estas correcciones se priorizaron por vulnerabilidades ya verificadas, sin declarar cerrada Fase 0, F1 o F2. La ejecución completa requiere un runner Laravel disponible; el único proyecto de desarrollo continúa siendo `contabilidad-database`. No ejecutar DDL desde Supabase.
+
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
@@ -502,6 +519,6 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Comando de diagnóstico F0:** `php artisan contabilidad:auditar-fase0` (solo lectura; sin mutaciones).
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** v1.6 — 2026-10-19 — Cambios funcionales de seguridad y precisión en Laravel/Vue; v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
 **Estado al 2026-10-19: _FASE 0 EN PROGRESO SOBRE LA BD DE DESARROLLO ÚNICA; 0/27 ACTIVIDADES APROBADAS; HITOS H1–H4 PENDIENTES_.**
