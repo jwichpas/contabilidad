@@ -80,6 +80,17 @@ final readonly class Decimal implements JsonSerializable, Stringable
             ));
         }
 
+        // BCMath trunca en silencio cifras decimales excedentes.
+        // Rechazar pérdida de precisión, permitiendo solo ceros sobrantes.
+        $fraction = explode('.', $trimmed, 2)[1] ?? '';
+        if (strlen(rtrim($fraction, '0')) > $scale) {
+            throw new InvalidArgumentException(sprintf(
+                'El valor [%s] supera la escala decimal permitida de %d dígitos.',
+                $raw,
+                $scale
+            ));
+        }
+
         $normalized = bcadd($trimmed, '0', $scale);
 
         // Evita "-0.0000"
