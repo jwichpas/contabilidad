@@ -143,6 +143,10 @@ function resetDraft(): void {
   success.value = null;
 }
 
+function confirmResetDraft(): void {
+  if (window.confirm('¿Descartar todos los datos no enviados y empezar de nuevo?')) resetDraft();
+}
+
 function recoverDraft(): void {
   try {
     const value = sessionStorage.getItem(COMPANY_ONBOARDING_DRAFT_KEY);
@@ -228,9 +232,12 @@ onMounted(() => {
         <h1 class="mt-1 text-2xl font-bold tracking-tight text-foreground">Asistente de creación de empresa</h1>
         <p class="mt-1 text-sm text-muted">Registre la entidad, sus actividades y los parámetros iniciales en cinco pasos.</p>
       </div>
-      <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surf px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-soft" @click="emit('cancel')">
-        <X class="h-4 w-4" /> Volver
-      </button>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="rounded-lg border border-line bg-surf px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-soft" @click="confirmResetDraft">Reiniciar</button>
+        <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surf px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-soft" @click="emit('cancel')">
+          <X class="h-4 w-4" /> Volver
+        </button>
+      </div>
     </div>
 
     <div v-if="success" class="rounded-xl border border-emerald-300 bg-emerald-50 p-7 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
