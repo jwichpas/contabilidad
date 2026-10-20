@@ -7,7 +7,7 @@
 
 ## 1. Diagnóstico verificado en el código y PostgreSQL (2026-10-19)
 
-- `company_settings.tax_regime` **ya existe** en Laravel, Vue y la base PostgreSQL, con opciones actuales `GENERAL`, `MYPE_TRIBUTARIO`, `RER` y `ESPECIAL`. La última opción es ambigua y requiere normalización; `RER` ya significa Régimen Especial de Renta.
+- `company_settings.tax_regime` **ya existe** en Laravel, Vue y la base PostgreSQL, con opciones actuales `GENERAL`, `MYPE_TRIBUTARIO`, `RER` y `ESPECIAL`. En Vue, `ESPECIAL` corresponde al rótulo genérico «Otros Regímenes Especiales», no al RER. Debe reemplazarse por opciones específicas y justificadas; `RER` ya es un régimen definido.
 - `company_settings.is_sire_obliged` e `is_ple_obliged` existen como **booleanos manuales**, no como determinación legal verificable por periodo.
 - `companies` contiene RUC, razón social, domicilio y estado. **No tiene** naturaleza legal, rubro económico, sector, CIIU ni actividad económica principal/secundaria.
 - `frontend/src/modules/company/views/CompanySettingsView.vue` incluye selector de régimen en los parámetros tributarios, pero **no hay un wizard completo** de actividad económica y obligaciones por ejercicio.
@@ -78,7 +78,7 @@ Resumen operativo de las guías oficiales SUNAT; comprobar fecha de obligatoried
 **F3 — Datos maestros y wizard:**
 1. Agregar mediante **nueva migración Laravel** los datos legales que faltan, preservando `company_settings.tax_regime` existente para retrocompatibilidad.
 2. Catálogo `economic_sectors` y asociación `company_economic_activities`: `company_id`, sector/subsector, CIIU Rev. 4, principal/secundario, vigencia.
-3. Historial de regímenes `company_tax_regime_periods`, con empresa, código normalizado, `valid_from`, `valid_until`, motivos y auditoría. Reconciliar `RER` y el alias `ESPECIAL`; no duplicar regímenes.
+3. Historial de regímenes `company_tax_regime_periods`, con empresa, código normalizado, `valid_from`, `valid_until`, motivos y auditoría. No mezclar `RER` con el marcador `ESPECIAL` («Otros Regímenes Especiales»); conservar datos históricos, definir una categoría específica válida o exigir revisión manual.
 4. Perfil anual `company_fiscal_obligation_profiles`: ejercicio, ingresos brutos y netos **decimales exactos**, UIT oficial del ejercicio, fuente, fecha de cálculo y versión normativa.
 5. Formularios Laravel/Vue que validen elegibilidad del régimen y completen: identificación → forma jurídica → sector/CIIU → régimen → ejercicio/ingresos → sugerencia de libros → monedas/PCGE → confirmación.
 6. Mantener `company_id`, RLS y permisos de `app_backend` en nuevas tablas mediante **migraciones Laravel**, nunca con DDL manual en Supabase.
