@@ -88,6 +88,30 @@ Se añadió `backend/scripts/phase0-audit-tenant-read-only.php` como **siguiente
 
 **Higiene pendiente:** retirar la variable temporal `DB_APP_BACKEND_NEW_PASSWORD` del archivo local, conservar `DB_PASSWORD`, coordinar valores secretos de cualquier backend desplegado. No ejecutar suite completa que crea empresas, usa `SET ROLE` o hace `DELETE` sobre base compartida hasta validar seguridad transaccional. Prohibido divulgar secretos en documentación y logs.
 
+## Auditoría RLS fail-closed aprobada — 2026-10-20
+
+El usuario ejecutó en `backend/` el control `php scripts/phase0-audit-tenant-read-only.php` como `app_backend` con transacción `READ ONLY` y `ROLLBACK`:
+
+- **Sin contexto de empresa:** 0 cuentas y 0 asientos visibles.
+- **Empresa inexistente:** 0 cuentas y 0 asientos visibles.
+- **Empresa activa:** 1.764 cuentas contables y 2 asientos visibles.
+- **Resultado:** `[PASS] RLS fail-closed comprobado con SELECT; sin cambios persistentes en PostgreSQL.`
+
+Se certifica **para estas consultas** que `accounting_accounts` y `journal_entries` tienen comportamiento fail-closed básico con el rol operativo. **Aún no se certifica aislamiento real de dos empresas ni rutas HTTP.** Solo hay una empresa en los registros de desarrollo actuales.
+
+### Siguiente prueba de autorización HTTP sin escritura — preparada, no ejecutada
+
+Se añadió `backend/tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php` para ejecutar exclusivamente endpoints `GET` con usuario de desarrollo existente:
+
+- Una petición sin autenticación a empresas o Libro Diario debe obtener 401.
+- El usuario autenticado debe recibir su empresa existente en `GET /api/v1/tenant/companies`.
+- El usuario autenticado no debe poder leer el Libro Diario de una empresa inexistente (403).
+- El usuario autorizado puede consultar su Libro Diario (200).
+
+**Hallazgo previo de código/RLS que exige comprobar la segunda aserción:** `ListUserCompaniesController` consulta el pivote `company_user` mediante relación Eloquent, pero `GET /api/v1/tenant/companies` está fuera del middleware `SetTenantContext`. La política vigente `company_user_tenant_isolation_policy` exige `company_id=app_current_company_id()`. Al no haberse establecido contexto SQL, puede devolver una lista vacía a pesar de existir membresía. **No cambiar RLS ni concesiones globales sin una corrección de diseño y prueba funcional.** La prueba diagnóstica tiene permiso de fallar y debe orientar la corrección; no se dará por aprobada anticipadamente.
+
+La suite completa permanece bloqueada hasta revisar la seguridad transaccional de pruebas con escrituras. Los 18 objetos sin RLS, la recuperación y la verificación end-to-end con dos empresas continúan pendientes.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
