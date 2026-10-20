@@ -510,6 +510,15 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 **Avance parcial de F1/F2 en código:** estas correcciones se priorizaron por vulnerabilidades ya verificadas, sin declarar cerrada Fase 0, F1 o F2. La ejecución completa requiere un runner Laravel disponible; el único proyecto de desarrollo continúa siendo `contabilidad-database`. No ejecutar DDL desde Supabase.
 
+### Continuación F0/F2 — cierre de pérdida de precisión y credenciales administrativas
+
+- **Corrección en motor contable:** `Decimal::from()` ya **rechaza cifras decimales significativas que exceden la escala**, en lugar de truncarlas silenciosamente con BCMath. Se permiten ceros redundantes. [Commit d0a30dd](https://github.com/jwichpas/contabilidad/commit/d0a30dde01ef3427596c1c880c286207e9b733ed).
+- **Pruebas nuevas:** `backend/tests/Unit/DecimalExactnessTest.php` verifica importes de 4 y tipos de cambio de 6 decimales, incluso cuando el exceso contiene cifras no cero. [Commit 7789224](https://github.com/jwichpas/contabilidad/commit/778922457133b8ce12b2e9161b5790e4efe55544). Se probaron localmente 4 casos de la **lógica de escala aislada** con PHP, 4/4 correctos; **no se ejecutó PHPUnit**, dado que no está disponible Composer/BCMath ni el runner remoto.
+- **Credenciales separadas:** `config/database.php` deja de heredar `DB_HOST`, `DB_USERNAME` o `DB_PASSWORD` de la conexión de aplicación en `pgsql_migrations`. Requiere explícitamente sus variables `DB_MIGRATIONS_*`. [Commit 3a92751](https://github.com/jwichpas/contabilidad/commit/3a92751148fc487cbdf1ecfd4ca841c147d36e19b9251525c6b7).
+- **Preflight fortalecido:** rechaza la configuración que vuelva a heredar credenciales del backend. [Commit ad386d3](https://github.com/jwichpas/contabilidad/commit/ad386d385534eda6b7a1f1fd4ca841c147d36e8e).
+- **Bloqueos abiertos:** rotar contraseña expuesta y actualizar entorno Laravel; disponer de runner para `composer test`, `php artisan contabilidad:auditar-fase0` y `pnpm build`; aplicar la migración de permisos **solo mediante Artisan**, no desde Supabase. No se ha aplicado una nueva migración ni alterado tablas.
+- **Estado:** F0 sigue `EN PROGRESO`; **F2 tiene correcciones en código sin aprobación**. No marcar tareas completas hasta ejecutar y registrar resultados.
+
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
@@ -519,6 +528,6 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Comando de diagnóstico F0:** `php artisan contabilidad:auditar-fase0` (solo lectura; sin mutaciones).
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** v1.6 — 2026-10-19 — Cambios funcionales de seguridad y precisión en Laravel/Vue; v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** v1.7 — 2026-10-19 — Control estricto de decimales y credenciales de migración; v1.6 — 2026-10-19 — Cambios funcionales de seguridad y precisión en Laravel/Vue; v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
 **Estado al 2026-10-19: _FASE 0 EN PROGRESO SOBRE LA BD DE DESARROLLO ÚNICA; 0/27 ACTIVIDADES APROBADAS; HITOS H1–H4 PENDIENTES_.**
