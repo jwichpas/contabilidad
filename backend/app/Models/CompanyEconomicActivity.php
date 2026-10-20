@@ -19,6 +19,8 @@ final class CompanyEconomicActivity extends Model
         'ciiu_code',
         'description',
         'is_primary',
+        'created_by',
+        'updated_by',
     ];
 
     protected function casts(): array
