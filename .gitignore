@@ -58,3 +58,9 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Backups PostgreSQL: nunca versionar datos de la base de desarrollo
+*.dump
+*.backup
+*.pgpass
+contabilidad-backups/
