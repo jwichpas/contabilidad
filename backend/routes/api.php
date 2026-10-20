@@ -27,6 +27,8 @@ use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\ListEntitiesController;
 use App\Http\Controllers\Api\V1\Company\SaveCompanyExchangeRatesController;
 use App\Http\Controllers\Api\V1\Company\UpdateCompanySettingsController;
+use App\Http\Controllers\Api\V1\Tenant\CompanyOnboardingCapabilityController;
+use App\Http\Controllers\Api\V1\Tenant\CreateCompanyFromWizardController;
 use App\Http\Controllers\Api\V1\Tenant\SwitchActiveCompanyController;
 use App\Http\Middleware\SetTenantContext;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +46,11 @@ Route::prefix('v1')->group(function (): void {
         // Empresas y cambio de empresa predeterminada del usuario autenticado
         Route::get('/tenant/companies', \App\Http\Controllers\Api\V1\Tenant\ListUserCompaniesController::class)
             ->name('api.v1.tenant.companies');
+        Route::get('/tenant/company-onboarding/capabilities', CompanyOnboardingCapabilityController::class)
+            ->name('api.v1.tenant.company-onboarding.capabilities');
+        Route::post('/tenant/companies', CreateCompanyFromWizardController::class)
+            ->middleware('throttle:5,1')
+            ->name('api.v1.tenant.companies.store');
         Route::post('/tenant/switch-company', SwitchActiveCompanyController::class)
             ->name('api.v1.tenant.switch-company');
 
