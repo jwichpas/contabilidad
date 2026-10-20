@@ -105,7 +105,11 @@ SQL);
     }
     echo sprintf('[RESUMEN] objetos=%d, permisos anon/auth a revisar=%d, objetos sin RLS=%d, funciones=%d',
         count($rows),$publicExposures,$tenantUnprotected,count($funcs)).PHP_EOL;
-    echo '[OK] Auditoría de catálogo completada; sin DDL ni escrituras.'.PHP_EOL;
+    if ($publicExposures !== 0) {
+        fwrite(STDERR, '[FAIL] Permisos públicos inesperados detectados.'.PHP_EOL);
+        exit(1);
+    }
+    echo '[PASS] Auditoría completada sin permisos públicos; sin DDL ni escrituras.'.PHP_EOL;
 } catch (Throwable $e) {
     fwrite(STDERR, '[ERROR] Auditoría incompleta. Revise la conexión local y los permisos de lectura de catálogo.'.PHP_EOL);
     exit(1);
