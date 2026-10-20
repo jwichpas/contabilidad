@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Services\Tenant\ListUserCompaniesService;
+use Illuminate\Support\Facades\DB;
 
 /**
  * F0 — Smoke HTTP sin mutaciones sobre la BD unica de desarrollo.
@@ -48,4 +50,15 @@ it('allows a member to read existing journal entries without writing anything', 
         ->getJson('/api/v1/accounting/journal-entries?limit=1')
         ->assertOk()
         ->assertJsonStructure(['data']);
+});
+
+it('reuses the login company-listing service without issuing or changing tokens', function (): void {
+    $user = User::query()->whereNotNull('current_company_id')->firstOrFail();
+    $before = DB::table('personal_access_tokens')->count();
+
+    $companies = app(ListUserCompaniesService::class)->forUser($user);
+
+    expect(array_column($companies, 'id'))
+        ->toContain((int) $user->current_company_id);
+    expect(DB::table('personal_access_tokens')->count())->toBe($before);
 });
