@@ -4,6 +4,7 @@ import {
   ArrowLeftRight,
   BookOpen,
   Building2,
+  CirclePlus,
   Calculator,
   FileBarChart2,
   FolderTree,
@@ -303,6 +304,21 @@ const activeCompanyIdString = computed<string>({
             >
               Configuración & Empresa
             </p>
+
+            <button
+              type="button"
+              :class="[
+                'w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
+                currentModule === 'company-create'
+                  ? 'bg-white/15 text-white font-semibold shadow-[inset_3px_0_0_var(--accent)]'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              ]"
+              title="Asistente para crear una nueva empresa"
+              @click="emit('navigate', 'company-create')"
+            >
+              <CirclePlus class="h-4 w-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Nueva empresa</span>
+            </button>
 
             <button
               type="button"
