@@ -208,6 +208,8 @@ final readonly class CreateCompanyFromWizardController
                     'id' => $companyId,
                     'tax_id' => $taxId,
                     'business_name' => (string) $company->business_name,
+                    'legal_address' => (string) $company->legal_address,
+                    'uuid' => (string) ($company->fresh()?->uuid ?? ''),
                     'plan_version' => $validated['pcge_version'],
                     'plan_accounts_created' => (int) $plan['total_accounts'],
                 ];
