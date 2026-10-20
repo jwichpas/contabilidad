@@ -1,0 +1,468 @@
+<script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue';
+import { AlertCircle, ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, CircleHelp,
+  ClipboardCheck, FileText, FolderTree, Plus, Save, Trash2, X } from 'lucide-vue-next';
+import { AccountingApiClient, ApiHttpError } from '@/modules/accounting/api/httpClient';
+import type { CompanyId } from '@/modules/accounting/types/accountingAccount.types';
+import type { CurrencyItem } from '@/modules/accounting/types/catalogs.types';
+import type { EconomicSector, LegalForm } from '../types/companySettings.types';
+import {
+  COMPANY_ONBOARDING_DRAFT_KEY, companyOnboardingPayload, isValidPeruvianRuc,
+  newCompanyOnboardingDraft, onboardingIsComplete, onboardingStepErrors,
+  type CompanyOnboardingDraft, type CompanyOnboardingResult, type PcgeTemplateSummary,
+  type TaxRegime,
+} from '../types/companyOnboarding.types';
+
+const props = defineProps<{
+  readonly activeCompanyId: CompanyId;
+  readonly getAccessToken: () => string | null;
+}>();
+const emit = defineEmits<{
+  (event: 'created', companyId: number): void;
+  (event: 'cancel'): void;
+}>();
+
+const steps = [
+  { title: 'Identificación', subtitle: 'RUC y forma jurídica' },
+  { title: 'Actividad', subtitle: 'Sector y CIIU' },
+  { title: 'Tributación', subtitle: 'Régimen e ingresos' },
+  { title: 'Contabilidad', subtitle: 'Monedas y PCGE' },
+  { title: 'Confirmación', subtitle: 'Revisión y alta' },
+] as const;
+
+const sectors: readonly { value: EconomicSector; label: string }[] = [
+  { value: 'COMERCIAL', label: 'Comercial / Distribución' },
+  { value: 'SERVICIOS', label: 'Servicios' },
+  { value: 'INDUSTRIAL', label: 'Industrial / Manufactura' },
+  { value: 'AGRICOLA', label: 'Agricultura' },
+  { value: 'GANADERIA', label: 'Ganadería' },
+  { value: 'PESCA', label: 'Pesca' },
+  { value: 'CONSTRUCCION', label: 'Construcción' },
+  { value: 'EXTRACTIVA', label: 'Minería / Extractivas' },
+  { value: 'TRANSPORTE_LOGISTICA', label: 'Transporte y logística' },
+  { value: 'OTROS', label: 'Otras actividades' },
+];
+const legalForms: readonly { value: LegalForm; label: string }[] = [
+  { value: 'PERSONA_NATURAL', label: 'Persona natural con negocio' },
+  { value: 'EIRL', label: 'Empresa Individual de Responsabilidad Limitada (EIRL)' },
+  { value: 'SAC', label: 'Sociedad Anónima Cerrada (SAC)' },
+  { value: 'SRL', label: 'Sociedad Comercial de Responsabilidad Limitada (SRL)' },
+  { value: 'SA', label: 'Sociedad Anónima (SA)' },
+  { value: 'SAA', label: 'Sociedad Anónima Abierta (SAA)' },
+  { value: 'SACS', label: 'Sociedad por Acciones Cerrada Simplificada (SACS)' },
+  { value: 'OTRA', label: 'Otra forma jurídica' },
+];
+const taxRegimes: readonly { value: TaxRegime; label: string }[] = [
+  { value: 'GENERAL', label: 'Régimen General' },
+  { value: 'MYPE_TRIBUTARIO', label: 'Régimen MYPE Tributario (RMT)' },
+  { value: 'RER', label: 'Régimen Especial de Renta (RER)' },
+  { value: 'NRUS', label: 'Nuevo RUS (persona natural elegible)' },
+];
+
+const draft = reactive<CompanyOnboardingDraft>(newCompanyOnboardingDraft());
+const step = ref(0);
+const attempted = ref(false);
+const saving = ref(false);
+const loadingCatalogs = ref(false);
+const loadError = ref('');
+const error = ref('');
+const success = ref<CompanyOnboardingResult | null>(null);
+const currencies = ref<readonly CurrencyItem[]>([]);
+const templates = ref<readonly PcgeTemplateSummary[]>([]);
+const canCreateOnServer = ref(false);
+const serverReason = ref('');
+
+const currentErrors = computed(() => attempted.value ? onboardingStepErrors(step.value, draft) : {});
+const pcge2026Early = computed(() => draft.pcge_version === 'PCGE_2026' && draft.fiscal_year < 2028);
+const draftHasErrors = computed(() => !onboardingIsComplete(draft));
+const baseCurrencyOptions = computed(() =>
+  currencies.value.length ? currencies.value : [
+    { code: 'PEN', name: 'Sol peruano', id: 1 },
+    { code: 'USD', name: 'Dólar estadounidense', id: 2 },
+    { code: 'EUR', name: 'Euro', id: 3 },
+  ] as readonly Pick<CurrencyItem, 'code' | 'name' | 'id'>[]
+);
+const pcgeOptions = computed(() => templates.value.length ? templates.value : [
+  { plan_version: 'PCGE_2019' as const, name: 'PCGE 2019', total_accounts: 0, is_current_default: true },
+  { plan_version: 'PCGE_2026' as const, name: 'PCGE 2026', total_accounts: 0, is_current_default: false },
+]);
+const uiField = 'w-full rounded-lg border border-line bg-surf px-3 py-2.5 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/10';
+const api = new AccountingApiClient('', {
+  getAccessToken: props.getAccessToken,
+  getActiveCompanyId: () => props.activeCompanyId,
+});
+
+function showError(field: string): string {
+  return currentErrors.value[field] ?? '';
+}
+
+function next(): void {
+  attempted.value = true;
+  error.value = '';
+  if (Object.keys(onboardingStepErrors(step.value, draft)).length) return;
+  if (step.value < steps.length - 1) {
+    step.value++;
+    attempted.value = false;
+  }
+}
+
+function previous(): void {
+  if (step.value > 0) step.value--;
+  attempted.value = false;
+  error.value = '';
+}
+
+function setPrimary(index: number): void {
+  draft.activities.forEach((activity, i) => { activity.is_primary = i === index; });
+}
+
+function addActivity(): void {
+  if (draft.activities.length >= 10) return;
+  draft.activities.push({ sector_code: 'SERVICIOS', ciiu_code: '', description: '', is_primary: false });
+}
+
+function removeActivity(index: number): void {
+  if (draft.activities.length === 1) return;
+  draft.activities.splice(index, 1);
+  if (!draft.activities.some(activity => activity.is_primary)) setPrimary(0);
+}
+
+function toggleSecondary(code: string, checked: boolean): void {
+  const without = draft.secondary_currency_codes.filter(currency => currency !== code);
+  draft.secondary_currency_codes = checked ? [...without, code] : without;
+}
+
+function saveDraft(): void {
+  try {
+    sessionStorage.setItem(COMPANY_ONBOARDING_DRAFT_KEY, JSON.stringify(draft));
+    error.value = '';
+    loadError.value = 'Borrador guardado en esta pestaña. Todavía no se ha creado la empresa.';
+  } catch {
+    error.value = 'El navegador no permitió guardar el borrador. Los datos permanecen en este formulario.';
+  }
+}
+
+function resetDraft(): void {
+  Object.assign(draft, newCompanyOnboardingDraft());
+  sessionStorage.removeItem(COMPANY_ONBOARDING_DRAFT_KEY);
+  step.value = 0;
+  attempted.value = false;
+  error.value = '';
+  success.value = null;
+}
+
+function recoverDraft(): void {
+  try {
+    const value = sessionStorage.getItem(COMPANY_ONBOARDING_DRAFT_KEY);
+    if (!value) return;
+    const recovered: unknown = JSON.parse(value);
+    if (typeof recovered !== 'object' || recovered === null || Array.isArray(recovered)) return;
+    const source = recovered as Partial<CompanyOnboardingDraft>;
+    const initial = newCompanyOnboardingDraft();
+    Object.assign(draft, {
+      ...initial,
+      ...source,
+      activities: Array.isArray(source.activities) && source.activities.length <= 10 && source.activities.length
+        ? source.activities : initial.activities,
+      secondary_currency_codes: Array.isArray(source.secondary_currency_codes)
+        ? source.secondary_currency_codes : initial.secondary_currency_codes,
+      confirm_legal_data: false,
+    });
+  } catch {
+    sessionStorage.removeItem(COMPANY_ONBOARDING_DRAFT_KEY);
+  }
+}
+
+async function loadCatalogs(): Promise<void> {
+  loadingCatalogs.value = true;
+  try {
+    const [currencyList, pcgeList, capability] = await Promise.all([
+      api.fetchCurrencies(), api.fetchPcgeTemplateSummaries(), api.fetchCompanyOnboardingCapability(),
+    ]);
+    currencies.value = currencyList.filter(c => c.is_active);
+    templates.value = pcgeList;
+    canCreateOnServer.value = capability.can_create;
+    serverReason.value = capability.reason ?? '';
+  } catch {
+    loadError.value = 'No se pudieron consultar todos los catálogos o el estado de la API. Puede preparar y guardar el borrador.';
+    canCreateOnServer.value = false;
+  } finally {
+    loadingCatalogs.value = false;
+  }
+}
+
+async function createCompany(): Promise<void> {
+  attempted.value = true;
+  error.value = '';
+  if (draftHasErrors.value || saving.value) return;
+  if (!canCreateOnServer.value) {
+    error.value = serverReason.value || 'El backend de alta aún no está habilitado. Guarde el borrador y aplique primero las migraciones Laravel.';
+    return;
+  }
+  saving.value = true;
+  try {
+    const result = await api.createCompanyFromWizard(companyOnboardingPayload(draft));
+    success.value = result;
+    sessionStorage.removeItem(COMPANY_ONBOARDING_DRAFT_KEY);
+    emit('created', result.id);
+  } catch (exception) {
+    if (exception instanceof ApiHttpError) {
+      error.value = exception.message;
+      if (exception.validationErrors.tax_id?.[0]) error.value = exception.validationErrors.tax_id[0];
+    } else {
+      error.value = exception instanceof Error ? exception.message : 'No se pudo crear la empresa.';
+    }
+  } finally {
+    saving.value = false;
+  }
+}
+
+onMounted(() => {
+  recoverDraft();
+  void loadCatalogs();
+});
+</script>
+
+<template>
+  <div class="mx-auto max-w-6xl space-y-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
+          <Building2 class="h-4 w-4" /> Fase 3 · Alta multiempresa
+        </div>
+        <h1 class="mt-1 text-2xl font-bold tracking-tight text-foreground">Asistente de creación de empresa</h1>
+        <p class="mt-1 text-sm text-muted">Registre la entidad, sus actividades y los parámetros iniciales en cinco pasos.</p>
+      </div>
+      <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surf px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-soft" @click="emit('cancel')">
+        <X class="h-4 w-4" /> Volver
+      </button>
+    </div>
+
+    <div v-if="success" class="rounded-xl border border-emerald-300 bg-emerald-50 p-7 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+      <CheckCircle2 class="mb-3 h-9 w-9" />
+      <h2 class="text-lg font-bold">Empresa creada correctamente</h2>
+      <p class="mt-2 text-sm">{{ success.business_name }} (RUC {{ success.tax_id }}) · {{ success.plan_accounts_created }} cuentas inicializadas.</p>
+      <button type="button" class="mt-5 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white" @click="emit('cancel')">Ir a configuración</button>
+    </div>
+
+    <template v-else>
+      <div class="rounded-xl border border-line bg-surf p-4 shadow-xs sm:p-5">
+        <div class="mb-4 flex items-center justify-between text-xs text-muted">
+          <span>Progreso de configuración</span><span class="font-semibold">{{ step + 1 }} de {{ steps.length }}</span>
+        </div>
+        <div class="mb-5 h-1.5 overflow-hidden rounded-full bg-soft">
+          <div class="h-full rounded-full bg-brand transition-all" :style="{ width: `${((step + 1) / steps.length) * 100}%` }" />
+        </div>
+        <ol class="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Pasos del asistente">
+          <li v-for="(item, index) in steps" :key="item.title" class="flex items-center gap-2">
+            <span :class="['flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+              index === step ? 'bg-brand text-white' : index < step ? 'bg-emerald-100 text-emerald-800' : 'bg-soft text-muted']">
+              <Check v-if="index < step" class="h-4 w-4" /><template v-else>{{ index + 1 }}</template>
+            </span>
+            <span class="min-w-0">
+              <strong :class="['block text-xs', index === step ? 'text-foreground' : 'text-muted']">{{ item.title }}</strong>
+              <small class="hidden text-[11px] text-muted lg:block">{{ item.subtitle }}</small>
+            </span>
+          </li>
+        </ol>
+      </div>
+
+      <div v-if="loadError" class="flex gap-2 rounded-lg border border-line bg-soft px-4 py-3 text-xs text-muted">
+        <CircleHelp class="h-4 w-4 shrink-0" /><p>{{ loadError }}</p>
+      </div>
+      <div v-if="error" role="alert" class="flex gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
+        <AlertCircle class="h-4 w-4 shrink-0" />{{ error }}
+      </div>
+
+      <form class="rounded-xl border border-line bg-surf p-5 shadow-xs sm:p-7" novalidate @submit.prevent="step === 4 ? createCompany() : next()">
+        <div class="mb-6">
+          <p class="text-xs font-semibold uppercase tracking-wide text-muted">Paso {{ step + 1 }}</p>
+          <h2 class="mt-1 text-lg font-semibold text-foreground">{{ steps[step]?.title }}</h2>
+          <p class="text-sm text-muted">{{ steps[step]?.subtitle }}</p>
+        </div>
+
+        <section v-if="step === 0" class="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <label class="block text-sm font-medium text-foreground">
+            RUC de la empresa <span class="text-red-500">*</span>
+            <input v-model.trim="draft.tax_id" :class="uiField" class="mt-1" inputmode="numeric" maxlength="11" autocomplete="off" placeholder="11 dígitos" aria-label="RUC" />
+            <small v-if="showError('tax_id')" class="mt-1 block text-red-600">{{ showError('tax_id') }}</small>
+            <small v-else-if="draft.tax_id && isValidPeruvianRuc(draft.tax_id)" class="mt-1 block text-emerald-700">Dígito verificador correcto</small>
+          </label>
+          <label class="block text-sm font-medium text-foreground">
+            Forma jurídica <span class="text-red-500">*</span>
+            <select v-model="draft.legal_form" :class="uiField" class="mt-1">
+              <option value="">Seleccionar…</option>
+              <option v-for="item in legalForms" :key="item.value" :value="item.value">{{ item.label }}</option>
+            </select>
+            <small v-if="showError('legal_form')" class="mt-1 block text-red-600">{{ showError('legal_form') }}</small>
+          </label>
+          <label class="block text-sm font-medium text-foreground md:col-span-2">
+            Razón social o nombre del negocio <span class="text-red-500">*</span>
+            <input v-model="draft.business_name" :class="uiField" class="mt-1" maxlength="200" placeholder="Ej. Comercial Andina S.A.C." />
+            <small v-if="showError('business_name')" class="mt-1 block text-red-600">{{ showError('business_name') }}</small>
+          </label>
+          <label class="block text-sm font-medium text-foreground md:col-span-2">
+            Domicilio fiscal <span class="text-red-500">*</span>
+            <input v-model="draft.legal_address" :class="uiField" class="mt-1" maxlength="300" placeholder="Dirección declarada ante SUNAT" />
+            <small v-if="showError('legal_address')" class="mt-1 block text-red-600">{{ showError('legal_address') }}</small>
+          </label>
+        </section>
+
+        <section v-else-if="step === 1" class="space-y-4">
+          <p class="text-sm text-muted">Identifique una actividad principal y hasta nueve secundarias. El código debe corresponder al CIIU oficial, que se validará posteriormente contra su catálogo.</p>
+          <div v-for="(activity, index) in draft.activities" :key="index" class="rounded-lg border border-line bg-soft/40 p-4">
+            <div class="mb-4 flex items-center justify-between">
+              <label class="flex items-center gap-2 text-sm font-medium text-foreground">
+                <input type="radio" name="main-activity" :checked="activity.is_primary" @change="setPrimary(index)" />
+                {{ activity.is_primary ? 'Actividad principal' : `Actividad secundaria ${index}` }}
+              </label>
+              <button type="button" :disabled="draft.activities.length <= 1" class="flex items-center gap-1 text-xs text-red-600 disabled:opacity-40" @click="removeActivity(index)">
+                <Trash2 class="h-4 w-4" /> Quitar
+              </button>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="block text-xs font-medium text-foreground">Sector económico
+                <select v-model="activity.sector_code" :class="uiField" class="mt-1">
+                  <option v-for="sector in sectors" :key="sector.value" :value="sector.value">{{ sector.label }}</option>
+                </select>
+              </label>
+              <label class="block text-xs font-medium text-foreground">CIIU Rev. 4 (cuatro dígitos)
+                <input v-model.trim="activity.ciiu_code" :class="uiField" class="mt-1" maxlength="4" inputmode="numeric" placeholder="Ej. 4752" />
+                <small v-if="showError(`ciiu_${index}`)" class="text-red-600">{{ showError(`ciiu_${index}`) }}</small>
+              </label>
+              <label class="block text-xs font-medium text-foreground sm:col-span-2">Descripción
+                <input v-model="activity.description" :class="uiField" class="mt-1" maxlength="200" placeholder="Actividad económica según CIIU" />
+                <small v-if="showError(`description_${index}`)" class="text-red-600">{{ showError(`description_${index}`) }}</small>
+              </label>
+            </div>
+          </div>
+          <small v-if="showError('activities')" class="block text-red-600">{{ showError('activities') }}</small>
+          <button type="button" :disabled="draft.activities.length >= 10" class="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm text-foreground hover:bg-soft disabled:opacity-40" @click="addActivity">
+            <Plus class="h-4 w-4" /> Agregar actividad secundaria
+          </button>
+        </section>
+
+        <section v-else-if="step === 2" class="space-y-5">
+          <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block text-sm font-medium text-foreground">Régimen tributario <span class="text-red-500">*</span>
+              <select v-model="draft.tax_regime" :class="uiField" class="mt-1">
+                <option v-for="regime in taxRegimes" :key="regime.value" :value="regime.value">{{ regime.label }}</option>
+              </select>
+              <small v-if="showError('tax_regime')" class="block text-red-600">{{ showError('tax_regime') }}</small>
+            </label>
+            <label class="block text-sm font-medium text-foreground">Ejercicio fiscal inicial
+              <input v-model.number="draft.fiscal_year" type="number" min="2000" max="2100" :class="uiField" class="mt-1" />
+              <small v-if="showError('fiscal_year')" class="block text-red-600">{{ showError('fiscal_year') }}</small>
+            </label>
+            <label class="block text-sm font-medium text-foreground">Ejercicio de referencia para ingresos
+              <input v-model.number="draft.income_reference_year" type="number" min="2000" :max="draft.fiscal_year" :class="uiField" class="mt-1" />
+              <small v-if="showError('income_reference_year')" class="block text-red-600">{{ showError('income_reference_year') }}</small>
+            </label>
+            <label class="block text-sm font-medium text-foreground">Ingresos referenciales (S/)
+              <input v-model.trim="draft.annual_income" :class="uiField" class="mt-1" inputmode="decimal" placeholder="Ej. 150000.00" />
+              <small v-if="showError('annual_income')" class="block text-red-600">{{ showError('annual_income') }}</small>
+            </label>
+          </div>
+          <div class="flex items-start gap-2 rounded-lg border border-line bg-soft p-3 text-xs text-muted">
+            <CircleHelp class="mt-0.5 h-4 w-4 shrink-0" />
+            <span>La selección del régimen es declarativa, no una validación automática de elegibilidad. La determinación de libros SUNAT, SIRE/PLE y tramos UIT se incorporará con reglas normativas versionadas.</span>
+          </div>
+        </section>
+
+        <section v-else-if="step === 3" class="space-y-6">
+          <div class="grid gap-5 sm:grid-cols-2">
+            <label class="block text-sm font-medium text-foreground">Moneda funcional
+              <select v-model="draft.base_currency_code" :class="uiField" class="mt-1" @change="draft.secondary_currency_codes = draft.secondary_currency_codes.filter(c => c !== draft.base_currency_code)">
+                <option v-for="currency in baseCurrencyOptions" :key="currency.code" :value="currency.code">{{ currency.code }} · {{ currency.name }}</option>
+              </select>
+              <small v-if="showError('base_currency_code')" class="block text-red-600">{{ showError('base_currency_code') }}</small>
+            </label>
+            <div class="space-y-2">
+              <p class="text-sm font-medium text-foreground">Monedas secundarias (opcional)</p>
+              <label v-for="currency in baseCurrencyOptions.filter(c => c.code !== draft.base_currency_code)" :key="currency.code" class="flex items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" :checked="draft.secondary_currency_codes.includes(currency.code)" @change="toggleSecondary(currency.code, ($event.target as HTMLInputElement).checked)" />
+                {{ currency.code }} · {{ currency.name }}
+              </label>
+              <small v-if="showError('secondary_currency_codes')" class="block text-red-600">{{ showError('secondary_currency_codes') }}</small>
+            </div>
+          </div>
+          <div class="border-t border-line pt-5">
+            <p class="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground"><FolderTree class="h-4 w-4" /> Plan de cuentas inicial</p>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label v-for="version in pcgeOptions" :key="version.plan_version" :class="[
+                'flex cursor-pointer items-start gap-3 rounded-lg border p-4',
+                draft.pcge_version === version.plan_version ? 'border-brand bg-soft' : 'border-line'
+              ]">
+                <input v-model="draft.pcge_version" type="radio" name="pcge-version" :value="version.plan_version" />
+                <span><strong class="block text-sm text-foreground">{{ version.plan_version.replace('_', ' ') }}</strong>
+                  <small class="text-xs text-muted">{{ version.total_accounts ? `${version.total_accounts} cuentas de plantilla` : 'Plantilla disponible después de cargar catálogos' }}</small>
+                </span>
+              </label>
+            </div>
+            <label v-if="pcge2026Early" class="mt-3 flex items-start gap-2 text-xs text-muted">
+              <input v-model="draft.confirm_early_adoption" type="checkbox" class="mt-0.5" />
+              Confirmo la elección anticipada del PCGE 2026 para el ejercicio {{ draft.fiscal_year }}, sujeto a los requisitos y vigencia aplicables.
+            </label>
+            <small v-if="showError('confirm_early_adoption')" class="mt-1 block text-red-600">{{ showError('confirm_early_adoption') }}</small>
+          </div>
+        </section>
+
+        <section v-else-if="step === 4" class="space-y-5">
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-lg border border-line p-4">
+              <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted"><Building2 class="h-4 w-4" /> Empresa</p>
+              <p class="text-sm font-semibold text-foreground">{{ draft.business_name }}</p>
+              <p class="text-xs text-muted">RUC {{ draft.tax_id }} · {{ legalForms.find(x => x.value === draft.legal_form)?.label }}</p>
+              <p class="mt-2 text-xs text-muted">{{ draft.legal_address }}</p>
+            </div>
+            <div class="rounded-lg border border-line p-4">
+              <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted"><FileText class="h-4 w-4" /> Tributación</p>
+              <p class="text-sm font-semibold text-foreground">{{ taxRegimes.find(x => x.value === draft.tax_regime)?.label }}</p>
+              <p class="text-xs text-muted">Ejercicio {{ draft.fiscal_year }} · Ingresos {{ draft.income_reference_year }}: S/ {{ draft.annual_income }}</p>
+            </div>
+            <div class="rounded-lg border border-line p-4">
+              <p class="mb-2 text-xs font-semibold uppercase text-muted">Actividad económica</p>
+              <p v-for="activity in draft.activities" :key="activity.ciiu_code" class="text-xs text-foreground">
+                {{ activity.is_primary ? 'Principal' : 'Secundaria' }} · {{ activity.sector_code }} · CIIU {{ activity.ciiu_code }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-line p-4">
+              <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted"><FolderTree class="h-4 w-4" /> Configuración contable</p>
+              <p class="text-sm font-semibold text-foreground">{{ draft.pcge_version.replace('_', ' ') }}</p>
+              <p class="text-xs text-muted">Moneda funcional: {{ draft.base_currency_code }}</p>
+              <p class="text-xs text-muted">Secundarias: {{ draft.secondary_currency_codes.join(', ') || 'Ninguna' }}</p>
+            </div>
+          </div>
+          <label class="flex items-start gap-2 rounded-lg border border-line bg-soft px-4 py-3 text-sm text-foreground">
+            <input v-model="draft.confirm_legal_data" type="checkbox" class="mt-1" />
+            Confirmo que revisé los datos declarados. La creación puede generar una copia privada del plan de cuentas y no debe repetirse por error.
+          </label>
+          <small v-if="showError('confirm_legal_data')" class="block text-red-600">{{ showError('confirm_legal_data') }}</small>
+          <div v-if="!canCreateOnServer" class="flex gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+            <AlertCircle class="h-4 w-4 shrink-0" />
+            {{ serverReason || 'Alta aún no habilitada en Laravel. Puede guardar su borrador hasta completar las migraciones.' }}
+          </div>
+        </section>
+
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+          <button v-if="step > 0" type="button" class="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2.5 text-sm text-foreground hover:bg-soft" @click="previous">
+            <ArrowLeft class="h-4 w-4" /> Anterior
+          </button>
+          <span v-else class="text-xs text-muted">* Datos obligatorios</span>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2.5 text-sm text-foreground hover:bg-soft" @click="saveDraft">
+              <Save class="h-4 w-4" /> Guardar borrador
+            </button>
+            <button v-if="step < 4" type="submit" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
+              Continuar <ArrowRight class="h-4 w-4" />
+            </button>
+            <button v-else type="submit" :disabled="saving || loadingCatalogs || draftHasErrors || !canCreateOnServer" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45">
+              <ClipboardCheck class="h-4 w-4" /> {{ saving ? 'Creando empresa…' : 'Crear empresa' }}
+            </button>
+          </div>
+        </div>
+      </form>
+      <p class="text-center text-xs text-muted">Los borradores solo se guardan en esta pestaña. No se han modificado empresas existentes ni datos de Supabase.</p>
+    </template>
+  </div>
+</template>
