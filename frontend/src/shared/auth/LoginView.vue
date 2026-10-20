@@ -2,8 +2,6 @@
 import { ref, shallowRef } from 'vue';
 import {
   AlertTriangle,
-  Building2,
-  CheckCircle2,
   Eye,
   EyeOff,
   KeyRound,
@@ -30,12 +28,11 @@ const emit = defineEmits<{
   (e: 'toggle-dark'): void;
 }>();
 
-const { login, isLoading, authError } = useAuthSession();
+const { login, isLoading, authError, sessionNotice } = useAuthSession();
 
-const email = ref('contador@corporacionperu.pe');
-const password = ref('Contabilidad2026!');
+const email = ref('');
+const password = ref('');
 const showPassword = shallowRef(false);
-const rememberDevice = shallowRef(true);
 const localError = shallowRef<string | null>(null);
 
 async function handleLogin(): Promise<void> {
@@ -63,11 +60,7 @@ async function handleLogin(): Promise<void> {
   }
 }
 
-function fillDemoCredentials(): void {
-  email.value = 'contador@corporacionperu.pe';
-  password.value = 'Contabilidad2026!';
-  localError.value = null;
-}
+
 </script>
 
 <template>
@@ -119,15 +112,16 @@ function fillDemoCredentials(): void {
             Sistema Multi-Tenant Bimoneda · NIIF 18/19 & SUNAT 2026
           </p>
 
-          <!-- Badge de Certificación SGSI ISO/IEC 27001 -->
-          <div class="mt-3 flex items-center justify-center">
-            <span
-              class="tag ok font-mono text-[11px] inline-flex items-center gap-1"
-            >
-              <CheckCircle2 class="w-3 h-3 text-pos" />
-              <span>ISO/IEC 27001:2023 · SGSI Activo</span>
-            </span>
-          </div>
+        </div>
+
+        <!-- Sesión caducada/revocada por HTTP 401; no muestra tokens ni secretos. -->
+        <div
+          v-if="sessionNotice"
+          class="mb-5 flex items-start gap-2.5 rounded-md border border-line bg-soft p-3 text-xs text-foreground"
+          role="alert"
+        >
+          <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+          <p>{{ sessionNotice }}</p>
         </div>
 
         <!-- Alerta de Error de Acceso -->
@@ -213,17 +207,9 @@ function fillDemoCredentials(): void {
             </div>
           </div>
 
-          <!-- Opciones de Seguridad y Retención de Sesión -->
-          <div class="flex items-center justify-between text-xs pt-1">
-            <label class="flex items-center gap-2 cursor-pointer text-muted select-none">
-              <input
-                v-model="rememberDevice"
-                type="checkbox"
-                class="w-4 h-4 rounded text-brand focus:ring-brand border-line bg-surf cursor-pointer"
-              />
-              <span>Mantener sesión activa en esta pestaña</span>
-            </label>
-          </div>
+          <p class="text-[11px] leading-relaxed text-muted">
+            Por seguridad, la sesión de API tiene una duración máxima de 12 horas.
+          </p>
 
           <!-- Botón de Envío -->
           <button
@@ -237,28 +223,10 @@ function fillDemoCredentials(): void {
           </button>
         </form>
 
-        <!-- Píldora de Credenciales Rápidas para Demostración -->
-        <div
-          class="mt-6 pt-4 border-t border-line text-center"
-        >
-          <p class="text-[11px] text-muted mb-2">
-            Entorno de demostración y homologación técnica:
-          </p>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-line bg-soft hover:bg-soft/70 text-xs font-mono text-foreground transition-colors cursor-pointer"
-            @click="fillDemoCredentials"
-          >
-            <Building2 class="w-3.5 h-3.5 text-brand" />
-            <span>contador@corporacionperu.pe</span>
-          </button>
-        </div>
-
         <!-- Pie de Información de Seguridad ISO 27001 -->
         <div class="mt-4 text-center">
           <p class="text-[10px] text-muted leading-relaxed">
-            Acceso restringido a personal autorizado. Conexión auditada bajo
-            <strong>ISO/IEC 27001:2023</strong>.
+            Acceso restringido a personal autorizado. La aplicación registra eventos de autenticación.
           </p>
         </div>
       </div>
