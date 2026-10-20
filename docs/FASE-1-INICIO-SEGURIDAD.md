@@ -60,3 +60,9 @@ php scripts/phase1-permissions-audit.php
 Se agregó el workflow [`phase1-security-static.yml`](../.github/workflows/phase1-security-static.yml) y el contrato SQL [`phase1-rls-contract.sql`](../backend/tests/security/phase1-rls-contract.sql). GitHub Actions realiza controles estáticos del auditor y, en un PostgreSQL 17 **efímero, con datos ficticios**, comprueba: falta de contexto, lectura interempresa, escritura interempresa rechazada y ausencia de SELECT anónimo. Se activa en pushes de archivos de F1 o manualmente.
 
 **Límite importante:** el SQL es una política de contrato simplificada y aislada, no las migraciones exactas del ERP; no acredita que la base Supabase actual esté correctamente configurada. Para cerrar F1 deben agregarse pruebas con migraciones/roles reales y auditar permisos efectivos del entorno de desarrollo con acceso de solo lectura y credenciales restringidas. Las ejecuciones de GitHub Actions todavía necesitan verificación; no dar PASS sin logs.
+
+## Validación de migraciones reales en GitHub Actions
+
+Se añadió el job `laravel-real-migrations` al workflow F1: aprovisiona PostgreSQL 17 efímero, instala Composer, ejecuta **las migraciones reales del backend Laravel** con `--database=pgsql_migrations` y comprueba que exista `app_backend` sin `SUPERUSER/BYPASSRLS` y que haya tablas `public` con `ENABLE + FORCE ROW LEVEL SECURITY`. Usa contraseñas ficticias de CI y no utiliza ninguna credencial ni conexión de Supabase.
+
+**Estado:** commit publicado; ejecución de GitHub Actions **pendiente de confirmación**. No se marca PASS hasta comprobar logs. Si falla una migración por dependencias de Supabase o supuestos ambientales, el job debe permanecer rojo y el error corregirse de forma reproducible; no reemplazarlo por un chequeo que simule las migraciones. La prueba no valida todavía todas las autorizaciones de cada ruta API ni el diseño completo de recuperación.
