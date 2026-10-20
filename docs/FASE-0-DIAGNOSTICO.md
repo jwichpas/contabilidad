@@ -30,6 +30,16 @@ El usuario ejecutó en Windows/PowerShell, desde `C:\\Proyectos\\contabilidad\\b
 
 ---
 
+## Incidencia de PHPUnit: conexión de pruebas con credenciales administrativas (2026-10-20)
+
+**Síntoma reportado:** `php artisan test tests/Feature/Security/PublicDataApiPrivilegesTest.php` falla antes de ejecutar una sola aserción (`0 assertions`): la conexión `pgsql` de PHPUnit intenta usar `postgres` en `aws-1-ca-central-1.pooler.supabase.com:5432` y obtiene `password authentication failed`. Repetir tras `php artisan config:clear` produce el mismo error.
+
+**Diagnóstico técnico:** `backend/phpunit.xml` establece `APP_ENV=testing`, `DB_CONNECTION=pgsql`. Laravel puede cargar `.env.testing`; además `config/database.php` prioriza `DB_URL` o `DATABASE_URL` sobre `DB_HOST/DB_PORT/DB_USERNAME`. Una variable del proceso o un archivo local no versionado puede entonces sobreescribir la conexión de aplicación `app_backend`. El resultado de la prueba **NO prueba que los GRANT estén mal**; el diagnóstico read-only de F0 ya confirmó su revocación y el rol `app_backend`.
+
+**Mitigación sin alterar PostgreSQL:** usar `php scripts/phase0-check-test-connection.php` tras `git pull --ff-only`. El script fuerza un bootstrap `testing` de Laravel y muestra solo host, puerto, usuario, conexión y si hay URL con prioridad; nunca muestra passwords ni abre conexiones. Si reporta usuario distinto de `app_backend`, corregir `.env.testing`, `.env`, `DB_URL`/`DATABASE_URL` y variables de entorno local, manteniendo `DB_MIGRATIONS_*` separados. **No volver a correr las pruebas Feature con `postgres`**, incluso si la autenticación administrativa pudiera funcionar. No ejecutar la suite completa mientras esta condición persista.
+
+**Estado:** autenticación de la conexión `pgsql` en modo `testing` pendiente de validación; `pgsql_migrations` funcionó en migraciones y auditoría, pero **no sustituye la conexión operacional ni sus controles RLS**.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
