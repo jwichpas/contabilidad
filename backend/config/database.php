@@ -53,11 +53,11 @@ return [
         'pgsql_migrations' => [
             'driver' => 'pgsql',
             'url' => env('DB_MIGRATIONS_URL'), // No heredar DATABASE_URL de la conexión de aplicación
-            'host' => env('DB_MIGRATIONS_HOST', env('DB_HOST', '127.0.0.1')),
+            'host' => env('DB_MIGRATIONS_HOST'),
             'port' => env('DB_MIGRATIONS_PORT', '5432'),
             'database' => env('DB_MIGRATIONS_DATABASE', env('DB_DATABASE', 'postgres')),
-            'username' => env('DB_MIGRATIONS_USERNAME', 'postgres'),
-            'password' => env('DB_MIGRATIONS_PASSWORD', env('DB_PASSWORD', '')),
+            'username' => env('DB_MIGRATIONS_USERNAME'),
+            'password' => env('DB_MIGRATIONS_PASSWORD'),
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
