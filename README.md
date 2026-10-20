@@ -44,7 +44,7 @@
 
 > 🔎 **Fase 0:** [Matriz funcional y módulos ya existentes](docs/FASE-0-MATRIZ-FUNCIONAL.md) · [Preflight estático](backend/scripts/phase0-preflight.php) · [Respaldo de desarrollo no destructivo](backend/scripts/phase0-backup.sh). **Las pruebas y el respaldo real continúan pendientes.**
 
-> 🏢 **Perfil empresarial y cumplimiento SUNAT (planificado):** [regímenes tributarios, segmentos económicos, CIIU y libros obligatorios por nivel de ingresos](docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md). La configuración básica del régimen existe; el motor automático de obligaciones aún no está implementado.
+> 🏢 **Perfil empresarial (F3, código preparado):** Laravel y Vue ya incluyen forma jurídica, macrosector y actividades CIIU principal/secundarias. [Ver especificación y pendientes](docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md). **Requiere migración Laravel aún sin ejecutar**; wizard de alta y cálculo automático de libros SUNAT permanecen pendientes.
 
 > 📌 **Plan maestro y seguimiento del proyecto:** [README-PLAN-MAESTRO.md](README-PLAN-MAESTRO.md) — 9 fases (F0–F8), hoja de ruta estimada, 4 hitos, criterios de aprobación y checklist de 27 actividades. **Fase 0 EN PROGRESO (sin tareas aprobadas).** Desarrollo exclusivamente sobre la base `contabilidad-database`, sin base aislada. [Diagnóstico y riesgos](docs/FASE-0-DIAGNOSTICO.md).
 
