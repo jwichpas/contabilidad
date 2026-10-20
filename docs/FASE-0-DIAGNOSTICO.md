@@ -40,6 +40,16 @@ El usuario ejecutó en Windows/PowerShell, desde `C:\\Proyectos\\contabilidad\\b
 
 **Estado:** autenticación de la conexión `pgsql` en modo `testing` pendiente de validación; `pgsql_migrations` funcionó en migraciones y auditoría, pero **no sustituye la conexión operacional ni sus controles RLS**.
 
+## Incidencia autenticación `app_backend` — diagnóstico y rotación preparada (2026-10-20)
+
+- El usuario ejecutó `php scripts/phase0-check-test-connection.php` y **confirmó** `APP_ENV=testing`, archivo `.env`, conexión por defecto `pgsql`, host shared pooler `aws-1-ca-central-1.pooler.supabase.com`, puerto `6543`, usuario `app_backend.bnjwxphwtkhblvhsnylj` y **sin `DB_URL` prioritario**.
+- La prueba `php artisan test tests/Feature/Security/PublicDataApiPrivilegesTest.php` sigue fallando en **autenticación** (`password authentication failed for user "app_backend"`, 0 aserciones). **No es un fallo de GRANT ni de RLS**, cuyos conteos se comprobaron por la conexión administrativa.
+- Verificación segura del catálogo Supabase: `app_backend` **existe**, `rolcanlogin=true`, `rolvaliduntil=NULL`, `rolbypassrls=false`, `rolsuper=false`. La documentación oficial Supabase admite roles personalizados en el shared pooler: `[ROLE].[PROJECT_REF]`. La contraseña de Postgres **no se recuperó ni imprimió**.
+- La migración original `0001_01_00_000000_setup_extensions_and_app_backend_role.php` solo asigna contraseña al **crear** el rol. Si ya existe, `ALTER ROLE` ajusta otros atributos pero **no sincroniza** la clave con `DB_PASSWORD` ni con `DB_APP_BACKEND_ROLE_PASSWORD`. Esta es una posible causa de la discrepancia; un pooler también puede mantener credenciales anteriores temporalmente.
+- Se **preparó en `main`, sin aplicar**, `backend/database/migrations/2026_10_20_000000_rotate_app_backend_credential.php`. Requiere secreto nuevo `DB_APP_BACKEND_NEW_PASSWORD` de 32–256 caracteres, conexión administrativa verificada, seguridad NOBYPASSRLS, uso de SCRAM y evita publicar clave en repositorio o en excepciones SQL. Solo se ejecuta mediante `php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_20_000000_rotate_app_backend_credential.php --force` tras actualizar localmente `DB_PASSWORD` al mismo valor y configurar la nueva variable temporal.
+- Tras aplicar se debe permitir actualización de caché del shared pooler, confirmar conexión `pgsql` real, repetir únicamente prueba de privilegios y retirar la variable temporal `DB_APP_BACKEND_NEW_PASSWORD`. Coordinar credenciales de cualquier backend desplegado para no interrumpirlo.
+- Prueba Pest de privilegios se reforzó con una comprobación del usuario efectivo `current_user='app_backend'`, para evitar aprobar erróneamente una ejecución bajo `postgres`. **F0 sigue abierta**; credencial y pruebas pendientes.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
