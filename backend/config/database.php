@@ -52,7 +52,7 @@ return [
          */
         'pgsql_migrations' => [
             'driver' => 'pgsql',
-            'url' => env('DB_MIGRATIONS_URL', env('DATABASE_URL')),
+            'url' => env('DB_MIGRATIONS_URL'), // No heredar DATABASE_URL de la conexión de aplicación
             'host' => env('DB_MIGRATIONS_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('DB_MIGRATIONS_PORT', '5432'),
             'database' => env('DB_MIGRATIONS_DATABASE', env('DB_DATABASE', 'postgres')),
