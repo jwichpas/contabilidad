@@ -112,6 +112,22 @@ Se añadió `backend/tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php` para
 
 La suite completa permanece bloqueada hasta revisar la seguridad transaccional de pruebas con escrituras. Los 18 objetos sin RLS, la recuperación y la verificación end-to-end con dos empresas continúan pendientes.
 
+## Error reproducido en HTTP F0 — 2026-10-20: booleanos y lista de empresas
+
+**Salida exacta de la prueba del usuario:** `php artisan test tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php` → **3 pruebas aprobadas, 1 fallida, 6 aserciones, 10.50 s**.
+
+- Aprobadas: usuarios no autenticados reciben rechazo; usuario autenticado no puede leer Libro Diario de empresa inexistente; usuario autorizado puede leer asientos de su empresa.
+- Falló `it lists the authenticated users existing active company`: **HTTP 500**, `SQLSTATE[42883] operator does not exist: boolean = integer`. Eloquent construía `companies.is_active = 1` y `company_user.is_active = 1` debido a la conversión de booleanos en parámetros SQL; PostgreSQL no admite esa igualdad. **Error confirmado por la traza**, anterior a comprobar el posible bloqueo RLS.
+- Además, la ruta `GET /api/v1/tenant/companies` estaba fuera de `SetTenantContext` y la política `company_user_tenant_isolation_policy` requiere empresa activa. Por tanto, tras corregir booleanos era probable que el SELECT devolviese lista vacía.
+
+**Correcciones preparadas en GitHub/main, todavía sin ejecutar en la base:**
+
+1. `backend/app/Http/Controllers/Api/V1/Tenant/ListUserCompaniesController.php`: consulta con `companies.is_active IS TRUE` y `company_user.is_active IS TRUE` (sin parámetros enteros), usa `DB::transaction` con `set_config('app.current_user_id', user autenticado, true)` para mantener el alcance SQL local a la transacción; no pide empresa activa para una lista que abarca varias empresas. Mantiene los campos de respuesta existentes.
+2. **Nueva migración Laravel pendiente**, `backend/database/migrations/2026_10_20_010000_scope_company_listing_to_authenticated_user.php`: añade política `FOR SELECT TO app_backend` exclusivamente sobre `company_user` con condición `user_id = current_setting('app.current_user_id')::bigint` dentro de una transacción. **No reemplaza la política RLS por empresa ni concede INSERT, UPDATE o DELETE**, ni cambia permisos de `anon`/`authenticated`. Requiere la conexión administrativa `pgsql_migrations` y control de identidad.
+3. Volver a ejecutar **solo** `tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php` después de confirmar la migración; comprobar resultado HTTP 200 y empresa existente. **No** ejecutar toda la suite antes de resolver el control.
+
+**Estado:** correcciones listas en código, resultado de prueba final PENDIENTE. La nueva migración NO está aplicada por el usuario. Las 17 anteriores siguen aplicadas; no tratar el fallo HTTP 500 como incidencia de conexión PostgreSQL.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
