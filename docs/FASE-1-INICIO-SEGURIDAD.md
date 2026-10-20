@@ -39,3 +39,18 @@ No permitir acceso a datos ajenos a otro `company_id`, ni lectura/escritura anó
 ## Registro de inicio
 
 El ensayo de restauración PostgreSQL 17 de `public` fue aprobado el 20/10/2026. El cifrado `age` fue **diferido a producción** por decisión del usuario, según [README Fase 0](README-FASE-0-CIERRE-Y-PRODUCCION.md). Las advertencias de seguridad de F0 continúan abiertas y se priorizan en F1. **Aún no se han ejecutado migraciones ni nuevas pruebas de F1**.
+
+## F1.1 — Primer instrumento implementado (20/10/2026)
+
+El script [`backend/scripts/phase1-permissions-audit.php`](../backend/scripts/phase1-permissions-audit.php) está versionado en `main`. Solo consulta catálogos `pg_class`, `pg_namespace` y `pg_proc` usando la conexión de desarrollo `app_backend`, luego muestra permisos efectivos de `anon`, `authenticated` y `app_backend`, RLS/FORCE y funciones ejecutables. No presenta filas de empresa ni secretos. El chequeo de objetos sin RLS **no indica automáticamente una vulnerabilidad**: algunos son catálogos/globales restringidos; se analizan con los permisos por separado.
+
+**Ejecutar desde Windows luego de `git pull --ff-only origin main`:**
+
+```powershell
+cd C:\Proyectos\contabilidad\backend
+php -l scripts/phase1-permissions-audit.php
+php scripts/phase1-permissions-audit.php
+```
+
+**Estado:** código publicado, **no ejecutado aquí** contra Supabase ni aprobado por ejecución local. Se requiere observar los resultados antes de redactar migraciones de privilegios o tocar funciones. Si la conexión no cumple los parámetros exactos del entorno de desarrollo, falla cerrado.
+
