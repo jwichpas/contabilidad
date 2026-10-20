@@ -25,6 +25,9 @@ import type {
   OperationalAccount,
 } from '../types/journalEntry.types';
 import type {
+  CompanyOnboardingResult, PcgeTemplateSummary,
+} from '@/modules/company/types/companyOnboarding.types';
+import type {
   CompanyExchangeRatesResponse,
   CompanySettingsData,
   SaveCompanyExchangeRatesPayload,
@@ -346,6 +349,36 @@ export class AccountingApiClient {
       true,
     );
     return rawPayload.data;
+  }
+
+  /**
+   * Alta de empresas (no requiere un tenant NUEVO; sí exige Sanctum).
+   * El servidor comprobará rol y migraciones pendientes antes de admitir la creación.
+   */
+  public async fetchCompanyOnboardingCapability(): Promise<{ can_create: boolean; reason: string | null }> {
+    const response = await this.request<{
+      data: { can_create: boolean; reason: string | null };
+    }>('/api/v1/tenant/company-onboarding/capabilities', { method: 'GET' }, false);
+    return response.data;
+  }
+
+  public async fetchPcgeTemplateSummaries(): Promise<readonly PcgeTemplateSummary[]> {
+    const response = await this.request<{ data: PcgeTemplateSummary[] }>(
+      '/api/v1/catalogs/chart-of-accounts-templates',
+      { method: 'GET' }, false,
+    );
+    return response.data;
+  }
+
+  public async createCompanyFromWizard(
+    payload: ReturnType<typeof import('@/modules/company/types/companyOnboarding.types').companyOnboardingPayload>,
+  ): Promise<CompanyOnboardingResult> {
+    const response = await this.request<{ data: CompanyOnboardingResult }>(
+      '/api/v1/tenant/companies', {
+        method: 'POST', body: JSON.stringify(payload),
+      }, false,
+    );
+    return response.data;
   }
 
   /**
