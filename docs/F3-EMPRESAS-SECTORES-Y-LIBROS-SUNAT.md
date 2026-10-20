@@ -105,6 +105,14 @@ Resumen operativo de las guías oficiales SUNAT; comprobar fecha de obligatoried
 - Empresa con actividades comercial y transporte: conservar sector principal y actividad secundaria, sin forzar una única actividad.
 - Pruebas en **dos empresas**: no mezclar reglas, ingresos ni libros y confirmar aislamiento tenant.
 
+## 6.b. Exportación y saldo a favor: dimensión independiente del sector
+
+- Agregar en el asistente de empresa una **declaración informativa de operaciones previstas**: solo ventas nacionales, exportación, o ambas; distinguir bienes y servicios, sin usar este dato para conceder automáticamente SFMB.
+- La posibilidad de exportar no depende de ser comercial, industrial o ganadera: el mismo RUC puede tener simultáneamente operaciones locales y exportaciones. En exportación de servicios, guardar inscripción y vigencia **cuando el supuesto legal la exija**.
+- La exportación válida se registra como **inafecta de IGV**; separada de exoneraciones locales, ventas gravadas y operaciones no admitidas.
+- La obligación de calcular SFE/SFMB debe basarse en **operaciones validadas del período**, créditos fiscales admitidos, límite normativo y documentación (DAM/FOB o facturas de servicios), no únicamente en un checkbox del perfil.
+- Dependencia F5/F6: [Especificación SFE/SFMB de empresas locales, mixtas y exportadoras](F6-IGV-SFE-SFMB-EXPORTADORES.md). **Pendiente de implementación.**
+
 ## 7. Estado de ejecución
 
 **Disponible previamente en la base:** `company_settings.tax_regime`, controles SIRE/PLE y configuración tributaria básica.
