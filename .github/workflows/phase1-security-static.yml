@@ -133,6 +133,8 @@ jobs:
           extensions: mbstring, bcmath, pdo_pgsql, xml, curl, zip
           coverage: none
       - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Instalar cliente PostgreSQL para aserciones reales
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Migrar esquema real Laravel en PostgreSQL CI
         run: php artisan migrate --database=pgsql_migrations --force --no-interaction
       - name: Verificar rol app_backend y RLS reales
@@ -164,3 +166,12 @@ jobs:
           """
           subprocess.run(["psql","-v","ON_ERROR_STOP=1","-c",sql],check=True)
           PY
+
+      - name: Probar funcion RLS real del ERP
+        env:
+          PGPASSWORD: temporary-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: contabilidad_ci
+        run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-tenant-context.sql
