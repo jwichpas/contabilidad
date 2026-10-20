@@ -5,6 +5,16 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## F0 — Primer simulacro aislado: conflicto con esquema public por defecto (20/10/2026)
+
+**Evidencia directa aportada por el usuario:** Docker respondió `linux`; el simulacro `phase0-restore-rehearsal.ps1` comprobó SHA-256 `[PASS]`, descargó imagen oficial `postgres:17-alpine`, creó PostgreSQL temporal con `--network none`, pero `pg_restore` se detuvo ante `ERROR: schema "public" already exists` al intentar ejecutar `CREATE SCHEMA public;`. El contenedor efímero **se eliminó correctamente** (`[LIMPIEZA]`). Esto **no demuestra corrupción de la copia**: PostgreSQL crea `public` por defecto y el dump también trae ese esquema.
+
+**Corrección versionada en `main`, commit `86d1688`:** antes del restore, se ejecuta exclusivamente en el contenedor `docker exec <nombre efímero> psql ... -c 'DROP SCHEMA public RESTRICT;'`, **sin CASCADE**. Si el esquema no está vacío, `RESTRICT` detiene la preparación en lugar de borrar objetos. El esquema se recreará por `pg_restore`; no se conecta a Supabase ni se modifica el archivo original. **La corrección todavía NO se ha ejecutado/validado en el equipo del usuario**.
+
+**Cifrado del destino aún sin certificar:** `Get-BitLockerVolume -MountPoint "C:"` falló con acceso CIM y `C: does not have an associated BitLocker volume`; no inferir que `C:\CONTA` está cifrada. Verificar desde PowerShell elevado con `manage-bde -status C:` o la interfaz de Cifrado de dispositivo/BitLocker; en caso de no estar protegido, mover copia e índice/manifiesto a un volumen cifrado con ACL restrictivas. No compartir dump/contraseña.
+
+**Próxima acción:** `git pull --ff-only` y reejecutar `phase0-restore-rehearsal.ps1` contra el `.dump` original; validar conteos y RLS. **Estado recuperación: INCOMPLETO**, no ejecutar DDL sobre la única base de desarrollo.
+
 ## F0 — Copia lógica de `public` creada en el equipo del usuario (20/10/2026)
 
 Según salida de PowerShell facilitada por el usuario, `phase0-backup-windows.ps1` terminó con `[PASS]`, generó el archivo `C:\CONTA\contabilidad-public-20261020T210205261Z.dump`, índice y manifiesto, e informó SHA-256 `8896DCC5F0B10279F95D6C8F55E32BD9278F217676C7953E7D2E081E617E423E`. Herramientas PostgreSQL 17 disponibles. El script exportó **solo `public`**; no copió los objetos Storage ni las tablas internas Supabase Auth. El archivo existe **según la salida local**, no se ha leído ni transferido desde ChatGPT.
