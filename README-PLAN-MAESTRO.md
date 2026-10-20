@@ -2,6 +2,8 @@
 
 > **Documento rector del proyecto** | Repositorio: `jwichpas/contabilidad` | Rama: `main` | Versión: **1.0** | Fecha de registro: **2026-10-19**  
 > **Estado global: EN EJECUCIÓN — FASE 0 EN PROGRESO (no aprobada).**  
+> **Validación de seguridad 2026-10-20 (más reciente):** el usuario ejecutó con Artisan la migración `2026_10_19_000000_restrict_supabase_data_api_grants` y Supabase confirma **15 migraciones aplicadas** (seguridad, batch 6). `anon` y `authenticated`: **0 tablas, 0 secuencias y 0 funciones** con permisos efectivos; `app_backend` conserva SELECT sobre 30 tablas, USAGE sobre 19 secuencias y EXECUTE sobre 5 funciones. Se preservan **2 asientos y 4 partidas**. La migración F3 `2026_10_19_010000_add_company_economic_profile` sigue pendiente. Sin prueba HTTP/funcional de Laravel aún y sin respaldo realizado (riesgo aceptado por el usuario en desarrollo). Los registros históricos siguientes reflejan fechas previas a esta validación.  
+
 > Esta hoja de ruta establece trabajo futuro. Las casillas en blanco **no** significan que el código existente carezca de esa funcionalidad; indican que la actividad de verificación/implementación del plan todavía no se ha aprobado.
 
 [Volver al README principal](README.md) · [Diagnóstico Fase 0](docs/FASE-0-DIAGNOSTICO.md) · [Seguimiento detallado](#10-checklist-de-seguimiento) · [Hitos](#8-hitos-y-puertas-de-calidad)
