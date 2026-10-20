@@ -539,6 +539,15 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Normativa:** https://emprender.sunat.gob.pe/comprobantes-libros/registros-libros-electronicos/libros-registros-contables-obligatorios y régimen General: https://emprender.sunat.gob.pe/ruc/regimenes-tributarios-mype/regimen-general-renta-rg.
 - **Ejecución:** especificación comprometida en `main`, **sin nueva migración ejecutada ni cambios a Supabase**. La migración pendiente de seguridad continúa pendiente de Artisan.
 
+### Control de integración pendiente — clasificación económica de empresas
+
+- **Dos migraciones Laravel preparadas y en orden de nombre:** `2026_10_19_000000_restrict_supabase_data_api_grants.php` (seguridad) y `2026_10_19_010000_add_company_economic_profile.php` (perfil económico). Ambas **sin aplicar**; `public.migrations` aún muestra **14** y no existen la nueva tabla ni la columna `legal_form`.
+- **Cambio de API ya integrado:** `GET/PUT /api/v1/company/settings` conserva sus rutas existentes; respuesta adicional `economic_profile_ready` evita errores antes de migrar. La actualización económica es atómica e incluye actor `created_by/updated_by` y auditoría de la operación.
+- **Protección tenant:** nueva tabla con `company_id`, FKs, políticas RLS `ENABLE/FORCE`, permisos de `app_backend`, unicidad de CIIU por empresa e índice único parcial que impide dos actividades principales.
+- **Vue integrado:** pestaña «Tributario & SIRE» con forma jurídica, sector, CIIU, actividades secundarias y selección de principal. Si falta la migración, muestra aviso de configuración pendiente y permite usar la configuración previa. Al cambiar de empresa descarta cargas atrasadas.
+- **Tests sin conexión:** cinco casos `backend/tests/Unit/CompanyEconomicProfileTest.php` para invariantes; falta ejecutar Pest y `pnpm typecheck/build` por indisponibilidad del runner. No considerar las pruebas aprobadas sin resultados.
+- **Alcance pendiente:** esto es la **edición del perfil de empresa existente**, NO el wizard de alta completo ni el motor de libros obligatorios; esos continúan en F3/F5/F6. No se ha efectuado despliegue ni DDL por Supabase.
+
 ### Avance en código de Fase 3 — Perfil económico multiempresa (2026-10-19)
 
 - **Preparado en `main` (NO aplicado en PostgreSQL):** [migración Laravel `2026_10_19_010000_add_company_economic_profile.php`](backend/database/migrations/2026_10_19_010000_add_company_economic_profile.php), que incorpora `company_settings.legal_form` y `company_economic_activities` con códigos sectoriales/CIIU, una actividad principal, varias secundarias, validaciones SQL, RLS forzado y permisos exclusivos de `app_backend`. No modifica las migraciones antiguas ni los registros existentes.
