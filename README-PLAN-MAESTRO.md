@@ -170,7 +170,7 @@ La tabla de ventanas prevalece si la tipografía del Gantt no se visualiza exact
 - Maestros de clientes, proveedores, bancos, trabajadores, entidades, áreas, centros de costos y subdiarios.
 - Control de adopción/migración entre versiones del PCGE y mapeos trazables.
 - Pruebas con empresas ficticias **comercial, servicios, industrial, agrícola, ganadera, construcción, extractiva y transporte/logística**, incluyendo mezcla de actividades y separación de perfiles tributarios por empresa.
-- Mantener **historial de regímenes tributarios** y perfiles de ingresos/UIT por ejercicio. Normalizar el alias ambiguo `ESPECIAL` existente sin romper registros históricos ni confundirlo con `RER`.
+- Mantener **historial de regímenes tributarios** y perfiles de ingresos/UIT por ejercicio. Normalizar el valor genérico `ESPECIAL` («Otros Regímenes Especiales») hacia regímenes concretos, sin romper registros históricos ni confundirlo con `RER`.
 
 **Entregable:** asistente funcional y empresa apta para iniciar registros.
 
