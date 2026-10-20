@@ -169,5 +169,6 @@ export function companyOnboardingPayload(draft: CompanyOnboardingDraft) {
     secondary_currency_codes: draft.secondary_currency_codes,
     pcge_version: draft.pcge_version,
     confirm_early_adoption: draft.confirm_early_adoption,
+    confirm_legal_data: draft.confirm_legal_data,
   };
 }
