@@ -172,3 +172,5 @@ export function companyOnboardingPayload(draft: CompanyOnboardingDraft) {
     confirm_legal_data: draft.confirm_legal_data,
   };
 }
+
+export type CreateCompanyOnboardingPayload = ReturnType<typeof companyOnboardingPayload>;
