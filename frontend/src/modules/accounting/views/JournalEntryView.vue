@@ -240,7 +240,7 @@ const expandedEntryIds = shallowRef<Set<number>>(new Set());
 // ==========================================
 
 function isValidPositiveExchangeRate(value: string): boolean {
-  if (!/^\\d+(?:\\.\\d{1,6})?$/.test(value.trim())) return false;
+  if (!/^\d+(?:\.\d{1,6})?$/.test(value.trim())) return false;
   try {
     return SystemDecimal.parseExchangeRate(value).isPositive();
   } catch {
