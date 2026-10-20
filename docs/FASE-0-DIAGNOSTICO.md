@@ -5,6 +5,23 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## Incidencia SQLSTATE 42883 boolean=integer — regresión aprobada (2026-10-20)
+
+El usuario ejecutó `php -l` sin errores en `ListOperationalAccountsController.php`, `AccountingAccount.php` y `ReadOnlyTenantApiSmokeTest.php`, seguido de:
+
+```text
+php artisan test tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php
+PASS — 7 tests, 29 assertions, 19.56 s
+```
+
+Las dos pruebas incorporadas verifican que `GET /api/v1/accounting/accounts/operational`, el árbol activo y los principales catálogos/maestros devuelvan 200 sin `SQLSTATE[42883]`. El commit [22702cf](https://github.com/jwichpas/contabilidad/commit/22702cf65a5dab451ebb3b95a0bcb8ebe6e2f9fc) corrigió **29 comparaciones booleanas SQL en 19 archivos** mediante `IS TRUE`/`IS FALSE`; no se modificaron políticas RLS, migraciones, `PDO::ATTR_EMULATE_PREPARES` ni datos de PostgreSQL.
+
+**Consulta de comprobación adicional en Supabase (SELECT):** `companies=1`, `users=1`, `memberships=1`, `accounting_accounts=1764`, `journal_entries=2`, `journal_entry_lines=4`, `migrations=18`, `personal_access_tokens=29`, `audit_logs=40`. Los conteos de tokens y auditorías son mayores que líneas base antiguas y pueden variar con los inicios de sesión; no atribuir sus variaciones a pruebas GET sin evidencia.
+
+**Validación visual pendiente:** con Laravel en puerto 8010 y Vite 5180, comprobar en navegador que Libro Diario → Nuevo Asiento cargue las cuentas operativas, permita seleccionarlas y no registre HTTP 500. La aprobación de 7 pruebas no equivale a prueba E2E.
+
+Detalle técnico: [FASE-0-SQL-BOOLEAN-FIX.md](FASE-0-SQL-BOOLEAN-FIX.md).
+
 ## Alta ERP aprobada para preparación; escritura pendiente — 2026-10-20
 
 El usuario autorizó preparar el alta de `elcontador@gmail.com` en Laravel, ligado a la empresa ficticia existente. **No autorizó aún el rol y nombre final ni la escritura sin confirmación; no se ejecutó ningún INSERT/UPDATE.** La cuenta aparece en la pantalla de Supabase Auth (`auth.users`), pero el script local de Laravel confirmó `[USUARIO] Correo NO registrado en la BD de Laravel` (`public.users`). El limitador de login ya usa `CACHE_STORE=file`.
