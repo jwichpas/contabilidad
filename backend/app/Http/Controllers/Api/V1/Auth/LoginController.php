@@ -61,7 +61,11 @@ final readonly class LoginController
         $companies = $this->companyListing->forUser($user);
 
         $deviceName = $validated['device_name'] ?? 'spa-web-client';
-        $plainTextToken = $user->createToken($deviceName)->plainTextToken;
+        // Fecha individual de expiracion (12 h) + limite global 720 min de
+        // Sanctum: incluso tokens antiguos con expires_at NULL dejaran de ser
+        // aceptados tras 12 horas desde created_at.
+        $expiresAt = now()->addHours(12);
+        $plainTextToken = $user->createToken($deviceName, ['*'], $expiresAt)->plainTextToken;
 
         $this->auditLogger->log(
             eventType: 'AUTH_LOGIN',
