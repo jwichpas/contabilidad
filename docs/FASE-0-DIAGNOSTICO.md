@@ -128,6 +128,20 @@ La suite completa permanece bloqueada hasta revisar la seguridad transaccional d
 
 **Estado:** correcciones listas en código, resultado de prueba final PENDIENTE. La nueva migración NO está aplicada por el usuario. Las 17 anteriores siguen aplicadas; no tratar el fallo HTTP 500 como incidencia de conexión PostgreSQL.
 
+## Validación entre empresas: preflight y prueba transaccional preparados — 2026-10-20
+
+**Verificaciones más recientes, ya aprobadas por el usuario:**
+- `2026_10_20_010000_scope_company_listing_to_authenticated_user` aplicada por Artisan: **DONE**.
+- `ReadOnlyTenantApiSmokeTest.php`: **4 PASS / 7 aserciones**, 8,35 segundos, cubre acceso sin autenticación, listado de empresas, acceso no autorizado a empresa inexistente y lectura del Libro Diario propio.
+- Confirmación SQL en Supabase: **18 migraciones** (la última en batch 9); RLS de `company_user` contiene tanto la política de tenant por `company_id` como la nueva `FOR SELECT` limitada por `user_id`; `anon`/`authenticated` siguen sin SELECT; **1 empresa, 1 usuario, 1 membresía, 1.764 cuentas, 2 asientos y 4 partidas**.
+
+**Nuevo desarrollo en `main` (NO ejecutado en la BD):**
+`backend/scripts/phase0-tenant-isolation-rollback.php`. Sin argumentos hace solo preflight: confirma usuario operativo `app_backend`, usuario administrativo `postgres`, entorno de desarrollo correcto, RLS ENABLE/FORCE, una empresa existente y los conteos de referencia. No escribe. Con `--execute` y solo si pasan las salvaguardas abre una única transacción como `app_backend`, inserta explícitamente empresa B y una cuenta contable sintéticas, sin consumir secuencias, verifica que A no pueda leer/modificar los datos de B y viceversa; comprueba que una membresía exista solo al ser creada, que el listado por usuario devuelva ambas empresas y que sin contexto se vuelva a negar acceso. **Siempre ejecuta ROLLBACK** y compara conteos del inicio y del final desde conexión administrativa independiente. No utiliza `SET ROLE`, no cambia RLS ni migra, no ejecuta transacciones de negocio. 
+
+**Limitación:** las escrituras son transitorias, pero una transacción reversible no equivaldría a garantía universal de ausencia de efectos externos de futuros triggers, notificaciones o integraciones. Se inspeccionaron los triggers de `companies`, `company_user` y `accounting_accounts`: solo hay un trigger propio de jerarquía en `accounting_accounts`. No se ha ejecutado el modo `--execute` y no debe declararse PASS hasta obtener evidencia de su resultado real y de los conteos finales. Tampoco es una prueba end-to-end de dos usuarios mediante HTTP; la protección de rutas requiere validación adicional.
+
+**Comandos seguros:** ejecutar primero `php -l scripts/phase0-tenant-isolation-rollback.php` y `php scripts/phase0-tenant-isolation-rollback.php` (solo preflight). Revisar resultados antes de decidir `--execute`. No ejecutar la suite `TenantIsolationTest.php` entera sin remediar sus casos que usan `SET ROLE` y mutaciones.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
