@@ -11,6 +11,12 @@ use Illuminate\Support\Facades\DB;
  * Son SELECT del catálogo PostgreSQL: no inserta datos ni modifica RLS.
  */
 it('blocks anon and authenticated from all public accounting tables, sequences and functions', function (): void {
+    // Esta prueba debe verificar privilegios desde el rol real de Laravel,
+    // nunca desde postgres/bypassrls, aunque la conexión administrativa exista.
+    $identity = DB::selectOne('SELECT current_user AS role_name, current_database() AS db_name');
+    expect($identity->role_name)->toBe('app_backend')
+        ->and($identity->db_name)->toBe('postgres');
+
     $table = DB::selectOne(<<<'SQL'
         SELECT
           count(*) FILTER (WHERE has_table_privilege('anon', c.oid,
