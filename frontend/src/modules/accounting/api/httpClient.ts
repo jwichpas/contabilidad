@@ -1,3 +1,4 @@
+import { reportUnauthorizedBearer } from '@/shared/auth/sessionInvalidation';
 import {
   accountingAccountTreeApiResponseSchema,
   createAccountingAccountDtoSchema,
@@ -75,16 +76,15 @@ export class AccountingApiClient {
   /**
    * Construye los encabezados por petición inyectando `Authorization` y `X-Company-Id`.
    */
-  private buildHeaders(requireTenantHeader: boolean): Headers {
+  private buildHeaders(requireTenantHeader: boolean, requestToken: string | null): Headers {
     const headers = new Headers({
       Accept: 'application/json',
       'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
     });
 
-    const token = this.authContext.getAccessToken();
-    if (token !== null && token.trim() !== '') {
-      headers.set('Authorization', `Bearer ${token}`);
+    if (requestToken !== null && requestToken.trim() !== '') {
+      headers.set('Authorization', `Bearer ${requestToken}`);
     }
 
     const activeCompanyId = this.authContext.getActiveCompanyId();
@@ -105,12 +105,16 @@ export class AccountingApiClient {
     init: RequestInit,
     requireTenantHeader = true,
   ): Promise<TResponse> {
+    // Captura el Bearer realmente enviado; evita invalidar sesiones nuevas
+    // por respuestas 401 de solicitudes anteriores.
+    const requestToken = this.authContext.getAccessToken();
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
-      headers: this.buildHeaders(requireTenantHeader),
+      headers: this.buildHeaders(requireTenantHeader, requestToken),
     });
 
-    if (response.status === 401) {
+    if (response.status === 401 && requestToken?.trim()) {
+      reportUnauthorizedBearer(requestToken);
       this.authContext.onUnauthorized?.();
     }
 
