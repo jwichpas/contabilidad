@@ -58,14 +58,14 @@ Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación
 
 **Tablas sin RLS:** `migrations`, `companies`, `users`, `personal_access_tokens`, `currencies`, `sunat_table_01_payment_methods`, `sunat_table_02_identity_document_types`, `sunat_table_03_financial_institutions`, `sunat_table_05_inventory_types`, `sunat_table_06_measurement_units`, `sunat_table_08_electronic_books`, `sunat_table_10_electronic_document_types`, `sunat_table_11_customs_dependencies`, `sunat_table_12_operation_types`, `financial_statement_rubrics`, `accounting_standards`, `tax_calendar_deadlines`, `accounting_account_templates`.
 
-**Datos de desarrollo reportados** (conteos, no contenido): 1 empresa, 1 usuario, 1,764 cuentas de empresa, 3,401 plantillas PCGE, 2 asientos/4 líneas, 7 entidades, 0 centros de costos y 34 eventos de auditoría. Se deberán volver a medir al ejecutar pruebas aisladas.
+**Datos de desarrollo reportados** (conteos, no contenido): 1 empresa, 1 usuario, 1,764 cuentas de empresa, 3,401 plantillas PCGE, 2 asientos/4 líneas, 7 entidades, 0 centros de costos y 34 eventos de auditoría. Volver a medir durante futuras pruebas controladas en la misma base de desarrollo.
 
 ### Correspondencia de migraciones
 
 Se contrastaron **14 nombres** de archivos de `backend/database/migrations/` con **14 entradas** de `public.migrations`:
 - **14/14 nombres presentes en ambos lados** en esta revisión.
 - Sin faltantes nominales detectados.
-- **NO comprobado:** checksum/contenido ejecutado, integridad de rollback, drift de objetos, aplicación automática desde una BD vacía ni reconstrucción en un sandbox.
+- **NO comprobado:** checksum/contenido ejecutado, integridad de rollback, drift de objetos, aplicación automática desde una BD vacía ni reconstrucción desde cero (no destructiva en la base única).
 
 **Nota:** no interpretar el resultado vacío del historial de migraciones nativas Supabase como ausencia de migraciones Laravel. Son mecanismos separados.
 
@@ -75,12 +75,12 @@ Se contrastaron **14 nombres** de archivos de `backend/database/migrations/` con
 |---|---|---|---|
 | R01 — Exposición API de tablas sin RLS | **CRÍTICA** | 18 tablas sin RLS; grants extensos en 31 tablas, incluyendo `users` y `personal_access_tokens` | F1: revocar privilegios indebidos, RLS y políticas específicas, probar acceso API |
 | R02 — Aislamiento multiempresa dudoso en pool | **CRÍTICA** | `backend/app/Http/Middleware/SetTenantContext.php` usa `set_config(..., false)` sin transacción envolvente visible | F1: controlar contexto por transacción/conexión, verificar que no migra entre peticiones |
-| **R10 — Credencial DB versionada en repositorio** | **CRÍTICA** | `backend/phpunit.xml` contiene `DB_PASSWORD` con un valor literal, en archivo tracked | **Rotar credencial inmediatamente** y eliminarla del archivo, de tests y de dependencias; evaluar historial Git. **No publicar el valor en issues/docs/logs** |
-| **R11 — Pruebas contra BD de desarrollo compartida** | **ALTA** | `backend/phpunit.xml` apunta a `contabilidad-database`; `tests/Pest.php` utiliza `DatabaseTransactions` | Antes de ejecutar tests, crear BD aislada/credenciales sin privilegios peligrosos; validar restauración |
+| **R10 — Credencial DB versionada en repositorio** | **CRÍTICA** | Se identificó un `DB_PASSWORD` literal; retirado del archivo actual en commit `cc363a17` | **Pendiente:** rotar la contraseña y revisar el historial Git; no difundir el valor anterior |
+| **R11 — Pruebas contra BD de desarrollo compartida** | **ALTA** | `backend/phpunit.xml` apunta a `contabilidad-database`; `tests/Pest.php` utiliza `DatabaseTransactions` | No crear BD aislada (decisión del usuario); revisar tests, preservar datos, usar transacciones/rollback y verificar conexión a la base de desarrollo |
 | R03 — Pérdida potencial de precisión monetaria | ALTA | `CreateJournalEntryController.php` convierte tasas e importes a `(float)` | F2: strings decimales/BCMath end-to-end |
 | R04 — Carrera de correlativos | ALTA | Controlador genera número vía `count() + 1` | F2: contador transaccional o estrategia segura e idempotente |
 | R06 — `search_path` mutable | ALTA | 5 funciones reportadas por asesor Supabase | F1: revisión función por función |
-| R12 — PCGE 2026 / fundamento legal por corroborar | ALTA | README declara oficial PCGE 2026 y atribuye resoluciones sin fuente documental primaria verificada en esta revisión | F0: localizar norma y texto oficial, verificar fecha, exigibilidad y cuentas; no declararlo vigente por documentación interna |
+| R12 — Error de cita legal del PCGE 2026 | MEDIA | Resolución correcta **002-2026-EF/30**, obligatoria desde 2028 | Corregir README y respetar vigencias en F3/F7 |
 | R13 — Ausencia de CI en GitHub | MEDIA | Ningún archivo en `.github/workflows/` | F0: ejecutar baseline aislado; F8: CI automatizada |
 | R14 — Artefacto de caché de PHPUnit versionado | BAJA | `backend/.phpunit.cache/test-results` en Git | Posteriormente excluirlo del control de versiones |
 
@@ -96,7 +96,7 @@ La configuración de PHPUnit contiene un valor literal que parece una credencial
 - Fundación IFRS — [NIIF 18](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-18-presentation-and-disclosure-in-financial-statements/) indica periodos iniciados a partir de **1 de enero de 2027**, permitiendo adopción anticipada.
 - Ministerio de Economía y Finanzas: comprobar adicionalmente el marco de **adopción local** (no confundir fecha IASB con oficialización nacional).
 
-**Hallazgo:** durante esta revisión exploratoria **no se obtuvo respaldo oficial primario suficiente para confirmar la aprobación y entrada en vigencia de un «PCGE 2026»** que el repositorio identifica como oficial. Esto **no prueba que no exista**; obliga a obtener resolución, publicación y texto autenticado antes de sostener su vigencia o modificar catálogos. También deberá verificarse el alcance de NIIF 19. El análisis PLE/SIRE queda pendiente.
+**Hallazgo normativo confirmado:** la [Resolución CNC 002-2026-EF/30](https://busquedas.elperuano.pe/dispositivo/NL/2550786-1), publicada el 4 de septiembre de 2026, aprueba el PCGE 2026, obligatorio desde el **1 de enero de 2028**, con adopción anticipada posible. El README citaba erróneamente la 003-2026. NIIF 18 y NIIF 19 tienen vigencia internacional general desde 2027 (adopción anticipada posible); falta verificar su adopción local y PLE/SIRE.
 
 ## 6. Pruebas y recuperación: estado real
 
@@ -114,14 +114,13 @@ La configuración de PHPUnit contiene un valor literal que parece una credencial
 
 **No emitir un «passed» sin registro de salida real.** Existen suites de prueba, pero eso no constituye evidencia de ejecución.
 
-### Comandos previstos SOLO para entorno aislado
+### Comandos previstos para la única base de desarrollo (sin comandos destructivos)
 
 ```bash
 # Backend (desde backend/), después de proveer un .env.testing seguro
 composer install
-php artisan migrate --env=testing --force
-php artisan db:seed --env=testing --force
-composer test
+php artisan migrate:status
+# composer test: ejecutar solo después de revisar los efectos de los tests y comprobar rollback
 composer lint
 
 # Frontend (desde frontend/)
@@ -130,13 +129,13 @@ pnpm typecheck
 pnpm build
 ```
 
-**Protección previa obligatoria:** comprobar que las variables DB de PHPUnit apuntan al **sandbox**, nunca al proyecto `contabilidad-database` compartido, y retirar contraseñas del repositorio antes de conectar. No copiar las actuales credenciales al informe.
+**Protección previa obligatoria:** verificar que PHPUnit usa `contabilidad-database` con contraseña renovada en variables no versionadas; revisar rollback y no ejecutar `migrate:fresh`, `db:wipe`, `db:seed` destructivo ni DDL de borrado sobre la base única.
 
 ## 7. Estado de las tareas del plan (sin marcar completadas)
 
 | Actividad | Estado | Avance verificable | Qué falta para `[x]` |
 |---|---|---|---|
-| **F0.1** Inventario y respaldo | **EN PROGRESO** | Inventario de tablas, RLS, permisos, roles, índices y funciones | Backup y restauración probada en entorno aislado |
+| **F0.1** Inventario y respaldo | **EN PROGRESO** | Inventario de tablas, RLS, permisos, roles, índices y funciones | Verificar respaldo recuperable para la misma base de desarrollo; no crear otra BD de trabajo |
 | **F0.2** Código y migraciones | **EN PROGRESO** | 14/14 migraciones por nombre; inventario de API, frontend, 7 suites | Reconstrucción de esquema y verificación funcional real |
 | **F0.3** Baseline y normativa | **EN PROGRESO** | Identificados test runners y discrepancias normativas a confirmar | Ejecutar tests seguros, builds, revisión normativa completa |
 
@@ -144,10 +143,10 @@ pnpm build
 
 ## 8. Siguiente trabajo dentro de F0 (antes de F1)
 
-1. Gestionar urgentemente **rotación de credencial filtrada** y retirar secreto de `backend/phpunit.xml`, con verificación de no uso de la contraseña anterior. Como toca seguridad, registrar autorización y trazabilidad; mantener al usuario informado.
-2. Preparar BD sandbox/backup; verificar que una restauración funciona y que el test runner no usa la BD compartida.
-3. Ejecutar suites de backend y frontend en entorno aislado; registrar comandos, salidas, duración y fallos.
-4. Reconstruir esquema desde migraciones y seeders, comparar tablas/restricciones/políticas con línea base.
+1. Gestionar urgentemente **rotación de credencial filtrada** (ya retirada del archivo actual `backend/phpunit.xml`), con verificación de no uso de la contraseña anterior. Como toca seguridad, registrar autorización y trazabilidad; mantener al usuario informado.
+2. Utilizar solamente la BD actual `contabilidad-database`, verificar respaldo y preservar todos los registros existentes.
+3. Ejecutar suites de backend (revisadas para rollback) y frontend mediante un runner disponible, usando la misma BD de desarrollo y registrando resultados.
+4. Comparar esquema/migraciones mediante consultas de solo lectura; prohibida la reconstrucción destructiva en la base actual.
 5. Corroborar normativas PCGE y NIIF en documentos oficiales, con fechas y estado de vigencia.
 6. Concluir matriz `implementado / implementado sin verificar / parcial / pendiente`, actualizar F0.1–F0.3 y obtener puerta de aprobación F0.
 
@@ -156,3 +155,34 @@ pnpm build
 | Fecha | Registro | Resultado |
 |---|---|---|
 | 2026-10-19 | Inicio Fase 0 y diagnóstico de solo lectura | Inventario técnico y riesgos documentados. F0 permanece abierta; sin modificaciones a DB ni código aplicativo |
+
+
+## 10. Continuación — Única base de desarrollo (2026-10-19)
+
+**Decisión del usuario:** toda la implementación y las pruebas se realizarán en Supabase **contabilidad-database**, referencia **bnjwxphwtkhblvhsnylj**, hasta finalizar el desarrollo. No se creará una base aislada. Esto no autoriza borrar datos existentes ni ejecutar comandos como `migrate:fresh`, `db:wipe` o seeders destructivos.
+
+**Seguridad:** se eliminó el valor literal de `DB_PASSWORD` de `backend/phpunit.xml` en el commit [cc363a17](https://github.com/jwichpas/contabilidad/commit/cc363a17a351114bc61c3a29f1901f127b095b16). El secreto permanece potencialmente comprometido por versiones previas de Git: **rotación pendiente**, con actualización coordinada de todas las conexiones.
+
+**Verificaciones SQL ejecutadas (todas SELECT, sin escrituras):**
+
+| Métrica | Resultado |
+|---|---|
+| Asientos / líneas examinadas | 2 / 4 |
+| Asientos descuadrados en MN/ME | 0 |
+| Asientos con menos de dos líneas o total cero | 0 |
+| Suma Debe y Haber local | 2,600.0000 / 2,600.0000 |
+| Suma Debe y Haber extranjera | 693.3367 / 693.3367 |
+| Partidas sin asiento o asociadas con cuenta de otra empresa | 0 |
+| Cuentas sin empresa / con padre faltante | 0 |
+| Códigos de cuenta duplicados dentro de empresa | 0 |
+| Partidas contabilizadas en cuentas no operativas o inactivas | 0 |
+| Plantillas PCGE 2019 / 2026 | 1,764 / 1,637 |
+| Cuentas operativas de empresa | 1,212 |
+| Cuentas operativas con seis dígitos | 21 (109 de 3; 396 de 4; 686 de 5 dígitos) |
+| Triggers en Diario/partidas revisados en catálogo | 5; incluyendo saldo diferido, habilitados |
+
+**Interpretación:** los dos asientos de prueba existentes concilian, pero una muestra de dos no valida concurrencia ni exactitud del motor completo.
+
+**Verificación normativa:** fuente oficial [El Peruano, Resolución CNC 002-2026-EF/30](https://busquedas.elperuano.pe/dispositivo/NL/2550786-1) (04-09-2026): PCGE 2026 obligatorio a partir del 01-01-2028, anticipado permitido. IFRS Foundation confirma vigencia general NIIF 18 y 19 desde 2027; se verificará la oficialización local.
+
+**Estado:** F0.1–F0.3 continúan EN PROGRESO, sin pruebas automáticas ejecutadas, sin respaldo/recuperación comprobados y sin cierre de fase. Este registro no inicia F1.
