@@ -1,10 +1,10 @@
 # Plan maestro, hoja de ruta e hitos — Sistema Contable
 
 > **Documento rector del proyecto** | Repositorio: `jwichpas/contabilidad` | Rama: `main` | Versión: **1.0** | Fecha de registro: **2026-10-19**  
-> **Estado global: PLANIFICADO — no se ha iniciado la Fase 0.**  
+> **Estado global: EN EJECUCIÓN — FASE 0 EN PROGRESO (no aprobada).**  
 > Esta hoja de ruta establece trabajo futuro. Las casillas en blanco **no** significan que el código existente carezca de esa funcionalidad; indican que la actividad de verificación/implementación del plan todavía no se ha aprobado.
 
-[Volver al README principal](README.md) · [Seguimiento detallado](#10-checklist-de-seguimiento) · [Hitos](#8-hitos-y-puertas-de-calidad)
+[Volver al README principal](README.md) · [Diagnóstico Fase 0](docs/FASE-0-DIAGNOSTICO.md) · [Seguimiento detallado](#10-checklist-de-seguimiento) · [Hitos](#8-hitos-y-puertas-de-calidad)
 
 ---
 
@@ -72,7 +72,7 @@ Duración indicativa: **32 semanas (~8 meses) para un equipo pequeño**, con sol
 
 | Fase | Nombre | Prioridad | Ventana estimada | Duración | Estado |
 |---|---|---|---|---|---|
-| **0** | Diagnóstico y línea base | Inmediata, previa a cambios | S1 | 1 sem. | ⬜ No iniciada |
+| **0** | Diagnóstico y línea base | Inmediata, previa a cambios | S1 | 1 sem. | 🟡 En progreso |
 | **1** | Seguridad, autenticación y multiempresa | Crítica | S2–S3 | 2 sem. | ⬜ No iniciada |
 | **2** | Integridad y motor contable | Crítica | S4–S6 | 3 sem. | ⬜ No iniciada |
 | **3** | Empresas, PCGE y maestros | Alta | S7–S9 | 3 sem. | ⬜ No iniciada |
@@ -299,6 +299,10 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | R07 | Índices insuficientes o innecesarios | Media | F8: medir antes de agregar/eliminar |
 | R08 | Cobertura de pruebas limitada o no verificada | Alta | F0 baseline; controles continuos F1–F8 |
 | R09 | Acoplamiento de módulos / regresiones UX | Media | F3/F4: contratos, tests y diseño modular |
+| **R10** | **Contraseña de BD versionada en `backend/phpunit.xml`** | **Crítica** | F0: registrar exposición; rotación urgente y retiro del secreto, incluidos rastros de Git, antes de ejecutar pruebas |
+| R11 | Tests apuntan a base de desarrollo compartida | Alta | F0: no correr tests hasta disponer de BD aislada y respaldo |
+| R12 | PCGE 2026 declarado oficial sin respaldo primario confirmado | Alta | F0: validar resolución, fecha de entrada en vigencia y contenido antes de adoptar |
+| R13 | Falta de workflows CI | Media | F0: registrar bloqueo de baseline; F8: incorporar CI |
 
 **Política de manejo:** un riesgo crítico abierto puede bloquear la habilitación de usuarios reales o el despliegue, incluso si el módulo parece funcional.
 
@@ -354,7 +358,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 | Hito / Fase | Fecha de aprobación | Responsable | Evidencia | Estado |
 |---|---|---|---|---|
-| F0 | — | — | — | NO INICIADA |
+| F0 | — | — | [Diagnóstico en progreso](docs/FASE-0-DIAGNOSTICO.md) | EN PROGRESO; pendiente de aprobación |
 | F1 | — | — | — | NO INICIADA |
 | F2 | — | — | — | NO INICIADA |
 | F3 | — | — | — | NO INICIADA |
@@ -369,11 +373,11 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ## 9. Orden de ejecución y primera decisión
 
-**Antes de comenzar la Fase 0:** registrar este README en GitHub y confirmar que el documento rector existe, se lee y está enlazado desde `README.md`.
+**Prerequisito completado (2026-10-19):** este README está en GitHub, verificado y enlazado desde `README.md`. **Fase 0 iniciada**, con evidencia y hallazgos en [docs/FASE-0-DIAGNOSTICO.md](docs/FASE-0-DIAGNOSTICO.md). Ninguna tarea se ha aprobado aún.
 
 **Secuencia recomendada:** F0 → F1 → F2 → F3 → F4/F5 → F6 → F7 → F8, respetando los solapamientos de la hoja de ruta.
 
-**Importante:** el guardado de esta documentación **no inicia la Fase 0**, **no ejecuta migraciones**, **no modifica Supabase**, **no corrige el código** y **no despliega versiones**. La ejecución comienza solo con una decisión explícita posterior.
+**Importante:** la Fase 0 se inició por instrucción explícita del usuario el 2026-10-19. Hasta este registro se efectuaron consultas de solo lectura y actualizaciones de Markdown; **no se ejecutaron migraciones, no se modificó Supabase ni código aplicativo, no se corrieron pruebas contra la base compartida y no se desplegó**. F1 continúa sin iniciar.
 
 ---
 
@@ -433,17 +437,24 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | Actividades aprobadas | **0/27 (0%)** | Contar `[x]` en sección 10 |
 | Fases aprobadas | **0/9** | Registrar puerta de calidad y evidencia de sección 8 |
 | Hitos aprobados | **0/4** | Registrar aprobación de H1–H4 |
-| Fase actual | **Ninguna — previa a F0** | Actualizar al iniciar explícitamente |
-| Bloqueos críticos conocidos | **R01, R02** | Actualizar matriz de riesgos y evidencia |
-| Próxima acción autorizable | **Iniciar Fase 0** | Requiere instrucción explícita |
+| Fase actual | **F0 — EN PROGRESO, sin aprobaciones** | [Registro de diagnóstico](docs/FASE-0-DIAGNOSTICO.md) |
+| Bloqueos críticos conocidos | **R01, R02, R10** | Actualizar matriz de riesgos y evidencia |
+| Próxima acción prioritaria | **Rotar credencial versionada, aislar pruebas y verificar respaldo** | F0/seguridad: ver diagnóstico y autorizaciones necesarias |
 
 ---
+
+### Actualización 2026-10-19 — Inicio Fase 0
+
+- **Estado:** EN PROGRESO; F0.1, F0.2 y F0.3 con trabajo de inventario en curso, ninguna completada.
+- **Evidencias:** [docs/FASE-0-DIAGNOSTICO.md](docs/FASE-0-DIAGNOSTICO.md).
+- **Descubrimientos críticos:** R10 (contraseña de BD en PHPUnit), R11 (tests apuntan a BD compartida), R01/R02 reconfirmados.
+- **Puerta pendiente:** backup y recuperación, reconstrucción de migraciones en sandbox, ejecución real de tests y validación normativa.
 
 ## 11. Referencias y control documental
 
 - Código y arquitectura actual: `backend/`, `frontend/`, `backend/database/migrations/`, `backend/tests/`, `README.md`.
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
-**Estado final de este documento en su creación: _PLANIFICADO; TODAS LAS FASES, ACTIVIDADES E HITOS PENDIENTES_.**
+**Estado al 2026-10-19: _FASE 0 EN PROGRESO; 0/27 ACTIVIDADES APROBADAS; HITOS H1–H4 PENDIENTES_.**
