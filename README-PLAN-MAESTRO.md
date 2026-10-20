@@ -1,3 +1,5 @@
+> **ACTUALIZACIÓN 20/10/2026 — RESTAURACIÓN F0 PASS; CIERRE CONDICIONADO.** El usuario ejecutó exitosamente el ensayo PostgreSQL 17 aislado: SHA256, restauración `public`, 7 conteos, 14 tablas FORCE RLS y 5 funciones; Docker efímero eliminado. El volumen C: está **descifrado (0%)**. Por decisión expresa del usuario, el cifrado individual de respaldos se difiere al paso a producción. **Fase 1 puede iniciarse en desarrollo**, pero F0 no se considera apta para producción: persisten rotación de credencial expuesta, 5 avisos `search_path`, permisos adicionales, recuperación integral fuera de `public` y protección de respaldos. Véase [README de cierre condicionado](docs/README-FASE-0-CIERRE-Y-PRODUCCION.md). Las notas históricas siguientes reflejan estados anteriores al ensayo exitoso.
+
 # Plan maestro, hoja de ruta e hitos — Sistema Contable
 
 > **Documento rector del proyecto** | Repositorio: `jwichpas/contabilidad` | Rama: `main` | Versión: **1.0** | Fecha de registro: **2026-10-19**  
