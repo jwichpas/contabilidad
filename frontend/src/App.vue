@@ -5,6 +5,7 @@ import JournalEntryView from './modules/accounting/views/JournalEntryView.vue';
 import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue';
 import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
 import CompanyOnboardingWizard from './modules/company/views/CompanyOnboardingWizard.vue';
+import type { CompanyOnboardingResult } from './modules/company/types/companyOnboarding.types';
 import LoginView from './shared/auth/LoginView.vue';
 import AppSidebar from './shared/layout/AppSidebar.vue';
 import AppHeader from './shared/layout/AppHeader.vue';
@@ -22,7 +23,7 @@ const {
   isLiveConnected,
   switchCompany,
   ensureAuthenticated,
-  fetchUserCompanies,
+  registerCreatedCompany,
   logout,
 } = useAuthSession();
 
@@ -97,9 +98,16 @@ function handleSwitchCompany(newCompanyId: CompanyId): void {
   void switchCompany(newCompanyId);
 }
 
-async function handleCompanyCreated(companyId: number): Promise<void> {
-  await fetchUserCompanies();
-  const switched = await switchCompany(asCompanyId(companyId));
+async function handleCompanyCreated(result: CompanyOnboardingResult): Promise<void> {
+  registerCreatedCompany({
+    id: asCompanyId(result.id),
+    uuid: result.uuid,
+    tax_id: result.tax_id,
+    business_name: result.business_name,
+    legal_address: result.legal_address,
+    role: 'ADMIN',
+  });
+  const switched = await switchCompany(asCompanyId(result.id));
   if (switched) handleNavigate('company');
 }
 
