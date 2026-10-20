@@ -142,6 +142,29 @@ La suite completa permanece bloqueada hasta revisar la seguridad transaccional d
 
 **Comandos seguros:** ejecutar primero `php -l scripts/phase0-tenant-isolation-rollback.php` y `php scripts/phase0-tenant-isolation-rollback.php` (solo preflight). Revisar resultados antes de decidir `--execute`. No ejecutar la suite `TenantIsolationTest.php` entera sin remediar sus casos que usan `SET ROLE` y mutaciones.
 
+## Fase 0 — Aislamiento interempresa A/B APROBADO — 2026-10-20
+
+**Resultado real informado por el usuario (PowerShell en `backend/`):**
+
+```text
+php scripts/phase0-tenant-isolation-rollback.php --execute
+[PREFLIGHT] Linea base: {"companies":1,"users":1,"memberships":1,"accounts":1764,"entries":2,"lines":4}
+[PASS] Empresas A/B: no hay lectura ni UPDATE cruzados, membresia valida, listado transversal y RLS fail-closed.
+[VERIFY] Conteos finales: {"companies":1,"users":1,"memberships":1,"accounts":1764,"entries":2,"lines":4}
+[OK] ROLLBACK confirmado; no quedan filas de prueba.
+```
+
+Antes de ello se verificó sintaxis PHP sin errores y preflight de solo lectura satisfactorio. **Supabase verificó independientemente mediante SELECT posterior** los mismos conteos de empresas, usuarios, membresías, cuentas, asientos, partidas y **18 migraciones**. Esta evidencia permite cerrar el control **RLS entre dos tenants a nivel SQL** para las operaciones ejercitadas, preservando datos existentes. No equivale a una certificación completa de seguridad, ni a probar todas las rutas HTTP.
+
+**Hallazgo de revisión estática siguiente:** `LoginController` contenía la misma lectura insegura de `companies.is_active = 1`/`company_user.is_active = 1` que ocasionó HTTP 500 en el listado de empresas, y consultaba `company_user` sin el contexto de usuario RLS. En el método de login, esto sucedía **después de emitir un token Sanctum**; un fallo de la consulta podía generar token pese a respuesta HTTP 500.
+
+**Correcciones de backend agregadas a `main`, pendientes de ejecutar el test de regresión:**
+- Nuevo servicio `backend/app/Services/Tenant/ListUserCompaniesService.php`: consulta común entre `LoginController` y `ListUserCompaniesController`, dentro de `DB::transaction()` con `set_config('app.current_user_id', user autenticado, true)`, filtros PostgreSQL `IS TRUE`. No se alteran políticas ni tablas.
+- `LoginController` ejecuta el listado antes de crear el token.
+- `ReadOnlyTenantApiSmokeTest.php` agrega una prueba de servicio sin escrituras ni emisión de tokens, verificando que el selector de empresas devuelve la empresa activa y que el conteo de tokens permanece intacto.
+
+**Pendiente inmediato:** ejecutar `php -l` sobre los tres archivos modificados y `php artisan test tests/Feature/Security/ReadOnlyTenantApiSmokeTest.php` (esperado 5 PASS, aserciones aún por verificar). **No ejecutar la suite de login completa** porque genera tokens, auditoría y otras escrituras; requiere revisión específica bajo aislamiento. Otros pendientes generales F0: estrategia de recuperación, pruebas funcionales autenticadas y revisión de tablas globales sin RLS.
+
 ## 1. Objetivo y alcance de este registro
 
 Iniciar F0 y levantar una línea base verificable: inventario GitHub, situación PostgreSQL, correspondencia inicial de migraciones, capacidades de pruebas, riesgos y bloqueos. **No confundir F0 con corrección de F1.** Ninguna actividad F0.1–F0.3 se marca terminada hasta completar sus respectivas condiciones, especialmente verificación de respaldo de la misma base, pruebas ejecutadas y análisis no destructivo de migraciones y esquema.
