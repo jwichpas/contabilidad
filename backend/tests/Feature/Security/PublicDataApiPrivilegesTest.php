@@ -24,6 +24,11 @@ it('blocks anon and authenticated from all public accounting tables, sequences a
         SQL);
 
     $sequence = DB::selectOne(<<<'SQL'
+        WITH target_sequences AS MATERIALIZED (
+          SELECT c.oid FROM pg_catalog.pg_class c
+          JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relkind = 'S'
+        )
         SELECT
           count(*) FILTER (WHERE has_sequence_privilege('anon', c.oid,
             'USAGE, SELECT, UPDATE')) AS anon_grants,
@@ -31,9 +36,7 @@ it('blocks anon and authenticated from all public accounting tables, sequences a
             'USAGE, SELECT, UPDATE')) AS authenticated_grants,
           count(*) FILTER (WHERE has_sequence_privilege('app_backend', c.oid,
             'USAGE')) AS backend_usage_grants
-        FROM pg_catalog.pg_class c
-        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relkind = 'S'
+        FROM target_sequences c
         SQL);
 
     $functions = DB::selectOne(<<<'SQL'
