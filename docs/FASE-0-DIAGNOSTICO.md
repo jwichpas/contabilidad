@@ -5,6 +5,21 @@
 > **Documento rector:** [README-PLAN-MAESTRO.md](../README-PLAN-MAESTRO.md), apartado «FASE 0».  
 > **Alcance actual:** consultas SQL de solo lectura en Supabase, actualización de documentos, retiro de credencial literal de PHPUnit y creación de workflow de chequeos estáticos en GitHub. No se ejecutaron migraciones, escrituras en BD, cambio de permisos ni despliegues.
 
+## Cierre de Fase 0 — revisión Free/seguridad y plan de respaldo pendiente (2026-10-20)
+
+**Verificación independiente mediante Supabase (consultas de solo lectura):**
+- Organización `grupo ichpas`: **plan Free**; proyecto `contabilidad-database` `ACTIVE_HEALTHY`, PostgreSQL `17.11`; tamaño aproximado de la BD `17 MB`. La documentación de Supabase garantiza backup diario gestionado a Pro/Team/Enterprise, no a Free. **No se verificó ninguna copia disponible/restaurable**. El usuario había decidido no generar backup; no se ha exportado nada.
+- Matriz de 32 tablas `public` consultada: **14 con RLS ENABLE + FORCE**, **18 sin RLS** (catálogos y tablas globales), **0** tablas con permiso de SELECT para `anon` o `authenticated`. La falta de RLS no equivale a tener SELECT público; las tablas globales siguen necesitando controles de autorización en Laravel.
+- Cinco funciones `public`: `proconfig=NULL`, `SECURITY INVOKER`, no ejecutables por `anon`/`authenticated`. `anon`, `authenticated` y `app_backend` carecen de `CREATE` en `public`. El Security Advisor mantiene **5 WARN** por `function_search_path_mutable`. Existe además **1 WARN** de Supabase Auth por protección de contraseñas filtradas desactivada; distinto del login Laravel Sanctum.
+- Conteos SQL de base `companies=1`, `users=1`, `memberships=1`, `accounting_accounts=1764`, `journal_entries=2`, `journal_entry_lines=4`, `personal_access_tokens=29`, `audit_logs=40`, `migrations=18`; conteos de tokens y auditorías pueden variar al usar el sistema. **Ninguna escritura SQL ni DDL ejecutados por esta revisión**.
+
+**Nuevos artefactos en GitHub/main:**
+- [Preflight de backup Windows](../backend/scripts/phase0-backup-preflight.ps1): solo chequea herramientas, variables presentes y carpeta externa; **no conecta a Supabase y no crea archivos**. No hay resultado local todavía.
+- [Plan de recuperación actualizado](FASE-0-PLAN-RECUPERACION.md): incorpora plan Free, límites de `pg_dump --schema=public`, evidencias y autorización necesaria para un backup/restauración aislada.
+- [Auditoría de funciones](FASE-0-AUDITORIA-FUNCIONES.md) y [propuesta SQL de `search_path = ''` NO EJECUTADA](FASE-0-PROPUESTA-SEARCH-PATH.md): firma exacta, reversión, pruebas y requisitos previos.
+
+**Puertas que siguen abiertas:** decidir y ejecutar copia externa **solo con aprobación**; comprobar recuperabilidad en destino aislado; después validar/revisar el DDL de `search_path` y demás seguridad de API. **Fase 0 EN PROGRESO**, no declarar recuperación aprobada ni endurecimiento SQL implementado.
+
 ## Fase 0 — Recorrido principal validado en navegador (2026-10-20)
 
 **Confirmación funcional directa del usuario:** puede **iniciar sesión**, **seleccionar una empresa**, **consultar el Plan de Cuentas** y **abrir el editor de asientos sin errores** en el frontend local conectado a Laravel. Se marca **APROBADO el recorrido manual principal de lectura y navegación**. Este resultado complementa la suite HTTP 7/7 y las 16 pruebas de frontend, pero **no acredita pruebas E2E automatizadas**, todos los casos de permisos/roles ni la contabilización efectiva de un asiento nuevo.
