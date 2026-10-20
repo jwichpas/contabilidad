@@ -2,6 +2,8 @@
 
 > **Documento rector del proyecto** | Repositorio: `jwichpas/contabilidad` | Rama: `main` | Versión: **1.0** | Fecha de registro: **2026-10-19**  
 > **Estado global: EN EJECUCIÓN — FASE 0 EN PROGRESO (no aprobada).**  
+> **Validación 2026-10-20, tras segunda migración:** el usuario ejecutó por Artisan la migración `2026_10_19_010000_add_company_economic_profile`; Supabase confirma **16 migraciones, batch 7 y 32 tablas**. La nueva `company_economic_activities` existe con RLS ENABLE/FORCE, una política para `app_backend`, FKs, restricciones de sector/CIIU, CIIU único por empresa y máximo una actividad principal por empresa. `company_settings` contiene los cinco nuevos campos. `anon`/`authenticated`: **0 tablas, secuencias o funciones** con permisos efectivos; `app_backend`: SELECT en 31 tablas, USAGE en 20 secuencias y EXECUTE en 5 funciones. Datos preservados: **1 empresa, 1 configuración, 2 asientos y 4 partidas**. Consulta F0 del ledger: **0 asientos inválidos, 0 partidas huérfanas, 0 referencias inválidas**. Existen **18 tablas sin RLS**; revocar privilegios públicos no equivale a habilitarlo. **No se ha probado la creación de empresas vía Laravel ni completado la suite de tests; no se realizó respaldo de desarrollo por decisión expresa del usuario.** La Fase 0 permanece abierta.  
+
 > **Validación de seguridad 2026-10-20 (más reciente):** el usuario ejecutó con Artisan la migración `2026_10_19_000000_restrict_supabase_data_api_grants` y Supabase confirma **15 migraciones aplicadas** (seguridad, batch 6). `anon` y `authenticated`: **0 tablas, 0 secuencias y 0 funciones** con permisos efectivos; `app_backend` conserva SELECT sobre 30 tablas, USAGE sobre 19 secuencias y EXECUTE sobre 5 funciones. Se preservan **2 asientos y 4 partidas**. La migración F3 `2026_10_19_010000_add_company_economic_profile` sigue pendiente. Sin prueba HTTP/funcional de Laravel aún y sin respaldo realizado (riesgo aceptado por el usuario en desarrollo). Los registros históricos siguientes reflejan fechas previas a esta validación.  
 
 > Esta hoja de ruta establece trabajo futuro. Las casillas en blanco **no** significan que el código existente carezca de esa funcionalidad; indican que la actividad de verificación/implementación del plan todavía no se ha aprobado.
@@ -564,6 +566,16 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Control de habilitación:** el asistente puede consultarse y guardar borradores antes de migrar, pero la confirmación de alta permanece deshabilitada hasta que `CompanyOnboardingGuard` confirme que existe el esquema y que el usuario es ADMIN. No se simulan catálogos de monedas ni plantillas PCGE.
 - **Pruebas preparadas:** [`company-onboarding.test.mjs`](frontend/scripts/company-onboarding.test.mjs) (6 casos), [`CompanyOnboardingRulesTest.php`](backend/tests/Unit/CompanyOnboardingRulesTest.php) y existentes de perfil. Ejecutar `npm run test:unit`, `npm run typecheck`/`npm run build` en frontend y pruebas Pest Laravel cuando dispongamos de runner.
 - **Estado honesto:** IMPLEMENTADO EN CÓDIGO; **no desplegado, no compilado ni probado end-to-end**. Supabase se conserva sin DDL. F3.1 sigue **EN VALIDACIÓN/PARCIAL** y no se marca `[x]` hasta crear empresa ficticia y registrar primer asiento desde UI.
+
+### Estado verificado por SQL de solo lectura, F0 y F3 (2026-10-20)
+
+- **Migraciones aplicadas por el usuario:** seguridad (batch 6) y nuevo perfil económico (batch 7); el inventario es **16/16 aplicadas**, sin nuevas pendientes al momento de la consulta.
+- **Permisos R01 observados:** `anon` y `authenticated` sin permisos efectivos sobre las **32 tablas, secuencias y 5 funciones del esquema public**. Accesos `app_backend` conservados e incrementados solo para nueva tabla/secuencia (31 tablas con SELECT; 20 secuencias con USAGE; 5 funciones con EXECUTE).
+- **Perfil empresarial:** cinco columnas añadidas a `company_settings`, tabla `company_economic_activities`, FKs y unicidades presentes, RLS habilitado/forzado y política tenant de `app_backend` confirmadas.
+- **Integridad de movimientos:** 2 asientos, 4 partidas; **ningún asiento desbalanceado ni inválido**, ninguna partida huérfana ni referencia de cuenta inválida en el control F0.
+- **Pendientes verificables:** ejecutar la auditoría Laravel de solo lectura `php artisan contabilidad:auditar-fase0`; comprobar credenciales/rutas `app_backend` y probar funcionalmente alta y selector de empresas; revisar 18 tablas sin RLS. Contraseñas rotadas/recuperación de respaldo aún por certificar.
+- **Corrección previa a la siguiente ejecución de F0:** CTE `MATERIALIZED` en `AuditPhaseZero.php` y `PublicDataApiPrivilegesTest.php` para evitar errores PostgreSQL de secuencias. SQL comprobado por consulta de solo lectura. Es necesario `git pull --ff-only` en el equipo del usuario para tomar ambos archivos.
+- **Criterio de aprobación:** las migraciones exitosas **no cierran** por sí mismas la Fase 0. Los controles de pruebas de aislamiento, integridad y recuperación siguen abiertos.
 
 ### Avance en código de Fase 3 — Perfil económico multiempresa (2026-10-19)
 
