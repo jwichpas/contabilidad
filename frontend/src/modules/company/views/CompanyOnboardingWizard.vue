@@ -75,17 +75,9 @@ const serverReason = ref('');
 const currentErrors = computed(() => attempted.value ? onboardingStepErrors(step.value, draft) : {});
 const pcge2026Early = computed(() => draft.pcge_version === 'PCGE_2026' && draft.fiscal_year < 2028);
 const draftHasErrors = computed(() => !onboardingIsComplete(draft));
-const baseCurrencyOptions = computed(() =>
-  currencies.value.length ? currencies.value : [
-    { code: 'PEN', name: 'Sol peruano', id: 1 },
-    { code: 'USD', name: 'Dólar estadounidense', id: 2 },
-    { code: 'EUR', name: 'Euro', id: 3 },
-  ] as readonly Pick<CurrencyItem, 'code' | 'name' | 'id'>[]
-);
-const pcgeOptions = computed(() => templates.value.length ? templates.value : [
-  { plan_version: 'PCGE_2019' as const, name: 'PCGE 2019', total_accounts: 0, is_current_default: true },
-  { plan_version: 'PCGE_2026' as const, name: 'PCGE 2026', total_accounts: 0, is_current_default: false },
-]);
+// No simular monedas ni plantillas: se utilizan solo catálogos reales de Laravel.
+const baseCurrencyOptions = computed(() => currencies.value);
+const pcgeOptions = computed(() => templates.value);
 const uiField = 'w-full rounded-lg border border-line bg-surf px-3 py-2.5 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/10';
 const api = new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
@@ -181,11 +173,14 @@ async function loadCatalogs(): Promise<void> {
     ]);
     currencies.value = currencyList.filter(c => c.is_active);
     templates.value = pcgeList;
-    canCreateOnServer.value = capability.can_create;
-    serverReason.value = capability.reason ?? '';
+    canCreateOnServer.value = capability.can_create &&
+      currencies.value.length > 0 && templates.value.length > 0;
+    serverReason.value = capability.reason ??
+      (canCreateOnServer.value ? '' : 'Faltan catálogos contables o monedas activas. No es posible crear la empresa.');
   } catch {
     loadError.value = 'No se pudieron consultar todos los catálogos o el estado de la API. Puede preparar y guardar el borrador.';
     canCreateOnServer.value = false;
+    serverReason.value = 'La creación requiere los catálogos reales de Laravel y las migraciones pendientes.';
   } finally {
     loadingCatalogs.value = false;
   }
