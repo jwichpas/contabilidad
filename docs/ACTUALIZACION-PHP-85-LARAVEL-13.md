@@ -87,11 +87,11 @@ El usuario confirmó:
 - PHP **8.5.12** ZTS x64 CLI, sin advertencias de arranque.
 - Extensiones bcmath, pdo_pgsql, mbstring, openssl, ctype, tokenizer, xml y fileinfo: **PASS**.
 - Composer **2.10.3 estable**, validación de manifest: **PASS**.
-- \`.\scripts\phase-php85-preflight.ps1\`: **PASS**. La advertencia final del script sobre Laravel 11 es un pendiente real, no un error de plataforma.
+- `.\scripts\phase-php85-preflight.ps1`: **PASS**. La advertencia final del script sobre Laravel 11 es un pendiente real, no un error de plataforma.
 
-Se agregó el asistente local \`backend/scripts/phase-php85-upgrade-laravel.ps1\` con dos modos:
+Se agregó el asistente local `backend/scripts/phase-php85-upgrade-laravel.ps1` con dos modos:
 
-\`\`\`powershell
+```powershell
 cd C:\Proyectos\contabilidad
 git pull --ff-only origin main
 cd backend
@@ -100,10 +100,10 @@ cd backend
 
 # SOLO si el resultado del dry-run es PASS y se han revisado conflictos:
 .\scripts\phase-php85-upgrade-laravel.ps1 -Apply
-\`\`\`
+```
 
-El script exige manifiestos limpios, valida PHP y Composer, hace copias externas en %TEMP%, usa \`composer require ... --no-update\` con constraints de PHP \`^8.5\`, Laravel \`^13.0\`, Pest \`^4.0\`, plugin Laravel \`^4.0\`, PHPUnit \`^12.0\` y resuelve \`composer update --with-all-dependencies --dry-run\`. En modo diagnóstico restaura automáticamente ambos archivos. Solo \`-Apply\` instala paquetes y genera nuevo \`composer.lock\`; valida dependencias, versión Artisan y paquetes clave. Si falla, restaura los archivos pero puede necesitar \`composer install\` para normalizar vendor/.
+El script exige manifiestos limpios, valida PHP y Composer, hace copias externas en %TEMP%, usa `composer require ... --no-update` con constraints de PHP `^8.5`, Laravel `^13.0`, Pest `^4.0`, plugin Laravel `^4.0`, PHPUnit `^12.0` y resuelve `composer update --with-all-dependencies --dry-run`. En modo diagnóstico restaura automáticamente ambos archivos. Solo `-Apply` instala paquetes y genera nuevo `composer.lock`; valida dependencias, versión Artisan y paquetes clave. Si falla, restaura los archivos pero puede necesitar `composer install` para normalizar vendor/.
 
-**No correr migraciones, seeders, ni otras pruebas que escriban en Supabase Dev.** Después de \`-Apply\`, ejecutar exclusivamente las pruebas GET/middleware autorizadas en F1 (sin DML), revisar las diferencias, actualizar los jobs CI a PHP 8.5 y subir **juntos** \`backend/composer.json\`, \`backend/composer.lock\` y configuración de CI. No subir lock obsoleto.
+**No correr migraciones, seeders, ni otras pruebas que escriban en Supabase Dev.** Después de `-Apply`, ejecutar exclusivamente las pruebas GET/middleware autorizadas en F1 (sin DML), revisar las diferencias, actualizar los jobs CI a PHP 8.5 y subir **juntos** `backend/composer.json`, `backend/composer.lock` y configuración de CI. No subir lock obsoleto.
 
 Este script ya está versionado, pero **no se ha ejecutado en Windows desde el conector**, y no acredita que Laravel 13 esté instalado ni que la resolución termine correctamente.
