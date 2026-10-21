@@ -225,7 +225,7 @@ final readonly class InitializeCompanyChartOfAccountsService
                         'name' => 'Centro de Costos de Administración General',
                         'destination_debit_account_id' => $acc9411,
                         'destination_credit_account_id' => $acc7911,
-                        'is_active' => true,
+                        'is_active' => DB::raw('TRUE'),
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]);
@@ -239,7 +239,7 @@ final readonly class InitializeCompanyChartOfAccountsService
                         'name' => 'Centro de Costos Comercial y Ventas',
                         'destination_debit_account_id' => $acc9511,
                         'destination_credit_account_id' => $acc7911,
-                        'is_active' => true,
+                        'is_active' => DB::raw('TRUE'),
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]);
