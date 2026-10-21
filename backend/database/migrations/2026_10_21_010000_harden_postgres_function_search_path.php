@@ -6,7 +6,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 /**
- * F1.4 - Fija search_path en cinco funciones existentes.
+ * F1.4 - Fija search_path = pg_catalog en cinco funciones existentes.
  * Solo aplica en Supabase Dev autorizado o PostgreSQL CI desechable.
  * No ejecuta DML de negocio y no altera firmas ni cuerpos de funciones.
  */
@@ -64,7 +64,7 @@ return new class extends Migration
                     throw new RuntimeException('Funcion inexistente o con SECURITY DEFINER inesperado: '.$functionName);
                 }
 
-                $db->unprepared("ALTER FUNCTION public.{$functionName}() SET search_path = ''");
+                $db->unprepared("ALTER FUNCTION public.{$functionName}() SET search_path = pg_catalog");
             }
 
             $hardenedCount = (int) ($db->selectOne(<<<'SQL'
@@ -81,11 +81,11 @@ return new class extends Migration
                     'trg_fn_enforce_double_entry_balance'
                   )
                   AND p.prosecdef = false
-                  AND 'search_path=' = ANY (p.proconfig)
+                  AND 'search_path=pg_catalog' = ANY (p.proconfig)
                 SQL)?->total ?? 0);
 
             if ($hardenedCount !== count(self::FUNCTIONS)) {
-                throw new RuntimeException('La auditoria search_path no confirmo las cinco funciones.');
+                throw new RuntimeException('La auditoria search_path=pg_catalog no confirmo las cinco funciones.');
             }
 
             // Asegura el funcionamiento de la funcion RLS con search_path vacio.
