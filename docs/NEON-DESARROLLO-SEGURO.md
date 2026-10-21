@@ -215,3 +215,34 @@ El usuario obtuvo dos PASS del limpiador (20 variables heredadas vacías elimina
 `phase1-neon-env-origins.php` ahora informa **solamente SI/NO**, sin imprimir hashes, passwords ni claves: validez de APP_KEY tanto en archivo como tras bootstrap, si `DB_PASSWORD` coincide con `DB_APP_BACKEND_ROLE_PASSWORD`, y si el secreto de rotación coincide con el rol. No revela valores ni conecta a PostgreSQL. En una rama Neon nueva sin datos cifrados que conservar, con entorno ya saneado, se permite regenerar APP_KEY mediante `php artisan key:generate --force` y validar inmediatamente; **no regenerar sobre datos cifrados existentes**. El usuario debe alinear privadamente DB_PASSWORD con el secreto inicial del rol, y reservar `DB_APP_BACKEND_NEW_PASSWORD` para rotación, pudiendo dejarla vacía ahora.
 
 **No ejecutar migraciones Neon** hasta comprobar APP_KEY válida, coincidencia DB_PASSWORD/ROLE, preflight de configuración PASS y `--read-only --require-empty`. Neon production y Supabase permanecen intactos.
+
+
+## F1.7 — Neon PostgreSQL 18 aprobado en modo lectura, migraciones NO aplicadas (21/10/2026)
+
+**Evidencia del usuario:** el preflight Laravel sin SQL y el preflight SELECT --read-only --require-empty finalizaron con PASS. La conexión identifica PostgreSQL 18, base neondb, usuario neondb_owner, cero tablas public y rol app_backend aún inexistente. Una comprobación independiente mediante el conector Neon confirmó: proyecto soft-bonus-52215969, rama contabilidad-dev (br-odd-lake-b6wshqv3), PostgreSQL 18.6, cero tablas, sin rol app_backend y branch ready. No se ha ejecutado DDL/DML, ni se ha modificado Supabase o Neon production.
+
+**Bloqueo local restante:** phase1-neon-env-origins.php detectó dos líneas activas DB_PASSWORD en backend/.env. Aunque la última coincida con DB_APP_BACKEND_ROLE_PASSWORD, Dotenv podría resolver la primera. El preflight ahora rechaza cualquier entrada repetida DB_*, NEON_*, APP_KEY, APP_ENV o DATABASE_URL. Para corregirlo, abrir notepad .env, buscar DB_PASSWORD= y dejar exactamente una sola línea, con el valor privado correcto. No imprimir ni pegar secretos en chats. DB_APP_BACKEND_NEW_PASSWORD es solo para rotación; no tiene que coincidir durante el primer bootstrap.
+
+**Inventario de migraciones del repositorio:** 21 PHP en total, 16 del esquema portátil PostgreSQL 18 y 5 específicas de Supabase excluidas. Las cinco excluidas son:
+
+- 2026_10_19_000000_restrict_supabase_data_api_grants
+- 2026_10_19_010000_add_company_economic_profile
+- 2026_10_20_000000_rotate_app_backend_credential
+- 2026_10_20_010000_scope_company_listing_to_authenticated_user
+- 2026_10_20_235900_create_dev_company_b_via_laravel
+
+Se publicó scripts/phase1-neon-schema-bootstrap.php. En modo --plan (predeterminado), enumera y valida los archivos SIN hacer SQL. En modo opt-in --apply=contabilidad-dev exige destino exacto conocido, PostgreSQL 18, base vacía, role app_backend ausente, SSL, credenciales válidas y ausencia de duplicados. Ejecuta una por una solo las 16 migraciones autorizadas usando pgsql_migrations y verifica registros de migrations, cinco search_path endurecidos, política de auditoría y rol app_backend sin bypass. Para evitar filtrar contraseñas, no imprime el texto bruto de errores SQL de Laravel.
+
+**Este inicializador NO se ha ejecutado en Neon.** Su lint PHP real y su --plan todavía requieren validación en Windows. El PASS anterior de Docker PostgreSQL 18 no sustituye estas dos verificaciones del nuevo script.
+
+Siguientes comandos seguros, dentro de backend (luego de corregir el duplicado de DB_PASSWORD):
+
+    git pull --ff-only origin main
+    (Select-String -Path .env -Pattern '^\s*DB_PASSWORD\s*=').Count
+    php -l scripts/phase1-neon-preflight.php
+    php scripts/phase1-neon-preflight.php
+    php scripts/phase1-neon-preflight.php --read-only --require-empty
+    php -l scripts/phase1-neon-schema-bootstrap.php
+    php scripts/phase1-neon-schema-bootstrap.php --plan
+
+No usar php artisan migrate general, migrate:fresh ni la opción --apply antes de comprobar el plan y autorizar expresamente la inicialización del entorno de desarrollo.
