@@ -157,3 +157,30 @@ Referencias de ventanas reparadas:
 - https://github.com/advisories/GHSA-crmm-hgp2-wgrp
 - https://github.com/advisories/GHSA-5vg9-5847-vvmq
 - https://getcomposer.org/doc/03-cli.md#audit
+
+
+## Incidencia -Apply: PowerShell ParserError (21/10/2026)
+
+El usuario ejecutó `.\scripts\phase-php85-upgrade-laravel.ps1 -Apply` y PowerShell detuvo la interpretación antes de ejecutar: `ParserError ... line 114: Falta la expresión de índice de matriz`. Inspección del archivo en GitHub confirmó **corrupción del código versionado**: expresión `$laravelVersion` truncada y duplicación de un bloque `catch/finally`. No fue un fallo de Composer ni de PHP; el comando -Apply no llegó a instalar paquetes ni modificar manifests.
+
+Se reemplazó **todo** el script por una implementación completa, con un único `try/catch/finally`, verificación del nuevo lock (Laravel >=13.30 y Pest 4), auditoría `composer audit --locked` posterior a la instalación, copia de seguridad externa y restauración en caso de fallo. Se confirmó integridad del archivo recuperado desde GitHub (156 líneas, bloque final único). **No se dispone de ejecución real del parser de Windows en el conector:** antes de llamar -Apply, comprobarlo en PowerShell de Windows:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+$tok = $null
+$err = $null
+[System.Management.Automation.Language.Parser]::ParseFile(
+    (Resolve-Path .\scripts\phase-php85-upgrade-laravel.ps1).Path,
+    [ref]$tok, [ref]$err
+) | Out-Null
+if ($err.Count -gt 0) {
+    $err | Format-List Message,Extent
+    throw 'Error de sintaxis: NO ejecutar -Apply'
+}
+Write-Host '[PASS] Sintaxis PowerShell'
+.\scripts\phase-php85-upgrade-laravel.ps1 -Apply
+```
+
+**Estado:** actualización Laravel 13 pendiente de ejecución real; preservar las empresas A/B y no ejecutar migraciones ni pruebas destructivas en Supabase Dev.
