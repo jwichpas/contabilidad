@@ -142,3 +142,18 @@ El usuario confirmó la **resolución exitosa** sobre Windows / PHP 8.5.12 (sin 
 - La simulación terminó `[PASS] Composer resolvio las dependencias objetivo en modo dry-run` y `[RESTORE] composer.json y composer.lock originales restaurados`.
 
 Se corrigió el script para añadir `--audit-format=plain` al dry-run. **Puerta siguiente:** repetir la simulación con ese cambio y leer el paquete, CVE/GHSA, rangos vulnerables y versión corregida. No usar todavía `-Apply` ni desplegar hasta evaluar estos avisos. Las empresas A/B de Supabase Dev no se han modificado.
+
+
+## Auditoría de cuatro avisos Laravel: comparación con versión resuelta
+
+El usuario remitió 4 avisos de seguridad para `laravel/framework`. La resolución `--dry-run` había elegido **v13.38.0**; los intervalos afectados son: `<13.30.0` (XSS), `<13.12.0` (URLs firmadas), `<=13.9.0` y `<13.10.0` (CRLF). Por tanto **v13.38.0 queda fuera de esos cuatro rangos**. Es muy probable que la salida de auditoría del dry-run se refiera al lock aún vigente con Laravel 11.57; **no equivale a un audit aprobado del lock nuevo**, que todavía no existe.
+
+Se añadió barrera al modo `-Apply` del script: comprobar Laravel >=13.30.0, Pest 4 y ejecutar `composer audit --locked --format=plain` después de regenerar el lock. Si falla la auditoría, el proceso **no declara PASS**, restaura composer.json/composer.lock y advierte que puede requerirse `composer install` para sincronizar vendor. No se desactivan alertas para evadir el test.
+
+**Acción siguiente:** ejecutar `.scriptsphase-php85-upgrade-laravel.ps1 -Apply` **en Windows** luego de sincronizar `main`. El proyecto no se debe publicar todavía: primero comprobar versión real Artisan, auditoría y suite HTTP de solo lectura; luego revisar la guía Laravel 11→12→13, comprometer juntos los nuevos `composer.json` y `composer.lock` y actualizar CI PHP 8.5. Sin migraciones ni escrituras contra Supabase Dev.
+
+Referencias de ventanas reparadas:
+- https://github.com/advisories/GHSA-jh5r-qr3c-85q8
+- https://github.com/advisories/GHSA-crmm-hgp2-wgrp
+- https://github.com/advisories/GHSA-5vg9-5847-vvmq
+- https://getcomposer.org/doc/03-cli.md#audit
