@@ -107,3 +107,25 @@ El script exige manifiestos limpios, valida PHP y Composer, hace copias externas
 **No correr migraciones, seeders, ni otras pruebas que escriban en Supabase Dev.** Después de `-Apply`, ejecutar exclusivamente las pruebas GET/middleware autorizadas en F1 (sin DML), revisar las diferencias, actualizar los jobs CI a PHP 8.5 y subir **juntos** `backend/composer.json`, `backend/composer.lock` y configuración de CI. No subir lock obsoleto.
 
 Este script ya está versionado, pero **no se ha ejecutado en Windows desde el conector**, y no acredita que Laravel 13 esté instalado ni que la resolución termine correctamente.
+
+
+## Corrección de fallo Composer dry-run — 21/10/2026 (1234 h local)
+
+**Entrada real del usuario:** PHP 8.5.12 y todas las extensiones PASS, Composer 2.10.3. La simulación inicial terminó con Composer exit 2 porque PowerShell pasó las restricciones `^8.5`, `^13.0`, `^4.0` y `^12.0` mediante `composer.bat`; cmd eliminó el carácter `^`, dejando versiones exactas: php 8.5 no satisfacía 8.5.12 y pest-plugin-laravel 4.0.0 no soportaba Laravel 13. **El script sí restauró composer.json y composer.lock originales; nunca se instaló un paquete.**
+
+**Solución publicada en main:** `phase-php85-upgrade-laravel.ps1` evita `composer require` pasando rangos con caret por `composer.bat`. Ahora usa PowerShell para editar temporalmente el JSON y conservar los constraints `php:^8.5`, `laravel/framework:^13.0`, `pestphp/pest:^4.0`, `pestphp/pest-plugin-laravel:^4.1`, `phpunit/phpunit:^12.0`. Ejecuta `composer validate --no-check-lock` y `composer update --with-all-dependencies --dry-run --no-scripts`, y restaura ambos archivos al salir. Pest Laravel plugin 4.1.0 añade soporte para Laravel 13; Sanctum 4.3.3 y Collision 8.9.5 también son compatibles en su matriz actual.
+
+**Próximo paso (solo dry-run):**
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+.\scripts\phase-php85-upgrade-laravel.ps1
+```
+
+Si el siguiente solver muestra un conflicto diferente, **no usar -Apply**; analizar el mensaje preciso. Después de PASS se revisarán lock, cambios de Laravel y suites sin escritura antes de promover la actualización.
+
+- https://getcomposer.org/doc/articles/versions.md
+- https://packagist.org/packages/pestphp/pest-plugin-laravel
+- https://packagist.org/packages/laravel/sanctum
+- https://packagist.org/packages/nunomaduro/collision
