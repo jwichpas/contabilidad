@@ -132,7 +132,7 @@ return new class extends Migration
                         'updated_at' => $now,
                     ]);
                     CompanySetting::query()->create([
-                                                'base_currency_id' => $currencies['PEN']->id,
+                        'base_currency_id' => $currencies['PEN']->id,
                         'secondary_currency_id' => $currencies['USD']->id,
                         'legal_form' => 'SAC',
                         'tax_regime' => 'GENERAL',
@@ -153,7 +153,7 @@ return new class extends Migration
                         ]);
                     }
                     CompanyEconomicActivity::query()->create([
-                                                'sector_code' => 'COMERCIAL',
+                        'sector_code' => 'COMERCIAL',
                         'ciiu_code' => '4752',
                         'description' => 'Venta de artículos de ferretería, pinturas y productos de vidrio',
                         'is_primary' => DB::raw('TRUE'),
