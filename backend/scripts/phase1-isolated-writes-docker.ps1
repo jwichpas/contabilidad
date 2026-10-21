@@ -177,6 +177,17 @@ echo "[PASS] Conexion administrativa verificada contra Docker efimero\n";
         )
     }
 
+    Write-Host '[FUNCIONES] Validando cinco search_path fijos luego de migraciones.'
+    Invoke-NativeChecked 'docker' @(
+        'cp',(Join-Path $backend 'tests/security/phase1-search-path-rehearsal.sql'),
+        ($dockerName + ':/tmp/f1-function-search-path.sql')
+    )
+    Invoke-NativeChecked 'docker' @(
+        'exec','--env',('PGPASSWORD=' + $adminPassword),$dockerName,
+        'psql','-h','127.0.0.1','-U','postgres','-d','contabilidad_ci',
+        '-X','-v','ON_ERROR_STOP=1','-f','/tmp/f1-function-search-path.sql'
+    )
+
     Write-Host '[RLS] Probando INSERT, UPDATE y DELETE A/B sobre tablas reales.'
     Invoke-NativeChecked 'docker' @(
         'cp',(Join-Path $backend 'tests/security/phase1-real-cross-tenant-writes.sql'),
