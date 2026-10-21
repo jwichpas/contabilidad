@@ -48,31 +48,36 @@ return new class extends Migration
         }
 
         $tenant = app(TenantContext::class);
-        $owner = null;
-
-        // Alta EXCLUSIVA de datos ficticios Dev, no altera el guard de la API.
-        // En el entorno actual el usuario válido tiene CHIEF_ACCOUNTANT, no ADMIN.
-        // Se verifica empresa/membresía activa bajo el contexto RLS real.
-        foreach (User::query()->whereNotNull('current_company_id')->orderBy('id')->cursor() as $candidate) {
-            $currentCompanyId = (int) $candidate->current_company_id;
-            $eligible = $tenant->run($currentCompanyId, static function () use ($db, $candidate, $currentCompanyId): bool {
-                return $db->table('company_user')
-                    ->join('companies', 'companies.id', '=', 'company_user.company_id')
-                    ->where('company_user.company_id', $currentCompanyId)
-                    ->where('company_user.user_id', $candidate->id)
-                    ->whereIn('company_user.role', ['ADMIN', 'CHIEF_ACCOUNTANT'])
-                    ->whereRaw('company_user.is_active IS TRUE')
-                    ->whereRaw('companies.is_active IS TRUE')
-                    ->exists();
-            });
-            if ($eligible) {
-                $owner = $candidate;
-                break;
-            }
+        // Elegir el usuario desde las dos tablas globales; no depender de un
+        // cursor Eloquent cuya sesión pudiera no tener aún contexto del tenant.
+        // La verificación de membresía se vuelve a efectuar con app_backend
+        // DENTRO de TenantContext::run(), bajo RLS y con el usuario activo.
+        $candidate = $db->selectOne(<<<'SQL'
+SELECT u.id AS user_id, c.id AS company_id
+FROM public.users u
+JOIN public.companies c ON c.id = u.current_company_id
+WHERE c.is_active IS TRUE
+ORDER BY u.id
+LIMIT 1
+SQL);
+        if ($candidate === null) {
+            throw new RuntimeException('No hay usuario con empresa activa en Supabase Dev.');
         }
-        if ($owner === null) {
-            throw new RuntimeException('Se requiere membresía activa ADMIN o CHIEF_ACCOUNTANT para la empresa ficticia Dev.');
+        $ownerId = (int) $candidate->user_id;
+        $sourceCompanyId = (int) $candidate->company_id;
+        $eligible = $tenant->run($sourceCompanyId, static function () use ($db, $ownerId, $sourceCompanyId): bool {
+            $db->select("SELECT set_config('app.current_user_id', ?, true)", [(string) $ownerId]);
+            return $db->table('company_user')
+                ->where('company_id', $sourceCompanyId)
+                ->where('user_id', $ownerId)
+                ->whereIn('role', ['ADMIN', 'CHIEF_ACCOUNTANT'])
+                ->whereRaw('is_active IS TRUE')
+                ->exists();
+        });
+        if (! $eligible) {
+            throw new RuntimeException('Membresía no visible o rol insuficiente bajo RLS para el usuario seleccionado.');
         }
+        $owner = User::query()->findOrFail($ownerId);
 
         $currencies = Currency::query()->whereIn('code', ['PEN', 'USD'])
             ->whereRaw('currencies.is_active IS TRUE')->get()->keyBy('code');
