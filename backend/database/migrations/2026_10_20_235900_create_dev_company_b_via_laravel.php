@@ -9,7 +9,6 @@ use App\Models\CompanySetting;
 use App\Models\Currency;
 use App\Models\User;
 use App\Services\Accounting\InitializeCompanyChartOfAccountsService;
-use App\Support\Company\CompanyOnboardingGuard;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -49,19 +48,30 @@ return new class extends Migration
         }
 
         $tenant = app(TenantContext::class);
-        $guard = app(CompanyOnboardingGuard::class);
         $owner = null;
 
-        // La empresa nueva queda a cargo de un administrador REAL de la empresa
-        // existente. No se inventan usuarios ni se omite la verificación del guard.
+        // Alta EXCLUSIVA de datos ficticios Dev, no altera el guard de la API.
+        // En el entorno actual el usuario válido tiene CHIEF_ACCOUNTANT, no ADMIN.
+        // Se verifica empresa/membresía activa bajo el contexto RLS real.
         foreach (User::query()->whereNotNull('current_company_id')->orderBy('id')->cursor() as $candidate) {
-            if ($guard->status($candidate)['can_create'] === true) {
+            $currentCompanyId = (int) $candidate->current_company_id;
+            $eligible = $tenant->run($currentCompanyId, static function () use ($db, $candidate, $currentCompanyId): bool {
+                return $db->table('company_user')
+                    ->join('companies', 'companies.id', '=', 'company_user.company_id')
+                    ->where('company_user.company_id', $currentCompanyId)
+                    ->where('company_user.user_id', $candidate->id)
+                    ->whereIn('company_user.role', ['ADMIN', 'CHIEF_ACCOUNTANT'])
+                    ->whereRaw('company_user.is_active IS TRUE')
+                    ->whereRaw('companies.is_active IS TRUE')
+                    ->exists();
+            });
+            if ($eligible) {
                 $owner = $candidate;
                 break;
             }
         }
         if ($owner === null) {
-            throw new RuntimeException('No existe un administrador activo con permiso de alta multiempresa.');
+            throw new RuntimeException('Se requiere membresía activa ADMIN o CHIEF_ACCOUNTANT para la empresa ficticia Dev.');
         }
 
         $currencies = Currency::query()->whereIn('code', ['PEN', 'USD'])
