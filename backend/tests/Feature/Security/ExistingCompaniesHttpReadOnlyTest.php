@@ -122,6 +122,10 @@ it('does not retain company context or cached accounts across A to B to A reads'
 
     expect($idsA2)->toEqual($idsA1);
     expect(array_intersect($idsA1, $idsB))->toBe([]);
-    $current = DB::selectOne("SELECT nullif(current_setting('app.current_company_id', true), '') AS tenant_id");
+    $current = DB::selectOne(<<<'SQL'
+SELECT nullif(current_setting('app.current_company_id', true), '') AS tenant_id,
+       nullif(current_setting('app.current_user_id', true), '') AS user_id
+SQL);
     expect($current->tenant_id)->toBeNull();
+    expect($current->user_id)->toBeNull();
 });
