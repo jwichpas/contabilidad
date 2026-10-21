@@ -126,7 +126,7 @@ final readonly class CreateCompanyFromWizardController
                     'tax_id' => $taxId,
                     'business_name' => trim($validated['business_name']),
                     'legal_address' => trim($validated['legal_address']),
-                    'is_active' => true,
+                    'is_active' => DB::raw('TRUE'),
                 ]);
                 $companyId = (int) $company->id;
 
@@ -141,7 +141,7 @@ final readonly class CreateCompanyFromWizardController
                         'company_id' => $companyId,
                         'user_id' => $user->id,
                         'role' => 'ADMIN',
-                        'is_active' => true,
+                        'is_active' => DB::raw('TRUE'),
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]);
@@ -159,16 +159,16 @@ final readonly class CreateCompanyFromWizardController
                         'initial_pcge_version' => $validated['pcge_version'],
                         'default_vat_rate' => '18.00',
                         // No atribuir obligatoriedad SIRE o PLE sin evaluar reglas SUNAT.
-                        'is_sire_obliged' => false,
-                        'is_ple_obliged' => false,
+                        'is_sire_obliged' => DB::raw('FALSE'),
+                        'is_ple_obliged' => DB::raw('FALSE'),
                     ]);
 
                     foreach ($currencyCodes as $currencyCode) {
                         CompanyCurrency::query()->create([
                             'company_id' => $companyId,
                             'currency_id' => $currencyMap[$currencyCode]->id,
-                            'is_base' => $currencyCode === $validated['base_currency_code'],
-                            'is_active' => true,
+                            'is_base' => DB::raw($currencyCode === $validated['base_currency_code'] ? 'TRUE' : 'FALSE'),
+                            'is_active' => DB::raw('TRUE'),
                         ]);
                     }
 
@@ -178,7 +178,7 @@ final readonly class CreateCompanyFromWizardController
                             'sector_code' => $activity['sector_code'],
                             'ciiu_code' => $activity['ciiu_code'],
                             'description' => trim($activity['description']),
-                            'is_primary' => $activity['is_primary'],
+                            'is_primary' => DB::raw($activity['is_primary'] ? 'TRUE' : 'FALSE'),
                             'created_by' => $user->id,
                             'updated_by' => $user->id,
                         ]);
