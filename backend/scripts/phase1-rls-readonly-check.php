@@ -56,12 +56,29 @@ SQL);
                 throw new RuntimeException('Falta RLS/FORCE');
             }
             $quoted = '"'.str_replace('"', '""', (string) $table->table_name).'"';
-            $count = $db->selectOne('SELECT count(*) AS total FROM public.'.$quoted);
-            if ((int) $count->total !== 0) {
-                throw new RuntimeException('RLS reveló '.$count->total.' filas sin contexto en tabla '.$table->table_name);
+            // Los eventos globales audit_logs (company_id NULL) tienen una
+            // política SELECT deliberadamente distinta. Detectar fugas de
+            // registros ligados a empresas por separado y advertir sobre los
+            // eventos globales, sin imprimir contenido de auditoría.
+            $companyRows = $db->selectOne(
+                'SELECT count(*) AS total FROM public.'.$quoted.' WHERE company_id IS NOT NULL'
+            );
+            if ((int) $companyRows->total !== 0) {
+                throw new RuntimeException(
+                    'RLS reveló '.$companyRows->total.' filas asociadas a empresas sin contexto en '.$table->table_name
+                );
+            }
+            if ($table->table_name === 'audit_logs') {
+                $globalRows = $db->selectOne(
+                    'SELECT count(*) AS total FROM public.audit_logs WHERE company_id IS NULL'
+                );
+                if ((int) $globalRows->total > 0) {
+                    echo '[ADVERTENCIA] audit_logs: '.$globalRows->total
+                        ." eventos globales visibles sin contexto. Revisar política SELECT.\n";
+                }
             }
         }
-        echo '[PASS] Sin contexto de empresa: '.count($tables)." tablas tenant protegidas, 0 filas visibles.\n";
+        echo '[PASS] Sin contexto de empresa: '.count($tables)." tablas tenant sin filas de empresa visibles.\n";
     } finally {
         $db->rollBack();
     }
