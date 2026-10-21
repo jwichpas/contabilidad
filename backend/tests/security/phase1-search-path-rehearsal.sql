@@ -22,7 +22,7 @@ BEGIN
       AND p.proname=ANY (expected)
       AND p.pronargs=0
       AND NOT p.prosecdef
-      AND 'search_path=' = ANY (p.proconfig);
+      AND 'search_path=pg_catalog' = ANY (p.proconfig);
     IF count_hardened <> 5 THEN
         RAISE EXCEPTION 'No estan fijados los cinco search_path: %/5',count_hardened;
     END IF;
