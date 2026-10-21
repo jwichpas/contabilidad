@@ -65,3 +65,17 @@ cd C:\Proyectos\contabilidad\backend
 - [ ] CI con PHP 8.5/Composer nuevo PASS; si Actions está bloqueado, dejar pendientes y no inventar certificados.
 
 **Estado F1:** en pausa de pruebas nuevas hasta completar P85; se conserva la evidencia 4/40 aprobada en el stack actual.
+
+## Diagnóstico real de Windows — 21/10/2026
+
+La consola del usuario ejecuta **PHP 8.5.12 ZTS x64** en `C:\Program Files\PHP\current\php.exe`, con configuración `C:\Program Files\PHP\current\php.ini`. El preflight anterior detectó las extensiones en `php -m` y declaró PASS, pero **no era un PASS válido**: el propio PHP mostró `PHP Startup: Unable to load dynamic library 'bcmath'` y `Module "curl" is already loaded`. Composer actual: `2.10-dev`, con advertencia de desarrollo anterior a 60 días.
+
+**Acciones pendientes antes de actualizar Composer/Laravel:**
+
+1. Ejecutar `php -n -m` para saber si **bcmath** y **curl** son módulos compilados dentro del ejecutable, sin leer `php.ini`.
+2. Examinar las entradas de `bcmath`, `curl` y `extension_dir` de `C:\Program Files\PHP\current\php.ini`. Si el módulo aparece con `php -n -m`, comentar su `extension=...` adicional, sin tocar las otras extensiones. Si no aparece, verificar si existe DLL de la misma versión y arquitectura; no copiar DLL de versiones anteriores ni desactivar a ciegas.
+3. Confirmar con `php -v` y `php -m` **sin warnings**, y repetir `scripts/phase-php85-preflight.ps1`.
+4. Se corrigió el preflight para tratar advertencias de carga de PHP como **FAIL**, incluso si el proceso terminó con exit code cero.
+5. Resolver la versión de Composer estable y después analizar `composer.lock`; no ejecutar aún `composer update`.
+
+**Estado:** pendiente de confirmar la limpieza del `php.ini`. No se ha modificado Supabase, `composer.json` ni `composer.lock`.
