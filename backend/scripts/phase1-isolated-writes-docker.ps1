@@ -20,10 +20,14 @@ $adminPassword = 'f1-' + [Guid]::NewGuid().ToString('N')
 $appPassword = 'app-f1-' + [Guid]::NewGuid().ToString('N')
 $guardToken = [Guid]::NewGuid().ToString('N')
 $tempFolder = Join-Path ([IO.Path]::GetTempPath()) $dockerName
-$fixture = Join-Path $backend 'database/migrations/2026_10_20_235900_create_dev_company_b_via_laravel.php'
-$fixtureBackup = Join-Path $tempFolder '2026_10_20_235900_create_dev_company_b_via_laravel.php'
+$supabaseOnly = @(
+    '2026_10_19_000000_restrict_supabase_data_api_grants.php',
+    '2026_10_20_000000_rotate_app_backend_credential.php',
+    '2026_10_20_010000_scope_company_listing_to_authenticated_user.php',
+    '2026_10_20_235900_create_dev_company_b_via_laravel.php'
+)
 $runContainer = $false
-$fixtureMoved = $false
+$fixturesMoved = @()
 $passed = $false
 $initialLocation = Get-Location
 $originalEnv = @{}
@@ -50,9 +54,13 @@ try {
     Set-Location $backend
 
     if (-not (Test-Path 'vendor/autoload.php') -or
-        -not (Test-Path $fixture) -or
         -not (Test-Path 'tests/security/phase1-real-cross-tenant-writes.sql')) {
-        throw 'Faltan dependencias Composer, fixture Dev o script RLS. Actualizar main y ejecutar composer install.'
+        throw 'Faltan dependencias Composer o script RLS. Actualizar main y ejecutar composer install.'
+    }
+    foreach ($name in $supabaseOnly) {
+        if (-not (Test-Path (Join-Path $backend ('database/migrations/' + $name)))) {
+            throw ('Falta migracion Supabase exclusiva: ' + $name)
+        }
     }
     if (Test-Path 'bootstrap/cache/config.php') {
         throw 'Existe bootstrap/cache/config.php; no iniciar para evitar conexiones cacheadas a Supabase.'
@@ -153,10 +161,15 @@ echo "[PASS] Conexion administrativa verificada contra Docker efimero\n";
 '@
     Invoke-NativeChecked 'php' @('-r',$guardCode)
 
-    # NO ejecutar migracion de datos exclusiva de Supabase Dev contra CI.
-    Move-Item -LiteralPath $fixture -Destination $fixtureBackup
-    $fixtureMoved = $true
-    Write-Host '[MIGRACIONES] Creando esquema real Laravel en PostgreSQL 17 temporal.'
+    # No ejecutar operaciones que exigen expresamente el ID/proyecto Supabase.
+    # Guardar temporalmente FUERA del repo y restaurar incluso si falla el test.
+    foreach ($name in $supabaseOnly) {
+        $source = Join-Path $backend ('database/migrations/' + $name)
+        $destination = Join-Path $tempFolder $name
+        Move-Item -LiteralPath $source -Destination $destination
+        $fixturesMoved += [PSCustomObject]@{ Source=$source; Backup=$destination }
+    }
+    Write-Host '[MIGRACIONES] Creando esquema Laravel compatible con PostgreSQL 17 temporal.'
     Invoke-NativeChecked 'php' @(
         'artisan','migrate','--database=pgsql_migrations','--force','--no-interaction'
     )
@@ -217,9 +230,17 @@ catch {
     Write-Host ('[FAIL] ' + $_.Exception.Message)
 }
 finally {
-    if ($fixtureMoved) {
-        Move-Item -LiteralPath $fixtureBackup -Destination $fixture -Force
-        Write-Host '[RESTORE] Migracion ficticia Dev restaurada en su lugar original.'
+    foreach ($moved in $fixturesMoved) {
+        if (Test-Path -LiteralPath $moved.Backup) {
+            Move-Item -LiteralPath $moved.Backup -Destination $moved.Source -Force
+        }
+        else {
+            Write-Host ('[WARN] Migracion no restaurada: ' + $moved.Source)
+            $passed = $false
+        }
+    }
+    if ($fixturesMoved.Count -gt 0) {
+        Write-Host ('[RESTORE] ' + $fixturesMoved.Count + ' migraciones Supabase restauradas.')
     }
     foreach ($key in $originalEnv.Keys) {
         [Environment]::SetEnvironmentVariable($key,$originalEnv[$key],'Process')
