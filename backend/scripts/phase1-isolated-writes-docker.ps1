@@ -16,6 +16,7 @@ $ErrorActionPreference = 'Stop'
 $backend = Split-Path -Parent $PSScriptRoot
 $root = Split-Path -Parent $backend
 $dockerName = 'f1-write-' + ([Guid]::NewGuid().ToString('N')).Substring(0,12)
+$junitPath = Join-Path ([IO.Path]::GetTempPath()) ($dockerName + '-junit.xml')
 $adminPassword = 'f1-' + [Guid]::NewGuid().ToString('N')
 $appPassword = 'app-f1-' + [Guid]::NewGuid().ToString('N')
 $guardToken = [Guid]::NewGuid().ToString('N')
@@ -220,11 +221,45 @@ echo "[PASS] Conexion app_backend sujeta a RLS en Docker efimero\n";
     Invoke-NativeChecked 'php' @('-r',$appGuard)
 
     Write-Host '[HTTP] Ejecutando roles con escrituras de prueba solo en Docker.'
+    # Algunos runners pueden imprimir FAIL y aun devolver exit 0 al invocar
+    # Pest mediante Artisan. El JUnit es un segundo control obligatorio.
     Invoke-NativeChecked 'php' @(
         'artisan','test',
         'tests/Feature/Security/CompanyRoleAuthorizationTest.php',
-        'tests/Feature/Security/TenantContextNestedTest.php'
+        'tests/Feature/Security/TenantContextNestedTest.php',
+        ('--log-junit=' + $junitPath)
     )
+    if (-not (Test-Path -LiteralPath $junitPath)) {
+        throw 'Pest no genero el reporte JUnit; NO se puede declarar PASS.'
+    }
+    try {
+        [xml]$report = Get-Content -LiteralPath $junitPath -Raw -ErrorAction Stop
+    }
+    catch {
+        throw ('Reporte JUnit invalido: ' + $_.Exception.Message)
+    }
+
+    $cases = @($report.SelectNodes('//testcase'))
+    $failed = @($report.SelectNodes('//failure | //error'))
+    $suites = @($report.SelectNodes('//testsuite'))
+    $suiteHasFailures = $false
+    foreach ($suite in $suites) {
+        if ([int]$suite.GetAttribute('failures') -gt 0 -or
+            [int]$suite.GetAttribute('errors') -gt 0) {
+            $suiteHasFailures = $true
+        }
+    }
+
+    # 10 tests de autorizacion + 2 tests de TenantContextNested.
+    # Un reporte incompleto o vacio NO puede validar una puerta de seguridad.
+    if ($cases.Count -ne 12 -or $failed.Count -ne 0 -or $suiteHasFailures) {
+        throw ('Pest NO aprobado: total=' + $cases.Count +
+            ', fallos/errores=' + $failed.Count +
+            ', suiteConErrores=' + $suiteHasFailures +
+            '. Revisar la salida de pruebas; el Docker sera eliminado.')
+    }
+
+    Write-Host '[PASS] Pest JUnit: 12 pruebas, 0 fallos/errores verificados.'
     $passed = $true
     Write-Host '[PASS] F1.3 escritura interempresa y pruebas HTTP en PostgreSQL aislado.'
 }
@@ -244,6 +279,9 @@ finally {
             Write-Host ('[WARN] No se pudo confirmar eliminacion de Docker: ' + $dockerName)
             $passed = $false
         }
+    }
+    if (Test-Path -LiteralPath $junitPath) {
+        Remove-Item -LiteralPath $junitPath -Force -ErrorAction SilentlyContinue
     }
     Set-Location $initialLocation
 }
