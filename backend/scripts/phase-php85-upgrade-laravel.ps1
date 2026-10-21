@@ -107,6 +107,41 @@ try {
             $pest.Count -ne 1 -or $pest[0].version -notmatch '^v?4\.') {
             throw "El lock no contiene Laravel 13 y Pest 4 segun lo esperado."
         }
+
+        # Las 4 alertas del dry-run estaban asociadas a versiones antiguas
+        # (Laravel 11.57); exigir al menos 13.30.0 para excluir esas ventanas.
+        $laravelVersion = [version](($installed[0].version -replace '^v', '') -replace '[-+].*
+        Write-Host ('[PASS] Lock: Laravel ' + $installed[0].version + ' / Pest ' + $pest[0].version)
+        Write-Host '[SIGUIENTE] Validar rutas HTTP GET y seguridad antes de subir el lock a GitHub.'
+        Write-Host '[SIGUIENTE] php artisan test tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php'
+    }
+}
+catch {
+    Write-Host ('[FAIL] ' + $_.Exception.Message)
+    exit 1
+}
+finally {
+    if (-not $applied -and (Test-Path (Join-Path $backup 'composer.json'))) {
+        Set-Location $backend
+        Copy-Item (Join-Path $backup 'composer.json') composer.json -Force
+        Copy-Item (Join-Path $backup 'composer.lock') composer.lock -Force
+        Write-Host '[RESTORE] composer.json y composer.lock originales restaurados.'
+        if ($Apply) {
+            Write-Host '[ATENCION] Si Composer habia iniciado la instalacion, vendor/ podria contener paquetes nuevos.'
+            Write-Host '[ATENCION] Una vez resuelta la causa, ejecutar composer install para restaurar vendor/ segun el lock.'
+        }
+    }
+    Set-Location $previousLocation
+}
+, '')
+        if ($laravelVersion -lt [version]'13.30.0') {
+            throw ('Laravel elegido es anterior a 13.30.0: ' + $installed[0].version)
+        }
+
+        # IMPORTANTE: auditar el LOCK REGENERADO, no los paquetes instalados
+        # previamente ni el viejo lock que aparece durante --dry-run.
+        Invoke-Checked 'composer' @('audit', '--locked', '--format=plain')
+        Write-Host '[PASS] Auditoria de seguridad del nuevo composer.lock aprobada.'
         $applied = $true
         Write-Host ('[PASS] Lock: Laravel ' + $installed[0].version + ' / Pest ' + $pest[0].version)
         Write-Host '[SIGUIENTE] Validar rutas HTTP GET y seguridad antes de subir el lock a GitHub.'
