@@ -169,17 +169,23 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE anon NOLOGIN'
           psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE authenticated NOLOGIN'
-      # La migracion 2026_10_20_235900 es SOLO de datos ficticios para
-      # Supabase Dev y aborta deliberadamente fuera de ese entorno.
-      # Excluirla del ensayo de ESQUEMA sin desactivar su guard de seguridad.
-      # El checkout/runner de Actions es efimero: nunca se altera main.
-      - name: Excluir fixture Dev exclusiva antes de migrar el esquema CI
+      # Cuatro migraciones exigen por diseño el proyecto Supabase Dev.
+      # En PostgreSQL 17 desechable se migra el esquema real independiente
+      # del proveedor; estas operaciones quedan pendientes de prueba Supabase:
+      # ACL Data API, rotacion de clave, listado global por usuario y empresa B.
+      - name: Excluir migraciones atadas a Supabase del PostgreSQL temporal
         run: |
-          fixture="database/migrations/2026_10_20_235900_create_dev_company_b_via_laravel.php"
-          test -f "$fixture"
-          mkdir -p "$RUNNER_TEMP/dev-fixtures"
-          mv "$fixture" "$RUNNER_TEMP/dev-fixtures/"
-      - name: Migrar esquema real Laravel en PostgreSQL CI
+          mkdir -p "$RUNNER_TEMP/supabase-only-migrations"
+          for fixture in \
+            2026_10_19_000000_restrict_supabase_data_api_grants.php \
+            2026_10_20_000000_rotate_app_backend_credential.php \
+            2026_10_20_010000_scope_company_listing_to_authenticated_user.php \
+            2026_10_20_235900_create_dev_company_b_via_laravel.php; do
+            path="database/migrations/$fixture"
+            test -f "$path"
+            mv "$path" "$RUNNER_TEMP/supabase-only-migrations/"
+          done
+      - name: Migrar esquema Laravel compatible con PostgreSQL CI
         run: php artisan migrate --database=pgsql_migrations --force --no-interaction
       - name: Verificar rol app_backend y RLS reales
         working-directory: .
