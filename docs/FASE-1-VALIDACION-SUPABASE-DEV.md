@@ -107,3 +107,16 @@ Duration: 11.06s
 El usuario publicó en `main` el lock Laravel 13 / PHP 8.5 en commit `be67509`. Se actualizó el workflow de seguridad F1 a PHP 8.5 (jobs estático y migraciones sobre PG17 efímero), revisión de lock con Composer y exclusión en el workspace CI de la migración excepcional de datos ficticios de Supabase Dev; **resultados de GitHub Actions todavía no confirmados**.
 
 **Pendientes:** comprobar CI real, pruebas de roles y escritura con PostgreSQL 17 efímero, seguridad de los logs globales, cinco funciones con `search_path` mutable y autorización integral de rutas. No cerrar F1 por los 58 asserts de lectura/guard.
+
+
+## F1.3 — Preparación de pruebas DML reales en PostgreSQL desechable (21/10/2026)
+
+**Evidencia de GitHub Actions:** corrida [#41](https://github.com/jwichpas/contabilidad/actions/runs/39663018271), commit `ae33d476`, evento `push`, concluida con **failure** en los tres jobs (`audit-script`, `postgres-rls-contract`, `laravel-real-migrations`). La consulta de los jobs muestra **0 pasos** y la descarga de logs no está disponible. **No se ha confirmado aún si la causa es configuración de facturación/runners o un fallo técnico; no declarar CI PASS.**
+
+**Código preparado en `main`:**
+
+- `backend/tests/security/phase1-real-cross-tenant-writes.sql`: prueba **RLS real** de `company_areas` con dos empresas ficticias en PostgreSQL 17 `contabilidad_ci`. Usando `SET LOCAL ROLE app_backend` sin BYPASSRLS, verifica lectura autorizada, `INSERT` propio, `INSERT` interempresa denegado, `UPDATE` y `DELETE` de otro tenant con 0 filas afectadas, rechazo al cambiar `company_id`, `UPDATE/DELETE` propios permitidos y denegación sin contexto. Todo está dentro de una transacción revertida con `ROLLBACK`. El script bloquea bases que no sean `contabilidad_ci`, rol distinto de `postgres` o ejecución no TCP.
+- `CompanyRoleAuthorizationTest.php`: corregido el orden de integridad referencial: primero crear usuarios sin empresa predeterminada, después membresías y al final `users.current_company_id`. Se corrigieron valores booleanos de prueba para `PDO::ATTR_EMULATE_PREPARES` usando SQL `TRUE/FALSE` tipado. **Solo se ejecutará en CI desechable**, nunca contra Supabase Dev.
+- `.github/workflows/phase1-security-static.yml`: ejecuta el nuevo SQL después de migrar el esquema real en PostgreSQL 17 y antes de las suites Pest. Continúa excluyendo exclusivamente del workspace CI la migración ficticia de empresa B (solo Supabase Dev).
+
+**Estado:** cambios publicados, pero **sin ejecución comprobada** del SQL ni de los tests que crean registros. Mantener F1 abierta. La suite Laravel 13 ya aprobada contra Supabase Dev se limita a 6 pruebas y 58 aserciones de lectura/guard con handler simulado. La prueba DML aislada no debe confundirse con un PASS hasta ejecutar su job y observar el log.
