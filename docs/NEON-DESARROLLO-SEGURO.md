@@ -246,3 +246,34 @@ Siguientes comandos seguros, dentro de backend (luego de corregir el duplicado d
     php scripts/phase1-neon-schema-bootstrap.php --plan
 
 No usar php artisan migrate general, migrate:fresh ni la opción --apply antes de comprobar el plan y autorizar expresamente la inicialización del entorno de desarrollo.
+
+
+## F1.7 — Puerta final previa a DDL (continuación 21/10/2026)
+
+El usuario confirmó en PowerShell las cuatro comprobaciones requeridas: **DB_PASSWORD único (conteo 1)**; preflight --read-only --require-empty **PASS** en `contabilidad-dev`; `php -l` del nuevo inicializador **PASS**; e inventario --plan **PASS**, exactamente **16 migraciones portables + 5 Supabase-only excluidas**.
+
+Una comprobación adicional read-only contra la rama de desarrollo `br-odd-lake-b6wshqv3` verificó que:
+- `neondb_owner` tiene LOGIN, CREATEROLE, CREATEDB, no es SUPERUSER y **sí tiene BYPASSRLS**: su credencial se reserva para migraciones administrativas, nunca para el tráfico.
+- `pgcrypto` es una extensión disponible en PostgreSQL 18.6, aún no instalada.
+- `app_backend` sigue ausente y `public` sigue sin tablas.
+- La rama sigue en estado `ready`. Neon `production` y Supabase siguen intactos.
+
+Se reforzó el bootstrap y las dos migraciones F1.4:
+- Antes de cualquier DDL, el bootstrap exige también que `neondb_owner` posea CREATEROLE y `pgcrypto` esté disponible.
+- Las F1.4 aceptan **solo el host directo exacto** de `contabilidad-dev`, no un host arbitrario Neon con un nombre de rama inventado.
+- Tras las 16 migraciones, el bootstrap requiere exactamente **13 tablas de tenant con ENABLE y FORCE RLS**, **16 filas en migrations**, **5 funciones con search_path fijo**, política de auditoría sin exposición global y `app_backend` sin SUPERUSER, BYPASSRLS, CREATEROLE, CREATEDB ni membresía `neon_superuser`.
+
+**No se ejecutó bootstrap ni SQL de escritura desde ChatGPT.** El conector Neon no puede recuperar las credenciales privadas de `backend/.env` local; no conviene crear un `app_backend` desde Neon Console/API porque puede recibir privilegios administrativos por defecto. La inicialización tiene que realizarse desde Laravel, usando la contraseña privada local, y con los guardas de la rama. Ejecutar únicamente la herramienta preparada, **no** `php artisan migrate` general:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-neon-schema-bootstrap.php
+php scripts/phase1-neon-schema-bootstrap.php --plan
+php scripts/phase1-neon-preflight.php --read-only --require-empty
+# Solo si los controles anteriores conservan PASS:
+php scripts/phase1-neon-schema-bootstrap.php --apply=contabilidad-dev
+```
+
+La ejecución --apply crea roles, funciones, tablas y políticas **solo** en `contabilidad-dev`. No ejecuta seeds ni copia datos Supabase. Si una migración se detiene, **no reejecutar desde cero**: el inicializador requiere cero tablas iniciales. Registrar el nombre de migración fallida y recuperar el estado read-only antes de decidir un ajuste; no borrar tablas ni hacer `migrate:fresh`. Después comprobar el resumen 16/16, rol `app_backend` y RLS antes de pruebas HTTP.
