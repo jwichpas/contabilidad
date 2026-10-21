@@ -47,15 +47,15 @@ return new class extends Migration
 
         $db->transaction(function () use ($db): void {
             $state = $db->selectOne(<<<'SQL'
-                SELECT c.relrowsecurity AS enabled,
-                       c.relforcerowsecurity AS forced
+                SELECT CASE WHEN c.relrowsecurity THEN 1 ELSE 0 END AS enabled,
+                       CASE WHEN c.relforcerowsecurity THEN 1 ELSE 0 END AS forced
                 FROM pg_catalog.pg_class c
                 JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname='public'
                   AND c.relname='audit_logs'
                   AND c.relkind='r'
                 SQL);
-            if ($state === null || ! (bool) $state->enabled || ! (bool) $state->forced) {
+            if ($state === null || (int) $state->enabled !== 1 || (int) $state->forced !== 1) {
                 throw new RuntimeException('La tabla audit_logs debe tener ENABLE y FORCE RLS.');
             }
 
