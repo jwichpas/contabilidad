@@ -69,3 +69,21 @@ Las pruebas de escritura A/B siguen priorizando Docker PostgreSQL 18 efímero ha
 - https://neon.com/docs/manage/roles
 - https://neon.com/docs/connect/connection-pooling
 - https://neon.com/docs/manage/database-access
+
+
+## F1.6 — Rama remota creada y verificada (21/10/2026)
+
+Se conectó el plugin Neon y se inspeccionó el proyecto real **contabilidad-database**, id `soft-bonus-52215969`, PostgreSQL **18**. Se identificó como única rama anterior `production` (`br-silent-leaf-b6zzefdl`), con **0 tablas de aplicación** y rol `neondb_owner`. **No se escribió nada en production.**
+
+Se creó **contabilidad-dev**, id `br-odd-lake-b6wshqv3`, desde la rama principal. Su endpoint independiente quedó activo. Una consulta `SELECT` **dirigida expresamente a esa rama** confirmó: PostgreSQL **18.6**, base `neondb`, usuario `neondb_owner`, **0 tablas de aplicación**, `app_backend` ausente y rol interno `neon_superuser` presente. No se ejecutó DML/DDL en la rama nueva.
+
+Hosts públicos (sin credenciales) devueltos por Neon:
+
+- Directo, administración y aplicación mientras no haya pooling: `ep-sweet-king-b6hxra2r.c-2.sa-east-1.aws.neon.tech`.
+- Host pooled anunciado, **pero pooling de la rama actualmente está desactivado**: `ep-sweet-king-b6hxra2r-pooler.c-2.sa-east-1.aws.neon.tech`. **No usarlo aún.**
+
+`backend/.env.example` ahora activa `DB_HOST` y `DB_MIGRATIONS_HOST` **directos** de contabilidad-dev, `NEON_TEST_BRANCH_NAME=contabilidad-dev`, `NEON_TEST_BRANCH_HOST` igual al directo, `NEON_USE_POOLING=false`, `DB_EMULATE_PREPARES=false`, `DB_USERNAME=app_backend` y `DB_MIGRATIONS_USERNAME=neondb_owner`. Conexiones Supabase conservadas como comentarios. Neon `production` permanece intacto.
+
+El preflight `phase1-neon-preflight.php` ahora admite **conexión directa sin pooling** con prepares nativos, o modo pooled solamente si se cambia `NEON_USE_POOLING=true`, `DB_HOST` al host con sufijo `-pooler` y `DB_EMULATE_PREPARES=true`, siempre después de activar realmente pooling en Neon. **Aún no hay credenciales locales verificadas ni ejecución de PHP preflight desde Windows**; la lectura Neon conectada es un control adicional, no reemplaza el preflight Laravel.
+
+**Próximo paso antes del bootstrap:** sincronizar main y completar en `backend/.env` privado `DB_MIGRATIONS_PASSWORD`, `DB_PASSWORD` y una contraseña aleatoria fuerte `DB_APP_BACKEND_ROLE_PASSWORD`; crear y ejecutar solo cuando pase `php scripts/phase1-neon-preflight.php` y `--read-only --require-empty`. La creación de `app_backend`, migraciones Laravel y DDL esperan validación explícita; no están aplicadas.
