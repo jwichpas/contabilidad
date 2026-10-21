@@ -82,6 +82,31 @@ $appDb = (array) config('database.connections.pgsql', []);
 $adminUrl = trim((string) ($admin['url'] ?? ''));
 $appUrl = trim((string) ($appDb['url'] ?? ''));
 $envExists = is_file($backend.'/.env');
+$duplicateEnvironmentKeys = [];
+if ($envExists) {
+    $seenEnvironmentKeys = [];
+    $rawEnvironment = file_get_contents($backend.'/.env');
+    if ($rawEnvironment === false) {
+        fwrite(STDERR, '[FAIL] No fue posible leer backend/.env para validar duplicados.'.PHP_EOL);
+        exit(1);
+    }
+    foreach (preg_split('/\r\n|\n|\r/', $rawEnvironment) as $environmentLine) {
+        if (! preg_match('/^[ \t]*(?:export[ \t]+)?([A-Z][A-Z0-9_]*)[ \t]*=/', $environmentLine, $keyMatch)) {
+            continue;
+        }
+        $environmentKey = $keyMatch[1];
+        if (! (str_starts_with($environmentKey, 'DB_')
+            || str_starts_with($environmentKey, 'NEON_')
+            || in_array($environmentKey, ['APP_ENV','APP_KEY','DATABASE_URL'], true))) {
+            continue;
+        }
+        if (isset($seenEnvironmentKeys[$environmentKey])) {
+            $duplicateEnvironmentKeys[$environmentKey] = true;
+        }
+        $seenEnvironmentKeys[$environmentKey] = true;
+    }
+    unset($rawEnvironment, $environmentLine);
+}
 $branch = trim((string) env('NEON_TEST_BRANCH_NAME', ''));
 $expectedHost = trim((string) env('NEON_TEST_BRANCH_HOST', ''));
 $host = trim((string) ($admin['host'] ?? ''));
@@ -96,6 +121,10 @@ $appDatabase = trim((string) ($appDb['database'] ?? ''));
 $appUser = trim((string) ($appDb['username'] ?? ''));
 $poolingEnabled = filter_var(env('NEON_USE_POOLING', false), FILTER_VALIDATE_BOOLEAN);
 $issues = [];
+if ($duplicateEnvironmentKeys !== []) {
+    $issues[] = 'Claves duplicadas en .env: '.implode(', ', array_keys($duplicateEnvironmentKeys))
+        .'. Mantener solo una entrada activa por clave antes de conectarse.';
+}
 if (! $configRepositoryAvailable) {
     $issues[] = 'Laravel no cargo config/database.php (aunque env() pueda leer .env): revisar bootstrap/config y la salida de php artisan about.';
 }
