@@ -47,3 +47,21 @@ Salida aportada por el usuario para `php scripts/phase1-rls-cross-company-readon
 El script `phase1-rls-readonly-check.php` ya había pasado el control fail-closed sin empresa con **0 filas empresariales visibles en 14 tablas**, y dejó **advertencia de 7 eventos globales de audit_logs** visibles sin contexto. La política de SELECT sobre `audit_logs` permite registros `company_id IS NULL` y requiere decisión de acceso específico; los contadores de filas visibles anteriores **incluyen registros globales, cuando existan**, y no equivalen a totales de registros empresariales exclusivamente.
 
 **Alcance logrado:** la lectura SQL interempresa bajo RLS está validada para 14 tablas y dos empresas existentes; el alta Laravel multiempresa con PCGE y datos básicos también quedó observada. **NO significa que Fase 1 esté cerrada**: siguen pendientes pruebas de escritura interempresa, autorización por roles sobre rutas HTTP, reversión de permisos, bloqueo de logs globales si corresponde, cinco funciones `search_path`, evaluación de catálogos/globales y ejecución de CI (GitHub Actions bloqueado por facturación). No usar la suite `CompanyRoleAuthorizationTest.php` directamente contra Supabase Dev: crea usuarios y empresas, está diseñada solo para PostgreSQL efímero.
+
+
+## F1.3 — Resultado HTTP real y siguiente suite (21/10/2026)
+
+El usuario ejecutó `php artisan test tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php` con:
+
+```text
+PASS Tests\\Feature\\Security\\ExistingCompaniesHttpReadOnlyTest
+✓ it separates real company account IDs and journal entries through Laravel HTTP GET (7.22s)
+Tests: 1 passed (16 assertions)
+Duration: 7.48s
+```
+
+**Evidencia aprobada:** a través de GET Laravel con sesión autenticada, el usuario pudo consultar las dos empresas, sus cuentas operativas y asientos sin mezcla de IDs, sobre Supabase Dev con `app_backend`. Se usó `DatabaseTransactions` y rutas solo de lectura.
+
+**Siguiente trabajo de F1.3, aún NO ejecutado:** se amplió el mismo test con tres casos: 401 anónimo para rutas GET, 400 ante identificadores de empresa falsificados, 403 ante empresa inexistente, recuperación de acceso autorizado, secuencia GET A→B→A y limpieza de `app.current_company_id`/`app.current_user_id` al terminar. El servicio `ListUserCompaniesService` ahora restaura `app.current_user_id` al finalizar un contexto SQL anidado. Publicación de código no es evidencia de PASS; requerir resultados locales.
+
+**No ejecutar pruebas POST de roles sobre Supabase Dev**; permanecen reservadas al PostgreSQL efímero hasta diseñar ensayos transaccionales seguros específicos.
