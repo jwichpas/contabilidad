@@ -179,3 +179,30 @@ Correcciones publicadas en `main`:
 **No volver a borrar variables a ciegas, ni recrear `.env`, ni migrar** hasta observar el nuevo diagnóstico. El `.env` proporcionado sí declara Neon `contabilidad-dev` y PostgreSQL 18, pero el arranque PHP/Laravel no utilizó los valores esperados. También faltan `DB_MIGRATIONS_PASSWORD`, `DB_PASSWORD` y `DB_APP_BACKEND_ROLE_PASSWORD`, que son un problema independiente; no compartirlas en el chat. `APP_KEY=base64:x` tampoco es válida si es literal. Ningún SQL/DDL/DML remoto se ha realizado con esta corrección. Supabase y Neon production siguen intactos.
 
 Referencia técnica: Laravel 13 `LoadEnvironmentVariables` ejecuta `Dotenv::create(Env::getRepository(), ...)->safeLoad()`, y Laravel advierte sobre precedencia de variables externas en su [guía de configuración](https://github.com/laravel/docs/blob/13.x/configuration.md).
+
+
+## F1.6 — Prueba concluyente de variables heredadas vacías y limpieza verificable (21/10/2026)
+
+El usuario ejecutó el diagnóstico seguro `phase1-neon-env-origins.php`. **Antes de Composer y Laravel** el proceso PHP tenía `getenv()=VACIO` y `$_SERVER=VACIO` para `APP_ENV`, `APP_KEY`, host/puerto/base/usuario SSL de ambas conexiones y contraseñas. `$_ENV` se encontraba ausente. En cambio, el `backend/.env` ya contenía valores reales para `APP_ENV`, hosts de Neon dev, base, usuario, contraseña de app y contraseña de migraciones. Dotenv no sobrescribe por defecto variables que ya existen, incluso si están vacías. Conclusión: **el bloqueo real está en las variables vacías heredadas por el proceso PHP, no en los hosts de Neon ni en la base PostgreSQL 18**.
+
+La implementación anterior del limpiador PowerShell invocaba `[Environment]::SetEnvironmentVariable($name, $null, 'Process')`, informaba PASS, pero el proceso PHP hijo seguía recibiendo variables vacías. Se cambió a **`Remove-Item -LiteralPath ('Env:' + $name) -Force`**, se comprueba su ausencia inmediata en PowerShell y, como segunda puerta, se lanza un proceso `php -r` independiente que comprueba `getenv()` y `$_SERVER` para variables críticas. Solo informa nombres de variables, no valores. Si PHP aún las recibe vacías, la limpieza se declara **FAIL**, no se autoriza ejecutar migraciones y se debe investigar variables persistentes de Windows o configuración de PHP. Se eliminan variables **solo de la sesión PowerShell actual**; no hay escrituras al `.env`, al registro de Windows, a Neon ni a Supabase.
+
+Comandos de validación:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+$tokens=$null; $errors=$null
+[System.Management.Automation.Language.Parser]::ParseFile(
+  (Resolve-Path .\scripts\phase1-neon-clear-empty-process-env.ps1).Path,
+  [ref]$tokens,[ref]$errors
+) | Out-Null
+if ($errors.Count -gt 0) { $errors | Format-List Message,Extent; throw "Error de sintaxis PowerShell" }
+.\scripts\phase1-neon-clear-empty-process-env.ps1 -Apply
+if ($LASTEXITCODE -ne 0) { throw "El limpiador del entorno PHP no aprobo" }
+php scripts/phase1-neon-env-origins.php
+php scripts/phase1-neon-preflight.php
+```
+
+La misma evidencia confirmó además `APP_KEY` de longitud inválida y `DB_APP_BACKEND_ROLE_PASSWORD` vacío. El preflight ahora verifica explícitamente longitud/formato de `APP_KEY` sin revelar su contenido. Completar contraseña del rol de app e instalar una APP_KEY válida **solamente para este entorno de desarrollo nuevo**, preservando secretos reales ya configurados. **No hacer cambios DDL/DML ni ejecutar migrate hasta PASS del preflight seguro y verificación read-only del destino.**
