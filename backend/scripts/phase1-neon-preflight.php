@@ -32,6 +32,20 @@ if (is_file($backend.'/bootstrap/cache/config.php')) {
 $app = require $backend.'/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
+$configRepositoryAvailable = app()->bound('config')
+    && (bool) config()->has('database.connections.pgsql_migrations')
+    && (bool) config()->has('database.connections.pgsql');
+$envHostPresent = trim((string) env('DB_MIGRATIONS_HOST', '')) !== '';
+$envAppHostPresent = trim((string) env('DB_HOST', '')) !== '';
+$processOverrides = [];
+foreach (['APP_ENV','DB_CONNECTION','DB_HOST','DB_PORT','DB_DATABASE',
+          'DB_USERNAME','DB_MIGRATIONS_HOST','DB_MIGRATIONS_PORT',
+          'DB_MIGRATIONS_DATABASE','DB_MIGRATIONS_USERNAME'] as $key) {
+    if (getenv($key) !== false) {
+        $processOverrides[] = $key;
+    }
+}
+
 $admin = (array) config('database.connections.pgsql_migrations', []);
 $appDb = (array) config('database.connections.pgsql', []);
 $adminUrl = trim((string) ($admin['url'] ?? ''));
@@ -51,11 +65,21 @@ $appDatabase = trim((string) ($appDb['database'] ?? ''));
 $appUser = trim((string) ($appDb['username'] ?? ''));
 $poolingEnabled = filter_var(env('NEON_USE_POOLING', false), FILTER_VALIDATE_BOOLEAN);
 $issues = [];
+if (! $configRepositoryAvailable) {
+    $issues[] = 'Laravel no cargo config/database.php (aunque env() pueda leer .env): revisar bootstrap/config y la salida de php artisan about.';
+}
 
 $productionHost = 'ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech';
 
 echo '[INFO] Modo: '.($readOnly ? 'SELECT de catalogos (opcional)' : 'configuracion local sin SQL').PHP_EOL;
 echo '[INFO] .env local: '.($envExists ? 'SI' : 'NO').PHP_EOL;
+echo '[INFO] Config Laravel database: '.($configRepositoryAvailable ? 'CARGADA' : 'NO CARGADA').PHP_EOL;
+echo '[INFO] Variables DB_HOST/DB_MIGRATIONS_HOST visibles en env(): '
+    .($envAppHostPresent ? 'SI' : 'NO').'/'.($envHostPresent ? 'SI' : 'NO').PHP_EOL;
+if ($processOverrides !== []) {
+    echo '[AVISO] Variables heredadas del proceso (pueden prevalecer sobre .env): '
+        .implode(', ', $processOverrides).PHP_EOL;
+}
 echo '[INFO] APP_ENV: '.$app->environment().PHP_EOL;
 echo '[INFO] Rama declarada: '.($branch !== '' ? $branch : '(vacia)').PHP_EOL;
 echo '[INFO] Host directo configurado: '.($host !== '' ? $host : '(vacio)').PHP_EOL;
@@ -112,6 +136,9 @@ if ($appUser !== 'app_backend') {
 if ($password === '') {
     $issues[] = 'Falta DB_MIGRATIONS_PASSWORD en .env; nunca subirla a Git.';
 }
+if ((string) ($appDb['password'] ?? '') === '') {
+    $issues[] = 'Falta DB_PASSWORD para app_backend en .env privado.';
+}
 if (! in_array($ssl, ['require','verify-ca','verify-full'], true)
     || ! in_array((string) ($appDb['sslmode'] ?? ''), ['require','verify-ca','verify-full'], true)) {
     $issues[] = 'SSL no valido: usar require, verify-ca o verify-full.';
@@ -122,6 +149,11 @@ if ((string) config('database.default') !== 'pgsql') {
 $rolePassword = (string) env('DB_APP_BACKEND_ROLE_PASSWORD', '');
 if (strlen($rolePassword) < 20) {
     $issues[] = 'Definir DB_APP_BACKEND_ROLE_PASSWORD aleatoria de al menos 20 caracteres antes de inicializar el esquema.';
+}
+if (strlen($rolePassword) >= 20
+    && (string) ($appDb['password'] ?? '') !== ''
+    && ! hash_equals($rolePassword, (string) ($appDb['password'] ?? ''))) {
+    $issues[] = 'DB_PASSWORD debe coincidir con DB_APP_BACKEND_ROLE_PASSWORD para el rol restringido inicial.';
 }
 
 if ($issues !== []) {
