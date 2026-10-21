@@ -15,6 +15,39 @@ if (-not $php) {
 }
 
 Write-Host ('[INFO] PHP: ' + $php.Source)
+
+# PHP puede devolver exit code 0 aun emitiendo avisos de Startup (por ejemplo
+# DLL faltante o extension cargada dos veces). El preflight anterior daba PASS
+# si php -m listaba el modulo; ahora verificamos tambien stderr/stdout de -v.
+$startInfo = New-Object System.Diagnostics.ProcessStartInfo
+$startInfo.FileName = $php.Source
+$startInfo.Arguments = '-v'
+$startInfo.UseShellExecute = $false
+$startInfo.RedirectStandardOutput = $true
+$startInfo.RedirectStandardError = $true
+$startInfo.CreateNoWindow = $true
+$process = [System.Diagnostics.Process]::Start($startInfo)
+if (-not $process) {
+    Write-Host '[FAIL] No se pudo iniciar php.exe.'
+    exit 1
+}
+$phpStdout = $process.StandardOutput.ReadToEnd()
+$phpStderr = $process.StandardError.ReadToEnd()
+$process.WaitForExit()
+
+$startupDiagnostics = ($phpStdout + [Environment]::NewLine + $phpStderr)
+if ($process.ExitCode -ne 0 -or
+    $startupDiagnostics -match '(?i)(PHP Startup:|Unable to load dynamic library|Module "[^"]+" is already loaded)') {
+    Write-Host '[FAIL] PHP tiene errores o advertencias de carga de extensiones.'
+    if ($phpStderr.Trim()) { Write-Host $phpStderr.Trim() }
+    if ($phpStdout -match '(?i)(PHP Startup:|Unable to load dynamic library|Module "[^"]+" is already loaded)') {
+        Write-Host $phpStdout.Trim()
+    }
+    Write-Host '[INFO] Revise php.ini: elimine extensiones duplicadas y DLL inexistentes.'
+    Write-Host '[INFO] php -n -m enumera los modulos integrados SIN cargar php.ini.'
+    exit 1
+}
+
 $version = (& $php.Source -r 'echo PHP_VERSION;')
 if ($LASTEXITCODE -ne 0 -or -not ($version -match '^8\.5\.[0-9]+')) {
     Write-Host ('[FAIL] Se requiere PHP 8.5.x; se detecto: ' + $version)
