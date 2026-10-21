@@ -79,11 +79,14 @@ try {
     Invoke-Checked 'composer' @('validate', '--no-check-publish', '--no-check-lock')
 
     # Resolver PRIMERO sin instalar, sin scripts ni alterar composer.lock.
+    # El formato plain imprime identificacion, severidad y rangos afectados
+    # de avisos de seguridad de las versiones RESUELTAS (no el viejo lock).
     Invoke-Checked 'composer' @(
         'update', '--with-all-dependencies', '--dry-run', '--no-scripts',
-        '--no-interaction', '--no-progress'
+        '--no-interaction', '--no-progress', '--audit-format=plain'
     )
-    Write-Host '[PASS] Composer resolvio las dependencias objetivo en modo dry-run.'
+    Write-Host '[PASS] Composer resolvio dependencias objetivo en modo dry-run.'
+    Write-Host '[REVISION] Inspeccionar los avisos de seguridad detallados antes de -Apply.'
 
     if (-not $Apply) {
         Write-Host '[PLAN] No se instalaron dependencias ni se cambiaron archivos.'
