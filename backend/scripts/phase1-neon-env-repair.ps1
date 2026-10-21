@@ -2,7 +2,8 @@
 <#
   Reparacion NO DESTRUCTIVA del .env parcial para Neon contabilidad-dev.
   Default: solo diagnostico. -Apply: guarda backup y completa SOLO variables
-  NO SECRETAS faltantes o vacias desde backend/.env.example.
+  NO SECRETAS faltantes, vacias o con valores ANTERIORES conocidos de
+  Supabase Dev y Neon production desde backend/.env.example.
   No imprime ni sustituye passwords, APP_KEY o URLs preexistentes.
 #>
 [CmdletBinding()]
@@ -36,6 +37,19 @@ $lines = New-Object 'System.Collections.Generic.List[string]'
 foreach ($line in [regex]::Split($current, '\r\n|\n|\r')) {
   [void]$lines.Add($line)
 }
+# Unicos valores antiguos que sabemos que son obsoletos para esta rama:
+# Supabase Dev y endpoint raiz production de Neon. No tocar otros valores.
+$knownStale = @{
+  'DB_HOST' = @('aws-1-ca-central-1.pooler.supabase.com','ep-ancient-brook-b6llhj4d-pooler.c-2.sa-east-1.aws.neon.tech','ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech')
+  'DB_PORT' = @('6543')
+  'DB_DATABASE' = @('postgres')
+  'DB_USERNAME' = @('app_backend.bnjwxphwtkhblvhsnylj')
+  'DB_EMULATE_PREPARES' = @('true')
+  'DB_MIGRATIONS_HOST' = @('db.bnjwxphwtkhblvhsnylj.supabase.co','aws-1-ca-central-1.pooler.supabase.com','ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech')
+  'DB_MIGRATIONS_DATABASE' = @('postgres')
+  'DB_MIGRATIONS_USERNAME' = @('postgres','postgres.bnjwxphwtkhblvhsnylj')
+  'NEON_TEST_BRANCH_HOST' = @('HOST_DIRECTO_DE_LA_RAMA','ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech')
+}
 $changed = New-Object 'System.Collections.Generic.List[string]'
 foreach ($key in $allowlist) {
   if (-not $defaults.ContainsKey($key)) { throw ('La plantilla carece de ' + $key) }
@@ -53,7 +67,9 @@ foreach ($key in $allowlist) {
   }
   $index = [int]$indexes[0]
   $existingValue = $lines[$index].Substring($key.Length + 1).Trim()
-  if ($existingValue -in @('', '""', "''")) {
+  $isEmpty = $existingValue -in @('', '""', "''")
+  $isKnownStale = $knownStale.ContainsKey($key) -and $knownStale[$key] -contains $existingValue
+  if ($isEmpty -or $isKnownStale) {
     if ($existingValue -ne [string]$defaults[$key]) {
       $lines[$index] = $key + '=' + $defaults[$key]
       [void]$changed.Add($key)
@@ -64,7 +80,7 @@ Write-Host ('[INFO] backend/.env existe: ' + $(if ($exists) { 'SI' } else { 'NO'
 if (-not $exists) { Write-Host '[PLAN] Crear .env completo desde .env.example (passwords vacios).' }
 Write-Host ('[PLAN] Claves no secretas por completar: ' + $changed.Count)
 if ($changed.Count -gt 0) { Write-Host ($changed -join ', ') }
-Write-Host '[SEGURIDAD] No modifica APP_KEY ni passwords ni valores existentes no vacios.'
+Write-Host '[SEGURIDAD] No modifica APP_KEY ni passwords, ni valores existentes excepto endpoints/ajustes antiguos explicitamente reconocidos.'
 foreach ($key in @('APP_ENV','DB_CONNECTION','DB_HOST','DB_MIGRATIONS_HOST')) {
   if ($null -ne [Environment]::GetEnvironmentVariable($key,'Process')) {
     Write-Host ('[AVISO] Variable de proceso ' + $key + ' puede prevalecer sobre .env.')
@@ -93,5 +109,5 @@ try {
     Remove-Item -LiteralPath $tempPath -Force
   }
 }
-Write-Host '[PASS] Configuracion publica Neon completada. Claves privadas permanecen sin cambios.'
+Write-Host '[PASS] Configuracion publica Neon actualizada. Claves privadas permanecen sin cambios.'
 Write-Host '[SIGUIENTE] Completar passwords en .env privado y ejecutar el preflight Neon.'
