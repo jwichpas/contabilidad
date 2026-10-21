@@ -462,10 +462,17 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - [ ] **F6.3** Validar formatos, duplicidades, observaciones y conciliación.
 - [ ] **F6.4** Implementar y probar SFE/SFMB (exportaciones bienes/servicios y empresas mixtas): origen del crédito, aplicación a IGV local, límites/arrastres, PDB, compensación/devolución y trazabilidad. [Documento de diseño](docs/F6-IGV-SFE-SFMB-EXPORTADORES.md).
 
-### Fase 7 — NIIF y EEFF
-- [ ] **F7.1** Implementar EEFF y matrices de rubros trazables.
-- [ ] **F7.2** Aplicar reglas contables NIIF/NIIF PYMES y diferencias temporarias.
-- [ ] **F7.3** Completar activos fijos, obra en curso y conciliación contable-fiscal.
+### Fase 7 — NIIF, NPIF, préstamos y activos fijos
+
+> Checklist de detalle F7.0–F7.6 ampliado; no cambia el conteo histórico de 27 hitos de alto nivel de este plan. [Especificación](docs/F7-PLAN-INTEGRAL-NIIF-NPIF-PRESTAMOS-ACTIVOS-FIJOS.md).
+
+- [ ] **F7.0** Motor de selección de marco: NIIF completas / NIIF PYMES 2015-2025 / NPIF, por empresa, ejercicio y norma peruana aplicable.
+- [ ] **F7.1** Activos fijos: altas, expedientes SUNAT, componentes, depreciación financiera NIC 16 y tributaria independiente.
+- [ ] **F7.2** Construcciones en curso: contratos, costos, mano de obra, NIC 23 cuando corresponda y puesta en uso.
+- [ ] **F7.3** Mejoras, cambios de estimaciones, bajas, ventas, deterioro, revaluación, arrendamiento y normas conexas.
+- [ ] **F7.4** NIC 12 y fiscalidad peruana: diferencias temporarias, impuesto diferido, Registro de Activos Fijos y conciliaciones.
+- [ ] **F7.5** Préstamos NIIF 9: costo amortizado, TIR/TIE, comisión, gracia, cronograma, devengos y asientos.
+- [ ] **F7.6** EEFF NIIF 18 con categorías y subtotales, revelaciones y reportes alternativos NIIF PYMES/NPIF.
 
 ### Fase 8 — Liberación
 - [ ] **F8.1** Completar pruebas y optimización de rendimiento/seguridad.
