@@ -74,12 +74,12 @@ jobs:
         run: echo "PASS - sintaxis y controles estaticos. No se ejecutaron consultas SQL ni pruebas RLS contra Supabase."
 
   postgres-rls-contract:
-    name: PostgreSQL 17 - RLS negativo en contenedor temporal
+    name: PostgreSQL 18 - RLS negativo en contenedor temporal
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_PASSWORD: temporary-ci-only
           POSTGRES_DB: f1_contract
@@ -94,6 +94,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Instalar cliente PostgreSQL
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Confirmar PostgreSQL 18 real de contrato CI
+        env:
+          PGPASSWORD: temporary-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: f1_contract
+        run: |
+          major=$(psql -X -At -v ON_ERROR_STOP=1 -c "SHOW server_version_num" | awk '{print int($1/10000)}')
+          test "$major" = "18"
+          echo "PASS: PostgreSQL $major"
       - name: Probar barreras RLS en datos ficticios
         env:
           PGPASSWORD: temporary-ci-only
@@ -104,12 +115,12 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f backend/tests/security/phase1-rls-contract.sql
 
   laravel-real-migrations:
-    name: Laravel real migrations - isolated PostgreSQL 17
+    name: Laravel real migrations - isolated PostgreSQL 18
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_PASSWORD: temporary-ci-only
           POSTGRES_DB: contabilidad_ci
@@ -161,6 +172,17 @@ jobs:
           php -r '$lock=json_decode(file_get_contents("composer.lock"),true); foreach ([["packages","laravel/framework","13"],["packages-dev","pestphp/pest","4"]] as $spec) { $found=false; foreach($lock[$spec[0]] as $pkg) { if ($pkg["name"]===$spec[1] && preg_match("/^v?".$spec[2]."\\./",$pkg["version"])) { $found=true; } } if (!$found) { fwrite(STDERR, "Version de lock inesperada: ".$spec[1]."\\n"); exit(1); } }'
       - name: Instalar cliente PostgreSQL para aserciones reales
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Confirmar PostgreSQL 18 real de migraciones CI
+        env:
+          PGPASSWORD: temporary-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: contabilidad_ci
+        run: |
+          major=$(psql -X -At -v ON_ERROR_STOP=1 -c "SHOW server_version_num" | awk '{print int($1/10000)}')
+          test "$major" = "18"
+          echo "PASS: PostgreSQL $major"
       - name: Crear roles de plataforma ficticios (solo CI)
         env:
           PGPASSWORD: temporary-ci-only
@@ -172,7 +194,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE anon NOLOGIN'
           psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE authenticated NOLOGIN'
       # Cinco migraciones exigen por diseño el proyecto Supabase Dev.
-      # En PostgreSQL 17 desechable se migra el esquema real independiente
+      # En PostgreSQL 18 desechable se migra el esquema real independiente
       # del proveedor; estas operaciones quedan pendientes de prueba Supabase:
       # ACL Data API, rotacion de clave, listado global por usuario y empresa B.
       - name: Excluir migraciones atadas a Supabase del PostgreSQL temporal
@@ -262,7 +284,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-cross-tenant-writes.sql
       - name: Run isolated Laravel unit tests
         run: ./vendor/bin/pest --testsuite=Unit
-      - name: F1.2-F1.3 HTTP y contexto RLS con JUnit obligatorio (solo PG17 CI)
+      - name: F1.2-F1.3 HTTP y contexto RLS con JUnit obligatorio (solo PG18 CI)
         env:
           DB_USERNAME: app_backend
           DB_PASSWORD: temporary-app-ci-only
