@@ -15,6 +15,27 @@ declare(strict_types=1);
  *   php scripts/phase1-neon-preflight.php --read-only --require-empty
  */
 $backend = dirname(__DIR__);
+
+// Capturar fuentes ANTES de cargar Laravel/.env. getenv() consultado DESPUES
+// del bootstrap no demuestra que una variable provenga de PowerShell.
+$environmentKeys = [
+    'APP_ENV','APP_KEY','DB_CONNECTION','DB_URL','DATABASE_URL','DB_HOST','DB_PORT',
+    'DB_DATABASE','DB_USERNAME','DB_PASSWORD','DB_SSLMODE','DB_EMULATE_PREPARES',
+    'DB_MIGRATIONS_URL','DB_MIGRATIONS_HOST','DB_MIGRATIONS_PORT',
+    'DB_MIGRATIONS_DATABASE','DB_MIGRATIONS_USERNAME','DB_MIGRATIONS_PASSWORD',
+    'DB_MIGRATIONS_SSLMODE','DB_APP_BACKEND_ROLE_PASSWORD',
+    'NEON_TEST_BRANCH_NAME','NEON_TEST_BRANCH_HOST','NEON_USE_POOLING',
+];
+$beforeLaravel = [];
+foreach ($environmentKeys as $key) {
+    $native = getenv($key);
+    $beforeLaravel[$key] = [
+        'process' => $native,
+        'env' => array_key_exists($key, $_ENV) ? $_ENV[$key] : null,
+        'server' => array_key_exists($key, $_SERVER) ? $_SERVER[$key] : null,
+    ];
+}
+
 require $backend.'/vendor/autoload.php';
 
 $readOnly = ($argc === 2 && ($argv[1] ?? '') === '--read-only')
@@ -39,21 +60,23 @@ $envHostPresent = trim((string) env('DB_MIGRATIONS_HOST', '')) !== '';
 $envAppHostPresent = trim((string) env('DB_HOST', '')) !== '';
 $processOverrides = [];
 $emptyProcessOverrides = [];
-foreach (['APP_ENV','APP_KEY','DB_CONNECTION','DB_URL','DATABASE_URL','DB_HOST','DB_PORT',
-          'DB_DATABASE','DB_USERNAME','DB_PASSWORD','DB_SSLMODE','DB_EMULATE_PREPARES',
-          'DB_MIGRATIONS_URL','DB_MIGRATIONS_HOST','DB_MIGRATIONS_PORT',
-          'DB_MIGRATIONS_DATABASE','DB_MIGRATIONS_USERNAME','DB_MIGRATIONS_PASSWORD',
-          'DB_MIGRATIONS_SSLMODE','DB_APP_BACKEND_ROLE_PASSWORD',
-          'NEON_TEST_BRANCH_NAME','NEON_TEST_BRANCH_HOST','NEON_USE_POOLING'] as $key) {
-    $inherited = getenv($key);
-    if ($inherited !== false) {
-        $processOverrides[] = $key;
-        if (trim((string) $inherited) === '') {
-            $emptyProcessOverrides[] = $key;
+$criticalKeys = [
+    'APP_ENV','DB_CONNECTION','DB_HOST','DB_PORT','DB_DATABASE','DB_USERNAME',
+    'DB_MIGRATIONS_HOST','DB_MIGRATIONS_PORT','DB_MIGRATIONS_DATABASE',
+    'DB_MIGRATIONS_USERNAME','DB_SSLMODE','DB_MIGRATIONS_SSLMODE',
+    'NEON_TEST_BRANCH_NAME','NEON_TEST_BRANCH_HOST',
+];
+foreach ($beforeLaravel as $key => $sources) {
+    foreach ($sources as $origin => $value) {
+        if ($value === false || $value === null) {
+            continue;
+        }
+        $processOverrides[$key][] = $origin;
+        if (in_array($key, $criticalKeys, true) && trim((string) $value) === '') {
+            $emptyProcessOverrides[$key][] = $origin;
         }
     }
 }
-
 $admin = (array) config('database.connections.pgsql_migrations', []);
 $appDb = (array) config('database.connections.pgsql', []);
 $adminUrl = trim((string) ($admin['url'] ?? ''));
@@ -77,7 +100,7 @@ if (! $configRepositoryAvailable) {
     $issues[] = 'Laravel no cargo config/database.php (aunque env() pueda leer .env): revisar bootstrap/config y la salida de php artisan about.';
 }
 if ($emptyProcessOverrides !== []) {
-    $issues[] = 'Variables de proceso vacias impiden configurar Neon; limpiar solo vacias antes de ejecutar SQL.';
+    $issues[] = 'Variables criticas vacias existentes antes de Laravel bloquean la configuracion de Neon.';
 }
 
 $productionHost = 'ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech';
@@ -88,13 +111,13 @@ echo '[INFO] Config Laravel database: '.($configRepositoryAvailable ? 'CARGADA' 
 echo '[INFO] Variables DB_HOST/DB_MIGRATIONS_HOST visibles en env(): '
     .($envAppHostPresent ? 'SI' : 'NO').'/'.($envHostPresent ? 'SI' : 'NO').PHP_EOL;
 if ($processOverrides !== []) {
-    echo '[AVISO] Variables heredadas del proceso (pueden prevalecer sobre .env): '
-        .implode(', ', $processOverrides).PHP_EOL;
+    echo '[INFO] Variables existentes ANTES de iniciar Laravel: '
+        .implode(', ', array_keys($processOverrides)).PHP_EOL;
 }
 if ($emptyProcessOverrides !== []) {
-    echo '[BLOQUEO] Variables heredadas VACIAS que pueden ocultar las entradas validas de .env: '
-        .implode(', ', $emptyProcessOverrides).PHP_EOL;
-    echo '[ACCION] Ejecutar scripts/phase1-neon-clear-empty-process-env.ps1 -Apply en ESTA terminal y repetir.'.PHP_EOL;
+    echo '[BLOQUEO] Variables CRITICAS vacias ANTES de iniciar Laravel: '
+        .implode(', ', array_keys($emptyProcessOverrides)).PHP_EOL;
+    echo '[ACCION] Verificar el origen con php scripts/phase1-neon-env-origins.php.'.PHP_EOL;
 }
 echo '[INFO] APP_ENV: '.$app->environment().PHP_EOL;
 echo '[INFO] Rama declarada: '.($branch !== '' ? $branch : '(vacia)').PHP_EOL;
