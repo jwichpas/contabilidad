@@ -65,17 +65,36 @@ SQL);
         }
         $ownerId = (int) $candidate->user_id;
         $sourceCompanyId = (int) $candidate->company_id;
-        $eligible = $tenant->run($sourceCompanyId, static function () use ($db, $ownerId, $sourceCompanyId): bool {
+        $check = $tenant->run($sourceCompanyId, static function () use ($db, $ownerId, $sourceCompanyId): array {
             $db->select("SELECT set_config('app.current_user_id', ?, true)", [(string) $ownerId]);
-            return $db->table('company_user')
-                ->where('company_id', $sourceCompanyId)
-                ->where('user_id', $ownerId)
-                ->whereIn('role', ['ADMIN', 'CHIEF_ACCOUNTANT'])
-                ->whereRaw('is_active IS TRUE')
-                ->exists();
+            $state = $db->selectOne(<<<'SQL'
+SELECT
+    current_user AS database_role,
+    public.app_current_company_id() AS tenant_id,
+    nullif(current_setting('app.current_user_id', true), '') AS user_context,
+    (SELECT count(*) FROM public.company_user
+     WHERE company_id = ?::bigint
+       AND user_id = ?::bigint
+       AND role IN ('ADMIN','CHIEF_ACCOUNTANT')
+       AND is_active IS TRUE) AS matching_memberships
+SQL, [$sourceCompanyId, $ownerId]);
+
+            return [
+                'role' => (string) $state->database_role,
+                'tenant' => (int) ($state->tenant_id ?? 0),
+                'user' => (int) ($state->user_context ?? 0),
+                'matches' => (int) $state->matching_memberships,
+            ];
         });
-        if (! $eligible) {
-            throw new RuntimeException('Membresía no visible o rol insuficiente bajo RLS para el usuario seleccionado.');
+        if ($check['role'] !== 'app_backend'
+            || $check['tenant'] !== $sourceCompanyId
+            || $check['user'] !== $ownerId
+            || $check['matches'] !== 1) {
+            throw new RuntimeException(sprintf(
+                'Diagnóstico de contexto Laravel: role=%s, tenant=%d, user=%d, memberships=%d (esperados %d/%d/1).',
+                $check['role'], $check['tenant'], $check['user'], $check['matches'],
+                $sourceCompanyId, $ownerId
+            ));
         }
         $owner = User::query()->findOrFail($ownerId);
 
