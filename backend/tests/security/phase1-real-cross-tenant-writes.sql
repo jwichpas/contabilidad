@@ -36,6 +36,14 @@ INSERT INTO public.companies(tax_id,business_name,legal_address,is_active,create
 VALUES ('20999999994','F1 CI Empresa B','CI local temporal',TRUE,now(),now())
 RETURNING id AS f1_company_b \gset
 
+-- F1.4: el evento de sistema con company_id NULL no debe filtrarse a
+-- ningun app_backend, con o sin contexto. Las filas A/B si deben aislarse.
+INSERT INTO public.audit_logs(company_id,user_id,event_type,severity)
+VALUES
+  (NULL,NULL,'F1_GLOBAL_SYSTEM','INFO'),
+  (:'f1_company_a'::bigint,NULL,'F1_TENANT_A','INFO'),
+  (:'f1_company_b'::bigint,NULL,'F1_TENANT_B','INFO');
+
 -- Las operaciones de negocio se efectuan con el rol restringido real.
 SET LOCAL ROLE app_backend;
 SELECT set_config('app.current_company_id', :'f1_company_a', true);
@@ -47,6 +55,11 @@ DO $check$
 BEGIN
     IF (SELECT count(*) FROM public.company_areas WHERE code='F1_A') <> 1 THEN
         RAISE EXCEPTION 'El rol app_backend no pudo insertar en su propia empresa A';
+    END IF;
+    IF (SELECT count(*) FROM public.audit_logs WHERE event_type='F1_GLOBAL_SYSTEM') <> 0
+       OR (SELECT count(*) FROM public.audit_logs WHERE event_type='F1_TENANT_A') <> 1
+       OR (SELECT count(*) FROM public.audit_logs WHERE event_type='F1_TENANT_B') <> 0 THEN
+        RAISE EXCEPTION 'La lectura de audit_logs A expone registros globales o de B';
     END IF;
 END
 $check$;
@@ -68,6 +81,11 @@ DO $check$
 BEGIN
     IF (SELECT count(*) FROM public.company_areas WHERE code='F1_B') <> 1 THEN
         RAISE EXCEPTION 'El rol app_backend no pudo insertar en su propia empresa B';
+    END IF;
+    IF (SELECT count(*) FROM public.audit_logs WHERE event_type='F1_GLOBAL_SYSTEM') <> 0
+       OR (SELECT count(*) FROM public.audit_logs WHERE event_type='F1_TENANT_A') <> 0
+       OR (SELECT count(*) FROM public.audit_logs WHERE event_type='F1_TENANT_B') <> 1 THEN
+        RAISE EXCEPTION 'La lectura de audit_logs B expone registros globales o de A';
     END IF;
 END
 $check$;
@@ -136,6 +154,10 @@ DECLARE blocked boolean := false;
 BEGIN
     IF (SELECT count(*) FROM public.company_areas WHERE code IN ('F1_A','F1_B')) <> 0 THEN
         RAISE EXCEPTION 'Sin contexto se exponen filas';
+    END IF;
+    IF (SELECT count(*) FROM public.audit_logs
+        WHERE event_type IN ('F1_GLOBAL_SYSTEM','F1_TENANT_A','F1_TENANT_B')) <> 0 THEN
+        RAISE EXCEPTION 'Sin contexto se exponen audit_logs globales o privados';
     END IF;
     BEGIN
         INSERT INTO public.company_areas(company_id,code,name,created_at,updated_at)
