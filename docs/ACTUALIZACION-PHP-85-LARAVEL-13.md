@@ -212,3 +212,21 @@ php artisan test tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.p
 ```
 
 Si pasan y no existen errores PHP 8.5, confirmar `git status --short`, revisar `git diff -- composer.json composer.lock` (desde `backend/`), subir ambos archivos **juntos**, y actualizar `.github/workflows/phase1-security-static.yml` a PHP 8.5 con las nuevas dependencias. No declarar validación CI hasta ver sus logs.
+
+
+## Compatibilidad inicial Laravel 13 aprobada en Windows — 21/10/2026
+
+**Evidencia obtenida del usuario** bajo PHP 8.5.12 / Laravel 13.38.0 / Pest 4.7.8:
+
+- `php artisan --version` respondió `Laravel Framework 13.38.0`.
+- `php artisan route:list --path=api/v1` registró **29 rutas**; no hubo error de bootstrap/routing.
+- `php artisan test tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php`: **4 tests PASS, 40 assertions, 38.13 s** (casos HTTP A/B, anónimo, tenant inválido, A→B→A).
+- `composer audit --locked` en la instalación había reportado **No security vulnerability advisories found**.
+- `git status --short` muestra modificaciones locales en `backend/composer.json`, `backend/composer.lock` y caché PHPUnit, y **eliminaciones locales de dos PDF PCGE**. Los PDF y la caché no forman parte de la actualización y **no deben incluirse en commit** ni restaurarse automáticamente sin intención del usuario.
+- `composer.json` fue reserializado desde PowerShell con CRLF y mantiene descripción anterior "Laravel 11"; la normalización de fin de línea es opcional, pero si se edita descripción debe comprobarse `composer validate`.
+
+**Pendiente de verificar antes del commit local:** `php artisan test tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.php` (solo consulta y middleware simulado). Los nuevos `composer.json` y `composer.lock` están en el disco Windows del usuario, **no en GitHub remoto**: deben subirse **juntos**, con `git add backend/composer.json backend/composer.lock` desde la raíz (nunca `git add -A`) y `git diff --cached --check`. No se pueden sustituir por archivos lock construidos a mano.
+
+**Después del push de ambos:** revisar/actualizar CI `.github/workflows/phase1-security-static.yml` de PHP 8.3 a 8.5, añadir filtros de `backend/composer.json` y `backend/composer.lock` y validar la ejecución de las migraciones en PostgreSQL efímero; ajustar README y badge de versiones. Sin afirmar CI PASS hasta ejecución comprobada.
+
+**Aún no cerrar migración de plataforma completa:** faltan el guard de roles, pruebas CI / integración y revisión de cambios 11→12→13. Supabase Dev no sufrió migraciones ni escrituras en esta fase.
