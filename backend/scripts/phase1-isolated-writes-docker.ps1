@@ -2,7 +2,7 @@
 <#
   F1.3 - PostgreSQL 17 temporal para validar aislamiento real de escrituras.
   Exclusivamente Docker local; no ejecuta ningun SQL contra Supabase.
-  - Levanta PostgreSQL 17 con puerto host ligado a 127.0.0.1.
+  - Levanta PostgreSQL 17 (por defecto) o 18 con puerto host 127.0.0.1.
   - Selecciona las migraciones de esquema una a una SIN mover archivos.
   - Corre migraciones de ESQUEMA Laravel y SQL DML A/B con ROLLBACK.
   - Corre pruebas Pest HTTP de roles en PostgreSQL efimero como app_backend.
@@ -10,7 +10,13 @@
 
   Invocar desde backend/:
     .\scripts\phase1-isolated-writes-docker.ps1
+    .\scripts\phase1-isolated-writes-docker.ps1 -PostgresVersion 18
 #>
+param(
+    [ValidateSet('17','18')]
+    [string]$PostgresVersion = '17'
+)
+
 $ErrorActionPreference = 'Stop'
 
 $backend = Split-Path -Parent $PSScriptRoot
@@ -75,13 +81,13 @@ try {
     if ($LASTEXITCODE -ne 0 -or $dockerOS -ne 'linux') {
         throw 'Docker Desktop debe ejecutar contenedores Linux.'
     }
-    Write-Host '[AISLAMIENTO] Iniciando PostgreSQL 17 temporal en Docker (solo loopback).'
+    Write-Host ('[AISLAMIENTO] Iniciando PostgreSQL ' + $PostgresVersion + ' temporal en Docker (solo loopback).')
     Invoke-NativeChecked 'docker' @(
         'run','--detach','--name',$dockerName,
         '--publish','127.0.0.1::5432',
         '--env',('POSTGRES_PASSWORD=' + $adminPassword),
         '--env','POSTGRES_DB=contabilidad_ci',
-        'postgres:17-alpine'
+        ('postgres:' + $PostgresVersion + '-alpine')
     )
     $runContainer = $true
 
@@ -214,6 +220,14 @@ echo "[PASS] Conexion administrativa verificada contra Docker efimero\n";
         'psql','-h','127.0.0.1','-U','postgres','-d','contabilidad_ci',
         '-X','-v','ON_ERROR_STOP=1','-f','/tmp/f1-write.sql'
     )
+
+    # Validar la version realmente iniciada: nunca aceptar silenciosamente
+    # una imagen distinta de la solicitada.
+    $serverVersion = (& docker exec $dockerName 'psql' '-U' 'postgres' '-d' 'contabilidad_ci' '-X' '-A' '-t' '-v' 'ON_ERROR_STOP=1' '-c' 'SHOW server_version' 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or $serverVersion -notmatch ('^' + [regex]::Escape($PostgresVersion) + '\\.[0-9]+')) {
+        throw ('Version PostgreSQL del Docker inesperada: ' + $serverVersion)
+    }
+    Write-Host ('[PASS] PostgreSQL efimero version ' + $serverVersion)
 
     # Comprobar tambien que Laravel opera exclusivamente en el contenedor
     # bajo el rol app_backend sin SUPERUSER ni BYPASSRLS.
