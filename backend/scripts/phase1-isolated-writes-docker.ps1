@@ -1,0 +1,239 @@
+#requires -Version 5.1
+<#
+  F1.3 - PostgreSQL 17 temporal para validar aislamiento real de escrituras.
+  Exclusivamente Docker local; no ejecuta ningun SQL contra Supabase.
+  - Levanta PostgreSQL 17 con puerto host ligado a 127.0.0.1.
+  - Excluye temporalmente la migracion de datos Supabase Dev.
+  - Corre migraciones de ESQUEMA Laravel y SQL DML A/B con ROLLBACK.
+  - Corre pruebas Pest HTTP de roles en PostgreSQL efimero como app_backend.
+  - Restaura fixture, variables de entorno y elimina el contenedor SIEMPRE.
+
+  Invocar desde backend/:
+    .\scripts\phase1-isolated-writes-docker.ps1
+#>
+$ErrorActionPreference = 'Stop'
+
+$backend = Split-Path -Parent $PSScriptRoot
+$root = Split-Path -Parent $backend
+$dockerName = 'f1-write-' + ([Guid]::NewGuid().ToString('N')).Substring(0,12)
+$adminPassword = 'f1-' + [Guid]::NewGuid().ToString('N')
+$appPassword = 'app-f1-' + [Guid]::NewGuid().ToString('N')
+$guardToken = [Guid]::NewGuid().ToString('N')
+$tempFolder = Join-Path ([IO.Path]::GetTempPath()) $dockerName
+$fixture = Join-Path $backend 'database/migrations/2026_10_20_235900_create_dev_company_b_via_laravel.php'
+$fixtureBackup = Join-Path $tempFolder '2026_10_20_235900_create_dev_company_b_via_laravel.php'
+$runContainer = $false
+$fixtureMoved = $false
+$passed = $false
+$initialLocation = Get-Location
+$originalEnv = @{}
+
+function Invoke-NativeChecked {
+    param([string]$Program, [string[]]$Arguments)
+    & $Program @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw ($Program + ' termino con codigo ' + $LASTEXITCODE)
+    }
+}
+
+function Set-TestEnvironment {
+    param([hashtable]$Values)
+    foreach ($key in $Values.Keys) {
+        if (-not $originalEnv.ContainsKey($key)) {
+            $originalEnv[$key] = [Environment]::GetEnvironmentVariable($key,'Process')
+        }
+        [Environment]::SetEnvironmentVariable($key,[string]$Values[$key],'Process')
+    }
+}
+
+try {
+    Set-Location $backend
+
+    if (-not (Test-Path 'vendor/autoload.php') -or
+        -not (Test-Path $fixture) -or
+        -not (Test-Path 'tests/security/phase1-real-cross-tenant-writes.sql')) {
+        throw 'Faltan dependencias Composer, fixture Dev o script RLS. Actualizar main y ejecutar composer install.'
+    }
+    if (Test-Path 'bootstrap/cache/config.php') {
+        throw 'Existe bootstrap/cache/config.php; no iniciar para evitar conexiones cacheadas a Supabase.'
+    }
+
+    $phpVersion = & php -r 'echo PHP_VERSION;'
+    if ($LASTEXITCODE -ne 0 -or $phpVersion -notmatch '^8\.5\.[0-9]+') {
+        throw ('Requiere PHP 8.5.x: ' + $phpVersion)
+    }
+
+    $dockerOS = (& docker info --format '{{.OSType}}' 2>$null | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or $dockerOS -ne 'linux') {
+        throw 'Docker Desktop debe ejecutar contenedores Linux.'
+    }
+
+    New-Item -ItemType Directory -Path $tempFolder -Force | Out-Null
+    Write-Host '[AISLAMIENTO] Iniciando PostgreSQL 17 temporal en Docker (solo loopback).'
+    Invoke-NativeChecked 'docker' @(
+        'run','--detach','--name',$dockerName,
+        '--publish','127.0.0.1::5432',
+        '--env',('POSTGRES_PASSWORD=' + $adminPassword),
+        '--env','POSTGRES_DB=contabilidad_ci',
+        'postgres:17-alpine'
+    )
+    $runContainer = $true
+
+    $portLine = (& docker port $dockerName '5432/tcp' | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or $portLine -notmatch '^127\.0\.0\.1:(\d+)$') {
+        throw ('Docker no publico exclusivamente 127.0.0.1: ' + $portLine)
+    }
+    $port = $Matches[1]
+
+    $ready = $false
+    for ($i=0; $i -lt 40; $i++) {
+        & docker exec $dockerName pg_isready -h 127.0.0.1 -U postgres -d contabilidad_ci 1>$null 2>$null
+        if ($LASTEXITCODE -eq 0) { $ready=$true; break }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $ready) { throw 'PostgreSQL 17 temporal no respondio.' }
+
+    # Marca aleatoria exclusiva del contenedor. Cualquier conexion accidental a
+    # Supabase fallara al no encontrar esta tabla o token.
+    $guardSql = "CREATE TABLE public.f1_ci_runtime_guard (token text NOT NULL); " +
+                "INSERT INTO public.f1_ci_runtime_guard(token) VALUES ('$guardToken'); " +
+                "CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;"
+    Invoke-NativeChecked 'docker' @(
+        'exec', $dockerName, 'psql', '-U','postgres','-d','contabilidad_ci',
+        '-X','-v','ON_ERROR_STOP=1','-c',$guardSql
+    )
+
+    $adminUrl = 'pgsql://postgres:' + $adminPassword + '@127.0.0.1:' + $port + '/contabilidad_ci'
+    $appUrl = 'pgsql://app_backend:' + $appPassword + '@127.0.0.1:' + $port + '/contabilidad_ci'
+
+    Set-TestEnvironment @{
+        APP_ENV='testing'
+        APP_DEBUG='false'
+        APP_KEY='base64:XQ9v12345678901234567890123456789012345678='
+        DB_CONNECTION='pgsql'
+        DB_HOST='127.0.0.1'
+        DB_PORT=$port
+        DB_DATABASE='contabilidad_ci'
+        DB_USERNAME='postgres'
+        DB_PASSWORD=$adminPassword
+        DB_URL=$adminUrl
+        DATABASE_URL=$adminUrl
+        DB_SSLMODE='disable'
+        DB_EMULATE_PREPARES='false'
+        DB_MIGRATIONS_URL=$adminUrl
+        DB_MIGRATIONS_HOST='127.0.0.1'
+        DB_MIGRATIONS_PORT=$port
+        DB_MIGRATIONS_DATABASE='contabilidad_ci'
+        DB_MIGRATIONS_USERNAME='postgres'
+        DB_MIGRATIONS_PASSWORD=$adminPassword
+        DB_MIGRATIONS_SSLMODE='disable'
+        DB_APP_BACKEND_ROLE_PASSWORD=$appPassword
+        F1_GUARD_TOKEN=$guardToken
+        CACHE_STORE='array'
+        SESSION_DRIVER='array'
+        QUEUE_CONNECTION='sync'
+    }
+
+    $guardCode = @'
+require "vendor/autoload.php";
+$app = require "bootstrap/app.php";
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$db = \Illuminate\Support\Facades\DB::connection("pgsql_migrations");
+$config = $db->getConfig();
+if (($config["host"] ?? "") !== "127.0.0.1"
+    || (string)($config["port"] ?? "") !== (string)getenv("DB_MIGRATIONS_PORT")
+    || ($config["database"] ?? "") !== "contabilidad_ci"
+    || ($config["username"] ?? "") !== "postgres"
+    || $db->selectOne("SELECT current_database() AS db")->db !== "contabilidad_ci"
+    || $db->selectOne("SELECT token FROM public.f1_ci_runtime_guard LIMIT 1")->token !== getenv("F1_GUARD_TOKEN")) {
+    fwrite(STDERR,"BLOQUEO: la conexion admin no es el PostgreSQL desechable\n");
+    exit(81);
+}
+echo "[PASS] Conexion administrativa verificada contra Docker efimero\n";
+'@
+    Invoke-NativeChecked 'php' @('-r',$guardCode)
+
+    # NO ejecutar migracion de datos exclusiva de Supabase Dev contra CI.
+    Move-Item -LiteralPath $fixture -Destination $fixtureBackup
+    $fixtureMoved = $true
+    Write-Host '[MIGRACIONES] Creando esquema real Laravel en PostgreSQL 17 temporal.'
+    Invoke-NativeChecked 'php' @(
+        'artisan','migrate','--database=pgsql_migrations','--force','--no-interaction'
+    )
+
+    Write-Host '[RLS] Probando INSERT, UPDATE y DELETE A/B sobre tablas reales.'
+    Invoke-NativeChecked 'docker' @(
+        'cp',(Join-Path $backend 'tests/security/phase1-real-cross-tenant-writes.sql'),
+        ($dockerName + ':/tmp/f1-write.sql')
+    )
+    Invoke-NativeChecked 'docker' @(
+        'exec','--env',('PGPASSWORD=' + $adminPassword),$dockerName,
+        'psql','-h','127.0.0.1','-U','postgres','-d','contabilidad_ci',
+        '-X','-v','ON_ERROR_STOP=1','-f','/tmp/f1-write.sql'
+    )
+
+    # Comprobar tambien que Laravel opera exclusivamente en el contenedor
+    # bajo el rol app_backend sin SUPERUSER ni BYPASSRLS.
+    Invoke-NativeChecked 'docker' @(
+        'exec',$dockerName,'psql','-U','postgres','-d','contabilidad_ci',
+        '-X','-v','ON_ERROR_STOP=1',
+        '-c','GRANT SELECT ON TABLE public.f1_ci_runtime_guard TO app_backend'
+    )
+    Set-TestEnvironment @{
+        DB_USERNAME='app_backend'
+        DB_PASSWORD=$appPassword
+        DB_URL=$appUrl
+        DATABASE_URL=$appUrl
+        DB_EMULATE_PREPARES='true'
+    }
+    $appGuard = @'
+require "vendor/autoload.php";
+$app=require "bootstrap/app.php";
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$db=\Illuminate\Support\Facades\DB::connection("pgsql");
+$c=$db->getConfig();
+if (($c["host"] ?? "") !== "127.0.0.1"
+    || (string)($c["port"] ?? "") !== (string)getenv("DB_PORT")
+    || ($c["database"] ?? "") !== "contabilidad_ci"
+    || $db->selectOne("SELECT current_user AS rol")->rol !== "app_backend"
+    || $db->selectOne("SELECT token FROM public.f1_ci_runtime_guard LIMIT 1")->token !== getenv("F1_GUARD_TOKEN")) {
+    fwrite(STDERR,"BLOQUEO: la conexion operativa no corresponde a Docker\n");
+    exit(82);
+}
+echo "[PASS] Conexion app_backend sujeta a RLS en Docker efimero\n";
+'@
+    Invoke-NativeChecked 'php' @('-r',$appGuard)
+
+    Write-Host '[HTTP] Ejecutando roles con escrituras de prueba solo en Docker.'
+    Invoke-NativeChecked 'php' @(
+        'artisan','test',
+        'tests/Feature/Security/CompanyRoleAuthorizationTest.php',
+        'tests/Feature/Security/TenantContextNestedTest.php'
+    )
+    $passed = $true
+    Write-Host '[PASS] F1.3 escritura interempresa y pruebas HTTP en PostgreSQL aislado.'
+}
+catch {
+    Write-Host ('[FAIL] ' + $_.Exception.Message)
+}
+finally {
+    if ($fixtureMoved) {
+        Move-Item -LiteralPath $fixtureBackup -Destination $fixture -Force
+        Write-Host '[RESTORE] Migracion ficticia Dev restaurada en su lugar original.'
+    }
+    foreach ($key in $originalEnv.Keys) {
+        [Environment]::SetEnvironmentVariable($key,$originalEnv[$key],'Process')
+    }
+    if ($runContainer) {
+        & docker rm --force $dockerName 1>$null 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host '[LIMPIEZA] Contenedor PostgreSQL efimero eliminado.'
+        }
+        else {
+            Write-Host ('[WARN] No se pudo confirmar eliminacion de Docker: ' + $dockerName)
+            $passed = $false
+        }
+    }
+    Set-Location $initialLocation
+}
+if (-not $passed) { exit 1 }
