@@ -185,6 +185,17 @@ if (! in_array($ssl, ['require','verify-ca','verify-full'], true)
 if ((string) config('database.default') !== 'pgsql') {
     $issues[] = 'DB_CONNECTION debe ser pgsql.';
 }
+$keyRaw = (string) env('APP_KEY', '');
+$isValidKey = false;
+if (str_starts_with($keyRaw, 'base64:')) {
+    $decodedKey = base64_decode(substr($keyRaw, 7), true);
+    $isValidKey = $decodedKey !== false && strlen($decodedKey) === 32;
+} else {
+    $isValidKey = strlen($keyRaw) === 32;
+}
+if (! $isValidKey) {
+    $issues[] = 'APP_KEY no es una clave Laravel valida de 32 bytes (valor no mostrado).';
+}
 $rolePassword = (string) env('DB_APP_BACKEND_ROLE_PASSWORD', '');
 if (strlen($rolePassword) < 20) {
     $issues[] = 'Definir DB_APP_BACKEND_ROLE_PASSWORD aleatoria de al menos 20 caracteres antes de inicializar el esquema.';
