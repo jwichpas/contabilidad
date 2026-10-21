@@ -58,7 +58,7 @@ SQL);
             $quoted = '"'.str_replace('"', '""', (string) $table->table_name).'"';
             $count = $db->selectOne('SELECT count(*) AS total FROM public.'.$quoted);
             if ((int) $count->total !== 0) {
-                throw new RuntimeException('RLS reveló filas sin contexto de empresa');
+                throw new RuntimeException('RLS reveló '.$count->total.' filas sin contexto en tabla '.$table->table_name);
             }
         }
         echo '[PASS] Sin contexto de empresa: '.count($tables)." tablas tenant protegidas, 0 filas visibles.\n";
