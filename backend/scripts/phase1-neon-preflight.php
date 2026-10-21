@@ -38,8 +38,8 @@ $configRepositoryAvailable = app()->bound('config')
 $envHostPresent = trim((string) env('DB_MIGRATIONS_HOST', '')) !== '';
 $envAppHostPresent = trim((string) env('DB_HOST', '')) !== '';
 $processOverrides = [];
-foreach (['APP_ENV','DB_CONNECTION','DB_HOST','DB_PORT','DB_DATABASE',
-          'DB_USERNAME','DB_MIGRATIONS_HOST','DB_MIGRATIONS_PORT',
+foreach (['APP_ENV','DB_CONNECTION','DB_URL','DATABASE_URL','DB_HOST','DB_PORT','DB_DATABASE',
+          'DB_USERNAME','DB_MIGRATIONS_URL','DB_MIGRATIONS_HOST','DB_MIGRATIONS_PORT',
           'DB_MIGRATIONS_DATABASE','DB_MIGRATIONS_USERNAME'] as $key) {
     if (getenv($key) !== false) {
         $processOverrides[] = $key;
