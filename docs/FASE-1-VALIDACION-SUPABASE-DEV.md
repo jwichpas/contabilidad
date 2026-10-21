@@ -260,3 +260,6 @@ if ($LASTEXITCODE -ne 0) { throw 'F1.4 no aprobado' }
 ```
 
 El PASS real requiere: todos los archivos elegibles registrados en `migrations`, cinco funciones con `search_path=pg_catalog`, eventos globales invisibles por RLS A/B/sin tenant, escrituras cruzadas denegadas, 12 tests y 0 errores/fallos JUnit, y eliminación del Docker temporal. Si cualquiera falla, no aplicar migraciones a Dev.
+
+
+**Nota posterior de integridad del script:** una revisión del archivo remoto detectó que la primera publicación del control `migrations` había quedado truncada en una expresión PowerShell y con un segmento duplicado al final. Se reconstruyó **el archivo completo** y se volvió a leer desde GitHub para confirmar un único `try/catch/finally`, un único cierre `if (-not $passed) { exit 1 }`, el bloque íntegro de comprobación de migraciones y las puertas de JUnit. **Aún se requiere analizar la sintaxis PowerShell en Windows antes de ejecutarlo**; la inspección estructural remota no sustituye el parser nativo. Último arreglo del ejecutor: `0086b5d3`.
