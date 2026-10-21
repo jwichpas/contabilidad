@@ -34,8 +34,19 @@ try {
     // IDs numéricos solamente; nunca imprimimos nombres, RUC ni emails.
     $companyIds = array_map(static fn ($row): int => (int) $row->id,
         $db->select('SELECT id FROM public.companies ORDER BY id LIMIT 2'));
-    if (count($companyIds) !== 2 || $companyIds[0] === $companyIds[1]) {
-        throw new RuntimeException('Se requieren dos empresas existentes para este test');
+    if (count($companyIds) === 0) {
+        throw new RuntimeException('No hay empresas para comprobar RLS');
+    }
+    $syntheticCompany = null;
+    if (count($companyIds) === 1) {
+        // Sin mutaciones: ID garantizado ausente al consultar el catálogo actual.
+        $candidate = $db->selectOne('SELECT COALESCE(MAX(id), 0) + 1 AS id FROM public.companies');
+        $syntheticCompany = (int) $candidate->id;
+        if ($syntheticCompany <= 0 || in_array($syntheticCompany, $companyIds, true)) {
+            throw new RuntimeException('No se pudo generar un identificador de contraste');
+        }
+        $companyIds[] = $syntheticCompany;
+        echo "[INFO] Hay una sola empresa real. Segunda prueba con ID inexistente: cobertura parcial.\n";
     }
 
     $tables = $db->select(<<<'SQL'
@@ -77,7 +88,16 @@ SQL);
                 $visible += (int) $counts->visible_rows;
             }
             $hasVisibleData = $hasVisibleData || $visible > 0;
-            echo '[PASS] Empresa '.$companyId.': 0 filas ajenas en '.count($tables)
+            if ($companyId === $syntheticCompany && $visible !== 0) {
+                // Solo audit_logs puede contener eventos globales legibles sin tenant.
+                $globalCount = (int) $db->selectOne(
+                    'SELECT count(*) AS n FROM public.audit_logs WHERE company_id IS NULL'
+                )->n;
+                if ($visible !== $globalCount) {
+                    throw new RuntimeException('ID inexistente expuso registros de alguna empresa');
+                }
+            }
+            echo '[PASS] Contexto '.$companyId.': 0 filas ajenas en '.count($tables)
                 .' tablas; visibles='.$visible."\n";
         } finally {
             $db->rollBack();
@@ -96,6 +116,9 @@ SQL);
     }
     if (! $hasVisibleData) {
         fwrite(STDERR, "[ADVERTENCIA] No se observaron filas visibles; el aislamiento se comprobó, no la existencia de datos.\n");
+    }
+    if ($syntheticCompany !== null) {
+        echo "[PENDIENTE] Falta validar aislamiento A/B con dos empresas existentes.\n";
     }
     echo "[PASS] No hubo escrituras; se usó rollback en todas las transacciones.\n";
 } catch (Throwable $exception) {
