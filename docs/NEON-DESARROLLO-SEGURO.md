@@ -87,3 +87,28 @@ Hosts públicos (sin credenciales) devueltos por Neon:
 El preflight `phase1-neon-preflight.php` ahora admite **conexión directa sin pooling** con prepares nativos, o modo pooled solamente si se cambia `NEON_USE_POOLING=true`, `DB_HOST` al host con sufijo `-pooler` y `DB_EMULATE_PREPARES=true`, siempre después de activar realmente pooling en Neon. **Aún no hay credenciales locales verificadas ni ejecución de PHP preflight desde Windows**; la lectura Neon conectada es un control adicional, no reemplaza el preflight Laravel.
 
 **Próximo paso antes del bootstrap:** sincronizar main y completar en `backend/.env` privado `DB_MIGRATIONS_PASSWORD`, `DB_PASSWORD` y una contraseña aleatoria fuerte `DB_APP_BACKEND_ROLE_PASSWORD`; crear y ejecutar solo cuando pase `php scripts/phase1-neon-preflight.php` y `--read-only --require-empty`. La creación de `app_backend`, migraciones Laravel y DDL esperan validación explícita; no están aplicadas.
+
+
+## F1.6 — Reparación del .env parcial tras el primer preflight (21/10/2026)
+
+El usuario ejecutó `php scripts/phase1-neon-preflight.php`: el comando reconoció que `backend/.env` existe y `NEON_TEST_BRANCH_NAME=contabilidad-dev`, pero encontró `APP_ENV` vacío, `DB_HOST` y `DB_MIGRATIONS_HOST` vacíos, puerto/base/usuarios/SSL no configurados y contraseñas ausentes. **No se abrió conexión ni se ejecutaron migraciones o DDL**. No adjudicar el bloqueo al motor PG18 ni a Neon; es configuración local incompleta o sobrescrita por variables de proceso.
+
+Se añadió `backend/scripts/phase1-neon-env-repair.ps1`. Funciona en PowerShell 5.1; su ejecución predeterminada es un **dry run**, sin escribir archivos. La opción `-Apply` guarda respaldo ignorado por Git `backend/.env.backup.*` y agrega/completa **solo** las claves públicas ausentes o vacías de `backend/.env.example`: host directo de contabilidad-dev, DB_CONNECTION=pgsql, APP_ENV=local, puerto/base/usuarios/SSL, banderas de pooling y rama. **Nunca sobreescribe valores no vacíos** ni modifica APP_KEY, DB_PASSWORD, DB_MIGRATIONS_PASSWORD o DB_APP_BACKEND_ROLE_PASSWORD. Si `.env` no existe, copia completa la plantilla. No muestra secretos ni conecta a Neon/Supabase.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+$tokens=$null; $errors=$null
+[System.Management.Automation.Language.Parser]::ParseFile(
+  (Resolve-Path .\scripts\phase1-neon-env-repair.ps1).Path,
+  [ref]$tokens,[ref]$errors
+) | Out-Null
+if ($errors.Count) { $errors | Format-List Message,Extent; throw 'ParserError' }
+.\scripts\phase1-neon-env-repair.ps1
+.\scripts\phase1-neon-env-repair.ps1 -Apply
+```
+
+Después completar PRIVADAMENTE con el panel Neon: `DB_MIGRATIONS_PASSWORD` del propietario `neondb_owner`; `DB_APP_BACKEND_ROLE_PASSWORD` aleatoria de al menos 20 caracteres y la misma contraseña temporal en `DB_PASSWORD` para el rol `app_backend` que aún no existe. No pegar passwords en el chat ni commitear `.env`.
+
+Reejecutar `php scripts/phase1-neon-preflight.php`. Si pasa, `--read-only --require-empty` es la siguiente puerta; hasta entonces, **no ejecutar migrate**. Si el script avisa de variables de proceso configuradas, inspeccionar también esa precedencia antes de tocar los archivos.
