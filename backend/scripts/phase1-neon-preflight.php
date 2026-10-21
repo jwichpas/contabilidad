@@ -49,6 +49,7 @@ $appHost = trim((string) ($appDb['host'] ?? ''));
 $appPort = trim((string) ($appDb['port'] ?? ''));
 $appDatabase = trim((string) ($appDb['database'] ?? ''));
 $appUser = trim((string) ($appDb['username'] ?? ''));
+$poolingEnabled = filter_var(env('NEON_USE_POOLING', false), FILTER_VALIDATE_BOOLEAN);
 $issues = [];
 
 $productionHost = 'ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech';
@@ -84,11 +85,17 @@ if ($host === $productionHost || $expectedHost === $productionHost) {
 if ($host === '' || $host !== $expectedHost || str_contains($host, '-pooler.')) {
     $issues[] = 'Host de migraciones no coincide con NEON_TEST_BRANCH_HOST o tiene pooling.';
 }
-// Neon agrega -pooler al nombre del endpoint, antes del primer punto.
+// Neon permite conexion directa mientras pooling siga deshabilitado.
+// Si se habilita PgBouncer, exigir el hostname derivado de la MISMA rama.
 $firstDot = strpos($host, '.');
 $derivedPooled = $firstDot !== false ? substr($host, 0, $firstDot).'-pooler'.substr($host, $firstDot) : '';
-if ($appHost !== $derivedPooled) {
-    $issues[] = 'DB_HOST debe ser el endpoint pooled de la MISMA rama que DB_MIGRATIONS_HOST.';
+$expectedAppHost = $poolingEnabled ? $derivedPooled : $host;
+if ($appHost === '' || $appHost !== $expectedAppHost) {
+    $issues[] = 'DB_HOST no corresponde a la conexion directa/pooled elegida para la MISMA rama.';
+}
+$emulatePrepares = (bool) ($appDb['options'][\PDO::ATTR_EMULATE_PREPARES] ?? false);
+if ($poolingEnabled !== $emulatePrepares) {
+    $issues[] = 'DB_EMULATE_PREPARES debe ser false en directo y true con pooling de transacciones.';
 }
 if ($port !== '5432' || $appPort !== '5432') {
     $issues[] = 'Neon usa puerto 5432 en host directo y pooled.';
@@ -124,7 +131,7 @@ if ($issues !== []) {
     fwrite(STDERR, "[BLOQUEO] No ejecutar migrations ni pruebas con escrituras en Neon.\n");
     exit(1);
 }
-echo '[PASS] Config de Neon validada: endpoint de pruebas declarado, admin directo y app pooled.'.PHP_EOL;
+echo '[PASS] Config Neon: rama pruebas, admin directo y app '.($poolingEnabled ? 'pooled' : 'directa').'.'.PHP_EOL;
 echo '[AVISO] El nombre de rama NO es verificable por SQL; confirmar visualmente el endpoint en Neon Connect.'.PHP_EOL;
 
 if (! $readOnly) {
