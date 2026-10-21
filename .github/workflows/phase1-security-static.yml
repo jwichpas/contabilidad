@@ -8,6 +8,10 @@ on:
       - '.github/workflows/phase1-security-static.yml'
       - 'backend/tests/security/**'
       - 'backend/database/migrations/**'
+      - 'backend/composer.json'
+      - 'backend/composer.lock'
+      - 'backend/tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php'
+      - 'backend/tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.php'
       - 'backend/config/database.php'
       - 'backend/routes/api.php'
       - 'backend/app/Http/Middleware/**'
@@ -31,10 +35,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Instalar PHP 8.3
+      - name: Instalar PHP 8.5
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.5'
           extensions: mbstring, bcmath, pdo_pgsql
           coverage: none
       - name: Comprobar sintaxis PHP independiente de la base
@@ -141,10 +145,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.5'
           extensions: mbstring, bcmath, pdo_pgsql, xml, curl, zip
           coverage: none
       - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Comprobar PHP 8.5 y lock de Laravel/Pest
+        run: |
+          php -r 'if (PHP_VERSION_ID < 80500 || PHP_VERSION_ID >= 80600) { fwrite(STDERR, "Se esperaba PHP 8.5\\n"); exit(1); }'
+          composer validate --strict --no-check-publish
+          composer check-platform-reqs
+          composer audit --locked --format=plain
+          php artisan --version
+          php -r '$lock=json_decode(file_get_contents("composer.lock"),true); foreach ([["packages","laravel/framework","13"],["packages-dev","pestphp/pest","4"]] as $spec) { $found=false; foreach($lock[$spec[0]] as $pkg) { if ($pkg["name"]===$spec[1] && preg_match("/^v?".$spec[2]."\\./",$pkg["version"])) { $found=true; } } if (!$found) { fwrite(STDERR, "Version de lock inesperada: ".$spec[1]."\\n"); exit(1); } }'
       - name: Instalar cliente PostgreSQL para aserciones reales
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Crear roles de plataforma ficticios (solo CI)
@@ -157,6 +169,16 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE anon NOLOGIN'
           psql -v ON_ERROR_STOP=1 -c 'CREATE ROLE authenticated NOLOGIN'
+      # La migracion 2026_10_20_235900 es SOLO de datos ficticios para
+      # Supabase Dev y aborta deliberadamente fuera de ese entorno.
+      # Excluirla del ensayo de ESQUEMA sin desactivar su guard de seguridad.
+      # El checkout/runner de Actions es efimero: nunca se altera main.
+      - name: Excluir fixture Dev exclusiva antes de migrar el esquema CI
+        run: |
+          fixture="database/migrations/2026_10_20_235900_create_dev_company_b_via_laravel.php"
+          test -f "$fixture"
+          mkdir -p "$RUNNER_TEMP/dev-fixtures"
+          mv "$fixture" "$RUNNER_TEMP/dev-fixtures/"
       - name: Migrar esquema real Laravel en PostgreSQL CI
         run: php artisan migrate --database=pgsql_migrations --force --no-interaction
       - name: Verificar rol app_backend y RLS reales
