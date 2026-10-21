@@ -206,3 +206,12 @@ php scripts/phase1-neon-preflight.php
 ```
 
 La misma evidencia confirmó además `APP_KEY` de longitud inválida y `DB_APP_BACKEND_ROLE_PASSWORD` vacío. El preflight ahora verifica explícitamente longitud/formato de `APP_KEY` sin revelar su contenido. Completar contraseña del rol de app e instalar una APP_KEY válida **solamente para este entorno de desarrollo nuevo**, preservando secretos reales ya configurados. **No hacer cambios DDL/DML ni ejecutar migrate hasta PASS del preflight seguro y verificación read-only del destino.**
+
+
+## F1.6 — Claves locales tras limpieza de variables (21/10/2026)
+
+El usuario obtuvo dos PASS del limpiador (20 variables heredadas vacías eliminadas, y PHP hijo limpio). El diagnóstico confirmó después que `APP_ENV=local` y ambos hosts de Neon `contabilidad-dev` se leen bien. **No hay problema de conexión por variables heredadas.** La comprobación actual de Laravel se detiene únicamente por `APP_KEY` inválida y por divergencia entre `DB_PASSWORD` y `DB_APP_BACKEND_ROLE_PASSWORD`. El usuario indicó que `DB_APP_BACKEND_ROLE_PASSWORD` y `DB_APP_BACKEND_NEW_PASSWORD` son iguales (35 caracteres); esto **no** equivale a que `DB_PASSWORD` coincida, y la variable `NEW_PASSWORD` solo corresponde a rotación del rol existente, no a bootstrap inicial.
+
+`phase1-neon-env-origins.php` ahora informa **solamente SI/NO**, sin imprimir hashes, passwords ni claves: validez de APP_KEY tanto en archivo como tras bootstrap, si `DB_PASSWORD` coincide con `DB_APP_BACKEND_ROLE_PASSWORD`, y si el secreto de rotación coincide con el rol. No revela valores ni conecta a PostgreSQL. En una rama Neon nueva sin datos cifrados que conservar, con entorno ya saneado, se permite regenerar APP_KEY mediante `php artisan key:generate --force` y validar inmediatamente; **no regenerar sobre datos cifrados existentes**. El usuario debe alinear privadamente DB_PASSWORD con el secreto inicial del rol, y reservar `DB_APP_BACKEND_NEW_PASSWORD` para rotación, pudiendo dejarla vacía ahora.
+
+**No ejecutar migraciones Neon** hasta comprobar APP_KEY válida, coincidencia DB_PASSWORD/ROLE, preflight de configuración PASS y `--read-only --require-empty`. Neon production y Supabase permanecen intactos.
