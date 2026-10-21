@@ -1,0 +1,100 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * F1.4 - Restringe las lecturas de audit_logs a la empresa activa.
+ *
+ * Anteriormente la politica SELECT incluia 'company_id IS NULL' y exponia
+ * eventos globales de sistema a cualquier sesion app_backend, incluso
+ * sin contexto de empresa. Los registros permanecen intactos: NO hay DML.
+ *
+ * Los auditores globales deberan contar con una ruta administrativa separada
+ * y controles de autorizacion explicitos; no se habilita acceso general.
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        $db = DB::connection('pgsql_migrations');
+        $config = $db->getConfig();
+        $host = (string) ($config['host'] ?? '');
+        $dbName = (string) ($config['database'] ?? '');
+        $locator = implode(' ', [
+            $host,
+            (string) ($config['url'] ?? ''),
+            (string) ($config['username'] ?? ''),
+        ]);
+
+        $isDisposableCI = app()->environment('testing')
+            && $host === '127.0.0.1'
+            && $dbName === 'contabilidad_ci';
+        $isApprovedDev = app()->environment('local')
+            && $dbName === 'postgres'
+            && str_contains($locator, 'bnjwxphwtkhblvhsnylj');
+
+        if (! $isDisposableCI && ! $isApprovedDev) {
+            throw new RuntimeException('Bloqueo: politica de auditoria solo en Dev aprobado o PostgreSQL CI local.');
+        }
+
+        $identity = $db->selectOne('SELECT current_user AS db_role, current_database() AS db_name');
+        if ($identity?->db_role !== 'postgres' || $identity?->db_name !== $dbName) {
+            throw new RuntimeException('Se requiere conexion administrativa postgres.');
+        }
+
+        $db->transaction(function () use ($db): void {
+            $state = $db->selectOne(<<<'SQL'
+                SELECT c.relrowsecurity AS enabled,
+                       c.relforcerowsecurity AS forced
+                FROM pg_catalog.pg_class c
+                JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname='public'
+                  AND c.relname='audit_logs'
+                  AND c.relkind='r'
+                SQL);
+            if ($state === null || ! (bool) $state->enabled || ! (bool) $state->forced) {
+                throw new RuntimeException('La tabla audit_logs debe tener ENABLE y FORCE RLS.');
+            }
+
+            $db->unprepared(<<<'SQL'
+                DROP POLICY IF EXISTS audit_logs_select_policy ON public.audit_logs;
+                CREATE POLICY audit_logs_select_policy
+                    ON public.audit_logs
+                    AS PERMISSIVE
+                    FOR SELECT
+                    TO app_backend
+                    USING (
+                        company_id IS NOT NULL
+                        AND company_id = (SELECT public.app_current_company_id())
+                    );
+                SQL);
+
+            $rule = $db->selectOne(<<<'SQL'
+                SELECT pg_catalog.pg_get_expr(p.polqual, p.polrelid) AS expression
+                FROM pg_catalog.pg_policy p
+                JOIN pg_catalog.pg_class c ON c.oid = p.polrelid
+                JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname='public'
+                  AND c.relname='audit_logs'
+                  AND p.polname='audit_logs_select_policy'
+                  AND p.polcmd='r'
+                SQL);
+
+            $expression = (string) ($rule?->expression ?? '');
+            if ($expression === ''
+                || ! str_contains($expression, 'company_id IS NOT NULL')
+                || str_contains($expression, 'company_id IS NULL')) {
+                throw new RuntimeException('La politica de lectura de auditoria no quedo restringida.');
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        // Prohibido volver a exponer eventos globales a todos los tenants.
+        throw new RuntimeException('Restaurar la exposicion global de audit_logs no es un rollback seguro.');
+    }
+};
