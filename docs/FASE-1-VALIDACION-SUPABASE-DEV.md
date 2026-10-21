@@ -306,3 +306,31 @@ if ($LASTEXITCODE -ne 0) { throw 'F1.4 segunda migracion fallida' }
 **IMPORTANTE:** en versiones anteriores del ejecutor, `php artisan` podía imprimir FAIL y devolver código cero. Por tanto, **inspeccionar también que cada migración muestre DONE** y validar posteriormente las dos filas en `migrations` mediante una consulta de catálogo independiente; no interpretar únicamente `$LASTEXITCODE` como éxito. La salida de la primera migración se debe verificar antes de ejecutar la segunda. Verificar en el advisor que desaparezcan los cinco `function_search_path_mutable`, que los 7 eventos globales permanezcan íntegros y que la política de SELECT ya no admita `company_id IS NULL`. No cambiar registros ni permisos del usuario ni del plan de cuentas.
 
 **GitHub Actions CI** continúa sin estado PASS verificable por bloqueo externo de runners/facturación; por ello F1 sigue abierta aunque el ensayo Docker esté aprobado.
+
+
+## F1.5 — Petición de PostgreSQL 18 y bloqueo previo de conexión administrativa (21/10/2026)
+
+El usuario ejecutó Laravel 13.38.0 y trató de aplicar la migración de search_path a Supabase Dev mediante `pgsql_migrations`. **Falló antes de conectar/ejecutar SQL**:
+
+```text
+SQLSTATE[08006] [7] invalid sslmode value: "connect_timeout=30"
+(Connection: pgsql_migrations, Host: , Port: , Database: )
+Migración 2026_10_21_010000 no confirmada; el bucle PowerShell se detuvo.
+```
+
+**Diagnóstico:** configuración de conexión/URL administrativa inválida. No es un error de PostgreSQL 17 ni un motivo para forzar una actualización a 18. Verificar `backend/.env` (sin publicar contraseñas): preferir `DB_MIGRATIONS_URL=` vacía y variables independientes `DB_MIGRATIONS_HOST=db.bnjwxphwtkhblvhsnylj.supabase.co`, `DB_MIGRATIONS_PORT=5432`, `DB_MIGRATIONS_DATABASE=postgres`, `DB_MIGRATIONS_USERNAME=postgres`, `DB_MIGRATIONS_SSLMODE=require`. Evitar parámetros malformados `sslmode=connect_timeout=30`; nunca exponer una URL con credenciales.
+
+Se publicó `backend/scripts/phase1-admin-connection-preflight.php`: diagnostica la configuración Laravel sin realizar conexiones SQL ni imprimir credenciales. Ejecutar `php scripts/phase1-admin-connection-preflight.php` después de revisar `.env`. No ejecutar migraciones Dev hasta obtener PASS y verificar destino.
+
+**Versión Supabase Dev verificada por herramientas de proyecto y SQL:** PostgreSQL **17.11**, proyecto activo/healthy. Al 21/10/2026, la documentación pública de Supabase describe PG17 como versión principal y habilita grandes actualizaciones mediante la opción **Upgrade project** del Dashboard; **no se confirmó que la versión 18 esté disponible para actualizar directamente este proyecto administrado**. No sustituir la imagen `supabase/postgres` ni modificar manualmente el servidor Supabase alojado.
+
+**Preparación opcional de compatibilidad PostgreSQL 18 (solo Docker):** el ejecutor `phase1-isolated-writes-docker.ps1` admite `-PostgresVersion 18`; mantiene 17 por defecto, valida `SHOW server_version`, y ejecuta la batería F1.4 completa contra una base nueva `contabilidad_ci`, sin cambiar el servidor Supabase ni migraciones reales:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+.\scripts\phase1-isolated-writes-docker.ps1 -PostgresVersion 18
+```
+
+**Estado:** implementación de opción PG18 y diagnóstico sin SQL publicados; **PG18 local aún no probado**. La aplicación F1.4 sobre Supabase Dev queda bloqueada hasta corregir la conexión y certificar los controles. Los cambios PG17→PG18 del proyecto alojado requieren confirmación oficial de elegibilidad, respaldo y pruebas de compatibilidad RLS/triggers/extensiones/roles.
