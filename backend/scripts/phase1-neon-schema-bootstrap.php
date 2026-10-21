@@ -157,14 +157,14 @@ try {
                (SELECT count(*) FROM pg_catalog.pg_class c
                 JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
                 WHERE n.nspname='public' AND c.relkind IN ('r','p'))::integer AS tables,
-               EXISTS (SELECT 1 FROM pg_catalog.pg_roles
-                WHERE rolname='app_backend') AS role_exists
+               (SELECT count(*) FROM pg_catalog.pg_roles
+                WHERE rolname='app_backend')::integer AS existing_roles
         SQL);
     if (($identity->db ?? '') !== $expectedDb
         || ($identity->username ?? '') !== 'neondb_owner'
         || intdiv((int) ($identity->version_num ?? 0), 10000) !== 18
         || (int) ($identity->tables ?? -1) !== 0
-        || (bool) ($identity->role_exists ?? true)) {
+        || (int) ($identity->existing_roles ?? -1) !== 0) {
         throw new RuntimeException('La rama no esta vacia o no cumple las precondiciones.');
     }
     echo '[PASS] Conexion admin real: PG18, neondb vacia, app_backend ausente.'.PHP_EOL;
