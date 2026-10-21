@@ -36,12 +36,30 @@ return new class extends Migration
             && $dbName === 'postgres'
             && str_contains($locator, 'bnjwxphwtkhblvhsnylj');
 
-        if (! $isDisposableCI && ! $isApprovedDev) {
-            throw new RuntimeException('Bloqueo: politica de auditoria solo en Dev aprobado o PostgreSQL CI local.');
+        // Neon: solo la rama de pruebas; nunca el endpoint raiz production.
+        // El nombre de rama es declarativo y el host debe coincidir con
+        // el endpoint DIRECTO configurado explicitamente para pruebas.
+        $branchName = strtolower(trim((string) env('NEON_TEST_BRANCH_NAME', '')));
+        $expectedNeonHost = trim((string) env('NEON_TEST_BRANCH_HOST', ''));
+        $isApprovedNeon = app()->environment('local')
+            && $dbName === 'neondb'
+            && $host !== ''
+            && $host === $expectedNeonHost
+            && $host !== 'ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech'
+            && ! str_contains($host, '-pooler.')
+            && str_ends_with($host, '.aws.neon.tech')
+            && (string) ($config['username'] ?? '') === 'neondb_owner'
+            && trim((string) ($config['url'] ?? '')) === ''
+            && ! in_array($branchName, ['', 'production', 'prod', 'main', 'master'], true)
+            && in_array((string) ($config['sslmode'] ?? ''), ['require', 'verify-ca', 'verify-full'], true);
+
+        if (! $isDisposableCI && ! $isApprovedDev && ! $isApprovedNeon) {
+            throw new RuntimeException('Bloqueo: politica de auditoria solo en Supabase Dev aprobado, rama Neon de pruebas o PostgreSQL CI local.');
         }
 
         $identity = $db->selectOne('SELECT current_user AS db_role, current_database() AS db_name');
-        if ($identity?->db_role !== 'postgres' || $identity?->db_name !== $dbName) {
+        $expectedAdminRole = $isApprovedNeon ? 'neondb_owner' : 'postgres';
+        if ($identity?->db_role !== $expectedAdminRole || $identity?->db_name !== $dbName) {
             throw new RuntimeException('Se requiere conexion administrativa postgres.');
         }
 
