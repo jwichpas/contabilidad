@@ -12,13 +12,16 @@ declare(strict_types=1);
  * Ejecutar dentro de backend:
  *   php scripts/phase1-neon-preflight.php
  *   php scripts/phase1-neon-preflight.php --read-only
+ *   php scripts/phase1-neon-preflight.php --read-only --require-empty
  */
 $backend = dirname(__DIR__);
 require $backend.'/vendor/autoload.php';
 
-$readOnly = ($argc === 2 && ($argv[1] ?? '') === '--read-only');
+$readOnly = ($argc === 2 && ($argv[1] ?? '') === '--read-only')
+    || ($argc === 3 && ($argv[1] ?? '') === '--read-only' && ($argv[2] ?? '') === '--require-empty');
+$requireEmpty = $argc === 3 && ($argv[2] ?? '') === '--require-empty';
 if ($argc > 1 && ! $readOnly) {
-    fwrite(STDERR, "Uso: php scripts/phase1-neon-preflight.php [--read-only]\n");
+    fwrite(STDERR, "Uso: php scripts/phase1-neon-preflight.php [--read-only [--require-empty]]\n");
     exit(2);
 }
 if (is_file($backend.'/bootstrap/cache/config.php')) {
@@ -151,6 +154,9 @@ try {
     echo '[PASS] Neon remoto: PG'.intdiv((int)$identity->version_num,10000)
         .', DB neondb, neondb_owner y rol neon_superuser presentes.'.PHP_EOL;
     echo '[INFO] Tablas public existentes: '.(int)$identity->public_tables.PHP_EOL;
+    if ($requireEmpty && (int)$identity->public_tables !== 0) {
+        throw new RuntimeException('Esquema public no esta vacio; prohibido el bootstrap inicial sobre datos existentes.');
+    }
     echo '[INFO] app_backend restringido existe: '.((int)$identity->restricted_roles === 1 ? 'SI' : 'NO; requiere bootstrap posterior').PHP_EOL;
     echo '[BLOQUEO] Preflight completado; no se ejecuto ningun DML/DDL ni migrate.'.PHP_EOL;
 } catch (\Throwable $e) {
