@@ -147,8 +147,7 @@ final readonly class CreateCompanyFromWizardController
                     ]);
 
                     CompanySetting::query()->create([
-                        'company_id' => $companyId,
-                        'base_currency_id' => $currencyMap[$validated['base_currency_code']]->id,
+                                                'base_currency_id' => $currencyMap[$validated['base_currency_code']]->id,
                         'secondary_currency_id' => isset($validated['secondary_currency_codes'][0])
                             ? $currencyMap[$validated['secondary_currency_codes'][0]]->id : null,
                         'tax_regime' => $validated['tax_regime'],
@@ -174,8 +173,7 @@ final readonly class CreateCompanyFromWizardController
 
                     foreach ($validated['economic_activities'] as $activity) {
                         CompanyEconomicActivity::query()->create([
-                            'company_id' => $companyId,
-                            'sector_code' => $activity['sector_code'],
+                                                        'sector_code' => $activity['sector_code'],
                             'ciiu_code' => $activity['ciiu_code'],
                             'description' => trim($activity['description']),
                             'is_primary' => DB::raw($activity['is_primary'] ? 'TRUE' : 'FALSE'),
