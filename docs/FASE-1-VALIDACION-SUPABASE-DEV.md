@@ -263,3 +263,46 @@ El PASS real requiere: todos los archivos elegibles registrados en `migrations`,
 
 
 **Nota posterior de integridad del script:** una revisión del archivo remoto detectó que la primera publicación del control `migrations` había quedado truncada en una expresión PowerShell y con un segmento duplicado al final. Se reconstruyó **el archivo completo** y se volvió a leer desde GitHub para confirmar un único `try/catch/finally`, un único cierre `if (-not $passed) { exit 1 }`, el bloque íntegro de comprobación de migraciones y las puertas de JUnit. **Aún se requiere analizar la sintaxis PowerShell en Windows antes de ejecutarlo**; la inspección estructural remota no sustituye el parser nativo. Último arreglo del ejecutor: `0086b5d3`.
+
+
+## F1.4 — Ensayo Docker aprobado; promoción a Supabase Dev pendiente (21/10/2026)
+
+**Evidencia real del usuario, luego de corregir las cinco exclusiones de Supabase, el `search_path` y la integridad del ejecutor:**
+
+```text
+[PASS] Conexion app_backend sujeta a RLS en Docker efimero
+PASS Tests\Feature\Security\CompanyRoleAuthorizationTest
+PASS Tests\Feature\Security\TenantContextNestedTest
+Tests: 12 passed (37 assertions)
+[PASS] Pest JUnit: 12 pruebas, 0 fallos/errores verificados.
+[PASS] F1.3 escritura interempresa y pruebas HTTP en PostgreSQL aislado.
+[LIMPIEZA] Contenedor PostgreSQL efimero eliminado.
+```
+
+**F1.4 aprobación del ensayo de regresión aislado:** el runner alcanza el paso HTTP solo si cada migración Laravel elegible consta en `public.migrations`, la comprobación `phase1-search-path-rehearsal.sql` verifica las cinco funciones y `phase1-real-cross-tenant-writes.sql` confirma los controles RLS de auditoría (globales, A/B y sin contexto) y DML con rollback. El JUnit de 12/12 valida el resto. Se actualizó la etiqueta final del runner para indicar F1.4. Estos pasos fueron certificados por el PASS final, aunque el extracto aportado es solo el tramo final. No confundirlo con aplicación real en Supabase Dev.
+
+**Preflight remoto read-only sobre Supabase Dev**, realizado después del PASS (sin alterar tablas):
+
+| Verificación | Valor |
+|---|---:|
+| Funciones F1.4 ya fijadas a `search_path=pg_catalog` | **0/5** |
+| Registros de las dos migraciones F1.4 en `public.migrations` | **0/2** |
+| Eventos globales preservados en `public.audit_logs` | **7** |
+| Política antigua que incluye `company_id IS NULL` | **1** |
+
+**Siguiente puerta: despliegue exclusivamente mediante Artisan local con conexión administrativa `pgsql_migrations`**, sin `migrate` masivo, `migrate:fresh`, `db:seed`, ni SQL manual en el editor de Supabase. Antes de ejecutarlo, confirmar que `php artisan --version` indica Laravel 13 y que el archivo `backend/.env` utiliza el proyecto Dev aprobado y no producción. Ambas migraciones implementan guard de ambiente, identidad PostgreSQL y proyecto; cualquier fallo debe detener el avance.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php artisan --version
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_21_010000_harden_postgres_function_search_path.php --force
+if ($LASTEXITCODE -ne 0) { throw 'F1.4 primera migracion fallida' }
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_21_020000_close_global_audit_log_read_leak.php --force
+if ($LASTEXITCODE -ne 0) { throw 'F1.4 segunda migracion fallida' }
+```
+
+**IMPORTANTE:** en versiones anteriores del ejecutor, `php artisan` podía imprimir FAIL y devolver código cero. Por tanto, **inspeccionar también que cada migración muestre DONE** y validar posteriormente las dos filas en `migrations` mediante una consulta de catálogo independiente; no interpretar únicamente `$LASTEXITCODE` como éxito. La salida de la primera migración se debe verificar antes de ejecutar la segunda. Verificar en el advisor que desaparezcan los cinco `function_search_path_mutable`, que los 7 eventos globales permanezcan íntegros y que la política de SELECT ya no admita `company_id IS NULL`. No cambiar registros ni permisos del usuario ni del plan de cuentas.
+
+**GitHub Actions CI** continúa sin estado PASS verificable por bloqueo externo de runners/facturación; por ello F1 sigue abierta aunque el ensayo Docker esté aprobado.
