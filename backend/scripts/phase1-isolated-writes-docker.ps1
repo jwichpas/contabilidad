@@ -224,7 +224,7 @@ echo "[PASS] Conexion administrativa verificada contra Docker efimero\n";
     # Validar la version realmente iniciada: nunca aceptar silenciosamente
     # una imagen distinta de la solicitada.
     $serverVersion = (& docker exec $dockerName 'psql' '-U' 'postgres' '-d' 'contabilidad_ci' '-X' '-A' '-t' '-v' 'ON_ERROR_STOP=1' '-c' 'SHOW server_version' 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0 -or $serverVersion -notmatch ('^' + [regex]::Escape($PostgresVersion) + '\\.[0-9]+')) {
+    if ($LASTEXITCODE -ne 0 -or $serverVersion -notmatch ('^' + [regex]::Escape($PostgresVersion) + '\.[0-9]+')) {
         throw ('Version PostgreSQL del Docker inesperada: ' + $serverVersion)
     }
     Write-Host ('[PASS] PostgreSQL efimero version ' + $serverVersion)
