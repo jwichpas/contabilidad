@@ -252,11 +252,28 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-cross-tenant-writes.sql
       - name: Run isolated Laravel unit tests
         run: ./vendor/bin/pest --testsuite=Unit
-      - name: F1.2-F1.3 HTTP and nested tenant tests as restricted app_backend
+      - name: F1.2-F1.3 HTTP y contexto RLS con JUnit obligatorio (solo PG17 CI)
         env:
           DB_USERNAME: app_backend
           DB_PASSWORD: temporary-app-ci-only
-        run: ./vendor/bin/pest tests/Feature/Security/CompanyRoleAuthorizationTest.php tests/Feature/Security/TenantContextNestedTest.php
+        run: |
+          ./vendor/bin/pest tests/Feature/Security/CompanyRoleAuthorizationTest.php tests/Feature/Security/TenantContextNestedTest.php --log-junit="$RUNNER_TEMP/f1-roles-junit.xml"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import xml.etree.ElementTree as ET
+          path = Path(os.environ["RUNNER_TEMP"]) / "f1-roles-junit.xml"
+          if not path.is_file():
+              raise SystemExit("FAIL: Pest no genero reporte JUnit")
+          root = ET.parse(path).getroot()
+          cases = root.findall(".//testcase")
+          failures = root.findall(".//failure") + root.findall(".//error")
+          suites = root.findall(".//testsuite")
+          bad_suites = [s.attrib for s in suites if int(s.get("failures", "0")) or int(s.get("errors", "0"))]
+          if len(cases) != 12 or failures or bad_suites:
+              raise SystemExit(f"FAIL: Pest JUnit total={len(cases)} errores/fallos={len(failures)} suite={bad_suites}")
+          print("PASS: Pest JUnit 12 pruebas, 0 fallos")
+          PY
       - name: Validate changed security PHP syntax
         run: |
           php -l app/Http/Middleware/RequireCompanyRole.php
