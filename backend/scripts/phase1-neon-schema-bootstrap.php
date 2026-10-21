@@ -158,16 +158,23 @@ try {
                 JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
                 WHERE n.nspname='public' AND c.relkind IN ('r','p'))::integer AS tables,
                (SELECT count(*) FROM pg_catalog.pg_roles
-                WHERE rolname='app_backend')::integer AS existing_roles
+                WHERE rolname='app_backend')::integer AS existing_roles,
+               (SELECT count(*) FROM pg_catalog.pg_roles
+                WHERE rolname=current_user AND rolcreaterole
+                  AND rolcanlogin AND NOT rolsuper)::integer AS admin_can_create_roles,
+               (SELECT count(*) FROM pg_catalog.pg_available_extensions
+                WHERE name='pgcrypto')::integer AS pgcrypto_available
         SQL);
     if (($identity->db ?? '') !== $expectedDb
         || ($identity->username ?? '') !== 'neondb_owner'
         || intdiv((int) ($identity->version_num ?? 0), 10000) !== 18
         || (int) ($identity->tables ?? -1) !== 0
-        || (int) ($identity->existing_roles ?? -1) !== 0) {
+        || (int) ($identity->existing_roles ?? -1) !== 0
+        || (int) ($identity->admin_can_create_roles ?? 0) !== 1
+        || (int) ($identity->pgcrypto_available ?? 0) !== 1) {
         throw new RuntimeException('La rama no esta vacia o no cumple las precondiciones.');
     }
-    echo '[PASS] Conexion admin real: PG18, neondb vacia, app_backend ausente.'.PHP_EOL;
+    echo '[PASS] Conexion admin real: PG18, neondb vacia, app_backend ausente, CREATEROLE y pgcrypto disponibles.'.PHP_EOL;
 } catch (\Throwable $failure) {
     // Nunca mostrar excepciones que podrían contener URI/SQL con contraseñas.
     fwrite(STDERR, "[FAIL] Conexion/identidad previa no certificada; no se ejecuto ninguna migracion.\n");
