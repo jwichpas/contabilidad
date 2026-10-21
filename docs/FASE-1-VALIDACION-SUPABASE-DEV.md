@@ -84,3 +84,26 @@ Duration: 19.00s
 **Aprobado para operaciones probadas:** listado autenticado de dos empresas, GET de cuentas y asientos separados, HTTP 401 para invitado, 400 para encabezados malformados, 403 para empresa inexistente, y cambio A → B → A sin fuga de contexto PostgreSQL user/tenant ni de caché de cuentas. No cubre acceso indebido con usuarios diferentes ni ejecución real de POST: esas puertas siguen abiertas.
 
 **Siguiente suite preparada, aún no ejecutada:** `backend/tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.php`. Utiliza una petición GET local simulada y ejecuta directamente `RequireCompanyRole` con una respuesta ficticia; **no llama a controladores de escritura ni realiza DML**. Verifica ADMIN/CHIEF_ACCOUNTANT separados entre empresas, rutas mal configuradas, rol inexistente, empresa ajena y usuario anónimo. Ejecutar exclusivamente ese archivo con `php artisan test`, después de `php -l`; para el resto de tests de autorización que generan usuarios y empresas, usar PostgreSQL efímero de CI.
+
+
+## F1.3 — Autorización de roles tras migración PHP 8.5/Laravel 13 — 21/10/2026
+
+El usuario ejecutó desde Windows, con `app_backend` y Supabase Dev, las siguientes pruebas **exclusivamente de lectura o middleware con handler simulado**:
+
+```text
+PASS Tests\\Feature\\Security\\ExistingCompaniesHttpReadOnlyTest
+Tests: 4 passed (40 assertions)
+Duration: 38.13s
+
+PASS Tests\\Feature\\Security\\ExistingCompaniesRoleGuardReadOnlyTest
+✓ it enforces company-specific ADMIN and CHIEF_ACCOUNTANT roles without executing writes
+✓ it fails closed for missing or invalid route roles and unauthenticated users
+Tests: 2 passed (18 assertions)
+Duration: 11.06s
+```
+
+**Acumulado F1 bajo Laravel 13: 6 pruebas, 58 aserciones PASS.** El test de roles valida autorizaciones **al invocar directamente el middleware** `RequireCompanyRole` en contextos de empresa A/B; no ejecuta los controladores de escritura, no modifica membresías ni demuestra todavía respuestas HTTP completas POST/PUT/PATCH o bloqueos de DML en PostgreSQL. El test también valida que las peticiones sin roles válidos no llegan al handler simulado.
+
+El usuario publicó en `main` el lock Laravel 13 / PHP 8.5 en commit `be67509`. Se actualizó el workflow de seguridad F1 a PHP 8.5 (jobs estático y migraciones sobre PG17 efímero), revisión de lock con Composer y exclusión en el workspace CI de la migración excepcional de datos ficticios de Supabase Dev; **resultados de GitHub Actions todavía no confirmados**.
+
+**Pendientes:** comprobar CI real, pruebas de roles y escritura con PostgreSQL 17 efímero, seguridad de los logs globales, cinco funciones con `search_path` mutable y autorización integral de rutas. No cerrar F1 por los 58 asserts de lectura/guard.
