@@ -90,3 +90,16 @@ La validación debe ejecutarse únicamente en el PostgreSQL efímero de CI. La b
 Agregado `backend/tests/security/phase1-search-path-rehearsal.sql` y ejecutor en GitHub Actions. El test usa las **cinco funciones reales** de Laravel, fija provisionalmente `search_path=''` con `ALTER FUNCTION` dentro de una transacción, verifica `proconfig`, `SECURITY INVOKER` y que `app_current_company_id()` continúe funcionando con tenant válido y ausente. Finaliza con `ROLLBACK`: no deja DDL persistido ni conecta con Supabase. Requiere que el job de migraciones Laravel funcione en PostgreSQL 17 temporal.
 
 **Puerta siguiente:** validar CI y revisar los triggers de jerarquía/asientos con el cambio temporal antes de elaborar una migración incremental aplicable al entorno activo. Este ensayo por sí mismo no corrige los avisos actuales de Supabase y no constituye aprobación F1.
+
+
+## 21/10/2026 — Continuidad F1.3 tras crear la empresa B
+
+Confirmado por ejecución del usuario: la migración Laravel creó empresa B ID **182** (batch 10). El script `phase1-rls-cross-company-readonly.php` devolvió **PASS para contextos 1 y 182**: 0 filas de otras empresas en 14 tablas, con rollback. Inventario comprobado por SELECT: empresa A 1.764 cuentas y B 1.764 cuentas, con configuración/membresía/monedas para ambas; empresa A aún sin actividad económica nueva.
+
+Se añadió `backend/tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php` para **validar en HTTP sin escribir** el selector de dos empresas activas del mismo usuario, la separación de IDs de cuentas operativas y el `company_id` de los asientos visibles por GET. El test solo se publica; **pendiente ejecución real por usuario**. Usa `DatabaseTransactions` común a Feature y salta si no hay dos empresas activas o el rol no es `app_backend`; un resultado SKIP no constituye PASS de autorización. Ejecutar únicamente este archivo contra el entorno de desarrollo aprobado:
+
+```powershell
+php artisan test tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php
+```
+
+La suite de roles `CompanyRoleAuthorizationTest.php` **NO debe ejecutarse contra Supabase Dev**: fabrica empresas/usuarios/roles y está diseñada para PostgreSQL 17 efímero en CI. Faltan HTTP negativos (401/403), escritura cruzada, auditoría global, 5 `search_path` y runner CI.
