@@ -288,7 +288,7 @@ echo "[PASS] Conexion app_backend sujeta a RLS en Docker efimero\n";
 
     Write-Host '[PASS] Pest JUnit: 12 pruebas, 0 fallos/errores verificados.'
     $passed = $true
-    Write-Host '[PASS] F1.3 escritura interempresa y pruebas HTTP en PostgreSQL aislado.'
+    Write-Host '[PASS] F1.4: migraciones, funciones, RLS de auditoria y pruebas HTTP en PostgreSQL aislado.'
 }
 catch {
     Write-Host ('[FAIL] ' + $_.Exception.Message)
