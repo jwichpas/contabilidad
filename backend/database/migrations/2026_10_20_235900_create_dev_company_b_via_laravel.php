@@ -113,7 +113,8 @@ return new class extends Migration
     
             // Las operaciones de negocio permanecen en UNA transacción app_backend.
             // La migración administrativa solo registra que la operación fue aplicada.
-            // PostgreSQL + PDO emulate prepares: los booleanos enlazados como PHP bool\n            // se convierten en 1/0. SQL TRUE/FALSE fijos conservan tipo boolean.\n            $db->transaction(function () use ($db, $tenant, $owner, $currencies): void {
+            // PostgreSQL/PDO: usar TRUE/FALSE tipados en los INSERT booleanos.
+            $db->transaction(function () use ($db, $tenant, $owner, $currencies): void {
                 $company = Company::query()->create([
                     'tax_id' => self::TAX_ID,
                     'business_name' => 'NEXUS EMPRESA PRUEBA B S.A.C.',
