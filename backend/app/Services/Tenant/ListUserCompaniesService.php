@@ -28,7 +28,14 @@ final readonly class ListUserCompaniesService
      */
     public function forUser(User $user): array
     {
-        return DB::transaction(static function () use ($user): array {
+        // RELEASE SAVEPOINT no restablece SET LOCAL; si hay transacción exterior,
+        // restaurar el user_id anterior antes de salir de la transacción anidada.
+        $nested = DB::transactionLevel() > 0;
+        $previousUserId = $nested
+            ? (string) (DB::selectOne("SELECT current_setting('app.current_user_id', true) AS user_id")?->user_id ?? '')
+            : '';
+
+        return DB::transaction(static function () use ($user, $nested, $previousUserId): array {
             DB::selectOne(
                 "SELECT set_config('app.current_user_id', ?, true)",
                 [(string) $user->id]
@@ -41,7 +48,7 @@ final readonly class ListUserCompaniesService
                 ->whereRaw('company_user.is_active IS TRUE')
                 ->get();
 
-            return $memberships->map(static function (Company $company): array {
+            $result = $memberships->map(static function (Company $company): array {
                 return [
                     'id' => (int) $company->id,
                     'uuid' => (string) $company->uuid,
@@ -52,6 +59,15 @@ final readonly class ListUserCompaniesService
                     'role' => $company->pivot->role?->value ?? (string) $company->pivot->role,
                 ];
             })->values()->all();
+
+            if ($nested) {
+                DB::selectOne(
+                    "SELECT set_config('app.current_user_id', ?, true)",
+                    [$previousUserId]
+                );
+            }
+
+            return $result;
         });
     }
 }
