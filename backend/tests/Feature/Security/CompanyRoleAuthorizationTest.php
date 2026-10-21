@@ -150,7 +150,21 @@ it('permits auditor read access only within an active membership', function (): 
 });
 
 it('rejects even valid roles if the destination company is inactive', function (): void {
-    $this->companyB->forceFill(['is_active' => DB::raw('FALSE')])->save();
+    // No usar forceFill/save con DB::raw('FALSE') en un atributo Eloquent
+    // casteado a bool: el cast del objeto Expression puede convertirlo a TRUE.
+    // Query Builder aplica el literal booleano directamente en PostgreSQL.
+    $affected = DB::table('companies')
+        ->where('id', (int) $this->companyB->id)
+        ->update(['is_active' => DB::raw('FALSE')]);
+    expect($affected)->toBe(1);
+
+    // Esta asercion identifica inequívocamente el estado guardado ANTES de
+    // evaluar el middleware: si falla, el error es del fixture y no de roles.
+    $state = DB::selectOne(
+        'SELECT CASE WHEN is_active IS FALSE THEN 1 ELSE 0 END AS disabled FROM public.companies WHERE id = ?::bigint',
+        [(int) $this->companyB->id]
+    );
+    expect((int) ($state->disabled ?? 0))->toBe(1);
 
     $this->actingAs($this->accountant)
         ->withHeader('X-Company-Id', (string) $this->companyB->id)
