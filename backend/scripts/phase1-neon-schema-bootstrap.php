@@ -238,13 +238,36 @@ try {
     $role = $db->selectOne(<<<'SQL'
         SELECT count(*)::integer AS n FROM pg_catalog.pg_roles
         WHERE rolname='app_backend' AND NOT rolsuper AND NOT rolbypassrls
-          AND rolcanlogin AND NOT rolcreaterole AND NOT rolcreatedb
+          AND rolcanlogin AND NOT rolinherit
+          AND NOT rolcreaterole AND NOT rolcreatedb
+          AND NOT EXISTS (
+            SELECT 1 FROM pg_catalog.pg_auth_members membership
+            JOIN pg_catalog.pg_roles granted_role ON granted_role.oid=membership.roleid
+            WHERE membership.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname='app_backend')
+              AND granted_role.rolname='neon_superuser'
+          )
         SQL);
+    $tenantRls = $db->selectOne(<<<'SQL'
+        SELECT count(*)::integer AS n
+        FROM pg_catalog.pg_class c
+        JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public'
+          AND c.relname IN (
+            'company_user', 'accounting_accounts', 'cost_centers',
+            'cash_flow_areas', 'company_areas', 'company_settings',
+            'entities', 'fiscal_periods', 'exchange_rates',
+            'journal_entries', 'journal_entry_lines', 'audit_logs',
+            'company_currencies')
+          AND c.relkind='r' AND c.relrowsecurity AND c.relforcerowsecurity
+        SQL);
+    $migrationCount = $db->selectOne('SELECT count(*)::integer AS n FROM public.migrations');
     if ((int) ($hardened->n ?? 0) !== 5 || (int) ($policy->total ?? 0) !== 1
-        || (int) ($policy->leaked ?? 1) !== 0 || (int) ($role->n ?? 0) !== 1) {
+        || (int) ($policy->leaked ?? 1) !== 0 || (int) ($role->n ?? 0) !== 1
+        || (int) ($tenantRls->n ?? 0) !== 13
+        || (int) ($migrationCount->n ?? 0) !== 16) {
         throw new RuntimeException('Control final de roles, search_path o auditoria no aprobado.');
     }
-    echo '[PASS] 16 migraciones; cinco search_path protegidos; audit_logs tenant-only; app_backend limitado.'.PHP_EOL;
+    echo '[PASS] 16 migraciones; 13 tablas con FORCE RLS; cinco search_path protegidos; audit_logs tenant-only; app_backend limitado.'.PHP_EOL;
     echo '[PENDIENTE] Pruebas integradas RLS/HTTP desde rol app_backend en rama de pruebas.'.PHP_EOL;
 } catch (\Throwable $failure) {
     fwrite(STDERR, "[FAIL] Esquema migrado pero verificaciones finales pendientes: no iniciar aplicaciones.\n");
