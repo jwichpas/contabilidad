@@ -144,3 +144,24 @@ php scripts/phase1-neon-preflight.php
 Despues completar `DB_MIGRATIONS_PASSWORD` con credencial Neon de la rama dev, `DB_APP_BACKEND_ROLE_PASSWORD` con secreto aleatorio fuerte y `DB_PASSWORD` con el mismo valor (rol aun sin crear). Si el preflight indica configuracion Laravel no cargada a pesar de env visibles, **detenerse y revisar bootstrapping** antes de permitir SQL. Si reporta variables heredadas en el proceso, revisar su procedencia sin publicar valores, utilizar nueva terminal para evitar contaminacion de entorno y repetir. Duplicados de `DB_APP_BACKEND_NEW_PASSWORD` quedan fuera de la reparacion: no afecta a esta puerta pero conviene eliminarlos manualmente antes de fases posteriores.
 
 El endpoint production y el proyecto Supabase NO fueron modificados. No se ejecutaron DDL, DML ni migraciones remotas; por tanto F1.6 aun no esta cerrado.
+
+
+## F1.6 — Causa confirmada: variables vacías heredadas en PowerShell
+
+La nueva evidencia del usuario confirmó que el `.env` YA apunta correctamente a Neon `contabilidad-dev` en ambos hosts, `neondb` y `APP_ENV=local`, pero la configuración cargada por Laravel muestra `APP_ENV`, hosts, puertos y usuario vacíos. El propio preflight indica que hay variables heredadas del proceso para esos nombres. **No cambiar los endpoints nuevamente.** Las variables de proceso declaradas vacías prevalecen sobre los valores válidos del `.env`.
+
+Se incorporó `backend/scripts/phase1-neon-clear-empty-process-env.ps1`: el modo predeterminado solo cuenta y enumera **nombres de variables heredadas**, sin mostrar valores. Con `-Apply` elimina exclusivamente las variables de proceso vacías o espacios en blanco **de la terminal PowerShell actual**; preserva cualquier variable no vacía, nunca modifica `.env`, no abre una conexión ni ejecuta SQL. Si muestra variables no vacías que podrían sobrescribir `.env`, revisarlas sin publicar sus valores. También se mejoró el preflight para que señale exactamente las variables heredadas vacías y no continúe con SQL cuando aparezcan.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+.\scripts\phase1-neon-clear-empty-process-env.ps1
+.\scripts\phase1-neon-clear-empty-process-env.ps1 -Apply
+php -l scripts/phase1-neon-preflight.php
+php scripts/phase1-neon-preflight.php
+```
+
+El `.env` aportado aún tiene vacías las contraseñas `DB_MIGRATIONS_PASSWORD`, `DB_PASSWORD` y `DB_APP_BACKEND_ROLE_PASSWORD`; son un bloqueo independiente que el usuario debe resolver **privadamente**. No guardar ni mostrar secretos en el repositorio. Si `APP_KEY=base64:x` es realmente literal (y no una redacción), debe generarse una clave válida con `php artisan key:generate` **solo en este entorno nuevo**, nunca en un entorno con datos cifrados ya almacenados.
+
+**No se aplicaron migraciones a Neon ni se modificó Neon production o Supabase.** La rama `contabilidad-dev` continúa creada y sin tablas del ERP. Antes de cualquier escritura, revalidar el host y ejecutar `--read-only --require-empty`.
