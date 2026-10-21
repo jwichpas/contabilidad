@@ -120,3 +120,34 @@ El usuario publicó en `main` el lock Laravel 13 / PHP 8.5 en commit `be67509`. 
 - `.github/workflows/phase1-security-static.yml`: ejecuta el nuevo SQL después de migrar el esquema real en PostgreSQL 17 y antes de las suites Pest. Continúa excluyendo exclusivamente del workspace CI la migración ficticia de empresa B (solo Supabase Dev).
 
 **Estado:** cambios publicados, pero **sin ejecución comprobada** del SQL ni de los tests que crean registros. Mantener F1 abierta. La suite Laravel 13 ya aprobada contra Supabase Dev se limita a 6 pruebas y 58 aserciones de lectura/guard con handler simulado. La prueba DML aislada no debe confundirse con un PASS hasta ejecutar su job y observar el log.
+
+## F1.3 — Alternativa local aislada ante bloqueo de GitHub Actions (21/10/2026)
+
+La ejecución [#43](https://github.com/jwichpas/contabilidad/actions/runs/39664475037) se observó con estado `failure` pero **sin jobs publicados** al consultar GitHub; ejecuciones anteriores igualmente muestran jobs fallidos sin pasos ni logs. No asumir que el SQL se ejecutó. Revisar las advertencias de GitHub Actions y la facturación/runners desde el sitio de GitHub; la causa exacta no está confirmada.
+
+Como alternativa independiente, se publicó `backend/scripts/phase1-isolated-writes-docker.ps1` para Windows con Docker Desktop Linux:
+
+- Crea PostgreSQL **17-alpine temporal**, base `contabilidad_ci`, contraseña de prueba aleatoria y puerto **solo 127.0.0.1**.
+- Verifica un token aleatorio creado únicamente en ese PostgreSQL y la conexión Laravel a ese mismo contenedor **antes de cualquier migración**. Rechaza `bootstrap/cache/config.php` y rutas/conexiones imprevistas.
+- Aplica las **15 migraciones de esquema/servicio independientes del proveedor** usando `php artisan migrate --path=... --database=pgsql_migrations` una a una, sin mover archivos en el repositorio. Las cuatro migraciones reservadas a Supabase (ACL públicas, rotación, listado global y empresa B) quedan intactas y no se aplican en Docker.
+- Ejecuta `phase1-real-cross-tenant-writes.sql` con el rol real `app_backend` en dos empresas ficticias, todos los DML revertidos.
+- Comprueba nuevamente la conexión `app_backend` de Laravel mediante token de Docker y ejecuta las suites `CompanyRoleAuthorizationTest.php` y `TenantContextNestedTest.php` sobre el contenedor desechable.
+- En `finally` restaura variables de entorno y elimina el contenedor. **Ningún DML a Supabase Dev ni producción.**
+
+**Ejecutar exclusivamente el script aislado, no los archivos Pest de escritura directamente en Supabase Dev:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+$tokens = $null
+$errors = $null
+[System.Management.Automation.Language.Parser]::ParseFile(
+    (Resolve-Path .\scripts\phase1-isolated-writes-docker.ps1).Path,
+    [ref]$tokens, [ref]$errors
+) | Out-Null
+if ($errors.Count -ne 0) { $errors | Format-List; throw 'Sintaxis PowerShell incorrecta' }
+.\scripts\phase1-isolated-writes-docker.ps1
+```
+
+**Estado:** runner/script SQL publicados, **no ejecutados todavía en Windows**, por lo tanto no declarar DML PASS. La CI sigue sin certificar y las cuatro migraciones atadas a Supabase requieren puertas independientes.
