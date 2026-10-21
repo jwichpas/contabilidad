@@ -151,3 +151,38 @@ if ($errors.Count -ne 0) { $errors | Format-List; throw 'Sintaxis PowerShell inc
 ```
 
 **Estado:** runner/script SQL publicados, **no ejecutados todavía en Windows**, por lo tanto no declarar DML PASS. La CI sigue sin certificar y las cuatro migraciones atadas a Supabase requieren puertas independientes.
+
+
+## F1.3 — Ejecución Docker real: SQL avanza, 1 fallo HTTP detectado (21/10/2026)
+
+**Evidencia entregada por el usuario al ejecutar `phase1-isolated-writes-docker.ps1`:**
+
+```text
+[PASS] Conexion app_backend sujeta a RLS en Docker efimero
+[HTTP] Ejecutando roles con escrituras de prueba solo en Docker.
+FAIL Tests\\Feature\\Security\\CompanyRoleAuthorizationTest
+PASS Tests\\Feature\\Security\\TenantContextNestedTest
+Tests: 1 failed, 11 passed (35 assertions)
+Expected response status code [403] but received 422.
+[LIMPIEZA] Contenedor PostgreSQL efimero eliminado.
+```
+
+La prueba fallida fue `it rejects even valid roles if the destination company is inactive`. El 422 de campos `entry_date`/`currency`/`description`/`lines` demuestra que se alcanzó la validación del formulario POST en vez de rechazarse por empresa inactiva. Se inspeccionó `SetTenantContext` y `RequireCompanyRole`: ambos filtran `companies.is_active = true`. **Hipótesis principal del fallo de fixture:** `forceFill(['is_active' => DB::raw('FALSE')])->save()` en Eloquent con cast booleano no almacenó `FALSE` como se pretendía.
+
+**Correcciones en main, aún NO reejecutadas:**
+- Test `CompanyRoleAuthorizationTest.php`: cambia a `DB::table('companies')->where('id', ...)->update(['is_active' => DB::raw('FALSE')])`, exige exactamente 1 fila afectada y verifica con SQL `CASE WHEN is_active IS FALSE THEN 1 ELSE 0 END` antes del POST esperado 403. Si sigue devolviendo 422 con la empresa realmente inactiva, hay un problema genuino en el middleware y se investigará, sin relajar el test.
+- Script Docker `phase1-isolated-writes-docker.ps1`: **ya no confía solo en exit code de `php artisan test`**, pues imprimió un `[PASS]` falso pese al fallo Pest. Ahora exige reporte `--log-junit` verificable, exactamente **12 casos** de las dos suites, **0 nodos failure/error y 0 suites con fallos**. El reporte ausente, mal formado o incompleto detiene la aprobación; se limpia en `finally`.
+- Workflow `phase1-security-static.yml`: valida también el reporte JUnit de sus dos suites; runners de Actions siguen sin evidencia de ejecución.
+
+**Alcance probado:** se observó progreso satisfactorio del SQL de escritura A/B (se alcanzó el siguiente paso HTTP), pero **la fase combinada Docker/HTTP fue FAIL y continúa abierta**. La base PostgreSQL efímera se eliminó. Nada de ello implica acceso a Supabase Dev.
+
+**Reejecución permitida solo mediante ejecutor Docker:**
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+.\scripts\phase1-isolated-writes-docker.ps1
+$code = $LASTEXITCODE
+Write-Host ('Exit code F1.3: ' + $code)
+if ($code -ne 0) { throw 'F1.3 pendiente: hubo errores' }
+```
