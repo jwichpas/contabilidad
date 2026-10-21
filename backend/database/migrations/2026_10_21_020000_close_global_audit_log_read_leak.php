@@ -45,9 +45,8 @@ return new class extends Migration
             && $dbName === 'neondb'
             && $host !== ''
             && $host === $expectedNeonHost
-            && $host !== 'ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech'
+            && $host === 'ep-sweet-king-b6hxra2r.c-2.sa-east-1.aws.neon.tech'
             && ! str_contains($host, '-pooler.')
-            && str_ends_with($host, '.aws.neon.tech')
             && (string) ($config['username'] ?? '') === 'neondb_owner'
             && trim((string) ($config['url'] ?? '')) === ''
             && ! in_array($branchName, ['', 'production', 'prod', 'main', 'master'], true)
