@@ -68,7 +68,7 @@ SQL);
                 $quoted = '"'.str_replace('"', '""', (string) $table->table_name).'"';
                 $counts = $db->selectOne(
                     'SELECT count(*) AS visible_rows, '.
-                    'count(*) FILTER (WHERE company_id IS DISTINCT FROM ?::bigint) AS foreign_rows '.
+                    'count(*) FILTER (WHERE company_id IS NOT NULL AND company_id <> ?::bigint) AS foreign_rows '.
                     'FROM public.'.$quoted, [$companyId]
                 );
                 if ((int) $counts->foreign_rows !== 0) {
