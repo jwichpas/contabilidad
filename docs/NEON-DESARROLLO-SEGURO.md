@@ -165,3 +165,17 @@ php scripts/phase1-neon-preflight.php
 El `.env` aportado aún tiene vacías las contraseñas `DB_MIGRATIONS_PASSWORD`, `DB_PASSWORD` y `DB_APP_BACKEND_ROLE_PASSWORD`; son un bloqueo independiente que el usuario debe resolver **privadamente**. No guardar ni mostrar secretos en el repositorio. Si `APP_KEY=base64:x` es realmente literal (y no una redacción), debe generarse una clave válida con `php artisan key:generate` **solo en este entorno nuevo**, nunca en un entorno con datos cifrados ya almacenados.
 
 **No se aplicaron migraciones a Neon ni se modificó Neon production o Supabase.** La rama `contabilidad-dev` continúa creada y sin tablas del ERP. Antes de cualquier escritura, revalidar el host y ejecutar `--read-only --require-empty`.
+
+
+## F1.6 — Corrección del falso diagnóstico de variables «heredadas» (21/10/2026)
+
+**Nueva evidencia de Windows:** el usuario ejecutó `phase1-neon-clear-empty-process-env.ps1 -Apply` y eliminó **20 variables vacías** de la sesión PowerShell. En la siguiente ejecución de `php scripts/phase1-neon-preflight.php`, el antiguo preflight volvió a enumerar estas variables como «heredadas», a pesar de que consultaba `getenv()` **después de iniciar Laravel**. Este procedimiento de detección fue defectuoso: los valores vistos después del bootstrap pueden proceder del `.env` que acaba de cargar Laravel; **no demuestra que PowerShell los heredara**. Además, claves `DB_URL` y `DATABASE_URL` se dejan intencionadamente vacías, por lo que no deben bloquear el preflight por esa sola condición.
+
+Correcciones publicadas en `main`:
+
+- `backend/scripts/phase1-neon-env-origins.php`: nuevo diagnóstico **sin conexión SQL ni escrituras** que captura `getenv()`, `$_ENV` y `$_SERVER` **ANTES** de cargar Composer/Laravel, compara únicamente la presencia/no presencia de variables en `backend/.env`, y al terminar compara `env()`, configuración Laravel y el archivo de entorno seleccionado. **Nunca imprime valores de contraseñas, tokens, usuarios, hosts ni URIs**. Detecta también claves duplicadas en `.env` y verifica la longitud de `APP_KEY` sin mostrarla. Ejecutar primero `php -l scripts/phase1-neon-env-origins.php` y después `php scripts/phase1-neon-env-origins.php`.
+- `backend/scripts/phase1-neon-preflight.php`: ahora captura las tres fuentes antes del bootstrap de Laravel; solo describe las variables realmente existentes antes de Laravel y bloquea claves críticas preexistentes vacías, no variables creadas/cargadas posteriormente por Dotenv. Las URLs vacías, permitidas por diseño, no provocan por sí mismas el bloqueo.
+
+**No volver a borrar variables a ciegas, ni recrear `.env`, ni migrar** hasta observar el nuevo diagnóstico. El `.env` proporcionado sí declara Neon `contabilidad-dev` y PostgreSQL 18, pero el arranque PHP/Laravel no utilizó los valores esperados. También faltan `DB_MIGRATIONS_PASSWORD`, `DB_PASSWORD` y `DB_APP_BACKEND_ROLE_PASSWORD`, que son un problema independiente; no compartirlas en el chat. `APP_KEY=base64:x` tampoco es válida si es literal. Ningún SQL/DDL/DML remoto se ha realizado con esta corrección. Supabase y Neon production siguen intactos.
+
+Referencia técnica: Laravel 13 `LoadEnvironmentVariables` ejecuta `Dotenv::create(Env::getRepository(), ...)->safeLoad()`, y Laravel advierte sobre precedencia de variables externas en su [guía de configuración](https://github.com/laravel/docs/blob/13.x/configuration.md).
