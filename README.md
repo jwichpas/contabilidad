@@ -1,3 +1,5 @@
+> ✅ **Plataforma de desarrollo actualizada (21/10/2026):** backend en Windows con **PHP 8.5.12 / Laravel 13.38.0 / Pest 4.7.8 / PHPUnit 12.5.33**; dependencias y lock publicados en `main` (commit `be67509`). El usuario comprobó 29 rutas API, **6 pruebas de lectura/roles y 58 aserciones PASS** (4/40 y 2/18), y `composer audit --locked` sin avisos. **GitHub Actions CI aún no certificado**; F1 de seguridad sigue abierta para pruebas de escritura/CI. [Plan de actualización](docs/ACTUALIZACION-PHP-85-LARAVEL-13.md).
+
 > ✅ **Fase 0 — restauración de desarrollo comprobada (20/10/2026):** se verificó SHA256 y restauración aislada de `public` sobre PostgreSQL 17, conteos de 7 entidades, 14 tablas con RLS forzado, 5 funciones y eliminación del contenedor. **No es una recuperación completa de Supabase ni una certificación de producción.** El usuario aplazó el cifrado de respaldos hasta producción (disco C: sin BitLocker). [README de cierre condicionado y tareas previas a producción](docs/README-FASE-0-CIERRE-Y-PRODUCCION.md). Se puede comenzar Fase 1 mientras se atienden las observaciones de seguridad restantes.
 
 <div align="center">
@@ -10,8 +12,8 @@
 <br />
 
 <p align="center">
-  <a href="https://laravel.com"><img src="https://img.shields.io/badge/Laravel-11.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 11" /></a>
-  <a href="https://www.php.net"><img src="https://img.shields.io/badge/PHP-8.3+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.3+" /></a>
+  <a href="https://laravel.com"><img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13" /></a>
+  <a href="https://www.php.net"><img src="https://img.shields.io/badge/PHP-8.5-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.5" /></a>
   <a href="https://vuejs.org"><img src="https://img.shields.io/badge/Vue.js-3.5-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white" alt="Vue 3" /></a>
   <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_15+-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase PostgreSQL" /></a>
