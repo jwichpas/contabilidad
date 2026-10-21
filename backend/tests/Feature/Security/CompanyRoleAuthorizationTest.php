@@ -18,33 +18,30 @@ beforeEach(function (): void {
         'tax_id' => '20'.(string) random_int(100000000, 999999999),
         'business_name' => 'F1 Test Empresa Alfa',
         'legal_address' => 'Calle de Prueba 101',
-        'is_active' => true,
+        'is_active' => DB::raw('TRUE'),
     ]);
 
     $this->companyB = Company::query()->create([
         'tax_id' => '20'.(string) random_int(100000000, 999999999),
         'business_name' => 'F1 Test Empresa Beta',
         'legal_address' => 'Calle de Prueba 202',
-        'is_active' => true,
+        'is_active' => DB::raw('TRUE'),
     ]);
 
     $this->administrator = User::query()->create([
         'name' => 'Administrador F1',
         'email' => "f1_admin_{$unique}@example.test",
         'password' => 'Temporary-CI-Only-1!',
-        'current_company_id' => $this->companyA->id,
     ]);
     $this->accountant = User::query()->create([
         'name' => 'Contador F1',
         'email' => "f1_accountant_{$unique}@example.test",
         'password' => 'Temporary-CI-Only-2!',
-        'current_company_id' => $this->companyB->id,
     ]);
     $this->operator = User::query()->create([
         'name' => 'Digitador F1',
         'email' => "f1_operator_{$unique}@example.test",
         'password' => 'Temporary-CI-Only-3!',
-        'current_company_id' => $this->companyB->id,
     ]);
 
     $now = now();
@@ -52,16 +49,22 @@ beforeEach(function (): void {
     $tenantContext->run($this->companyA->id, function () use ($now): void {
         DB::table('company_user')->insert([
             'company_id' => $this->companyA->id, 'user_id' => $this->administrator->id,
-            'role' => 'ADMIN', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now,
+            'role' => 'ADMIN', 'is_active' => DB::raw('TRUE'), 'created_at' => $now, 'updated_at' => $now,
         ]);
     });
     $tenantContext->run($this->companyB->id, function () use ($now): void {
         DB::table('company_user')->insert([
-            ['company_id' => $this->companyB->id, 'user_id' => $this->administrator->id, 'role' => 'AUDITOR', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['company_id' => $this->companyB->id, 'user_id' => $this->accountant->id, 'role' => 'ACCOUNTANT', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['company_id' => $this->companyB->id, 'user_id' => $this->operator->id, 'role' => 'DATA_ENTRY', 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['company_id' => $this->companyB->id, 'user_id' => $this->administrator->id, 'role' => 'AUDITOR', 'is_active' => DB::raw('TRUE'), 'created_at' => $now, 'updated_at' => $now],
+            ['company_id' => $this->companyB->id, 'user_id' => $this->accountant->id, 'role' => 'ACCOUNTANT', 'is_active' => DB::raw('TRUE'), 'created_at' => $now, 'updated_at' => $now],
+            ['company_id' => $this->companyB->id, 'user_id' => $this->operator->id, 'role' => 'DATA_ENTRY', 'is_active' => DB::raw('TRUE'), 'created_at' => $now, 'updated_at' => $now],
         ]);
     });
+
+    // Clave foranea compuesta: primero crear membresias, DESPUES asignar
+    // current_company_id. De lo contrario INSERT users viola la FK.
+    $this->administrator->update(['current_company_id' => $this->companyA->id]);
+    $this->accountant->update(['current_company_id' => $this->companyB->id]);
+    $this->operator->update(['current_company_id' => $this->companyB->id]);
 });
 
 it('denies writes to auditors even if they are administrators of another company', function (): void {
@@ -113,7 +116,7 @@ it('denies access immediately after membership is revoked', function (): void {
         DB::table('company_user')
             ->where('company_id', $this->companyB->id)
             ->where('user_id', $this->accountant->id)
-            ->update(['is_active' => false]);
+            ->update(['is_active' => DB::raw('FALSE')]);
     });
 
     $this->actingAs($this->accountant)
@@ -147,7 +150,7 @@ it('permits auditor read access only within an active membership', function (): 
 });
 
 it('rejects even valid roles if the destination company is inactive', function (): void {
-    $this->companyB->forceFill(['is_active' => false])->save();
+    $this->companyB->forceFill(['is_active' => DB::raw('FALSE')])->save();
 
     $this->actingAs($this->accountant)
         ->withHeader('X-Company-Id', (string) $this->companyB->id)
