@@ -45,6 +45,7 @@ $file = $backend.'/.env';
 $fileState = [];
 $duplicates = [];
 $rawKey = null;
+$credentialStates = [];
 if (is_file($file)) {
     $contents = file_get_contents($file);
     if ($contents === false) {
@@ -72,6 +73,9 @@ if (is_file($file)) {
         $fileState[$key] = presence($value);
         if ($key === 'APP_KEY') {
             $rawKey = $value;
+        }
+        if (in_array($key, ['DB_PASSWORD','DB_APP_BACKEND_ROLE_PASSWORD','DB_APP_BACKEND_NEW_PASSWORD'], true)) {
+            $credentialStates[$key] = $value;
         }
     }
     unset($contents, $value);
@@ -109,6 +113,17 @@ if ($rawKey !== null) {
 }
 unset($rawKey);
 
+// Comparaciones en memoria: no se muestran claves, valores ni hashes.
+$role = (string) ($credentialStates['DB_APP_BACKEND_ROLE_PASSWORD'] ?? '');
+$appPassword = (string) ($credentialStates['DB_PASSWORD'] ?? '');
+$newPassword = (string) ($credentialStates['DB_APP_BACKEND_NEW_PASSWORD'] ?? '');
+echo '[INFO] DB_APP_BACKEND_ROLE_PASSWORD presente (archivo): '.($role !== '' ? 'SI' : 'NO').PHP_EOL;
+echo '[INFO] DB_PASSWORD coincide con DB_APP_BACKEND_ROLE_PASSWORD: '
+    .($role !== '' && $appPassword !== '' && hash_equals($role,$appPassword) ? 'SI' : 'NO').PHP_EOL;
+echo '[INFO] DB_APP_BACKEND_NEW_PASSWORD coincide con rol (solo rotacion): '
+    .($role !== '' && $newPassword !== '' && hash_equals($role,$newPassword) ? 'SI' : 'NO').PHP_EOL;
+unset($role,$appPassword,$newPassword,$credentialStates);
+
 if (! is_file($backend.'/vendor/autoload.php')) {
     fwrite(STDERR, "[FAIL] Falta vendor/autoload.php; ejecutar composer install en entorno seguro.\n");
     exit(1);
@@ -133,6 +148,16 @@ try {
             .' pre_ENV='.$before[$key]['_ENV']
             .' pre_SERVER='.$before[$key]['_SERVER'].PHP_EOL;
     }
+    $loadedKey = (string) env('APP_KEY','');
+    $validLoadedKey = false;
+    if (str_starts_with($loadedKey,'base64:')) {
+        $decoded = base64_decode(substr($loadedKey,7),true);
+        $validLoadedKey = $decoded !== false && strlen($decoded) === 32;
+    } else {
+        $validLoadedKey = strlen($loadedKey) === 32;
+    }
+    echo '[LARAVEL] APP_KEY cargada tiene 32 bytes validos: '.($validLoadedKey ? 'SI' : 'NO').PHP_EOL;
+    unset($loadedKey,$decoded);
     $admin = (array) config('database.connections.pgsql_migrations', []);
     $traffic = (array) config('database.connections.pgsql', []);
     foreach ([
