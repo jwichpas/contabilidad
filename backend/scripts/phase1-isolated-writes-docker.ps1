@@ -1,8 +1,8 @@
 #requires -Version 5.1
 <#
-  F1.3 - PostgreSQL 17 temporal para validar aislamiento real de escrituras.
+  F1.4 - PostgreSQL 18 temporal para validar aislamiento real de escrituras.
   Exclusivamente Docker local; no ejecuta ningun SQL contra Supabase.
-  - Levanta PostgreSQL 17 (por defecto) o 18 con puerto host 127.0.0.1.
+  - Levanta PostgreSQL 18 (por defecto) o 17 con puerto host 127.0.0.1.
   - Selecciona las migraciones de esquema una a una SIN mover archivos.
   - Corre migraciones de ESQUEMA Laravel y SQL DML A/B con ROLLBACK.
   - Corre pruebas Pest HTTP de roles en PostgreSQL efimero como app_backend.
@@ -10,11 +10,11 @@
 
   Invocar desde backend/:
     .\scripts\phase1-isolated-writes-docker.ps1
-    .\scripts\phase1-isolated-writes-docker.ps1 -PostgresVersion 18
+    .\scripts\phase1-isolated-writes-docker.ps1 -PostgresVersion 17
 #>
 param(
     [ValidateSet('17','18')]
-    [string]$PostgresVersion = '17'
+    [string]$PostgresVersion = '18'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -103,7 +103,7 @@ try {
         if ($LASTEXITCODE -eq 0) { $ready=$true; break }
         Start-Sleep -Seconds 1
     }
-    if (-not $ready) { throw 'PostgreSQL 17 temporal no respondio.' }
+    if (-not $ready) { throw ('PostgreSQL ' + $PostgresVersion + ' temporal no respondio.') }
 
     # Marca aleatoria exclusiva del contenedor. Cualquier conexion accidental a
     # Supabase fallara al no encontrar esta tabla o token.
