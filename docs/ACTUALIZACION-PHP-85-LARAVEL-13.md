@@ -129,3 +129,16 @@ Si el siguiente solver muestra un conflicto diferente, **no usar -Apply**; anali
 - https://packagist.org/packages/pestphp/pest-plugin-laravel
 - https://packagist.org/packages/laravel/sanctum
 - https://packagist.org/packages/nunomaduro/collision
+
+
+## Dry-run Composer confirmado, pero falta auditoría de seguridad — 21/10/2026
+
+El usuario confirmó la **resolución exitosa** sobre Windows / PHP 8.5.12 (sin instalar paquetes ni cambiar el lock):
+
+- Laravel `v11.57.0 → v13.38.0`; Pest `v3.8.7 → v4.7.8`; plugin Laravel `v3.2.0 → v4.1.0`; PHPUnit `11.5.56 → 12.5.33`; Symfony `7.4 → 8.1`.
+- Composer proyectó **6 instalaciones, 50 actualizaciones y 4 eliminaciones**.
+- **Alerta:** `Found 4 security vulnerability advisories affecting 1 package.`
+- El `composer.json` actual contiene `config.audit.block-on=false` y `config.policy.advisories.block=false`: no interpretar el éxito del solver como aprobación de seguridad.
+- La simulación terminó `[PASS] Composer resolvio las dependencias objetivo en modo dry-run` y `[RESTORE] composer.json y composer.lock originales restaurados`.
+
+Se corrigió el script para añadir `--audit-format=plain` al dry-run. **Puerta siguiente:** repetir la simulación con ese cambio y leer el paquete, CVE/GHSA, rangos vulnerables y versión corregida. No usar todavía `-Apply` ni desplegar hasta evaluar estos avisos. Las empresas A/B de Supabase Dev no se han modificado.
