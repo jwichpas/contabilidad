@@ -23,3 +23,27 @@ Referencia del aviso: https://supabase.com/docs/guides/database/database-linter?
 ## Ampliación comprobada de permisos DML — 20/10/2026
 
 Consulta real de solo lectura sobre las 32 tablas de `public`, usando `has_table_privilege` para `anon` y `authenticated`: **0 tablas** con permiso efectivo `INSERT`, **0** con `UPDATE` y **0** con `DELETE` para cualquiera de esos dos roles. Combinado con la comprobación SELECT anterior, **0 de 32 tablas** presentan permisos efectivos DML públicos para esos roles. Esto no valida privilegios sobre secuencias, funciones, vistas ni políticas ejecutadas bajo `app_backend` y no sustituye pruebas HTTP. No hubo escrituras a Supabase.
+
+
+## F1.2 — Validación real de dos empresas — 21/10/2026
+
+**Nueva evidencia: empresa B creada en la base única Supabase Dev por migración Laravel.** El usuario ejecutó `php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_20_235900_create_dev_company_b_via_laravel.php --force` y obtuvo **DONE (9 s)**. Migración confirmada por SELECT administrativo en `public.migrations`, **batch 10**. No se utilizó un INSERT administrativo directo para dar de alta la empresa; la migración asignó temporalmente `pgsql` al código de aplicación, con `app_backend`, `TenantContext` y transacción; el migrador registró el lote mediante `pgsql_migrations`.
+
+Inventario confirmado con agregados de solo lectura desde Supabase:
+
+| Empresa | Membresías | Configuraciones | Monedas | Actividades económicas | Cuentas PCGE |
+|---|---:|---:|---:|---:|---:|
+| ID **1** (preexistente) | 1 | 1 | 3 | **0** (pendiente de completar perfil) | 1.764 |
+| ID **182** (ficticia, nueva) | 1 | 1 | 2 | 1 | 1.764 |
+
+Salida aportada por el usuario para `php scripts/phase1-rls-cross-company-readonly.php` usando la conexión restringida `app_backend`, transacciones READ ONLY con `set_config(..., true)` y `ROLLBACK`:
+
+```text
+[PASS] Contexto 1: 0 filas ajenas en 14 tablas; visibles=1842
+[PASS] Contexto 182: 0 filas ajenas en 14 tablas; visibles=1776
+[PASS] No hubo escrituras; se usó rollback en todas las transacciones.
+```
+
+El script `phase1-rls-readonly-check.php` ya había pasado el control fail-closed sin empresa con **0 filas empresariales visibles en 14 tablas**, y dejó **advertencia de 7 eventos globales de audit_logs** visibles sin contexto. La política de SELECT sobre `audit_logs` permite registros `company_id IS NULL` y requiere decisión de acceso específico; los contadores de filas visibles anteriores **incluyen registros globales, cuando existan**, y no equivalen a totales de registros empresariales exclusivamente.
+
+**Alcance logrado:** la lectura SQL interempresa bajo RLS está validada para 14 tablas y dos empresas existentes; el alta Laravel multiempresa con PCGE y datos básicos también quedó observada. **NO significa que Fase 1 esté cerrada**: siguen pendientes pruebas de escritura interempresa, autorización por roles sobre rutas HTTP, reversión de permisos, bloqueo de logs globales si corresponde, cinco funciones `search_path`, evaluación de catálogos/globales y ejecución de CI (GitHub Actions bloqueado por facturación). No usar la suite `CompanyRoleAuthorizationTest.php` directamente contra Supabase Dev: crea usuarios y empresas, está diseñada solo para PostgreSQL efímero.
