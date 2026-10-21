@@ -184,3 +184,31 @@ Write-Host '[PASS] Sintaxis PowerShell'
 ```
 
 **Estado:** actualización Laravel 13 pendiente de ejecución real; preservar las empresas A/B y no ejecutar migraciones ni pruebas destructivas en Supabase Dev.
+
+
+## Actualización local aplicada: Laravel 13 / Pest 4 — 21/10/2026
+
+**Evidencia enviada por el usuario de `phase-php85-upgrade-laravel.ps1 -Apply`:**
+
+```text
+No security vulnerability advisories found.
+[PASS] Auditoria de seguridad del nuevo composer.lock aprobada.
+[PASS] Lock: Laravel v13.38.0 / Pest v4.7.8
+[SIGUIENTE] php artisan test tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php
+```
+
+PHP del equipo: **8.5.12**; Composer 2.10.3 estable. **Actualización real ejecutada solo en Windows**, con `composer.json`/`composer.lock` regenerados localmente; estos **todavía no se han subido a GitHub** y el repositorio remoto puede seguir con Laravel 11/Pest 3 hasta que el usuario los publique.
+
+**Importante:** que Composer haya resuelto paquetes y auditado el lock **no demuestra** todavía que la aplicación ERP sea compatible con Laravel 13: continúan pendientes las pruebas F1 HTTP, guard de roles, arranque/route-list y revisión de middleware/RLS. No ejecutar migraciones ni pruebas de escrituras sobre Supabase Dev. El cambio no incluyó migraciones por el script.
+
+**Puerta siguiente (local, solo GET/lectura):**
+
+```powershell
+cd C:\Proyectos\contabilidad\backend
+php artisan --version
+php artisan route:list --path=api/v1
+php artisan test tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php
+php artisan test tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.php
+```
+
+Si pasan y no existen errores PHP 8.5, confirmar `git status --short`, revisar `git diff -- backend/composer.json backend/composer.lock`, subir ambos archivos **juntos**, y actualizar `.github/workflows/phase1-security-static.yml` a PHP 8.5 con las nuevas dependencias. No declarar validación CI hasta ver sus logs.
