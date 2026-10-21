@@ -113,12 +113,12 @@ return new class extends Migration
     
             // Las operaciones de negocio permanecen en UNA transacción app_backend.
             // La migración administrativa solo registra que la operación fue aplicada.
-            $db->transaction(function () use ($db, $tenant, $owner, $currencies): void {
+            // PostgreSQL + PDO emulate prepares: los booleanos enlazados como PHP bool\n            // se convierten en 1/0. SQL TRUE/FALSE fijos conservan tipo boolean.\n            $db->transaction(function () use ($db, $tenant, $owner, $currencies): void {
                 $company = Company::query()->create([
                     'tax_id' => self::TAX_ID,
                     'business_name' => 'NEXUS EMPRESA PRUEBA B S.A.C.',
                     'legal_address' => 'Av. Industrial 100, Tacna - Entorno de desarrollo',
-                    'is_active' => true,
+                    'is_active' => DB::raw('TRUE'),
                 ]);
                 $tenant->run((int) $company->id, function () use ($db, $company, $owner, $currencies): void {
                     $now = now();
@@ -126,7 +126,7 @@ return new class extends Migration
                         'company_id' => $company->id,
                         'user_id' => $owner->id,
                         'role' => 'ADMIN',
-                        'is_active' => true,
+                        'is_active' => DB::raw('TRUE'),
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]);
@@ -141,15 +141,15 @@ return new class extends Migration
                         'annual_income' => '0.00',
                         'initial_pcge_version' => 'PCGE_2019',
                         'default_vat_rate' => '18.00',
-                        'is_sire_obliged' => false,
-                        'is_ple_obliged' => false,
+                        'is_sire_obliged' => DB::raw('FALSE'),
+                        'is_ple_obliged' => DB::raw('FALSE'),
                     ]);
                     foreach (['PEN', 'USD'] as $code) {
                         CompanyCurrency::query()->create([
                             'company_id' => $company->id,
                             'currency_id' => $currencies[$code]->id,
-                            'is_base' => $code === 'PEN',
-                            'is_active' => true,
+                            'is_base' => DB::raw($code === 'PEN' ? 'TRUE' : 'FALSE'),
+                            'is_active' => DB::raw('TRUE'),
                         ]);
                     }
                     CompanyEconomicActivity::query()->create([
@@ -157,7 +157,7 @@ return new class extends Migration
                         'sector_code' => 'COMERCIAL',
                         'ciiu_code' => '4752',
                         'description' => 'Venta de artículos de ferretería, pinturas y productos de vidrio',
-                        'is_primary' => true,
+                        'is_primary' => DB::raw('TRUE'),
                         'created_by' => $owner->id,
                         'updated_by' => $owner->id,
                     ]);
