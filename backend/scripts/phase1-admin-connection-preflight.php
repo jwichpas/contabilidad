@@ -3,82 +3,103 @@
 declare(strict_types=1);
 
 /**
- * F1.4: diagnostico de CONFIGURACION administrativa, SIN abrir conexiones SQL.
+ * F1.5: diagnostico local SIN SQL de pgsql_migrations.
+ * Nunca muestra contrasenas ni URLs completas ni establece conexion remota.
  *
- * Uso en Windows:
- *   php scripts/phase1-admin-connection-preflight.php
- *
- * No imprime credenciales, tokens, URLs completas ni valores de contrasena.
- * No conecta a Supabase, no ejecuta migraciones ni altera datos.
+ * php scripts/phase1-admin-connection-preflight.php
  */
-require dirname(__DIR__).'/vendor/autoload.php';
+$backend = dirname(__DIR__);
+require $backend.'/vendor/autoload.php';
 
-if (is_file(dirname(__DIR__).'/bootstrap/cache/config.php')) {
-    fwrite(STDERR, "[FAIL] Hay config cacheada; no diagnosticar hasta revisar bootstrap/cache/config.php.\n");
+if (is_file($backend.'/bootstrap/cache/config.php')) {
+    fwrite(STDERR, "[FAIL] Configuracion Laravel cacheada. Revisar bootstrap/cache/config.php antes de continuar.\n");
     exit(2);
 }
 
-$app = require dirname(__DIR__).'/bootstrap/app.php';
+$app = require $backend.'/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-$config = \Illuminate\Support\Facades\DB::connection('pgsql_migrations')->getConfig();
-
+$config = (array) config('database.connections.pgsql_migrations', []);
+$envExists = is_file($backend.'/.env');
+$environment = (string) $app->environment();
 $url = trim((string) ($config['url'] ?? ''));
 $host = trim((string) ($config['host'] ?? ''));
 $port = trim((string) ($config['port'] ?? ''));
-$dbName = trim((string) ($config['database'] ?? ''));
-$user = trim((string) ($config['username'] ?? ''));
+$database = trim((string) ($config['database'] ?? ''));
+$username = trim((string) ($config['username'] ?? ''));
+$password = (string) ($config['password'] ?? '');
 $sslmode = trim((string) ($config['sslmode'] ?? ''));
+$issues = [];
 
-echo '[INFO] DB_MIGRATIONS_URL configurada: '.($url !== '' ? 'SI' : 'NO').PHP_EOL;
-echo '[INFO] Host administrativo: '.($host !== '' ? $host : '(vacio)').PHP_EOL;
-echo '[INFO] Puerto administrativo: '.($port !== '' ? $port : '(vacio)').PHP_EOL;
-echo '[INFO] Base administrativa: '.($dbName !== '' ? $dbName : '(vacia)').PHP_EOL;
-echo '[INFO] SSLMODE: '.($sslmode !== '' ? $sslmode : '(vacio)').PHP_EOL;
-echo '[INFO] Usuario configurado: '.($user !== '' ? 'SI' : 'NO').PHP_EOL;
+echo '[INFO] APP_ENV: '.$environment.PHP_EOL;
+echo '[INFO] backend/.env existe: '.($envExists ? 'SI' : 'NO').PHP_EOL;
+echo '[INFO] backend/.env.testing existe: '.(is_file($backend.'/.env.testing') ? 'SI' : 'NO').PHP_EOL;
+echo '[INFO] DB_MIGRATIONS_URL: '.($url !== '' ? 'CONFIGURADA' : 'NO CONFIGURADA').PHP_EOL;
 
-$problems = [];
+if ($environment !== 'local') {
+    $issues[] = 'Este preflight para Supabase Dev requiere APP_ENV=local.';
+}
+if (! $envExists) {
+    $issues[] = 'Falta backend/.env: crear un archivo privado partiendo de .env.example, sin sobrescribir un .env existente.';
+}
 
 if ($url !== '') {
     $parsed = parse_url($url);
     if ($parsed === false || ! in_array((string) ($parsed['scheme'] ?? ''), ['postgres', 'postgresql', 'pgsql'], true)) {
-        $problems[] = 'DB_MIGRATIONS_URL no tiene una URI PostgreSQL valida.';
+        $issues[] = 'DB_MIGRATIONS_URL tiene una URI PostgreSQL invalida.';
     } else {
+        $queryString = (string) ($parsed['query'] ?? '');
         $query = [];
-        parse_str((string) ($parsed['query'] ?? ''), $query);
+        parse_str($queryString, $query);
+        if (str_contains($queryString, '?') || str_contains($queryString, ';')) {
+            $issues[] = 'La URI administrativa contiene separadores de parametros incorrectos: usar & entre los parametros.';
+        }
         if (isset($query['sslmode']) && ! in_array((string) $query['sslmode'], ['disable','allow','prefer','require','verify-ca','verify-full'], true)) {
-            $problems[] = 'DB_MIGRATIONS_URL contiene sslmode invalido (revisar parametros de consulta y &).';
+            $issues[] = 'El sslmode de DB_MIGRATIONS_URL es invalido.';
         }
-        if (! isset($parsed['host']) || ! isset($parsed['path'])) {
-            $problems[] = 'La URI de migraciones debe incluir host y nombre de base.';
-        }
+        $host = (string) ($parsed['host'] ?? $host);
+        $port = (string) ($parsed['port'] ?? $port);
+        $database = ltrim((string) ($parsed['path'] ?? $database), '/');
+        $username = (string) ($parsed['user'] ?? $username);
+        $password = (string) ($parsed['pass'] ?? $password);
+        $sslmode = (string) ($query['sslmode'] ?? $sslmode);
     }
 }
 
-if (! in_array($sslmode, ['disable','allow','prefer','require','verify-ca','verify-full'], true)) {
-    $problems[] = 'DB_MIGRATIONS_SSLMODE no es uno de los valores admitidos por libpq.';
-}
-if ($host === '' || $port === '' || $dbName === '' || $user === '') {
-    $problems[] = 'Falta host, puerto, nombre de base o usuario en la configuracion administrativa.';
-}
-if ($dbName !== 'postgres') {
-    $problems[] = 'Se esperaba DB_MIGRATIONS_DATABASE=postgres para Supabase Dev.';
-}
-if ($host !== 'db.bnjwxphwtkhblvhsnylj.supabase.co'
-    && $host !== 'aws-1-ca-central-1.pooler.supabase.com') {
-    $problems[] = 'El host no coincide con el proyecto Supabase Dev autorizado.';
+echo '[INFO] Host: '.($host !== '' ? $host : '(vacio)').PHP_EOL;
+echo '[INFO] Puerto: '.($port !== '' ? $port : '(vacio)').PHP_EOL;
+echo '[INFO] Base: '.($database !== '' ? $database : '(vacia)').PHP_EOL;
+echo '[INFO] Usuario administrativo: '.($username !== '' ? 'CONFIGURADO' : 'NO CONFIGURADO').PHP_EOL;
+echo '[INFO] Contrasena administrativa: '.($password !== '' ? 'CONFIGURADA' : 'NO CONFIGURADA').PHP_EOL;
+echo '[INFO] SSLMODE: '.($sslmode !== '' ? $sslmode : '(vacio)').PHP_EOL;
+
+$direct = $host === 'db.bnjwxphwtkhblvhsnylj.supabase.co' && $username === 'postgres';
+$sessionPool = $host === 'aws-1-ca-central-1.pooler.supabase.com'
+    && $username === 'postgres.bnjwxphwtkhblvhsnylj';
+
+if (! $direct && ! $sessionPool) {
+    $issues[] = 'El host/usuario debe ser del proyecto contabilidad-database: postgres directo o postgres.<ref> en pooler de sesion.';
 }
 if ($port !== '5432') {
-    $problems[] = 'Se esperaba el puerto administrativo 5432, nunca 6543 de pool transaccional.';
+    $issues[] = 'Se requiere puerto administrativo 5432 (no 6543 de transacciones).';
+}
+if ($database !== 'postgres') {
+    $issues[] = 'DB_MIGRATIONS_DATABASE debe ser postgres.';
+}
+if ($password === '') {
+    $issues[] = 'Falta la contrasena administrativa en DB_MIGRATIONS_PASSWORD (o URI).';
+}
+if (! in_array($sslmode, ['require', 'verify-ca', 'verify-full'], true)) {
+    $issues[] = 'SSL administrativo invalido: utilizar require, verify-ca o verify-full.';
 }
 
-if ($problems !== []) {
-    foreach ($problems as $problem) {
-        fwrite(STDERR, '[FAIL] '.$problem.PHP_EOL);
+if ($issues !== []) {
+    foreach (array_unique($issues) as $issue) {
+        fwrite(STDERR, '[FAIL] '.$issue.PHP_EOL);
     }
-    fwrite(STDERR, "[INFO] Revisar backend/.env sin enviar contrasenas, URIs ni tokens. No ejecutar migrate.\n");
+    fwrite(STDERR, "[BLOQUEO] No ejecutar migrate. Revisar el archivo backend/.env local; no compartir secretos.\n");
     exit(1);
 }
 
-echo '[PASS] Configuracion administrativa coherente; no se realizo ninguna conexion SQL.'.PHP_EOL;
-echo '[SIGUIENTE] Validar conectividad y destino real antes de migrar, por separado.'.PHP_EOL;
+echo '[PASS] Configuracion administrativa coherente para Supabase Dev. No se realizo SQL.'.PHP_EOL;
+echo '[PENDIENTE] Comprobar conexion e identidad reales antes de aplicar DDL.'.PHP_EOL;

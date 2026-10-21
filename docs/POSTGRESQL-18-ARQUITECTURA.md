@@ -48,3 +48,21 @@ Verificar variables DB_MIGRATIONS_HOST, PORT, DATABASE, USERNAME, SSLMODE y PASS
 Una nueva version de PostgreSQL en un entorno persistente requiere backup probado, verificacion de extensiones, roles, RLS, tablas contables, triggers, migraciones y suite de integracion. GitHub Actions sigue pendiente de una corrida CI exitosa.
 
 Fuentes: https://supabase.com/docs/guides/platform/upgrading
+
+
+## Continuación 21/10/2026 — diagnóstico sin SQL y GitHub Actions
+
+El usuario confirmó **PostgreSQL 18.6 Docker F1.4 PASS** (12 pruebas/37 aserciones). La validación de configuración administrativa `php scripts/phase1-admin-connection-preflight.php` mostró que **host, puerto, base, usuario y SSL estaban vacíos**, sin URI de migraciones. Es un problema del `backend/.env` local (ausente, incompleto o variables vacías); **no implica incompatibilidad con PostgreSQL 18**.
+
+Se actualizó el preflight para mostrar si `backend/.env` existe, distinguir host directo o pooler de sesión, comprobar contraseña solo como indicador SI/NO, validar TLS y detectar URI con parámetros separados de forma incorrecta. **No conecta a PostgreSQL, no muestra credenciales y no altera el archivo .env.**
+
+Desde Windows, dentro de `backend`:
+
+```powershell
+Test-Path .\.env
+php scripts/phase1-admin-connection-preflight.php
+```
+
+Si falta el archivo, crear `backend/.env` a partir de `backend/.env.example` solo cuando NO existe el original y añadir credenciales privadas válidas. Para conexión directa Supabase Dev, mantener `DB_MIGRATIONS_URL=` vacía y configurar `DB_MIGRATIONS_HOST=db.bnjwxphwtkhblvhsnylj.supabase.co`, puerto 5432, base postgres, usuario postgres, contraseña privada y SSL require. La conexión por pooler de sesión usa host de pooler y usuario postgres con sufijo de proyecto. **No ejecutar migraciones hasta que preflight sea PASS y se compruebe destino real de conexión.** El servidor Dev sigue en PG17.11; PG18 es motor principal del ERP y pruebas Docker.
+
+**GitHub Actions continúa bloqueado antes de ejecutar jobs**: la corrida [#39678580152](https://github.com/jwichpas/contabilidad/actions/runs/39678580152) terminó failure inmediatamente (fecha creación y actualización coincidentes); su API de jobs devolvió total_count=0. Corridas recientes muestran el mismo patrón. Sin logs ni jobs, la causa no puede atribuirse al framework ni a PostgreSQL 18. Revisar la página de la corrida (aviso de workflow inválido, permisos, runners o facturación) y la configuración de Actions del repositorio. No generar reintentos en bucle ni declarar CI PASS.
