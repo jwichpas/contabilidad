@@ -65,3 +65,22 @@ Duration: 7.48s
 **Siguiente trabajo de F1.3, aún NO ejecutado:** se amplió el mismo test con tres casos: 401 anónimo para rutas GET, 400 ante identificadores de empresa falsificados, 403 ante empresa inexistente, recuperación de acceso autorizado, secuencia GET A→B→A y limpieza de `app.current_company_id`/`app.current_user_id` al terminar. El servicio `ListUserCompaniesService` ahora restaura `app.current_user_id` al finalizar un contexto SQL anidado. Publicación de código no es evidencia de PASS; requerir resultados locales.
 
 **No ejecutar pruebas POST de roles sobre Supabase Dev**; permanecen reservadas al PostgreSQL efímero hasta diseñar ensayos transaccionales seguros específicos.
+
+
+## F1.3 — Evidencia ampliada: 4/4 pruebas HTTP GET — 21/10/2026
+
+Salida reproducida por el usuario después de sincronizar `main` y validar sintaxis:
+
+```text
+PASS Tests\\Feature\\Security\\ExistingCompaniesHttpReadOnlyTest
+✓ separates real company account IDs and journal entries through Laravel HTTP GET
+✓ rejects anonymous access to all reviewed tenant GET routes
+✓ denies malformed and unassigned company IDs then permits its own company
+✓ does not retain company context or cached accounts across A to B to A reads
+Tests: 4 passed (40 assertions)
+Duration: 19.00s
+```
+
+**Aprobado para operaciones probadas:** listado autenticado de dos empresas, GET de cuentas y asientos separados, HTTP 401 para invitado, 400 para encabezados malformados, 403 para empresa inexistente, y cambio A → B → A sin fuga de contexto PostgreSQL user/tenant ni de caché de cuentas. No cubre acceso indebido con usuarios diferentes ni ejecución real de POST: esas puertas siguen abiertas.
+
+**Siguiente suite preparada, aún no ejecutada:** `backend/tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.php`. Utiliza una petición GET local simulada y ejecuta directamente `RequireCompanyRole` con una respuesta ficticia; **no llama a controladores de escritura ni realiza DML**. Verifica ADMIN/CHIEF_ACCOUNTANT separados entre empresas, rutas mal configuradas, rol inexistente, empresa ajena y usuario anónimo. Ejecutar exclusivamente ese archivo con `php artisan test`, después de `php -l`; para el resto de tests de autorización que generan usuarios y empresas, usar PostgreSQL efímero de CI.
