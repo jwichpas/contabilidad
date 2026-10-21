@@ -15,7 +15,12 @@ return new class extends Migration
     {
         DB::statement('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
 
-        $password = (string) config('database.app_backend_password', env('DB_APP_BACKEND_ROLE_PASSWORD', 'app_backend_local_secret'));
+        $password = (string) config('database.app_backend_password', env('DB_APP_BACKEND_ROLE_PASSWORD', ''));
+        // Evitar que un entorno nuevo (Neon u otro proveedor) cree app_backend
+        // con una contraseña conocida. Se necesita secreto aleatorio fuerte.
+        if (strlen($password) < 20) {
+            throw new RuntimeException('Definir DB_APP_BACKEND_ROLE_PASSWORD aleatoria (minimo 20 caracteres) antes de migrar.');
+        }
         $escapedPassword = str_replace("'", "''", $password);
 
         // Crea el rol `app_backend` sin privilegios de superusuario y explícitamente con NOBYPASSRLS.
