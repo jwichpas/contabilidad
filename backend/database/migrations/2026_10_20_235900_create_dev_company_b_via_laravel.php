@@ -13,7 +13,6 @@ use App\Support\Company\CompanyOnboardingGuard;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 /**
  * Datos ficticios de F1.2: segundo tenant completo, creado por Laravel.
