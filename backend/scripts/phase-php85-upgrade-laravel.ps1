@@ -53,20 +53,34 @@ try {
     Copy-Item composer.lock (Join-Path $backup 'composer.lock') -ErrorAction Stop
     Write-Host ("[BACKUP] Manifiestos guardados en: $backup")
 
-    # NO usar --dev en el primer require: Laravel es dependencia de produccion.
-    Invoke-Checked 'composer' @(
-        'require', 'php:^8.5', 'laravel/framework:^13.0',
-        '--no-update', '--no-interaction'
+    # composer.bat (cmd.exe) consume los caracteres ^ pasados desde
+    # PowerShell: php:^8.5 acaba transformado en php:8.5 (version exacta).
+    # Editar JSON temporalmente, en lugar de pasar ^ por composer.bat.
+    $manifestPath = Join-Path $backend 'composer.json'
+    $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+    $manifest.require.php = '^8.5'
+    $manifest.require.'laravel/framework' = '^13.0'
+    $manifest.'require-dev'.'pestphp/pest' = '^4.0'
+    # 4.0.0 NO admite Laravel 13; 4.1.0 si.
+    $manifest.'require-dev'.'pestphp/pest-plugin-laravel' = '^4.1'
+    $phpunitProperty = $manifest.'require-dev'.PSObject.Properties['phpunit/phpunit']
+    if ($null -eq $phpunitProperty) {
+        $manifest.'require-dev' | Add-Member -NotePropertyName 'phpunit/phpunit' -NotePropertyValue '^12.0'
+    }
+    else {
+        $manifest.'require-dev'.'phpunit/phpunit' = '^12.0'
+    }
+    $json = $manifest | ConvertTo-Json -Depth 50
+    [System.IO.File]::WriteAllText(
+        $manifestPath, ($json + [Environment]::NewLine),
+        (New-Object System.Text.UTF8Encoding($false))
     )
-    Invoke-Checked 'composer' @(
-        'require', '--dev', 'pestphp/pest:^4.0',
-        'pestphp/pest-plugin-laravel:^4.0', 'phpunit/phpunit:^12.0',
-        '--no-update', '--no-interaction'
-    )
+    Write-Host '[INFO] Manifest temporal: PHP ^8.5, Laravel ^13.0, Pest ^4.0, plugin Laravel ^4.1, PHPUnit ^12.0'
+    Invoke-Checked 'composer' @('validate', '--no-check-publish', '--no-check-lock')
 
-    # Resolver PRIMERO sin instalar ni alterar composer.lock.
+    # Resolver PRIMERO sin instalar, sin scripts ni alterar composer.lock.
     Invoke-Checked 'composer' @(
-        'update', '--with-all-dependencies', '--dry-run',
+        'update', '--with-all-dependencies', '--dry-run', '--no-scripts',
         '--no-interaction', '--no-progress'
     )
     Write-Host '[PASS] Composer resolvio las dependencias objetivo en modo dry-run.'
