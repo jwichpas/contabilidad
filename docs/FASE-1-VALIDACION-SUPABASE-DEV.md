@@ -186,3 +186,40 @@ $code = $LASTEXITCODE
 Write-Host ('Exit code F1.3: ' + $code)
 if ($code -ne 0) { throw 'F1.3 pendiente: hubo errores' }
 ```
+
+
+## F1.3 confirmada y F1.4 preparada (21/10/2026)
+
+### Evidencia F1.3 (ejecución real aportada por el usuario)
+
+```text
+[PASS] Conexion app_backend sujeta a RLS en Docker efimero
+PASS Tests\\Feature\\Security\\CompanyRoleAuthorizationTest
+PASS Tests\\Feature\\Security\\TenantContextNestedTest
+Tests: 12 passed (37 assertions)
+[PASS] Pest JUnit: 12 pruebas, 0 fallos/errores verificados.
+[PASS] F1.3 escritura interempresa y pruebas HTTP en PostgreSQL aislado.
+[LIMPIEZA] Contenedor PostgreSQL efimero eliminado.
+```
+
+El SQL previo al tramo HTTP validó aislamiento INSERT/UPDATE/DELETE real sobre `company_areas` con empresas ficticias y ROLLBACK (el ejecutor no habría avanzado a HTTP si fallaba `psql`). Los casos HTTP incluyen denegación de mutaciones por rol, revocación inmediata, contexto anidado, empresa inactiva y peticiones anónimas. **Sumado a las 6 pruebas/58 aserciones previas de solo lectura/guard en Supabase Dev: 18 tests y 95 aserciones PASS bajo Laravel 13**, en dos entornos distintos. No confundir la suma con la ejecución de una suite integral única. GitHub Actions continúa pendiente por falta de runners/logs verificables.
+
+### Diagnóstico F1.4, exclusivamente SELECT/metadata en Supabase Dev
+
+Se consultaron el catálogo `pg_proc`, políticas `pg_policy`, conteos agregados de `audit_logs` y los asesores de seguridad de Supabase, **sin DML/DDL**:
+
+- Cinco funciones en `public` sin `proconfig.search_path`: `app_current_company_id`, `trg_fn_enforce_accounting_account_hierarchy`, `trg_fn_prevent_journal_entry_mutation`, `trg_fn_validate_journal_line_context`, `trg_fn_enforce_double_entry_balance`. Todas son `SECURITY INVOKER`; el advisor `function_search_path_mutable` reportó **5 WARN**.
+- La política SELECT de `public.audit_logs` es `company_id IS NULL OR company_id = public.app_current_company_id()`. En `audit_logs` hay **40 registros**, de los cuales **7 globales** (`company_id IS NULL`), y **los 7 no tienen `user_id` asociado**. El OR permite a `app_backend` consultar los 7 registros globales aun sin contexto de empresa. No se inspeccionó ni divulgó el contenido de esos eventos.
+- Un advisor independiente `auth_leaked_password_protection` advierte que la protección de contraseñas filtradas de Supabase Auth está desactivada. La autenticación de este ERP se realiza mediante Laravel/Sanctum; antes de recomendar cambios en Auth, confirmar si también se utiliza Supabase Auth.
+
+Referencias: [linter de funciones](https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable); [seguridad de contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+### Cambios preparados en GitHub: **todavía no aplicados en Supabase Dev**
+
+- `backend/database/migrations/2026_10_21_010000_harden_postgres_function_search_path.php`: fija `search_path = ''` en las 5 funciones, exige `postgres`, controla el ambiente local Dev aprobado o `contabilidad_ci` efímero, modifica de forma transaccional y verifica el helper RLS.
+- `backend/database/migrations/2026_10_21_020000_close_global_audit_log_read_leak.php`: reemplaza la política SELECT por `company_id IS NOT NULL AND company_id = public.app_current_company_id()`, conservando intactos los 7 registros globales del sistema. No crea permisos de lectura privilegiada nuevos. Las dos migraciones son endurecimientos **sin down destructivo/automático**.
+- `backend/tests/security/phase1-real-cross-tenant-writes.sql`: añade regresiones A, B y sin tenant sobre eventos `F1_GLOBAL_SYSTEM` y `F1_TENANT_A/B`, además de los DML existentes; siguen revertidos por ROLLBACK.
+- `backend/tests/security/phase1-search-path-rehearsal.sql`: ahora verifica los cinco `search_path` ya aplicados sin DDL temporal.
+- `.github/workflows/phase1-security-static.yml`: incorpora lint PHP de las migraciones nuevas. GitHub Actions sigue sin certificación de ejecución.
+
+**Siguiente puerta antes de aplicar a Dev:** repetir el ejecutor Docker después de sincronizar `main` y observar el PASS de migraciones nuevas + regresión SQL + JUnit 12/12. No ejecutar `php artisan migrate` genérico contra Supabase Dev; cualquier futura aplicación requerirá rutas explícitas `--database=pgsql_migrations --path=...`, respaldos y verificación de los avisos del advisor.
