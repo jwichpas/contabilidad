@@ -225,3 +225,38 @@ Referencias: [linter de funciones](https://supabase.com/docs/guides/database/dat
 **Siguiente puerta antes de aplicar a Dev:** repetir el ejecutor Docker después de sincronizar `main` y observar el PASS de migraciones nuevas + regresión SQL + JUnit 12/12. No ejecutar `php artisan migrate` genérico contra Supabase Dev; cualquier futura aplicación requerirá rutas explícitas `--database=pgsql_migrations --path=...`, respaldos y verificación de los avisos del advisor.
 
 **Ajuste final del ejecutor Docker F1.4:** además de las dos migraciones nuevas, ahora ejecuta explícitamente `phase1-search-path-rehearsal.sql` contra PostgreSQL 17 aislado **antes** de probar escritura cruzada y JUnit. Así el siguiente PASS también validará la configuración persistida de las cinco funciones, sin requerir acceso a Supabase Dev.
+
+
+## F1.4 — Fallo del primer ensayo y correcciones (21/10/2026)
+
+**Evidencia enviada por el usuario** al ejecutar `phase1-isolated-writes-docker.ps1` contra PostgreSQL 17 efímero:
+
+```text
+2026_10_19_010000_add_company_economic_profile ... FAIL
+La migración de perfil económico requiere contabilidad-database.
+2026_10_21_010000_harden_postgres_function_search_path ... FAIL
+La auditoria search_path no confirmo las cinco funciones.
+2026_10_21_020000_close_global_audit_log_read_leak ... DONE
+[FUNCIONES] ... No estan fijados los cinco search_path: 0/5
+[FAIL] docker termino con codigo 3
+[LIMPIEZA] Contenedor PostgreSQL efimero eliminado.
+```
+
+**Tres causas comprobadas:**
+
+1. La migración de perfil económico `2026_10_19_010000` también está restringida expresamente al proyecto Supabase Dev. La lista de exclusiones del contenedor/CI tenía cuatro migraciones; deben ser **cinco**. No ampliar ni eliminar el guard de la migración Dev.
+2. Las cinco funciones fueron comprobadas con una coincidencia literal de `proconfig` para `search_path=` tras `SET search_path = ''`. PostgreSQL serializa ajustes vacíos con comillas según su configuración; la verificación produjo `0/5` y la transacción se revirtió. Se cambió el endurecimiento a `SET search_path = pg_catalog` (entorno seguro y determinista, todas las referencias a tablas dentro de los cuerpos existentes están calificadas explícitamente con `public.`) y ahora se exige `'search_path=pg_catalog' = ANY (proconfig)` tanto en la migración como en la prueba SQL aislada.
+3. El ejecutor continuó a la siguiente migración aunque Artisan imprimió `FAIL`. Ahora se consulta inmediatamente `public.migrations` del contenedor temporal después de **cada archivo** y se exige **exactamente una fila** para el nombre migrado. Si falla, detiene el ensayo antes de ejecutar cualquier RLS/JUnit. El workflow Linux verifica asimismo que el total de filas de `public.migrations` coincida con la cantidad exacta de archivos de migración admitidos en CI.
+
+**Estado actual:** las modificaciones están publicadas en `main` pero **NO están ejecutadas de nuevo ni certificadas**. El ensayo F1.4 anterior quedó FAIL y sí limpió Docker. **Supabase Dev sigue intacto:** estas dos migraciones de F1.4 no se aplicaron allí. Mantener sin cambios las 18 pruebas/95 aserciones F1.2-F1.3 ya aprobadas.
+
+**Próxima ejecución en Windows:**
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+.\scripts\phase1-isolated-writes-docker.ps1
+if ($LASTEXITCODE -ne 0) { throw 'F1.4 no aprobado' }
+```
+
+El PASS real requiere: todos los archivos elegibles registrados en `migrations`, cinco funciones con `search_path=pg_catalog`, eventos globales invisibles por RLS A/B/sin tenant, escrituras cruzadas denegadas, 12 tests y 0 errores/fallos JUnit, y eliminación del Docker temporal. Si cualquiera falla, no aplicar migraciones a Dev.
