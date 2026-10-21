@@ -50,6 +50,8 @@ jobs:
           php -l backend/routes/api.php
           php -l backend/tests/Feature/Security/CompanyRoleAuthorizationTest.php
           php -l backend/tests/Feature/Security/TenantContextNestedTest.php
+          php -l backend/database/migrations/2026_10_21_010000_harden_postgres_function_search_path.php
+          php -l backend/database/migrations/2026_10_21_020000_close_global_audit_log_read_leak.php
       - name: Verificar barreras de seguridad del script
         shell: bash
         run: |
@@ -282,6 +284,8 @@ jobs:
           php -l routes/api.php
           php -l tests/Feature/Security/CompanyRoleAuthorizationTest.php
           php -l tests/Feature/Security/TenantContextNestedTest.php
+          php -l database/migrations/2026_10_21_010000_harden_postgres_function_search_path.php
+          php -l database/migrations/2026_10_21_020000_close_global_audit_log_read_leak.php
           php -l tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.php
       - name: Ensayar search_path seguro de las cinco funciones y revertirlo
         env:
