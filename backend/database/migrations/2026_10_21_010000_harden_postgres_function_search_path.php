@@ -52,7 +52,7 @@ return new class extends Migration
             foreach (self::FUNCTIONS as $functionName) {
                 // El nombre es constante de codigo; nunca se interpola entrada del usuario.
                 $signature = $db->selectOne(<<<'SQL'
-                    SELECT p.oid, p.prosecdef
+                    SELECT p.oid, CASE WHEN p.prosecdef THEN 1 ELSE 0 END AS definer_flag
                     FROM pg_catalog.pg_proc p
                     JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
                     WHERE n.nspname = 'public'
@@ -60,7 +60,7 @@ return new class extends Migration
                       AND p.pronargs = 0
                     SQL, [$functionName]);
 
-                if ($signature === null || (bool) $signature->prosecdef) {
+                if ($signature === null || (int) $signature->definer_flag !== 0) {
                     throw new RuntimeException('Funcion inexistente o con SECURITY DEFINER inesperado: '.$functionName);
                 }
 
