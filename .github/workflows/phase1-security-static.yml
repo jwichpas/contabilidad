@@ -236,6 +236,14 @@ jobs:
           PGUSER: postgres
           PGDATABASE: contabilidad_ci
         run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-tenant-transactions.sql
+      - name: F1.3 - RLS real: escrituras cruzadas denegadas y rollback verificado
+        env:
+          PGPASSWORD: temporary-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGDATABASE: contabilidad_ci
+        run: psql -v ON_ERROR_STOP=1 -f tests/security/phase1-real-cross-tenant-writes.sql
       - name: Run isolated Laravel unit tests
         run: ./vendor/bin/pest --testsuite=Unit
       - name: F1.2-F1.3 HTTP and nested tenant tests as restricted app_backend
@@ -251,6 +259,7 @@ jobs:
           php -l routes/api.php
           php -l tests/Feature/Security/CompanyRoleAuthorizationTest.php
           php -l tests/Feature/Security/TenantContextNestedTest.php
+          php -l tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.php
       - name: Ensayar search_path seguro de las cinco funciones y revertirlo
         env:
           PGPASSWORD: temporary-ci-only
