@@ -230,3 +230,25 @@ Si pasan y no existen errores PHP 8.5, confirmar `git status --short`, revisar `
 **Después del push de ambos:** revisar/actualizar CI `.github/workflows/phase1-security-static.yml` de PHP 8.3 a 8.5, añadir filtros de `backend/composer.json` y `backend/composer.lock` y validar la ejecución de las migraciones en PostgreSQL efímero; ajustar README y badge de versiones. Sin afirmar CI PASS hasta ejecución comprobada.
 
 **Aún no cerrar migración de plataforma completa:** faltan el guard de roles, pruebas CI / integración y revisión de cambios 11→12→13. Supabase Dev no sufrió migraciones ni escrituras en esta fase.
+
+
+## Publicación definitiva del stack PHP 8.5 / Laravel 13 (21/10/2026)
+
+Confirmado por ejecución y resultados enviados por el usuario:
+
+| Hito | Evidencia |
+|---|---|
+| PHP 8.5.12 y Composer 2.10.3 | Preflight sin errores de carga |
+| Laravel 13.38.0 | `php artisan --version` PASS |
+| Pest 4.7.8 / PHPUnit 12.5.33 | Lock nuevo y Composer |
+| Auditoría de dependencias | `composer audit --locked`: **sin avisos** |
+| Rutas de API | `php artisan route:list --path=api/v1`: **29 rutas** |
+| HTTP GET multiempresa | **4 pruebas, 40 aserciones PASS** |
+| Middleware de roles ADMIN/CHIEF_ACCOUNTANT | **2 pruebas, 18 aserciones PASS**, 11,06 segundos, sin DML |
+| Publicación del lock | **commit `be67509`**, `main`, `composer.json` y `composer.lock` juntos, `git push` exitoso |
+
+**Total de suites probadas después de Laravel 13:** **6 pruebas / 58 aserciones PASS**. Los cambios locales de la caché PHPUnit y la eliminación de dos archivos PDF PCGE no fueron incluidos en el commit de dependencias.
+
+**CI adaptado** mediante `.github/workflows/phase1-security-static.yml`: dos jobs que utilizaban PHP 8.3 pasan a PHP 8.5; `composer.json`/`composer.lock` activan el workflow; se validan lock, PHP, versión del framework y `composer audit --locked`. Para mantener el ensayo real del esquema PostgreSQL 17, el job retira de su workspace **efímero** el archivo de migración `2026_10_20_235900_create_dev_company_b_via_laravel.php`, que es una fixture de datos diseñada exclusivamente para Supabase Dev y rechaza por guard el entorno testing. La migración original sigue intacta en `main`.
+
+**Pendiente, sin atribuir PASS:** comprobar ejecución/estado real de GitHub Actions, unidad/funcionalidad restante en PostgreSQL efímero, reglas de escritura interempresa, advertencias de `search_path`, y revisión integral de compatibilidad y de seguridad F1. No ejecutar `migrate:fresh` ni suites de escritura contra Supabase Dev.
