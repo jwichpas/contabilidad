@@ -3,10 +3,10 @@
   F1.3 - PostgreSQL 17 temporal para validar aislamiento real de escrituras.
   Exclusivamente Docker local; no ejecuta ningun SQL contra Supabase.
   - Levanta PostgreSQL 17 con puerto host ligado a 127.0.0.1.
-  - Excluye temporalmente la migracion de datos Supabase Dev.
+  - Selecciona las migraciones de esquema una a una SIN mover archivos.
   - Corre migraciones de ESQUEMA Laravel y SQL DML A/B con ROLLBACK.
   - Corre pruebas Pest HTTP de roles en PostgreSQL efimero como app_backend.
-  - Restaura fixture, variables de entorno y elimina el contenedor SIEMPRE.
+  - Restaura variables de entorno y elimina el contenedor SIEMPRE.
 
   Invocar desde backend/:
     .\scripts\phase1-isolated-writes-docker.ps1
@@ -19,7 +19,6 @@ $dockerName = 'f1-write-' + ([Guid]::NewGuid().ToString('N')).Substring(0,12)
 $adminPassword = 'f1-' + [Guid]::NewGuid().ToString('N')
 $appPassword = 'app-f1-' + [Guid]::NewGuid().ToString('N')
 $guardToken = [Guid]::NewGuid().ToString('N')
-$tempFolder = Join-Path ([IO.Path]::GetTempPath()) $dockerName
 $supabaseOnly = @(
     '2026_10_19_000000_restrict_supabase_data_api_grants.php',
     '2026_10_20_000000_rotate_app_backend_credential.php',
@@ -27,7 +26,6 @@ $supabaseOnly = @(
     '2026_10_20_235900_create_dev_company_b_via_laravel.php'
 )
 $runContainer = $false
-$fixturesMoved = @()
 $passed = $false
 $initialLocation = Get-Location
 $originalEnv = @{}
@@ -75,8 +73,6 @@ try {
     if ($LASTEXITCODE -ne 0 -or $dockerOS -ne 'linux') {
         throw 'Docker Desktop debe ejecutar contenedores Linux.'
     }
-
-    New-Item -ItemType Directory -Path $tempFolder -Force | Out-Null
     Write-Host '[AISLAMIENTO] Iniciando PostgreSQL 17 temporal en Docker (solo loopback).'
     Invoke-NativeChecked 'docker' @(
         'run','--detach','--name',$dockerName,
@@ -161,18 +157,24 @@ echo "[PASS] Conexion administrativa verificada contra Docker efimero\n";
 '@
     Invoke-NativeChecked 'php' @('-r',$guardCode)
 
-    # No ejecutar operaciones que exigen expresamente el ID/proyecto Supabase.
-    # Guardar temporalmente FUERA del repo y restaurar incluso si falla el test.
-    foreach ($name in $supabaseOnly) {
-        $source = Join-Path $backend ('database/migrations/' + $name)
-        $destination = Join-Path $tempFolder $name
-        Move-Item -LiteralPath $source -Destination $destination
-        $fixturesMoved += [PSCustomObject]@{ Source=$source; Backup=$destination }
-    }
-    Write-Host '[MIGRACIONES] Creando esquema Laravel compatible con PostgreSQL 17 temporal.'
-    Invoke-NativeChecked 'php' @(
-        'artisan','migrate','--database=pgsql_migrations','--force','--no-interaction'
+    # Migrate --path=<file> usa los archivos reales versionados y NO
+    # mueve ni borra migraciones de Supabase del working tree del usuario.
+    $schemaMigrations = @(
+        Get-ChildItem (Join-Path $backend 'database/migrations') -Filter '*.php' |
+            Where-Object { $supabaseOnly -notcontains $_.Name } |
+            Sort-Object Name
     )
+    if ($schemaMigrations.Count -lt 14) {
+        throw ('Se esperaban al menos 14 migraciones de esquema; halladas: ' + $schemaMigrations.Count)
+    }
+    Write-Host ('[MIGRACIONES] Aplicando ' + $schemaMigrations.Count + ' migraciones al Docker efimero.')
+    foreach ($migration in $schemaMigrations) {
+        $relativePath = 'database/migrations/' + $migration.Name
+        Invoke-NativeChecked 'php' @(
+            'artisan','migrate','--database=pgsql_migrations',
+            ('--path=' + $relativePath),'--force','--no-interaction'
+        )
+    }
 
     Write-Host '[RLS] Probando INSERT, UPDATE y DELETE A/B sobre tablas reales.'
     Invoke-NativeChecked 'docker' @(
@@ -230,18 +232,6 @@ catch {
     Write-Host ('[FAIL] ' + $_.Exception.Message)
 }
 finally {
-    foreach ($moved in $fixturesMoved) {
-        if (Test-Path -LiteralPath $moved.Backup) {
-            Move-Item -LiteralPath $moved.Backup -Destination $moved.Source -Force
-        }
-        else {
-            Write-Host ('[WARN] Migracion no restaurada: ' + $moved.Source)
-            $passed = $false
-        }
-    }
-    if ($fixturesMoved.Count -gt 0) {
-        Write-Host ('[RESTORE] ' + $fixturesMoved.Count + ' migraciones Supabase restauradas.')
-    }
     foreach ($key in $originalEnv.Keys) {
         [Environment]::SetEnvironmentVariable($key,$originalEnv[$key],'Process')
     }
