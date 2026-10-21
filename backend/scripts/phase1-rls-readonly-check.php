@@ -51,6 +51,7 @@ SQL);
         if ($db->selectOne('SELECT public.app_current_company_id() AS company_id')->company_id !== null) {
             throw new RuntimeException('La función tenant no falla cerrado');
         }
+        $db->select("SELECT set_config('app.current_user_id', '', true)");
         foreach ($tables as $table) {
             if (! $table->rls_on || ! $table->rls_forced) {
                 throw new RuntimeException('Falta RLS/FORCE');
