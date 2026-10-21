@@ -211,4 +211,4 @@ php artisan test tests/Feature/Security/ExistingCompaniesHttpReadOnlyTest.php
 php artisan test tests/Feature/Security/ExistingCompaniesRoleGuardReadOnlyTest.php
 ```
 
-Si pasan y no existen errores PHP 8.5, confirmar `git status --short`, revisar `git diff -- backend/composer.json backend/composer.lock`, subir ambos archivos **juntos**, y actualizar `.github/workflows/phase1-security-static.yml` a PHP 8.5 con las nuevas dependencias. No declarar validación CI hasta ver sus logs.
+Si pasan y no existen errores PHP 8.5, confirmar `git status --short`, revisar `git diff -- composer.json composer.lock` (desde `backend/`), subir ambos archivos **juntos**, y actualizar `.github/workflows/phase1-security-static.yml` a PHP 8.5 con las nuevas dependencias. No declarar validación CI hasta ver sus logs.
