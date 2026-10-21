@@ -223,3 +223,5 @@ Referencias: [linter de funciones](https://supabase.com/docs/guides/database/dat
 - `.github/workflows/phase1-security-static.yml`: incorpora lint PHP de las migraciones nuevas. GitHub Actions sigue sin certificación de ejecución.
 
 **Siguiente puerta antes de aplicar a Dev:** repetir el ejecutor Docker después de sincronizar `main` y observar el PASS de migraciones nuevas + regresión SQL + JUnit 12/12. No ejecutar `php artisan migrate` genérico contra Supabase Dev; cualquier futura aplicación requerirá rutas explícitas `--database=pgsql_migrations --path=...`, respaldos y verificación de los avisos del advisor.
+
+**Ajuste final del ejecutor Docker F1.4:** además de las dos migraciones nuevas, ahora ejecuta explícitamente `phase1-search-path-rehearsal.sql` contra PostgreSQL 17 aislado **antes** de probar escritura cruzada y JUnit. Así el siguiente PASS también validará la configuración persistida de las cinco funciones, sin requerir acceso a Supabase Dev.
