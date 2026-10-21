@@ -28,15 +28,13 @@ foreach ($line in [regex]::Split($template, '\r\n|\n|\r')) {
   }
 }
 $exists = Test-Path -LiteralPath $envPath
-$current = if ($exists) { [IO.File]::ReadAllText($envPath) } else { '' }
+$current = if ($exists) { [IO.File]::ReadAllText($envPath) } else { $template }
 $eol = if ($current.Contains([string][char]13 + [string][char]10)) {
   [string][char]13 + [string][char]10
 } else { [string][char]10 }
 $lines = New-Object 'System.Collections.Generic.List[string]'
-if ($exists) {
-  foreach ($line in [regex]::Split($current, '\r\n|\n|\r')) {
-    [void]$lines.Add($line)
-  }
+foreach ($line in [regex]::Split($current, '\r\n|\n|\r')) {
+  [void]$lines.Add($line)
 }
 $changed = New-Object 'System.Collections.Generic.List[string]'
 foreach ($key in $allowlist) {
@@ -63,6 +61,7 @@ foreach ($key in $allowlist) {
   }
 }
 Write-Host ('[INFO] backend/.env existe: ' + $(if ($exists) { 'SI' } else { 'NO' }))
+if (-not $exists) { Write-Host '[PLAN] Crear .env completo desde .env.example (passwords vacios).' }
 Write-Host ('[PLAN] Claves no secretas por completar: ' + $changed.Count)
 if ($changed.Count -gt 0) { Write-Host ($changed -join ', ') }
 Write-Host '[SEGURIDAD] No modifica APP_KEY ni passwords ni valores existentes no vacios.'
