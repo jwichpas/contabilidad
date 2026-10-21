@@ -276,7 +276,7 @@ try {
         throw new RuntimeException('Esquema public no esta vacio; prohibido el bootstrap inicial sobre datos existentes.');
     }
     echo '[INFO] app_backend restringido existe: '.((int)$identity->restricted_roles === 1 ? 'SI' : 'NO; requiere bootstrap posterior').PHP_EOL;
-    echo '[BLOQUEO] Preflight completado; no se ejecuto ningun DML/DDL ni migrate.'.PHP_EOL;
+    echo '[PASS] Comprobacion remota de solo lectura completada: no se ejecuto DML/DDL ni migrate.'.PHP_EOL;
 } catch (\Throwable $e) {
     // No imprimir excepciones de PDO por si incorporan credenciales o URLs.
     fwrite(STDERR, '[FAIL] Conexion de solo lectura / identidad Neon no confirmada (revisar DNS, TLS, usuario y password).'.PHP_EOL);
