@@ -72,7 +72,7 @@ if ($adminUrl !== '' || $appUrl !== '') {
 if ($branch === '' || in_array(strtolower($branch), ['production','prod','main','master'], true)) {
     $issues[] = 'NEON_TEST_BRANCH_NAME debe identificar una rama de pruebas distinta de production/main.';
 }
-if ($expectedHost === '' || ! preg_match('/^ep-[a-z0-9-]+[.]([a-z0-9-]+[.])?aws[.]neon[.]tech$/', $expectedHost)) {
+if ($expectedHost === '' || ! preg_match('/^ep-[a-z0-9-]+[.](?:[a-z0-9-]+[.]){1,3}aws[.]neon[.]tech$/', $expectedHost)) {
     $issues[] = 'NEON_TEST_BRANCH_HOST debe ser el host directo del endpoint de pruebas copiado del panel Neon.';
 }
 if ($host === $productionHost || $expectedHost === $productionHost) {
