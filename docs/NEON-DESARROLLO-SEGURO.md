@@ -112,3 +112,35 @@ if ($errors.Count) { $errors | Format-List Message,Extent; throw 'ParserError' }
 Después completar PRIVADAMENTE con el panel Neon: `DB_MIGRATIONS_PASSWORD` del propietario `neondb_owner`; `DB_APP_BACKEND_ROLE_PASSWORD` aleatoria de al menos 20 caracteres y la misma contraseña temporal en `DB_PASSWORD` para el rol `app_backend` que aún no existe. No pegar passwords en el chat ni commitear `.env`.
 
 Reejecutar `php scripts/phase1-neon-preflight.php`. Si pasa, `--read-only --require-empty` es la siguiente puerta; hasta entonces, **no ejecutar migrate**. Si el script avisa de variables de proceso configuradas, inspeccionar también esa precedencia antes de tocar los archivos.
+
+
+## F1.6 — Segundo preflight: .env todavia apunta a Supabase/production (21/10/2026)
+
+El usuario adjunto un extracto de su `backend/.env` (sin contrasenas). Se identificaron **dos problemas diferentes**:
+
+1. Valores NO SECRETOS antiguos todavia activos: `DB_HOST=aws-1-ca-central-1.pooler.supabase.com`, `DB_PORT=6543`, `DB_DATABASE=postgres`, `DB_USERNAME=app_backend.bnjwxphwtkhblvhsnylj`, `DB_EMULATE_PREPARES=true`; `DB_MIGRATIONS_HOST=ep-ancient-brook-b6llhj4d.c-2.sa-east-1.aws.neon.tech` corresponde a Neon **production**, y `NEON_TEST_BRANCH_HOST=HOST_DIRECTO_DE_LA_RAMA` es un marcador provisional. **No hacer consultas ni migraciones contra esas conexiones**.
+2. El preflight devolvio `APP_ENV` vacio, `DB_HOST` vacio y `DB_MIGRATIONS_HOST` vacio incluso existiendo parametros en el archivo. Esto requiere descartar configuracion Laravel sin cargar o variables de entorno de PowerShell/proceso que sobrescriban `.env`. **No diagnosticar solo cambiando hosts**.
+
+Se mejoro `backend/scripts/phase1-neon-env-repair.ps1` con allowlist exacta de valores conocidos de Supabase y Neon production. Su modo sin `-Apply` no modifica archivos. Con `-Apply` crea backup privado y reemplaza solo parametros no secretos vacios, ausentes o iguales a un valor antiguo reconocido. El host de migraciones y aplicacion sera `ep-sweet-king-b6hxra2r.c-2.sa-east-1.aws.neon.tech`, PostgreSQL 18.6 rama `contabilidad-dev`, pooling desactivado. Se conserva cualquier otro valor personalizado y se mantienen sin cambios las contrasenas y `APP_KEY`. No modificar Supabase ni Neon production.
+
+`phase1-neon-preflight.php` ahora muestra exclusivamente indicadores sin secretos: si el repositorio de configuracion Laravel contiene los nodos DB, si `env()` ve los dos hosts, y **nombres** de variables heredadas del proceso que puedan prevalecer sobre `.env`. Ademas exige `DB_PASSWORD` no vacio e igualdad criptografica con `DB_APP_BACKEND_ROLE_PASSWORD` cuando esta configurada para bootstrap; no imprime ninguna.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+$tokens=$null; $parseErrors=$null
+[System.Management.Automation.Language.Parser]::ParseFile(
+  (Resolve-Path .\scripts\phase1-neon-env-repair.ps1).Path,
+  [ref]$tokens,[ref]$parseErrors
+) | Out-Null
+if ($parseErrors.Count -gt 0) { $parseErrors | Format-List Message,Extent; throw "ParserError" }
+.\scripts\phase1-neon-env-repair.ps1
+.\scripts\phase1-neon-env-repair.ps1 -Apply
+php -l scripts/phase1-neon-preflight.php
+php scripts/phase1-neon-preflight.php
+```
+
+Despues completar `DB_MIGRATIONS_PASSWORD` con credencial Neon de la rama dev, `DB_APP_BACKEND_ROLE_PASSWORD` con secreto aleatorio fuerte y `DB_PASSWORD` con el mismo valor (rol aun sin crear). Si el preflight indica configuracion Laravel no cargada a pesar de env visibles, **detenerse y revisar bootstrapping** antes de permitir SQL. Si reporta variables heredadas en el proceso, revisar su procedencia sin publicar valores, utilizar nueva terminal para evitar contaminacion de entorno y repetir. Duplicados de `DB_APP_BACKEND_NEW_PASSWORD` quedan fuera de la reparacion: no afecta a esta puerta pero conviene eliminarlos manualmente antes de fases posteriores.
+
+El endpoint production y el proyecto Supabase NO fueron modificados. No se ejecutaron DDL, DML ni migraciones remotas; por tanto F1.6 aun no esta cerrado.
