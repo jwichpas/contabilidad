@@ -153,6 +153,67 @@ describe('Asientos Contables / Libro Diario Bimoneda (Partida Doble)', function 
         expect($auditLog->severity)->toBe('INFO');
     });
 
+    test('correlativo automático usa el mayor sufijo y preview no reserva número', function (): void {
+        $operational = $this->tenantContext->run($this->company->id, function (): array {
+            return AccountingAccount::query()
+                ->where('is_operational', true)
+                ->where('is_active', true)
+                ->take(2)
+                ->get()
+                ->all();
+        });
+        expect(count($operational))->toBe(2);
+        $payload = [
+            'entry_date' => '2026-10-19',
+            'entry_type' => 'STANDARD',
+            'currency' => 'PEN',
+            'exchange_rate' => '3.750000',
+            'exchange_rate_type' => 'SELL',
+            'description' => 'Prueba de correlativo en transaccion',
+            'lines' => [
+                [
+                    'accounting_account_id' => $operational[0]->id,
+                    'debit_local' => '120.0000',
+                    'credit_local' => '0.0000',
+                    'debit_foreign' => '32.0000',
+                    'credit_foreign' => '0.0000',
+                ],
+                [
+                    'accounting_account_id' => $operational[1]->id,
+                    'debit_local' => '0.0000',
+                    'credit_local' => '120.0000',
+                    'debit_foreign' => '0.0000',
+                    'credit_foreign' => '32.0000',
+                ],
+            ],
+        ];
+
+        // Crear un hueco intencional: COUNT(*)+1 sugeriría 10-00002,
+        // pero el MAX real obliga a reservar 10-98001.
+        $manual = $this->postJson('/api/v1/accounting/journal-entries',
+            array_merge($payload, ['entry_number' => '10-98000']),
+            $this->headers);
+        $manual->assertCreated();
+
+        $preview = $this->getJson(
+            '/api/v1/accounting/journal-entries/next-number?date=2026-10-19',
+            $this->headers
+        );
+        $preview->assertOk();
+        $preview->assertJsonPath('data.is_reserved', false);
+        $preview->assertJsonPath('data.next_number', '10-98001');
+
+        $first = $this->postJson('/api/v1/accounting/journal-entries',
+            $payload, $this->headers);
+        $second = $this->postJson('/api/v1/accounting/journal-entries',
+            $payload, $this->headers);
+
+        $first->assertCreated()->assertJsonPath('data.entry_number','10-98001');
+        $second->assertCreated()->assertJsonPath('data.entry_number','10-98002');
+        expect($first->json('data.entry_number'))
+            ->not->toBe($second->json('data.entry_number'));
+    });
+
     test('rechaza asientos descuadrados que violan la partida doble (Debe != Haber)', function (): void {
         $operationalAccounts = $this->tenantContext->run($this->company->id, function (): array {
             return AccountingAccount::query()
