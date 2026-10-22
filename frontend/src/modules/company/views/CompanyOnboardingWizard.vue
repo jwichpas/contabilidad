@@ -206,10 +206,15 @@ async function createCompany(): Promise<void> {
     emit('created', result);
   } catch (exception) {
     if (exception instanceof ApiHttpError) {
-      error.value = exception.message;
-      if (exception.validationErrors.tax_id?.[0]) error.value = exception.validationErrors.tax_id[0];
+      if (exception.status >= 500) {
+        error.value = 'El servidor no confirmó el alta. Antes de volver a intentarlo, comprueba si la empresa ya aparece en el selector por su RUC. Si no existe, revisa el diagnóstico de Laravel.';
+      } else {
+        error.value = exception.validationErrors.tax_id?.[0] ?? exception.message;
+      }
     } else {
-      error.value = exception instanceof Error ? exception.message : 'No se pudo crear la empresa.';
+      error.value = exception instanceof Error
+        ? 'No se pudo confirmar el alta por un error de conexión. Comprueba primero el listado de empresas antes de reintentar.'
+        : 'No se pudo confirmar el alta. Verifica primero el listado de empresas.';
     }
   } finally {
     saving.value = false;
@@ -446,6 +451,9 @@ onMounted(() => {
           </div>
         </section>
 
+        <p v-if="saving" role="status" class="mt-5 rounded-lg border border-brand/30 bg-brand/5 px-4 py-3 text-xs text-foreground">
+          Creando la empresa y copiando el PCGE de seis dígitos en Neon. La operación es transaccional; no vuelvas a enviar el formulario.
+        </p>
         <div class="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
           <button v-if="step > 0" type="button" class="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-foreground hover:bg-soft" @click="previous">
             <ArrowLeft class="h-4 w-4" /> Anterior
