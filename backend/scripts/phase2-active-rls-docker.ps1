@@ -25,8 +25,14 @@ function Set-F23hEnv {
     }
 }
 function Invoke-F23h {
-    param([string]$Program,[string[]]$Args)
-    & $Program @Args
+    param(
+        [Parameter(Mandatory=$true)][string]$Program,
+        [Parameter(Mandatory=$true)][string[]]$Arguments
+    )
+    # No usar $Args: es una variable automatica de PowerShell que contiene
+    # argumentos sin enlazar, y en este wrapper resultaba vacia.
+    if($Arguments.Count -eq 0){throw "Invocacion sin argumentos: $Program"}
+    & $Program @Arguments
     if($LASTEXITCODE -ne 0){throw "$Program fallo: codigo $LASTEXITCODE"}
 }
 try{
@@ -46,7 +52,7 @@ try{
         throw 'Docker Desktop debe estar encendido con contenedores Linux.'
     }
     Write-Host '[AISLAMIENTO] PostgreSQL 18 en Docker temporal; puerto solo 127.0.0.1.'
-    Invoke-F23h 'docker' @('run','--detach','--name',$containerName,
+    Invoke-F23h -Program 'docker' -Arguments @('run','--detach','--name',$containerName,
         '--publish','127.0.0.1::5432','--env',('POSTGRES_PASSWORD='+$adminPassword),
         '--env','POSTGRES_DB=contabilidad_ci','postgres:18-alpine')
     $runContainer=$true
@@ -66,7 +72,7 @@ try{
     $guardSql="CREATE TABLE public.f23h_guard (token text NOT NULL); "+
         "INSERT INTO public.f23h_guard(token) VALUES ('$guardToken'); "+
         'CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;'
-    Invoke-F23h 'docker' @('exec',$containerName,'psql','-U','postgres',
+    Invoke-F23h -Program 'docker' -Arguments @('exec',$containerName,'psql','-U','postgres',
         '-d','contabilidad_ci','-X','-v','ON_ERROR_STOP=1','-c',$guardSql)
     Set-F23hEnv @{
         APP_ENV='testing';APP_DEBUG='false'
@@ -109,17 +115,17 @@ try{
     }
     Write-Host ('[MIGRACIONES] '+$migrations.Count+' migraciones reales en el contenedor desechable.')
     foreach($migration in $migrations){
-        Invoke-F23h 'php' @('artisan','migrate','--database=pgsql_migrations',
+        Invoke-F23h -Program 'php' -Arguments @('artisan','migrate','--database=pgsql_migrations',
             ('--path='+$migration),'--force','--no-interaction')
         $id=[IO.Path]::GetFileNameWithoutExtension($migration)
         $check="SELECT count(*) FROM public.migrations WHERE migration='$id'"
         $rows=(& docker exec $containerName psql -U postgres -d contabilidad_ci -X -A -t -v ON_ERROR_STOP=1 -c $check | Out-String).Trim()
         if($LASTEXITCODE -ne 0 -or $rows -ne '1'){throw "Migración no registrada: $id"}
     }
-    Invoke-F23h 'docker' @('exec',$containerName,'psql','-U','postgres','-d','contabilidad_ci',
+    Invoke-F23h -Program 'docker' -Arguments @('exec',$containerName,'psql','-U','postgres','-d','contabilidad_ci',
         '-X','-v','ON_ERROR_STOP=1','-c','GRANT SELECT ON public.f23h_guard TO app_backend')
-    Invoke-F23h 'php' @('-l','scripts/phase2-active-rls-docker.php')
-    Invoke-F23h 'php' @('scripts/phase2-active-rls-docker.php','--probe=ephemeral-docker')
+    Invoke-F23h -Program 'php' -Arguments @('-l','scripts/phase2-active-rls-docker.php')
+    Invoke-F23h -Program 'php' -Arguments @('scripts/phase2-active-rls-docker.php','--probe=ephemeral-docker')
     Write-Host '[PASS] F2.3h: HTTP ACTIVE con rol app_backend y FORCE RLS verificados en Docker.'
     $success=$true
 }catch{
@@ -129,9 +135,16 @@ try{
         [Environment]::SetEnvironmentVariable($key,$originalEnv[$key],'Process')
     }
     if($runContainer){
-        & docker rm --force $containerName 1>$null 2>$null
-        if($LASTEXITCODE -eq 0){Write-Host '[LIMPIEZA] PostgreSQL Docker descartable eliminado.'}
-        else{$success=$false;Write-Host ('[WARN] No se pudo eliminar '+$containerName)}
+        # No mostrar una limpieza exitosa si el contenedor nunca existio.
+        $found=(& docker container inspect --format '{{.Id}}' $containerName 2>$null | Out-String).Trim()
+        if($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($found)){
+            $success=$false
+            Write-Host ('[WARN] No existe el contenedor registrado para limpiar: '+$containerName)
+        }else{
+            & docker rm --force $containerName 1>$null 2>$null
+            if($LASTEXITCODE -eq 0){Write-Host '[LIMPIEZA] PostgreSQL Docker descartable eliminado.'}
+            else{$success=$false;Write-Host ('[WARN] No se pudo eliminar '+$containerName)}
+        }
     }
     Set-Location $oldLocation
 }
