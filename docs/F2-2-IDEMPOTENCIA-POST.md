@@ -1,6 +1,31 @@
 # F2.2 — Idempotencia de asientos contables: implementación y validación manual
 
-**Fecha:** 22/10/2026 · **Rama:** `main` · **Estado:** implementado en código, **NO validado ni migrado en Neon**.
+**Fecha:** 22/10/2026 · **Rama:** `main` · **Estado:** pruebas Docker/Frontend **PASS**; migración aditiva y HTTP en **Neon DEV pendientes**.
+
+## Evidencia manual confirmada — 22/10/2026
+
+**PASS informado por el usuario:** Docker PostgreSQL 18 con 20 migraciones; HTTP bajo `app_backend` sin BYPASSRLS y matriz ACTIVE solo dentro de transacción; idempotencia 201→200 replay / 409 conflicto, un recibo para un asiento, protección de recibos por tenant, denegación UPDATE, prueba de segunda conexión sin obtener el advisory lock, extorno y auditoría, ROLLBACK, eliminación efectiva del contenedor. **Vue**: `pnpm typecheck` PASS; **16/16** pruebas unitarias PASS; `pnpm build` PASS con 1.615 módulos compilados.
+
+**Pendiente para cerrar F2.2 en Neon:** aplicar la migración aditiva con **Laravel** y ejecutar HTTP idempotente en Neon DEV con ROLLBACK. No dar por aplicadas las 22 migraciones hasta ver el resultado local.
+
+**Instalador protegido publicado:** `backend/scripts/phase2-neon-journal-idempotency.php` con `--plan`, `--verify` y `--apply=contabilidad-dev`. Verifica roles, host PG18, 3 empresas ficticias, SHA/metadatos, baseline, índice UNIQUE, FK, CHECK, FORCE RLS y permisos de `app_backend`. El modo `--apply` sí confirma **una migración** mediante Artisan; no es un ensayo ROLLBACK.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-journal-idempotency.php
+php scripts/phase2-neon-journal-idempotency.php --plan
+php scripts/phase2-neon-journal-idempotency.php --apply=contabilidad-dev
+php scripts/phase2-neon-journal-idempotency.php --verify
+php scripts/phase2-neon-analytic-http.php --probe=contabilidad-dev
+php scripts/phase2-neon-analytic-allocations.php --verify
+php scripts/phase2-neon-tenant-integrity.php --verify
+```
+
+**Puerta:** no ejecutar `--apply` si la primera verificación del entorno falla. Los tres verificadores posteriores deben confirmar 22 migraciones, HTTP 201/200/409 reversible, cero asientos/recibos tras rollback y tres matrices DRAFT.
+
+---
 
 ## Problema concreto
 
