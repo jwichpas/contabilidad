@@ -79,8 +79,8 @@ try {
       SQL,[$migration]);
     if (!$state||$state->role_name!=='neondb_owner'||$state->db_name!=='neondb'
         ||intdiv((int)$state->pg_ver,10000)!==18
-        ||!in_array((int)$state->migrations,[20,21],true)
-        ||(int)$state->migration_record !== (int)$state->migrations-20
+        ||!in_array((int)$state->migrations,[20,21,22],true)
+        ||(int)$state->migration_record !== ((int)$state->migrations===20?0:1)
         ||(int)$state->allocation_table!==(int)$state->migration_record
         ||(int)$state->companies!==3||(int)$state->users!==3||(int)$state->members!==8
         ||(int)$state->global_versions!==1||(int)$state->pcge!==3401
@@ -129,13 +129,13 @@ try {
         CASE WHEN has_table_privilege('app_backend',
             'public.journal_analytic_allocations','DELETE') THEN 1 ELSE 0 END AS can_delete
       SQL,[$migration]);
-    if (!$check||(int)$check->migrations!==21||(int)$check->migration_record!==1
+    if (!$check||!in_array((int)$check->migrations,[21,22],true)||(int)$check->migration_record!==1
         ||(int)$check->fks!==5||(int)$check->force_rls!==1
         ||(int)$check->active_index!==1||(int)$check->can_read!==1||(int)$check->can_insert!==1
         ||(int)$check->can_update!==0||(int)$check->can_delete!==0) {
         throw new RuntimeException('Contrato PostgreSQL RLS/FK F2.3b incompleto.');
     }
-    echo "[PASS] F2.3b: 21 migraciones, lineage same-voucher, UNIQUE y RLS sin UPDATE/DELETE.\n";
+    echo "[PASS] F2.3b: ".(int)$check->migrations." migraciones, lineage same-voucher, UNIQUE y RLS sin UPDATE/DELETE.\n";
     echo "[PENDIENTE] V2 sigue DRAFT: no se generan asientos 94/95/79 automaticamente.\n";
 } catch (Throwable $error) {
     fwrite(STDERR,"[BLOQUEO] F2.3b no verificada. No ejecutar migrate general ni activar matrices.\n");
