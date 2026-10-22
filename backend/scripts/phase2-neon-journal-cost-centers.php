@@ -90,16 +90,17 @@ try {
       SQL,[$migration]);
     if (!$before || $before->role_name!=='neondb_owner' || $before->db_name!=='neondb'
         || intdiv((int)$before->pg_ver,10000)!==18
-        || !in_array((int)$before->migrations,[19,20],true)
-        || (int)$before->migrations - 19 !== (int)$before->migration_record
+        || !in_array((int)$before->migrations,[19,20,21],true)
+        || ((int)$before->migrations === 19 && (int)$before->migration_record !== 0)
+        || ((int)$before->migrations >= 20 && (int)$before->migration_record !== 1)
         || (int)$before->companies!==3 || (int)$before->users!==3 || (int)$before->members!==8
         || (int)$before->global_reference!==1 || (int)$before->pcge!==3401
         || (int)$before->versions!==3 || (int)$before->routes!==1362) {
         throw new RuntimeException('Estado previo de Neon no coincide.');
     }
-    echo "[PASS] Neon dev PG18, 3 empresas, 3 matrices DRAFT, 1.362 rutas, 19/20 migraciones.\n";
+    echo "[PASS] Neon dev PG18, 3 empresas, 3 matrices DRAFT, 1.362 rutas, 19/20/21 migraciones.\n";
     if ($mode==='--verify') {
-        if ((int)$before->migrations!==20 || (int)$before->migration_record!==1
+        if ((int)$before->migrations<20 || (int)$before->migration_record!==1
             || (int)$before->col_present!==1 || (int)$before->fk_present!==1) {
             echo "[PENDIENTE] Dimension cost_center_id aun no esta instalada.\n";
             exit(1);
@@ -107,7 +108,7 @@ try {
         echo "[PASS] F2.3a: cost_center_id nullable y FK multiempresa instalados.\n";
         exit(0);
     }
-    if ((int)$before->migrations===20) {
+    if ((int)$before->migrations>=20) {
         if ((int)$before->col_present!==1 || (int)$before->fk_present!==1) {
             throw new RuntimeException('Migracion aplicada parcialmente.');
         }
