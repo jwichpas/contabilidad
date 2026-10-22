@@ -36,6 +36,23 @@ foreach (file($root.'/.env',FILE_IGNORE_NEW_LINES)?:[] as $line) {
 require $root.'/vendor/autoload.php';
 $app=require $root.'/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+// This standalone HTTP harness boots the real Laravel kernel but must not
+// depend on the operator's cache/session drivers, which may be empty or
+// point to unavailable database-backed Laravel cache/session tables.
+// Docker F2.3h passes with these same IN-MEMORY test-only drivers.
+// Do not edit .env or persist any of these temporary overrides.
+$previousProbeDrivers=[
+    'cache.default'=>config('cache.default'),
+    'session.driver'=>config('session.driver'),
+    'queue.default'=>config('queue.default'),
+];
+config([
+    'cache.default'=>'array',
+    'session.driver'=>'array',
+    'queue.default'=>'sync',
+]);
+$probePhase='configuration gate';
 $admin=(array)config('database.connections.pgsql_migrations',[]);
 $runtime=(array)config('database.connections.pgsql',[]);
 $key=(string)env('APP_KEY','');
@@ -66,6 +83,7 @@ $db=DB::connection('pgsql');
 $kernel=$app->make(\Illuminate\Contracts\Http\Kernel::class);
 $inTransaction=false;$successful=false;
 try{
+    $probePhase='baseline owner SELECT';
     $pre=$owner->selectOne(<<<'SQL'
         SELECT current_database() AS database_name,
           current_setting('server_version_num')::integer AS version,
@@ -93,11 +111,13 @@ try{
         throw new RuntimeException('Las tres empresas ficticias no coinciden.');
     }
     $companyA=(int)$all[0]->id;$companyB=(int)$all[1]->id;
+    $probePhase='app_backend transaction';
     $db->beginTransaction();$inTransaction=true;
     $db->selectOne("SELECT set_config('statement_timeout','20000',true)");
     $who=$db->selectOne('SELECT current_user AS actor');
     if(!$who||$who->actor!=='app_backend')throw new RuntimeException('No se conecto con app_backend.');
 
+    $probePhase='Sanctum DEMO actors';
     $adminUser=User::query()->findOrFail(3000000000201);
     $auditorUser=User::query()->findOrFail(3000000000203);
     \Laravel\Sanctum\Sanctum::actingAs($adminUser,['*'],'sanctum');
@@ -174,6 +194,7 @@ try{
     // Schema 21: original DRAFT POST test; schema 22: F2.2 Idempotency-Key
     // exercises real Neon app_backend, same transaction and ROLLBACK.
     $idempotencyKey=(int)$pre->migrations===22?'f22-neon-draft-lookup-key-001':null;
+    $probePhase='HTTP journal POST with Sanctum';
     $createdResponse=$request('POST','/api/v1/accounting/journal-entries',$companyA,$post,$idempotencyKey);
     $created=json_decode((string)$createdResponse->getContent(),true,512,JSON_THROW_ON_ERROR);
     $check($createdResponse->getStatusCode()===201,
@@ -192,6 +213,7 @@ try{
             &&(int)($againJson['data']['id']??0)===$entryId
             &&$again->headers->get('Idempotency-Replayed')==='true',
             'HTTP Neon idempotencia no devolvio mismo asiento con 200.');
+            $probePhase='HTTP idempotency conflict';
         $different=$post;
         $different['description']='F22 CLAVE REPETIDA CONTENIDO DISTINTO';
         $conflict=$request('POST','/api/v1/accounting/journal-entries',
@@ -254,6 +276,7 @@ try{
     echo "[PASS] HTTP 403: auditor sin permiso POST y sin membresia A.\n";
     \Laravel\Sanctum\Sanctum::actingAs($adminUser,['*'],'sanctum');
 
+    $probePhase='HTTP reverse and audit';
     $reversalResponse=$request(
         'POST','/api/v1/accounting/journal-entries/'.$entryId.'/reverse',
         $companyA,[
@@ -290,17 +313,23 @@ try{
         'Auditoria/contabilidad extorno HTTP inconsistentes.');
     $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
     echo "[PASS] HTTP 201 extorno + 422 doble extorno; auditoria y triggers bimoneda.\n";
-    $successful=true;
+    echo "[PASS] F2.3d: HTTP harness usa cache/session=array y cola sync solo en memoria.\n";    $successful=true;
 }catch(\Throwable $e){
     // Errors from integration assertions are safe to show, not SQL with secrets.
-    $detail=(string)$e->getMessage();
-    fwrite(STDERR,"[FAIL] F2.3d: ".substr($detail,0,500)."\n");
+    // Phased error labels, not raw SQL or full environment values.
+    $detail=$e instanceof \Illuminate\Database\QueryException
+        ?'SQLSTATE='.($e->errorInfo[0]??$e->getCode())
+        :substr((string)$e->getMessage(),0,240);
+    fwrite(STDERR,"[FAIL] F2.3d fase=".$probePhase.": ".$detail."\n");
 }finally{
     if($inTransaction){
         try{$db->rollBack();echo "[ROLLBACK] HTTP vouchers, auditoria, periodos y tipos de cambio revertidos.\n";}
         catch(\Throwable){$successful=false;fwrite(STDERR,"[BLOQUEO] ROLLBACK HTTP fallido.\n");}
     }
     $db->disconnect();
+    // Only PHP memory was changed; ensure the harness restores the defaults
+    // when the probe finishes, whether it passes or fails.
+    config($previousProbeDrivers);
 }
 if($successful){
     try{
