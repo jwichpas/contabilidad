@@ -96,40 +96,24 @@ try {
                (SELECT count(*) FROM public.migrations)::integer AS migrations,
                (SELECT count(*) FROM public.companies)::integer AS companies,
                (SELECT count(*) FROM public.users)::integer AS users,
-               (SELECT count(*) FROM public.company_user)::integer AS memberships,
                (SELECT count(*) FROM public.journal_entries)::integer AS entries,
                (SELECT count(*) FROM public.accounting_accounts)::integer AS accounts,
                (SELECT count(*) FROM public.fiscal_periods)::integer AS periods,
                (SELECT count(*) FROM pg_catalog.pg_roles
                 WHERE rolname=current_user AND rolcanlogin AND NOT rolsuper
-                  AND NOT rolbypassrls AND NOT rolcreaterole AND NOT rolcreatedb)::integer AS safe_role,
-               (SELECT count(*) FROM public.company_user
-                WHERE company_id=? AND user_id=? AND role='ADMIN' AND is_active)::integer AS admin_member
-        SQL,[$companyId,$userId]);
-    if($identity===null || $identity->actor!=='app_backend'
-       || $identity->db!=='neondb'
-       || intdiv((int)$identity->version,10000)!==18
-       || (int)$identity->migrations!==17
-       || (int)$identity->companies!==3
-       || (int)$identity->users!==3
-       || (int)$identity->memberships!==8
-       || (int)$identity->entries!==0
-       || (int)$identity->accounts!==0
-       || (int)$identity->periods!==0
-       || (int)$identity->safe_role!==1
-       || (int)$identity->admin_member!==0) {
-        // RLS correctly hides memberships before tenant is active;
-        // require the grant via a scoped transaction below instead.
-        if ($identity===null || $identity->actor!=='app_backend'
-            || $identity->db!=='neondb' || (int)($identity->entries??-1)!==0
-            || (int)($identity->accounts??-1)!==0
-            || (int)($identity->periods??-1)!==0
-            || (int)($identity->companies??-1)!==3
-            || (int)($identity->users??-1)!==3
-            || (int)($identity->migrations??-1)!==17
-            || (int)($identity->safe_role??0)!==1) {
-            throw new \RuntimeException('Estado de desarrollo inesperado.');
-        }
+                  AND NOT rolbypassrls AND NOT rolcreaterole AND NOT rolcreatedb)::integer AS safe_role
+        SQL);
+    if ($identity===null || $identity->actor!=='app_backend'
+        || $identity->db!=='neondb'
+        || intdiv((int) ($identity->version??0),10000)!==18
+        || (int) ($identity->migrations??-1)!==17
+        || (int) ($identity->companies??-1)!==3
+        || (int) ($identity->users??-1)!==3
+        || (int) ($identity->entries??-1)!==0
+        || (int) ($identity->accounts??-1)!==0
+        || (int) ($identity->periods??-1)!==0
+        || (int) ($identity->safe_role??0)!==1) {
+        throw new \RuntimeException('Estado de desarrollo inesperado.');
     }
     echo '[PASS] Neon contabilidad-dev: 3 empresas, 3 usuarios, 17 migraciones, sin asientos.'.PHP_EOL;
     config(['database.connections.pgsql_f114_neon_b'=>$cfg]);
