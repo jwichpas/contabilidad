@@ -86,5 +86,7 @@ test('requires a selected SUNAT Annex 2 contributor code', () => {
   d.sunat_contributor_type_code = '';
   assert.ok(onboardingStepErrors(0, d).sunat_contributor_type_code);
   d.sunat_contributor_type_code = '07';
+  assert.ok(onboardingStepErrors(0, d).sunat_contributor_type_code);
+  d.sunat_contributor_type_code = '39';
   assert.deepEqual(onboardingStepErrors(0, d), {});
 });
