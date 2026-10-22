@@ -75,6 +75,27 @@ php scripts/phase2-neon-tenant-integrity.php --verify
 
 **Importante:** la verificación puede fallar con `[FAIL]` y revertir igualmente la transacción. No activar reglas ni modificar manualmente datos en ese caso; analizar SQLSTATE y middleware/contexto.
 
+## F2.3c verificada y F2.3d HTTP preparada (22/10/2026)
+
+**El usuario confirmó ejecución completa de F2.3c con app_backend:** INSERT/SELECT de A/B; 42501 para escritura cruzada y UPDATE/DELETE, 23503 para referencia de otro voucher/tenant, 23505 para vínculo duplicado; aislamiento B/C/sin tenant; triggers diferidos PASS; ROLLBACK completo y cero asientos, líneas, vínculos y períodos. Se mantienen 21 migraciones, 3 DRAFT, 1362 rutas, 0 ACTIVE.
+
+**F2.3d HTTP está publicada, NO ejecutada aún:** el script `backend/scripts/phase2-neon-analytic-http.php` utiliza el Kernel Laravel y Sanctum en conexión `app_backend` para comprobar HTTP 201 de voucher USD/PEN con centro de costos, tipo de cambio, auditoría, HTTP 422 por centro faltante/ajeno y descuadre, GET de diario con aislamiento multiempresa, HTTP 403 por rol AUDITOR/membresía ausente y 201 de extorno con rechazo 422 al repetir. Todos los cambios son temporales en una transacción externa que termina ROLLBACK. Revalida 0 asientos, líneas, vínculos, períodos, tipos de cambio y auditorías; DRAFT no genera líneas analíticas.
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-analytic-http.php
+php scripts/phase2-neon-analytic-http.php --plan
+php scripts/phase2-neon-analytic-http.php --probe=contabilidad-dev
+php scripts/phase2-neon-analytic-allocations.php --verify
+php scripts/phase2-neon-tenant-integrity.php --verify
+```
+
+**Mejora del historial:** el backend incluye `lines.costCenter` en GET/POST/extorno; el frontend usa `cost_center.code`, incluso para centros desactivados posteriormente. No altera asientos históricos.
+
+**Pendiente antes de activar:** prueba HTTP con matriz ACTIVE reversible (además del probe F2.3b a nivel de servicio), promoción formal versionada y auditada, y reparación/verificación del CI de GitHub Actions sin jobs.
+
 ## Estado y barrera de activación
 
 **Todo el código de generación está detrás de la condición `status=ACTIVE`.**
