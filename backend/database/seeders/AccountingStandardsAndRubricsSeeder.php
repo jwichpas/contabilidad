@@ -14,6 +14,23 @@ use Illuminate\Database\Seeder;
  */
 class AccountingStandardsAndRubricsSeeder extends Seeder
 {
+    private bool $bulkGlobalInstall = false;
+
+    /** Only the F2 guarded installer may request insert-only, batched loading. */
+    public function runForGlobalInstall(): void
+    {
+        if ($this->bulkGlobalInstall) {
+            throw new \RuntimeException('Carga global ya iniciada.');
+        }
+
+        $this->bulkGlobalInstall = true;
+        try {
+            $this->run();
+        } finally {
+            $this->bulkGlobalInstall = false;
+        }
+    }
+
     public function run(): void
     {
         $this->seedAccountingStandards();
@@ -501,6 +518,11 @@ class AccountingStandardsAndRubricsSeeder extends Seeder
             ],
         ];
 
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(AccountingStandard::class, $standards, ['legal_base' => 'Resolución N.° 003-2026-EF/30 CNC', 'is_active' => true]);
+            return;
+        }
+
         foreach ($standards as $standard) {
             AccountingStandard::query()->updateOrCreate(
                 ['code' => $standard['code']],
@@ -969,6 +991,11 @@ class AccountingStandardsAndRubricsSeeder extends Seeder
                 'presentation_order' => 790,
             ],
         ];
+
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(FinancialStatementRubricModel::class, $rubrics, ['is_active' => true]);
+            return;
+        }
 
         foreach ($rubrics as $rubric) {
             FinancialStatementRubricModel::query()->updateOrCreate(
