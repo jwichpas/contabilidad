@@ -18,6 +18,7 @@ use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 /**
@@ -68,6 +69,14 @@ final readonly class CreateJournalEntryController
             $key = JournalPostIdempotencyService::validateHeader($request);
         } catch (DomainException $e) {
             return response()->json(['message'=>$e->getMessage()], 400);
+        }
+        if ($key !== null && ! Schema::hasTable('journal_post_idempotency')) {
+            // Safe rolling deployment: the new Vue sends the key before a
+            // guarded Laravel migration may have reached a DEV environment.
+            // Fail BEFORE any journal/FX/period side effect, not with SQL 42P01.
+            return response()->json([
+                'message'=>'Idempotencia aún no disponible: falta aplicar la migración contable aditiva.',
+            ], 503);
         }
         $receipt = $key === null ? null : $this->idempotency->lockAndLookup(
             $companyId, (int)$user->id, $key, $validated
