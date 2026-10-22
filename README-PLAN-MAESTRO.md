@@ -7,7 +7,7 @@
 >
 > **Fase 1 validada técnicamente en Neon DEV.** El motor POST, extornos, analítica 94/95/79 y aislamiento ACTIVE+RLS fueron probados manualmente (F2.3b–F2.3h). **F2.2 ha quedado cerrada con pruebas de idempotencia HTTP en Neon DEV**, mientras **F2.3 completada:** POST/extornos y cierres/reaperturas/bloqueos bajo prueba HTTP, concurrencia de dos conexiones y apertura real con auditoría comprobada en Neon DEV. F3.2 dispone de 3.401 plantillas PCGE y 3 empresas DEMO con planes operativos de seis dígitos.
 >
-> **F2.2 (22/10/2026):** se publicaron migración aditiva `journal_post_idempotency`, servicio de recibos inmutables por empresa/usuario, respuestas HTTP 201/200/409, reutilización controlada de clave UUID en Vue y pruebas Docker PG18 ampliadas de 19 a 20 migraciones. **Docker PG18 y Vue (16/16 tests, typecheck y build) APROBADOS; migración aditiva Laravel aplicada y verificada en Neon DEV (22 migraciones, recibos FORCE RLS).** **HTTP 201/200/409 probado en Neon con app_backend/Sanctum**, extorno, RLS y ROLLBACK; sin recibos ni asientos persistidos. **F2.2 APROBADA**. Nota operativa: el .env local aún necesita CACHE_STORE, SESSION_DRIVER y QUEUE_CONNECTION para ejecución normal, aunque el ensayo integrador aisló esos drivers en memoria. [Plan y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).
+> **F2.2 (22/10/2026):** se publicaron migración aditiva `journal_post_idempotency`, servicio de recibos inmutables por empresa/usuario, respuestas HTTP 201/200/409, reutilización controlada de clave UUID en Vue y pruebas Docker PG18 ampliadas de 19 a 20 migraciones. **Docker PG18 y Vue (16/16 tests, typecheck y build) APROBADOS; migración aditiva Laravel aplicada y verificada en Neon DEV (22 migraciones, recibos FORCE RLS).** **HTTP 201/200/409 probado en Neon con app_backend/Sanctum**, extorno, RLS y ROLLBACK; sin recibos ni asientos persistidos. **F2.2 APROBADA**. Nota operativa: CACHE_STORE, SESSION_DRIVER y QUEUE_CONNECTION ya fueron configurados y su diagnóstico local terminó PASS; los ensayos integradores también mantienen drivers temporales en memoria. [Plan y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).
 >
 > **Decisión: NO utilizar GitHub Actions.** Los dos workflows fueron retirados de `main`; las pruebas se ejecutan **manualmente** en Windows/PowerShell/PHP/Neon DEV y PostgreSQL Docker desechable. Procedimiento y resultados en [Validación manual y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md). **No hay habilitación automática de matrices ni uso de datos reales.**
 >
@@ -458,7 +458,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | Indicador | Estado real (22/10/2026) | Evidencia / siguiente control |
 |---|---|---|
 | Actividades aprobadas | **7/32 (22%)** | Contar únicamente `[x]` de esta sección |
-| Actividades pendientes | **27/32 (84%)** | Incluyen subtareas parcialmente desarrolladas |
+| Actividades pendientes | **25/32 (78%)** | Incluyen subtareas parcialmente desarrolladas |
 | Fase de seguridad F1 | **3/3 con validación técnica en DEV** | Pendiente aprobación formal del hito H1 |
 | Fase del motor F2 | **3/3 completas**; **F2.3 aprobado** | HTTP, concurrencia Docker, RLS y apertura real con auditoría verificados |
 | Fase de empresas F3 | **1/3 completa** | F3.1 alta E2E y F3.3 maestros restantes |
