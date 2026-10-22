@@ -55,6 +55,7 @@ jobs:
           php -l backend/scripts/phase1-neon-journal-rollback.php
           php -l backend/scripts/phase1-neon-journal-number-rollback.php
           php -l backend/scripts/phase1-journal-concurrency-docker.php
+          php -l backend/scripts/phase1-neon-concurrency-demo.php
           php -l backend/app/Services/Accounting/JournalEntryNumberService.php
           php -l backend/app/Services/Accounting/PostJournalEntryService.php
           php -l backend/app/Http/Controllers/Api/V1/Accounting/GetNextJournalEntryNumberController.php
