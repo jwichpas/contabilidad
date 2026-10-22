@@ -49,6 +49,7 @@ final readonly class CreateJournalEntryController
             'description' => ['required', 'string', 'max:350'],
             'lines' => ['required', 'array', 'min:2'],
             'lines.*.accounting_account_id' => ['required', 'integer', 'min:1'],
+            'lines.*.cost_center_id' => ['nullable', 'integer', 'min:1'],
             'lines.*.description' => ['nullable', 'string', 'max:250'],
             'lines.*.debit_local' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
             'lines.*.credit_local' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
@@ -203,6 +204,7 @@ final readonly class CreateJournalEntryController
         $formattedLines = array_map(static function (array $line) use ($validated): array {
             return [
                 'accounting_account_id' => (int) $line['accounting_account_id'],
+                'cost_center_id' => isset($line['cost_center_id']) ? (int) $line['cost_center_id'] : null,
                 'description' => $line['description'] ?? $validated['description'],
                 'debit_local' => Decimal::ofMonetary((string) $line['debit_local'])->toString(),
                 'credit_local' => Decimal::ofMonetary((string) $line['credit_local'])->toString(),
