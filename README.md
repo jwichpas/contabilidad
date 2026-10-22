@@ -10,7 +10,9 @@
 
 # Sistema de Gestión Contable y Financiero Bimonetario (ERP Clean Room)
 
-### Transaccionalidad de Alta Precisión · Normativa Oficial SUNAT, PCGE 2026 y NIIF 18 / NIIF 19
+#**Acceso DEMO Neon DEV:** ya existen tres cuentas de prueba, pero sus contraseñas no se publican. Para generar una contraseña personal del administrador de desarrollo sin crear usuarios, consulta [Acceso inicial DEMO — ContaPerú](docs/ACCESO-DEMO-NEON-DEV.md).
+
+## Transaccionalidad de Alta Precisión · Normativa Oficial SUNAT, PCGE 2026 y NIIF 18 / NIIF 19
 **Aislamiento Multi-Tenant de Dos Capas con PostgreSQL Row Level Security (RLS) y Tipado Numérico Fuerte Anti-Flotantes.**
 
 <br />
