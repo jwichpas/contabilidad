@@ -27,6 +27,80 @@ final readonly class FiscalPeriodStatusService
 {
     public function __construct(private TenantContext $tenantContext) {}
 
+    /**
+     * Explicitly initialize one monthly period for the active company.
+     * Never called by GET; never overwrites CLOSED / LOCKED periods.
+     * The unique company/year/month index serializes concurrent requests.
+     */
+    public function open(int $year, int $month, string $reason, Request $request): FiscalPeriod
+    {
+        $companyId=$this->tenantContext->requireCompanyId(FiscalPeriod::class);
+        $actorId=(int)$request->user()->id;
+        $reason=trim($reason);
+        if($year<2000||$year>2100||$month<1||$month>12){
+            throw new DomainException('Ejercicio o mes fuera de rango.');
+        }
+        if(mb_strlen($reason)<10||mb_strlen($reason)>500){
+            throw new DomainException('Debe justificar la apertura con 10 a 500 caracteres.');
+        }
+
+        $start=sprintf('%04d-%02d-01',$year,$month);
+        $end=\Carbon\CarbonImmutable::parse($start,'UTC')->endOfMonth()->toDateString();
+
+        try {
+            return DB::transaction(function()use(
+                $companyId,$actorId,$year,$month,$start,$end,$reason,$request
+            ):FiscalPeriod {
+                // An existing CLOSED / LOCKED period may never be "opened"
+                // by re-creating it. REOPEN is a separate audited transition.
+                if(FiscalPeriod::query()
+                    ->where('company_id',$companyId)->where('year',$year)
+                    ->where('month',$month)->exists()){
+                    throw new DomainException(
+                        'El período ya existe. Actualice la pantalla y utilice su estado actual.'
+                    );
+                }
+
+                $period=FiscalPeriod::query()->create([
+                    'company_id'=>$companyId,
+                    'year'=>$year,
+                    'month'=>$month,
+                    'start_date'=>$start,
+                    'end_date'=>$end,
+                    'status'=>'OPEN',
+                    'closed_at'=>null,
+                ]);
+
+                // The opening and its audit commit together. No silent errors.
+                AuditLog::query()->create([
+                    'company_id'=>$companyId,
+                    'user_id'=>$actorId,
+                    'event_type'=>'FISCAL_PERIOD_OPENED',
+                    'auditable_type'=>FiscalPeriod::class,
+                    'auditable_id'=>(string)$period->id,
+                    'old_values'=>null,
+                    'new_values'=>[
+                        'status'=>'OPEN','year'=>$year,'month'=>$month,'reason'=>$reason,
+                    ],
+                    'ip_address'=>substr((string)($request->ip()??'127.0.0.1'),0,45),
+                    'user_agent'=>substr((string)($request->userAgent()??'system'),0,500),
+                    'severity'=>'INFO',
+                ]);
+
+                return $period->refresh();
+            });
+        }catch(\Illuminate\Database\QueryException $e){
+            // UNIQUE(company_id,year,month) is the final race protection.
+            if((string)($e->errorInfo[0]??$e->getCode())==='23505'){
+                throw new DomainException(
+                    'Otro usuario ya registró este período. Actualice la pantalla.',
+                    previous:$e
+                );
+            }
+            throw $e;
+        }
+    }
+
     public function change(int $periodId, string $action, string $reason, Request $request): FiscalPeriod
     {
         $companyId=$this->tenantContext->requireCompanyId(FiscalPeriod::class);
