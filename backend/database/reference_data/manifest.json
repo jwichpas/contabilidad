@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "dataset": "nexus-global-reference-2026-10-21-v1",
+  "kind": "immutable-global-reference-installation",
+  "source": "GitHub jwichpas/contabilidad main; independently reconciled row counts against Supabase contabilidad-database on 2026-10-21",
+  "sources": [
+    {
+      "path": "backend/database/seeders/CurrenciesSeeder.php",
+      "git_blob_sha1": "742ef3859a43b1547126028e3b2dcdc78784f4f4"
+    },
+    {
+      "path": "backend/database/seeders/SunatCatalogSeeder.php",
+      "git_blob_sha1": "4859b0ca3f519c4b1bcea508b453da21fbe8925d"
+    },
+    {
+      "path": "backend/database/seeders/AccountingStandardsAndRubricsSeeder.php",
+      "git_blob_sha1": "cd62a90dc64e84306edb13440275fe49c60081e7"
+    },
+    {
+      "path": "backend/database/seeders/MasterChartOfAccountsSeeder.php",
+      "git_blob_sha1": "65cfdd0a6065e9ad3a67948a0f97f6301f312948"
+    },
+    {
+      "path": "plan-contable-2019.md",
+      "git_blob_sha1": "406aee36f9e64e750dcc2877bdb80dd00c4261ea"
+    },
+    {
+      "path": "plan-contable-2026.md",
+      "git_blob_sha1": "31bbef3ee0ee3c052ae4904ea609db16a79552cb"
+    }
+  ],
+  "counts": {
+    "currencies": 3,
+    "accounting_standards": 43,
+    "financial_statement_rubrics": 48,
+    "sunat_table_01_payment_methods": 20,
+    "sunat_table_02_identity_document_types": 5,
+    "sunat_table_03_financial_institutions": 33,
+    "sunat_table_05_inventory_types": 6,
+    "sunat_table_06_measurement_units": 16,
+    "sunat_table_08_electronic_books": 20,
+    "sunat_table_10_electronic_document_types": 24,
+    "sunat_table_11_customs_dependencies": 22,
+    "sunat_table_12_operation_types": 17,
+    "accounting_account_templates": 3401
+  },
+  "plan_versions": {
+    "PCGE_2019": 1764,
+    "PCGE_2026": 1637
+  },
+  "excluded": {
+    "per_company": "No creates/alters tenant-specific account charts, cost centers, users, areas or currencies",
+    "historical": "Nexus Contable Dev custom PLE book reference catalog tables are not yet mapped; tracked separately",
+    "calendar": "2026 tax deadline calendar not yet verified independently; excluded to avoid regulatory misinformation",
+    "currency": "CLP not in frozen 3-row source dataset; add via independently validated reference migration"
+  }
+}
