@@ -1,6 +1,8 @@
-> ✅ **Plataforma ERP objetivo (21/10/2026): PHP 8.5.12, Laravel 13.38.0, Pest 4.7.8 y PostgreSQL 18.** El usuario validó PostgreSQL **18.6** sobre Docker desechable: migraciones, RLS, funciones de auditoría y **12 pruebas / 37 aserciones PASS**. PostgreSQL 18 quedó como versión predeterminada en Docker y GitHub Actions (CI real todavía pendiente). **Supabase `contabilidad-database` permanece en PostgreSQL 17.11 exclusivamente para desarrollo**, sin upgrade ejecutado; PostgreSQL 18 es el objetivo para la base productiva futura. El bloqueo anterior de migraciones Dev por `sslmode`/configuración administrativa está pendiente de resolver. [Decisión de arquitectura](docs/POSTGRESQL-18-ARQUITECTURA.md) · [Plan PHP/Laravel](docs/ACTUALIZACION-PHP-85-LARAVEL-13.md).
+> **Estado vigente — 22/10/2026.** Desarrollo en **Neon PostgreSQL 18, rama `contabilidad-dev`**, 21 migraciones, 3 empresas ficticias, 3 matrices `DRAFT`, 0 `ACTIVE` y 1.362 rutas de destino. El motor analítico fue validado manualmente (F2.3b–h) con POST bimoneda, 94/95/79, extornos, Sanctum y RLS real en PostgreSQL 18 Docker temporal. **No se activaron matrices permanentemente.** [Plan maestro y checklist 5/32 (16%)](README-PLAN-MAESTRO.md#10-checklist-de-seguimiento).
 
-> ✅ **Fase 0 — restauración de desarrollo comprobada (20/10/2026):** se verificó SHA256 y restauración aislada de `public` sobre PostgreSQL 17, conteos de 7 entidades, 14 tablas con RLS forzado, 5 funciones y eliminación del contenedor. **No es una recuperación completa de Supabase ni una certificación de producción.** El usuario aplazó el cifrado de respaldos hasta producción (disco C: sin BitLocker). [README de cierre condicionado y tareas previas a producción](docs/README-FASE-0-CIERRE-Y-PRODUCCION.md). Se puede comenzar Fase 1 mientras se atienden las observaciones de seguridad restantes.
+> **Pruebas manuales exclusivamente.** Por decisión del proyecto se eliminaron los workflows de GitHub Actions. Compilación, tests, migraciones y auditorías se ejecutan localmente con evidencia documentada en [Validación manual y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md). GitHub permanece como repositorio `main`, sin ramas adicionales para estas pruebas.
+
+> **Base de respaldo histórica:** Supabase `contabilidad-database` (PostgreSQL 17) perteneció a la etapa anterior de desarrollo; su simulacro de restauración de `public` no certifica recuperación integral de producción. La continuación operativa se hace en Neon DEV y la migración definitiva no se ejecuta sin una restauración y reconciliación verificadas. [Historial](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md).
 
 <div align="center">
 
@@ -16,7 +18,7 @@
   <a href="https://www.php.net"><img src="https://img.shields.io/badge/PHP-8.5-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.5" /></a>
   <a href="https://vuejs.org"><img src="https://img.shields.io/badge/Vue.js-3.5-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white" alt="Vue 3" /></a>
   <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
-  <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-PostgreSQL_15+-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase PostgreSQL" /></a>
+  <a href="https://neon.tech"><img src="https://img.shields.io/badge/Neon-PostgreSQL_18-00E599?style=for-the-badge" alt="Neon PostgreSQL 18" /></a>
   <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" /></a>
 </p>
 
@@ -44,9 +46,9 @@
 
 </div>
 
-> 🗄️ **Política de base de datos:** [Laravel es el único gestor de migraciones y cambios de estructura](docs/ARQUITECTURA-BD-LARAVEL.md). Base única de desarrollo: `contabilidad-database`. Para diagnóstico sin escrituras: `php artisan contabilidad:auditar-fase0` desde `backend/`.
+> 🗄️ **Política de base de datos:** [Laravel es el único gestor de migraciones y cambios de estructura](docs/ARQUITECTURA-BD-LARAVEL.md). Entorno operativo de desarrollo: **Neon PG18 / `contabilidad-dev`**; no ejecutar `migrate:fresh` ni cargas destructivas. Ver [plan maestro](README-PLAN-MAESTRO.md).
 
-> 🔎 **Fase 0:** [Matriz funcional y módulos ya existentes](docs/FASE-0-MATRIZ-FUNCIONAL.md) · [Preflight estático](backend/scripts/phase0-preflight.php) · [Respaldo de desarrollo no destructivo](backend/scripts/phase0-backup.sh). **Las pruebas y el respaldo real continúan pendientes.**
+> 🔎 **Diagnóstico y validación actual:** [Matriz funcional histórica](docs/FASE-0-MATRIZ-FUNCIONAL.md) · [Procedimiento manual](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) · [Checklist actualizado](README-PLAN-MAESTRO.md#10-checklist-de-seguimiento). El motor F2.3b–h está probado, pero los hitos de recuperación y aceptación de producción siguen pendientes.
 
 > 📊 **Tributación de exportadores (diseño F6.4, no implementado):** [SFE y Saldo a Favor Materia del Beneficio — normativa SUNAT, empresas mixtas, límites, devoluciones y pruebas](docs/F6-IGV-SFE-SFMB-EXPORTADORES.md). El motor automático se desarrollará cuando existan documentos tributarios y conciliación de IGV.
 
