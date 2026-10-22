@@ -14,7 +14,7 @@ if($argc!==2||($arg!=='--plan'&&$arg!=='--verify'
     fwrite(STDERR,"[FAIL] Use --plan | --verify | --preflight=20999990011 (RUC demo).\n");exit(2);
 }
 if($arg==='--plan'){
-    echo "[PLAN] F2.3f: verificar 21 migraciones, empresa DEMO, SHA256 de rutas, 227 x 2.\n";
+    echo "[PLAN] F2.3f: verificar 21/22 migraciones, empresa DEMO, SHA256 de rutas, 227 x 2.\n";
     echo "[PLAN] SELECT-only: sin activar matrices, sin crear asientos ni auditar cambios.\n";
     echo "[DRY-RUN] Sin conexion SQL.\n";exit(0);
 }
@@ -53,7 +53,7 @@ try{
         SQL);
     if(!$guard||$guard->actor!=='neondb_owner'||$guard->db!=='neondb'
         ||intdiv((int)$guard->version,10000)!==18
-        ||(int)$guard->migrations!==21||(int)$guard->companies!==3
+        ||!in_array((int)$guard->migrations,[21,22],true)||(int)$guard->companies!==3
         ||(int)$guard->matrices!==3||(int)$guard->routes!==1362
         ||(int)$guard->active!==0){
         throw new RuntimeException('Baseline de matrices DEMO alterado o hay version ACTIVE.');
