@@ -128,18 +128,22 @@ test('una empresa puede inicializar su plan contable PCGE 2019 de forma aislada 
     $response = $this->actingAs($this->user)
         ->postJson('/api/v1/company/chart-of-accounts/initialize', [
             'plan_version' => 'PCGE_2019',
-            'force' => true,
+            'force' => false,
         ]);
 
     $response->assertStatus(201)
         ->assertJsonPath('data.company_id', $newCompany->id)
         ->assertJsonPath('data.plan_version', 'PCGE_2019')
-        ->assertJsonPath('data.total_accounts', 1764);
+        ->assertJsonPath('data.total_accounts', 2955);
 
     // 3. Verificar que las cuentas de la nueva empresa existen en accounting_accounts
     $this->tenantContext->run($newCompany->id, function () use ($newCompany): void {
         $count = AccountingAccount::query()->count();
-        expect($count)->toBe(1764);
+        expect($count)->toBe(2955);
+
+        $posting = AccountingAccount::query()->where('is_operational', true)->get(['code']);
+        expect($posting)->toHaveCount(1212)
+            ->and($posting->every(static fn ($acc) => strlen((string) $acc->code) === 6))->toBeTrue();
 
         // Modificar una cuenta propia de la empresa nueva
         $acc1041 = AccountingAccount::query()->where('code', '1041')->first();
