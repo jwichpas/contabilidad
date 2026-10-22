@@ -1,3 +1,19 @@
+## F2.3h — corrección de invocación PowerShell (22/10/2026)
+
+El usuario ejecutó dos veces el wrapper: primera vez Docker Desktop no respondía con motor Linux; segunda vez Docker sí respondió pero imprimió su ayuda general en lugar de ejecutar `docker run`, luego `No such container` y `Puerto Docker no seguro`. El fallo fue de la función PowerShell `Invoke-F23h`: el parámetro `$Args` colisionaba con la variable automática `$args`, por lo que no propagaba los argumentos a la aplicación nativa. **No implica defecto en RLS ni en el código contable**, porque las migraciones y el probe PHP ni siquiera habían iniciado.
+
+Solución aplicada a `backend/scripts/phase2-active-rls-docker.ps1`: parámetro renombrado a `$Arguments`, con `-Program` y `-Arguments` explícitos en las seis invocaciones y `& $Program @Arguments`. El `finally` confirma el ID real mediante `docker container inspect` antes de afirmar que eliminó un contenedor.
+
+**F2.3h continúa pendiente de su primera ejecución efectiva; no declarar PASS hasta que termine el probe completo.**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+docker info --format '{{.OSType}}'
+.\scripts\phase2-active-rls-docker.ps1
+```
+
 ## F2.3g certificada / F2.3h Docker ACTIVE + app_backend (22/10/2026)
 
 **F2.3g aprobada por ejecución del usuario**: prueba `--probe=contabilidad-dev` con ADMIN demo activó y retiró la versión **solo dentro de transacción sin COMMIT**, rechazó AUDITOR, SHA-256 incorrecto, doble activación y doble retiro. Verificó dos eventos auditados; ROLLBACK dejó 3 DRAFT, 0 ACTIVE, 0 RETIRED, 0 asientos/auditorías. Preflight F2.3f nuevamente PASS con 454 rutas por cada empresa.
