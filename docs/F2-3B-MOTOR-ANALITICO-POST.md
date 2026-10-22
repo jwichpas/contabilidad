@@ -1,3 +1,27 @@
+## F2.3h aprobada — cierre de certificación del motor analítico (22/10/2026)
+
+**Ejecución real confirmada por el usuario, PowerShell + PostgreSQL 18 efímero:**
+
+- Docker creó el contenedor, ejecutó y registró las **19 migraciones reales** aisladas.
+- Se crearon exclusivamente dentro del contenedor **dos empresas ficticias**, cuentas, centros y una matriz A `ACTIVE` sin COMMIT; B siguió en `DRAFT`.
+- El runner confirmó **`current_user=app_backend`**, `session_user=postgres` y **sin BYPASSRLS** en la misma transacción HTTP Laravel/Sanctum.
+- HTTP 201 A CC-ADM creó **6xx → 941100/791000**; HTTP 201 A CC-VTA creó **6xx → 951100/791000**. Cada asiento tuvo 4 líneas y un vínculo analítico RLS.
+- GET B no pudo ver asientos de A; AUDITOR recibió 403 para POST y GET sin membresía.
+- El ajuste al Haber de 6xx generó **Debe 791000 / Haber 951100**.
+- HTTP extorno exacto en dos monedas, **4 asientos balanceados, 4 vínculos, auditoría y triggers diferidos**: PASS.
+- El runner terminó con `[ROLLBACK]` y el wrapper confirmó `[LIMPIEZA] PostgreSQL Docker descartable eliminado.`
+
+**Alcance:** F2.3b–g y F2.3h están certificadas en sus respectivos entornos. F2.3h prueba la combinación que faltaba **ACTIVE + HTTP real + `app_backend` + FORCE RLS**, usando una matriz pequeña ficticia. F2.3f verifica separadamente las 227×2 rutas SHA-256 de cada empresa real de desarrollo Neon. Los resultados NO significan que las versiones de Neon estén activas.
+
+**Estado Neon revisado:** 21 migraciones, 3 empresas, **3 DRAFT, 0 ACTIVE, 0 RETIRED, 1.362 rutas, 0 asientos y 0 auditorías**.
+
+**No repetir más probes para el mismo alcance sin un cambio funcional.** Siguientes pendientes independientes:
+1. Diseñar operación de activación persistente limitada al entorno dev con **identidad humana efectivamente autenticada**, aprobación explícita, auditoría y opción de retirar versiones sin tocar asientos; `AnalyticMatrixPromotionService` existe, pero aún no está conectado a una acción autorizada del producto.
+2. Recuperar GitHub Actions: YAML ya carga y crea jobs, pero se reportan fallos sin steps/logs accesibles; requerirá investigar configuración/cuota de runners y registros de la interfaz. No afirmar CI verde.
+3. Continuar los módulos funcionales del ERP (editor e historial contable, configuración empresarial), sin extender innecesariamente la fase de pruebas del motor.
+
+---
+
 ## F2.3h — corrección de invocación PowerShell (22/10/2026)
 
 El usuario ejecutó dos veces el wrapper: primera vez Docker Desktop no respondía con motor Linux; segunda vez Docker sí respondió pero imprimió su ayuda general en lugar de ejecutar `docker run`, luego `No such container` y `Puerto Docker no seguro`. El fallo fue de la función PowerShell `Invoke-F23h`: el parámetro `$Args` colisionaba con la variable automática `$args`, por lo que no propagaba los argumentos a la aplicación nativa. **No implica defecto en RLS ni en el código contable**, porque las migraciones y el probe PHP ni siquiera habían iniciado.
