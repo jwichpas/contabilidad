@@ -563,3 +563,22 @@ php scripts/phase1-journal-concurrency-docker.php --plan
 ```
 
 **Nunca ejecutar** directamente `--probe=ephemeral-docker` apuntando a Neon: el script debe rechazarlo. No se ejecutaron migraciones/SQL con escrituras sobre Neon desde el asistente. Neon `production` y Supabase intactos.
+
+
+### F1.14 ejecutable también desde Linux/WSL
+
+Se añadió `backend/scripts/phase1-journal-concurrency-docker.sh`, un wrapper Bash **independiente** del PowerShell anterior, dirigido a quienes trabajan desde `~/contabilidad/backend`. Verifica Docker Linux, PHP/Composer y ausencia de config Laravel cacheada; levanta `postgres:18-alpine` con puerto aleatorio mapeado solamente a `127.0.0.1`, contraseñas aleatorias y marcador temporal F1_GUARD_TOKEN. Sobre `contabilidad_ci` instala con allowlist exacta solo las 16 migraciones portables, cambia el usuario operativo a app_backend y ejecuta el test de **dos conexiones** con `--probe=ephemeral-docker`. El `trap` de Bash ejecuta `docker rm -f` incluso si las pruebas fallan, y no imprime las contraseñas.
+
+Desde Linux/WSL con Docker disponible:
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-journal-concurrency-docker.php
+bash -n scripts/phase1-journal-concurrency-docker.sh
+php scripts/phase1-journal-concurrency-docker.php --plan
+bash scripts/phase1-journal-concurrency-docker.sh
+```
+
+El CI está configurado para validar `php -l` y `bash -n` sin conectar a las bases de datos. **El script de concurrencia F1.14 aún no cuenta con salida PASS**, y no debe confundirse la prueba de bloqueo secuenciado con una carga masiva paralela. Neon `contabilidad-dev`, Neon production y Supabase no reciben escrituras de este wrapper.
