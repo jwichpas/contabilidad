@@ -8,6 +8,7 @@ use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Support\Math\Decimal;
+use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -169,18 +170,45 @@ final readonly class PostJournalEntryService
             $reason,
             $userId,
         ): JournalEntry {
+            // El extorno debe registrarse en un periodo ABIERTO que corresponda
+            // exactamente a la fecha. Se bloquea para impedir cierres
+            // concurrentes antes de insertar las partidas.
+            /** @var FiscalPeriod $targetPeriod */
+            $targetPeriod = FiscalPeriod::query()->lockForUpdate()->findOrFail($targetFiscalPeriodId);
+            if (! $targetPeriod->isOpen()) {
+                throw new DomainException('No se pueden registrar extornos en un periodo cerrado o bloqueado.');
+            }
+            $date = CarbonImmutable::createFromFormat('!Y-m-d', $reversalDate);
+            if ($date === false || (int) $date->year !== (int) $targetPeriod->year
+                || (int) $date->month !== (int) $targetPeriod->month) {
+                throw new DomainException('La fecha del extorno debe pertenecer al periodo contable seleccionado.');
+            }
+
             /** @var JournalEntry $original */
             $original = JournalEntry::query()->with('lines')->lockForUpdate()->findOrFail($originalEntryId);
+            if ((int) $original->company_id !== (int) $targetPeriod->company_id) {
+                throw new DomainException('El asiento original y el periodo destino deben pertenecer a la misma empresa.');
+            }
 
             if ($original->status !== 'POSTED') {
                 throw new DomainException('Solo se puede extornar un asiento que se encuentre en estado POSTED.');
+            }
+
+            // Asignacion de correlativo protegida por el bloqueo del periodo.
+            $number = trim($reversalEntryNumber);
+            if ($number === '') {
+                $number = $this->entryNumbers->nextForPeriod(
+                    (int) $targetPeriod->company_id,
+                    (int) $targetPeriod->id,
+                    (int) $targetPeriod->month
+                );
             }
 
             $original->update(['status' => 'REVERSED']);
 
             $reversal = JournalEntry::query()->create([
                 'fiscal_period_id' => $targetFiscalPeriodId,
-                'entry_number' => trim($reversalEntryNumber),
+                'entry_number' => $number,
                 'entry_date' => $reversalDate,
                 'entry_type' => 'REVERSAL',
                 'status' => 'POSTED',
