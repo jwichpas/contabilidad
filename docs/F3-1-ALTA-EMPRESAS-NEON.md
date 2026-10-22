@@ -75,6 +75,44 @@ Entrar con administrador DEMO y abrir `http://localhost:5180/#nueva-empresa`. Co
 
 **No confirmar una cuarta empresa DEMO de forma permanente durante esta prueba de interfaz.** Crear una empresa adicional desde el botón final requiere acordar cómo quedarán los scripts antiguos que parten de exactamente tres empresas, o adaptar sus guardas primero. La prueba reversible por HTTP es suficiente para validar el backend sin contaminar la rama DEV.
 
+## Incidencia HTTP 500 en creación real — diagnóstico y corrección del 22/10/2026
+
+**Evidencia:** migración 23 instalada correctamente y ensayo F3.1 HTTP reversible **PASS** (ADMIN, PCGE, CIIU, monedas, 6 áreas y 9 flujos, auditoría, rollback). El usuario intentó crear una empresa EIRL con RMT y actividad de transporte en Vue: el navegador registró `POST /api/v1/tenant/companies` → HTTP **500** tras **30,18 s**, y PHP mostró `Maximum execution time of 30 seconds exceeded`.
+
+**Consulta directa a Neon (solo SELECT) inmediatamente después del error:** no existe la empresa solicitada por nombre/RUC; siguen 3 empresas, 23 migraciones, 3 `company_settings`, 0 auditorías `COMPANY_ONBOARDED` y enero 2026 de DEMO A intacto. No se debe reintentar el mismo POST sin validar la corrección.
+
+**Posible cuello de botella:** `InitializeCompanyChartOfAccountsService` clonaba por lotes de 200 filas, con consultas repetidas desde Laravel al endpoint directo de Neon, además del trigger obligatorio de jerarquía y RLS. El test CLI no tiene el mismo límite web de 30 segundos, por lo que un PASS funcional anterior no demuestra tiempo aceptable en navegador.
+
+**Cambio publicado en `main`, pendiente prueba manual:**
+
+- La ruta de alta llama ahora al servicio PCGE en modo **`fastCopy`**. Construye la jerarquía idéntica y envía **un INSERT JSONB por nivel**, unido a la cuenta padre previamente insertada. No desactiva el trigger de integridad, `FORCE RLS`, el control de cuentas operativas a seis dígitos ni la transacción general. El método legacy queda sin alteración funcional para sus otros consumidores.
+- En el controlador Laravel se amplía temporalmente a 120 s el límite de ejecución de **esta operación de alta únicamente** y se restaura al finalizar; es una red de seguridad, no reemplaza medir/optimizar la consulta.
+- El ensayo `phase3-neon-company-onboarding-http.php` utiliza ahora un perfil ficticio **EIRL / MYPE_TRIBUTARIO / transporte CIIU 4923**, reporta segundos reales del POST y alerta si excede 25 s; termina en ROLLBACK y comprueba el estado original de Neon.
+- Vue explica la copia PCGE durante el envío y trata un 500 como resultado no confirmado, para evitar duplicados por reintentos ciegos.
+
+**Puerta obligatoria antes de reintentar en navegador:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+
+php -l app/Services/Accounting/InitializeCompanyChartOfAccountsService.php
+php -l app/Http/Controllers/Api/V1/Tenant/CreateCompanyFromWizardController.php
+php -l scripts/phase3-neon-company-onboarding-http.php
+
+php scripts/phase3-company-onboarding-preflight.php --check
+php scripts/phase3-neon-company-onboarding-http.php --probe=contabilidad-dev
+
+cd ..\frontend
+pnpm typecheck
+pnpm build
+```
+
+La prueba debe terminar con HTTP 201, integridad PCGE y auditoría, ROLLBACK y confirmación de que solo siguen tres empresas. **Registrar la métrica `[METRICA] F3.1 POST...` para determinar si la optimización es suficiente**. Si supera 25 s, profundizar en triggers/perfil de base antes de realizar un alta persistente. Una vez aprobado, reiniciar `php artisan serve` para cargar el código actualizado y reabrir el borrador de la pestaña. No regenerar migraciones ni eliminar registros.
+
+---
+
 ## Resultado esperado / estado
 
 La actividad F3.1 sigue **pendiente** hasta recibir los PASS reales de migración y E2E, comprobar la interfaz y la pertenencia de la empresa tras el alta. No declarar 23 migraciones instaladas antes de la salida real de Artisan.
