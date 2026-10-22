@@ -53,5 +53,21 @@
     "historical": "Nexus Contable Dev custom PLE book reference catalog tables are not yet mapped; tracked separately",
     "calendar": "2026 tax deadline calendar not yet verified independently; excluded to avoid regulatory misinformation",
     "currency": "CLP not in frozen 3-row source dataset; add via independently validated reference migration"
-  }
+  },
+  "historical_sources": [
+    {
+      "path": "backend/database/reference_data/historical/ple_234_tablas_2026-10-21.json",
+      "git_blob_sha1": "16d4ef68c5c9e2264a9bcb45356166c696015182",
+      "rows": 247,
+      "status": "HISTORICAL_NOT_VERIFIED",
+      "loaded_operationally": false
+    },
+    {
+      "path": "backend/database/reference_data/historical/sunat_book_catalog_codes_draft_2026-10-21.json",
+      "git_blob_sha1": "b8c77a8c89ac5ac00c26d737ce8eab65ddd0c242",
+      "rows": 23,
+      "status": "DRAFT_NOT_VALIDATED",
+      "loaded_operationally": false
+    }
+  ]
 }
