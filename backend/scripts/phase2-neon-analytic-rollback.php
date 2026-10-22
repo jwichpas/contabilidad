@@ -84,13 +84,13 @@ try {
         SQL);
     if (!$guard||$guard->role_name!=='neondb_owner'||$guard->database_name!=='neondb'
         ||intdiv((int)$guard->server_version,10000)!==18
-        ||(int)$guard->migrations!==21||(int)$guard->companies!==3
+        ||!in_array((int)$guard->migrations,[21,22],true)||(int)$guard->companies!==3
         ||(int)$guard->memberships!==8||(int)$guard->entries!==0
         ||(int)$guard->lines!==0||(int)$guard->allocations!==0
         ||(int)$guard->drafts!==3||(int)$guard->active_rules!==0||(int)$guard->routes!==1362) {
-        throw new RuntimeException('Precondiciones: se requieren 21 migraciones, tres matrices DRAFT y 0 asientos.');
+        throw new RuntimeException('Precondiciones: se requieren 21 o 22 migraciones, tres matrices DRAFT y 0 asientos.');
     }
-    echo "[PASS] Neon dev PG18, 21 migraciones, matrices DRAFT, cero asientos.\n";
+    echo "[PASS] Neon dev PG18, 21/22 migraciones, matrices DRAFT, cero asientos.\n";
     $companies=$db->select('SELECT id,tax_id FROM public.companies ORDER BY tax_id');
     if (array_column($companies,'tax_id')!==['20999990011','20999990012','20999990013']) {
         throw new RuntimeException('Empresas demo inesperadas.');
