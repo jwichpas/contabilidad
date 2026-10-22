@@ -56,7 +56,7 @@ final readonly class AnalyticMatrixPromotionService
             if (! $environment || $environment->role_name !== 'neondb_owner'
                 || $environment->database_name !== 'neondb'
                 || intdiv((int)$environment->postgres_version, 10000) !== 18
-                || (int)$environment->migration_count !== 21) {
+                || ! in_array((int)$environment->migration_count, [21, 22], true)) {
                 throw new RuntimeException('Rol, base de datos o migraciones no autorizados.');
             }
 
