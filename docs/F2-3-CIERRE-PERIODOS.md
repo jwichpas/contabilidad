@@ -230,13 +230,31 @@ pnpm build
 F2.3 permanece abierto hasta aprobar el nuevo endpoint y verificar el diálogo en navegador.
 
 ---
-## Puertas todavía abiertas
+## Cierre formal F2.3 — evidencia E2E + RLS (22/10/2026)
 
-1. El flujo HTTP nuevo **superó** la ejecución manual del usuario; F2.3 seguirá `[ ]` hasta verificar las carreras de concurrencia y completar los criterios de aceptación restantes.
-2. **Aprobado:** las dos carreras CLOSE-first y POST-first superaron la prueba Docker con 55P03, correlativos únicos y auditoría.
-3. **Frontend y preflight recuperados:** typecheck/16 tests/build y GET real tenant A PASS. Pendiente GET explícito de tenant B y revisión visual de diálogos, cambios de empresa y roles. Las conciliaciones previas y la reapertura extraordinaria de LOCKED quedan como diseño/procedimiento separado.
-4. **Configuración local resuelta:** `CACHE_STORE`, `SESSION_DRIVER` y `QUEUE_CONNECTION` recibieron PASS tras actualizar el `.env` privado. No reabrir este punto sin nuevo fallo.
+**Actividad F2.3 APROBADA; plan maestro 7/32 (22%).**
 
-**No habilitar matrices analíticas ACTIVE de forma persistente ni ejecutar `migrate:fresh`.**
+**Captura del usuario:** `http://localhost:5180/#periodos` muestra enero de 2026 en estado **Abierto**, contador **1 abierto**, 0 asientos y mensaje `Período abierto y auditado. Ya puede registrar asientos en este mes.` El botón de enero cambia de Abrir a Cerrar. Esto acredita la integración real UI → POST Laravel → GET.
+
+**Verificación SQL independiente de Neon DEV (solo SELECT):** empresa **DEMO A - Comercial Andina S.A.C.**, enero 2026, `fiscal_periods.status=OPEN`, `start_date=2026-01-01`, `end_date=2026-01-31`, `closed_at=NULL`, **0 asientos**, **1 evento FISCAL_PERIOD_OPENED asociado al período**.
+
+**Prueba de RLS con dos contextos y rol real `app_backend`** (solo consultas en una transacción, `set_config(...,true)`): contexto DEMO B consultó `fiscal_periods` → **0 filas visibles**, inclusive cero de DEMO A; contexto DEMO A → **1 fila visible**, la suya. No se emitió escritura remota para esta verificación.
+
+**Otros componentes ya aceptados:** CLOSE/REOPEN/LOCK y rechazo de acciones indebidas HTTP 403/409/422, auditoría atómica; POST/extorno de asientos balanceados, concurrencia CLOSE-first y POST-first con dos sesiones PostgreSQL 18 Docker, ROLLBACK; frontend operativo con confirmación y motivo, compilación Vue 16/16 pruebas y build Vite anteriores. La apertura real completó la validación que faltaba.
+
+**Restricciones al seguir desarrollando:** existe **un período OPEN persistente** en Neon; los ensayos iniciales `phase2-neon-analytic-http.php` y algunos preflights más antiguos aún parten de `0 períodos / 0 auditorías contables`. Antes de usarlos nuevamente, adaptar sus snapshots a un baseline DEV con registros legítimos o mover fixtures íntegramente a Docker efímero. **No borrar el período ni su auditoría para conseguir que pase un preflight.** Este asunto es deuda técnica del *harness*, no una falla del cierre de períodos.
+
+**Siguiente objetivo:** F3.1 asistente de alta de empresa de prueba y sus parámetros fiscales, utilizando `main`, sin nuevas ramas y sin crear datos reales.
+
+---
+
+## Controles posteriores / deuda técnica
+
+1. Las pruebas funcionales del alcance F2.3 están aprobadas (Neon HTTP, Docker concurrencia, interfaz real y aislamiento multiempresa).
+2. Actualizar los *harnesses* de ensayo que exigían base de desarrollo vacía antes de futuras pruebas. No restablecer datos de usuario legítimos para ejecutar tests.
+3. Las conciliaciones y el cierre financiero de fin de año pertenecen a tareas posteriores del ERP; F2.3 contempla **estado mensual, doble entrada, autorización, auditoría y bloqueo**, no la aprobación normativa de estados financieros.
+4. Mantener `LOCKED` sin reapertura ordinaria; cualquier excepción requerirá flujo nuevo de administración y auditoría.
+
+**No ejecutar `migrate:fresh`, ni habilitar matrices analíticas ACTIVE automáticamente.**
 
 [Plan maestro](../README-PLAN-MAESTRO.md) · [Evidencia manual](VALIDACION-MANUAL-Y-EVIDENCIAS.md).
