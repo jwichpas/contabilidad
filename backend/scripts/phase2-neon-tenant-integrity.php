@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * F2.2 — Auditoria READ ONLY de instalacion global + integridad por empresa.
+ * F2.2/F2.3a — Auditoria READ ONLY de datos globales, matriz de rutas v2 y tenants.
  *
  * --plan: ningun SQL.
  * --verify: SELECT sobre contabilidad-dev como neondb_owner dentro de
@@ -18,10 +18,10 @@ if ($argc > 2 || ! in_array($mode, ['--plan','--verify'],true)) {
     exit(2);
 }
 if ($mode === '--plan') {
-    echo "[PLAN] READ ONLY: 18 migraciones, catalogos globales y 3 empresas existentes.\n";
+    echo "[PLAN] READ ONLY: 19/20 migraciones, catalogos globales y 3 empresas existentes.\n";
     echo "[PLAN] Por empresa: 2966 cuentas, 1214 operativas de 6 digitos, jerarquia sin huerfanos.\n";
     echo "[PLAN] Valida areas, centros, monedas, configuracion, cuentas vinculadas y RLS.\n";
-    echo "[PLAN] Identifica destinos automaticos que no resuelven a cuentas operativas.\n";
+    echo "[PLAN] Verifica 454 rutas versionadas por empresa; codigos 9411/7911 legacy NO son destinos activos.\n";
     echo "[DRY-RUN] Sin conexion SQL.\n";
     exit(0);
 }
@@ -91,7 +91,7 @@ try {
     if ($state===null || $state->role_name!=='neondb_owner'
         || $state->db_name!=='neondb'
         || intdiv((int)$state->pg_ver,10000)!==18
-        || (int)$state->migrations!==18
+        || ! in_array((int)$state->migrations,[19,20],true)
         || (int)$state->templates!==3401
         || (int)$state->ledger!==1
         || (int)$state->companies!==3
@@ -144,7 +144,37 @@ try {
                AND a.has_automatic_destination
                AND NOT EXISTS(SELECT 1 FROM public.accounting_accounts target
                   WHERE target.company_id=c.id AND target.code=a.destination_credit_code
-                    AND target.is_operational AND length(target.code)=6))::int AS bad_auto_credit
+                    AND target.is_operational AND length(target.code)=6))::int AS bad_auto_credit,
+          (SELECT count(*) FROM public.accounting_destination_rule_versions v
+              WHERE v.company_id=c.id AND v.version_key='PCGE_2019_CC_V2'
+                AND v.status='DRAFT' AND v.strategy='COST_CENTER'
+                AND v.source_count=227 AND v.route_count=454)::int AS v2_valid_versions,
+          (SELECT count(*) FROM public.accounting_destination_routes r
+              JOIN public.accounting_destination_rule_versions v
+                ON v.company_id=r.company_id AND v.id=r.rule_version_id
+              WHERE v.company_id=c.id AND v.version_key='PCGE_2019_CC_V2')::int AS v2_route_count,
+          (SELECT count(*) FROM public.accounting_accounts src
+              JOIN public.cost_centers cc ON cc.company_id=src.company_id AND cc.is_active
+              LEFT JOIN public.accounting_destination_rule_versions v
+                ON v.company_id=src.company_id AND v.version_key='PCGE_2019_CC_V2'
+              LEFT JOIN public.accounting_destination_routes r
+                ON r.company_id=src.company_id AND r.rule_version_id=v.id
+                  AND r.source_account_id=src.id AND r.cost_center_id=cc.id
+                  AND r.destination_debit_account_id=cc.destination_debit_account_id
+                  AND r.destination_credit_account_id=cc.destination_credit_account_id
+              WHERE src.company_id=c.id AND src.has_automatic_destination
+                AND src.is_operational AND src.is_active AND length(src.code)=6
+                AND r.id IS NULL)::int AS missing_v2_pairs,
+          (SELECT count(*) FROM public.accounting_destination_routes r
+              JOIN public.accounting_destination_rule_versions v
+                ON v.company_id=r.company_id AND v.id=r.rule_version_id
+              JOIN public.cost_centers cc ON cc.company_id=r.company_id AND cc.id=r.cost_center_id
+              JOIN public.accounting_accounts src ON src.company_id=r.company_id AND src.id=r.source_account_id
+              WHERE v.company_id=c.id AND v.version_key='PCGE_2019_CC_V2'
+                AND (NOT src.has_automatic_destination OR NOT src.is_operational OR NOT src.is_active
+                  OR length(src.code)<>6 OR NOT cc.is_active
+                  OR cc.destination_debit_account_id<>r.destination_debit_account_id
+                  OR cc.destination_credit_account_id<>r.destination_credit_account_id))::int AS invalid_v2_pairs
         FROM public.companies c ORDER BY c.tax_id
         SQL);
     $expectedTaxIds=['20999990011','20999990012','20999990013'];
@@ -161,26 +191,23 @@ try {
             || (int)$row->settings!==1
             || (int)$row->company_currencies!==2
             || (int)$row->base_currencies!==1
-            || (int)$row->invalid_cost_center_targets!==0) {
+            || (int)$row->invalid_cost_center_targets!==0
+            || (int)$row->v2_valid_versions!==1
+            || (int)$row->v2_route_count!==454
+            || (int)$row->missing_v2_pairs!==0
+            || (int)$row->invalid_v2_pairs!==0) {
             throw new RuntimeException('Configuracion multiempresa invalida: '.$row->tax_id);
         }
         echo '[PASS] '.$row->tax_id.': 2966 cuentas, 1214 de movimiento (6 digitos), 6 areas, 9 areas NIC7, 2 CC y 2 monedas.'.PHP_EOL;
-        if ((int)$row->bad_auto_debit!==0 || (int)$row->bad_auto_credit!==0) {
-            echo '[BLOQUEO] '.$row->tax_id.': '.$row->auto_count.' reglas de destino; '
-                .$row->bad_auto_debit.' debitos y '.$row->bad_auto_credit.' creditos no resuelven a cuentas operativas.'.PHP_EOL;
-        } else {
-            echo '[PASS] '.$row->tax_id.': referencias de destino automatico validas.'.PHP_EOL;
-        }
+        echo '[PASS] '.$row->tax_id.': matriz de destinos v2 en DRAFT (227 x 2 = 454 rutas validas).'.PHP_EOL;
+        echo '[INFO] '.$row->tax_id.': metadatos legacy 9411/7911 pendientes de retiro, no usados por v2.'.PHP_EOL;
     }
     if (count($tenants)!==3) throw new RuntimeException('Cantidad de empresas inesperada.');
 
-    // No afirmar instalacion completa si hay destinos automaticos ambiguos.
-    $bad=0;
-    foreach ($tenants as $row) $bad+=(int)$row->bad_auto_debit+(int)$row->bad_auto_credit;
-    if ($bad!==0) {
-        echo '[PENDIENTE] F2.2: normalizar reglas de destino automatico y versionar matriz antes de activar ese motor.'.PHP_EOL;
-    }
-    $passed=$bad===0;
+    // La matriz v2 es valida pero sigue DRAFT: no afirmar POST analitico operativo.
+    echo '[PASS] Integridad F2.2: tres empresas, matriz v2 coherente y configuracion global.'.PHP_EOL;
+    echo '[PENDIENTE] Activacion automatica POST 94/95/79 sigue bloqueada hasta pruebas.'.PHP_EOL;
+    $passed=true;
 } catch (Throwable $error) {
     // No exponer SQL, credenciales ni consultas con datos de empresas reales.
     fwrite(STDERR,'[FAIL] F2.2: '.($error instanceof RuntimeException
