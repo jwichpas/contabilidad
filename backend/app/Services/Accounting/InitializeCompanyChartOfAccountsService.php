@@ -187,6 +187,7 @@ final readonly class InitializeCompanyChartOfAccountsService
                             $sourceRows[(string) $tpl->code] = $level > 1
                                 ? (string) $tpl->parent_code : null;
                         }
+                        $source = [];
                         foreach ($batchRows as $row) {
                             unset($row['parent_id'], $row['path']);
                             $row['parent_code'] = $sourceRows[$row['code']] ?? null;
