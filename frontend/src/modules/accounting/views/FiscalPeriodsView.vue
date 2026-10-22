@@ -237,10 +237,10 @@ onMounted(() => { void loadPeriods(); });
               <td class="px-4 py-3">
                 <div v-if="canManagePeriods" class="flex items-center justify-end gap-2">
                   <button v-if="!row.period" type="button" :disabled="isSaving || isLoading" class="rounded-md border border-emerald-500/40 px-2.5 py-1.5 font-semibold text-emerald-700 hover:bg-emerald-500/10 disabled:opacity-50 dark:text-emerald-300" @click="requestOpen(row.month)">Abrir</button>
-                  <button v-else-if="row.period?.status === 'OPEN'" type="button" :disabled="isSaving" class="rounded-md border border-amber-500/40 px-2.5 py-1.5 text-amber-700 hover:bg-amber-500/10 disabled:opacity-50 dark:text-amber-300" @click="requestAction(row.period, 'close')">Cerrar</button>
+                  <button v-else-if="row.period?.status === 'OPEN'" type="button" :disabled="isSaving" class="rounded-md border border-amber-500/40 px-2.5 py-1.5 text-amber-700 hover:bg-amber-500/10 disabled:opacity-50 dark:text-amber-300" @click="requestAction(row.period!, 'close')">Cerrar</button>
                   <template v-else-if="row.period?.status === 'CLOSED'">
-                    <button type="button" :disabled="isSaving" class="rounded-md border border-line px-2.5 py-1.5 text-foreground hover:bg-soft disabled:opacity-50" @click="requestAction(row.period, 'reopen')">Reabrir</button>
-                    <button type="button" :disabled="isSaving" class="rounded-md border border-rose-500/40 px-2.5 py-1.5 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50 dark:text-rose-300" @click="requestAction(row.period, 'lock')">Bloquear</button>
+                    <button type="button" :disabled="isSaving" class="rounded-md border border-line px-2.5 py-1.5 text-foreground hover:bg-soft disabled:opacity-50" @click="requestAction(row.period!, 'reopen')">Reabrir</button>
+                    <button type="button" :disabled="isSaving" class="rounded-md border border-rose-500/40 px-2.5 py-1.5 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50 dark:text-rose-300" @click="requestAction(row.period!, 'lock')">Bloquear</button>
                   </template>
                   <span v-else-if="row.period?.status === 'LOCKED'" class="flex items-center gap-1 text-muted"><LockKeyhole class="h-3.5 w-3.5" /> Definitivo</span>
                 </div>
