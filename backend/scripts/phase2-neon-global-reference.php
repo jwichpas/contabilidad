@@ -177,6 +177,10 @@ $defaultConnection = $manager->getDefaultConnection();
 $manager->setDefaultConnection('pgsql_migrations');
 $db = $manager->connection('pgsql_migrations');
 
+$canonicalMap = static function (array $value): array {
+    ksort($value, SORT_STRING);
+    return $value;
+};
 $getCounts = static function () use ($db, $expectedTables): array {
     $counts = [];
     foreach (array_keys($expectedTables) as $table) {
@@ -214,7 +218,7 @@ try {
                (SELECT count(*) FROM public.companies)::integer AS companies,
                (SELECT count(*) FROM public.users)::integer AS users,
                (SELECT count(*) FROM public.company_user)::integer AS memberships,
-               (SELECT to_regclass('public.reference_data_versions') IS NOT NULL) AS ledger_exists
+               CASE WHEN to_regclass('public.reference_data_versions') IS NOT NULL THEN 1 ELSE 0 END AS ledger_exists
         SQL);
     if ($state === null || $state->user_name !== 'neondb_owner'
         || $state->db_name !== 'neondb'
@@ -225,7 +229,7 @@ try {
         throw new RuntimeException('Identidad PostgreSQL o empresas persistentes inesperadas.');
     }
 
-    $ledgerExists = filter_var($state->ledger_exists, FILTER_VALIDATE_BOOLEAN);
+    $ledgerExists = (int) ($state->ledger_exists ?? 0) === 1;
     $counts = $getCounts();
     $records = $ledgerExists ? $db->table('reference_data_versions')
         ->where('dataset_key', $manifest['dataset'])->first() : null;
@@ -245,9 +249,9 @@ try {
             $savedHashes = json_decode((string) $records->content_sha256,true,512,JSON_THROW_ON_ERROR);
             $savedSources = json_decode((string) $records->source_sha256,true,512,JSON_THROW_ON_ERROR);
             if ($counts !== $expectedTables
-                || $savedCounts !== $expectedTables
-                || $savedHashes !== $currentHashes
-                || $savedSources !== $sourceHashes
+                || $canonicalMap($savedCounts) !== $canonicalMap($expectedTables)
+                || $canonicalMap($savedHashes) !== $canonicalMap($currentHashes)
+                || $canonicalMap($savedSources) !== $canonicalMap($sourceHashes)
                 || (string) $records->manifest_sha256 !== $manifestSha) {
                 throw new RuntimeException('Drift global detectado: contenido/manifiesto diferentes.');
             }
@@ -257,8 +261,12 @@ try {
     } else {
         if ($ledgerExists && $records !== null) {
             $savedHashes = json_decode((string)$records->content_sha256,true,512,JSON_THROW_ON_ERROR);
+            $savedCounts = json_decode((string)$records->verified_counts,true,512,JSON_THROW_ON_ERROR);
+            $savedSources = json_decode((string)$records->source_sha256,true,512,JSON_THROW_ON_ERROR);
             if ($counts !== $expectedTables
-                || $savedHashes !== $currentHashes
+                || $canonicalMap($savedCounts) !== $canonicalMap($expectedTables)
+                || $canonicalMap($savedSources) !== $canonicalMap($sourceHashes)
+                || $canonicalMap($savedHashes) !== $canonicalMap($currentHashes)
                 || (string)$records->manifest_sha256 !== $manifestSha) {
                 throw new RuntimeException('Instalacion previa diferente: no sobrescribir.');
             }
