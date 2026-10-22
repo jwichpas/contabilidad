@@ -170,3 +170,13 @@ El manifestado permite reconstruir en nuevas bases PostgreSQL, pero el instalado
 ### Protección adicional: seeder genérico deshabilitado
 
 Se reemplazó `backend/database/seeders/DatabaseSeeder.php` por un seeder que **falla cerrado** con una explicación. La versión anterior creaba una cuarta empresa de demostración y un usuario con contraseña fija; sería un riesgo para cualquier migración posterior. La carga global versionada se realiza solamente por el instalador guardado, no por `php artisan db:seed`. Las tres empresas y los usuarios existentes no se modifican por este cambio de código.
+
+## 8. Reconciliación histórica PLE: NO publicar como normativa vigente
+
+Consulta READ ONLY al proyecto Supabase `Nexus Contable Dev` confirma que `sunat_ple_reference_rows` contiene **247 filas** de las tablas 1–12 del archivo histórico `234_tablas (1).xls`, y que **ninguna** tiene `code_review_status = APPROVED` ni `validity_review_status = VERIFIED`. Distribución: tabla 01=20, 02=5, 03=33, 04=3, 05=6, 06=16, 07=3, 08=31, 09=35, 10=48, 11=30 y 12=17. La tabla `sunat_book_catalog_codes` tiene **23 filas**, todas marcadas `DRAFT`.
+
+Por lo tanto estos registros **NO se pueden etiquetar como catálogos oficiales actualmente vigentes**, aunque sí se deben conservar sin pérdida como referencia histórica y con estado de revisión. La operación correcta es un snapshot versionado de fuente, una estructura portable **separada** para referencia histórica y un proceso de aprobación posterior usando normativa SUNAT auténtica. No sobrescribir `sunat_table_*` operativas ni fusionar listas con semánticas diferentes.
+
+El otro catálogo `accounting_plan_reference_accounts` de Nexus Contable Dev tiene 3.522 cuentas distribuidas en dos versiones (1.764 y 1.758). En una versión están las 1.764 cuentas con `posting_allowed=false`; en la otra, 1.202 cuentas están marcadas para movimiento. El identificador de versión es UUID específico de la fuente y exige mapearlo a una clave semántica antes de trasladarlo. Ninguna fila debe adquirir carácter operativo por una equivalencia de IDs supuesta.
+
+**Puerta obligatoria:** preservar campos `source_file`, `code_review_status`, `validity_review_status`, `review_status`, las fechas de vigencia y versiones de referencia, y no habilitar como utilizable ninguna fila no aprobada.
