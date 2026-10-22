@@ -401,6 +401,31 @@ try{
             &&(string)$row->foreign_diff==='0.0000','Voucher descuadrado.');
     }
     echo "[PASS] HTTP ACTIVE + FORCE RLS: 4 asientos balanceados, 4 enlaces, extorno exacto y auditoría.\n";
+
+    // Real second PostgreSQL connection attempts to take the SAME advisory
+    // transaction lock while connection A still holds it from its HTTP POST.
+    // This proves that simultaneous keyed retries cannot both enter the
+    // critical section. No uncommitted fixture reads from connection B.
+    $configB=(array)config('database.connections.pgsql_migrations',[]);
+    $configB['username']='app_backend';
+    $configB['password']=(string)getenv('DB_APP_BACKEND_ROLE_PASSWORD');
+    config(['database.connections.pgsql_f22_other'=>$configB]);
+    $dbOther=\Illuminate\Support\Facades\DB::connection('pgsql_f22_other');
+    try {
+        $dbOther->beginTransaction();
+        $other=$dbOther->selectOne(<<<'SQL'
+            SELECT current_user AS actor,
+                CASE WHEN pg_try_advisory_xact_lock(hashtextextended(?,0))
+                    THEN 1 ELSE 0 END AS acquired
+            SQL,['nexus:journal-post-idempotency:'.$A.':'.$idempotencyKey]);
+        $assert($other && $other->actor==='app_backend'
+            &&(int)$other->acquired===0,
+            'Una segunda conexión app_backend pudo entrar concurrentemente con la misma clave.');
+        echo "[PASS] F2.2 concurrencia: segunda conexión app_backend no obtiene advisory lock retenido por el POST.\n";
+    }finally{
+        while($dbOther->transactionLevel()>0){$dbOther->rollBack();}
+        $dbOther->disconnect();
+    }
     $passed=true;
 }catch(\Throwable $e){
     $msg=$e instanceof \Illuminate\Database\QueryException
