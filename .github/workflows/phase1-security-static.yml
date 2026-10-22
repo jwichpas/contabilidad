@@ -54,6 +54,11 @@ jobs:
           php -l backend/scripts/phase1-neon-journal-rollback.php
           php -l backend/scripts/phase1-neon-journal-number-rollback.php
           php -l backend/app/Services/Accounting/JournalEntryNumberService.php
+          php -l backend/app/Services/Accounting/PostJournalEntryService.php
+          php -l backend/app/Http/Controllers/Api/V1/Accounting/GetNextJournalEntryNumberController.php
+          php -l backend/app/Http/Controllers/Api/V1/Accounting/CreateJournalEntryController.php
+          php -l backend/app/Http/Controllers/Api/V1/Accounting/ReverseJournalEntryController.php
+          php -l backend/routes/api.php
           php -l backend/app/Http/Middleware/RequireCompanyRole.php
           php -l backend/app/Support/Tenant/TenantContext.php
           php -l backend/app/Providers/AppServiceProvider.php
