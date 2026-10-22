@@ -3,11 +3,11 @@
 > **Documento rector vigente · Actualizado 22/10/2026 · Versión 2.0**  
 > Repositorio: `jwichpas/contabilidad` · Rama única: `main` · Base de desarrollo: **Neon PostgreSQL 18 / contabilidad-dev**.
 >
-> **Avance verificable: 5/32 actividades completas (16%).** El checklist de la [sección 10](#10-checklist-de-seguimiento) es la **fuente única** del conteo. Se distinguió expresamente entre una prueba/subetapa aprobada y una actividad amplia todavía pendiente.
+> **Avance verificable: 6/32 actividades completas (19%).** El checklist de la [sección 10](#10-checklist-de-seguimiento) es la **fuente única** del conteo. Se distinguió expresamente entre una prueba/subetapa aprobada y una actividad amplia todavía pendiente.
 >
-> **Fase 1 validada técnicamente en Neon DEV.** El motor POST, extornos, analítica 94/95/79 y aislamiento ACTIVE+RLS fueron probados manualmente (F2.3b–F2.3h). Sin embargo **F2.2 no está cerrada hasta validar idempotencia** y **F2.3 no está cerrada hasta validar el cierre de periodos**. F3.2 dispone de 3.401 plantillas PCGE y 3 empresas DEMO con planes operativos de seis dígitos.
+> **Fase 1 validada técnicamente en Neon DEV.** El motor POST, extornos, analítica 94/95/79 y aislamiento ACTIVE+RLS fueron probados manualmente (F2.3b–F2.3h). **F2.2 ha quedado cerrada con pruebas de idempotencia HTTP en Neon DEV**, mientras **F2.3 sigue pendiente hasta validar el cierre de periodos**. F3.2 dispone de 3.401 plantillas PCGE y 3 empresas DEMO con planes operativos de seis dígitos.
 >
-> **F2.2 (22/10/2026):** se publicaron migración aditiva `journal_post_idempotency`, servicio de recibos inmutables por empresa/usuario, respuestas HTTP 201/200/409, reutilización controlada de clave UUID en Vue y pruebas Docker PG18 ampliadas de 19 a 20 migraciones. **Docker PG18 y Vue (16/16 tests, typecheck y build) APROBADOS; migración aditiva Laravel aplicada y verificada en Neon DEV (22 migraciones, recibos FORCE RLS).** Queda pendiente repetir HTTP 201/200/409 reversible: primera ejecución falló por un driver de Laravel durante el ensayo (se publicó corrección aislada del harness). [Plan y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).
+> **F2.2 (22/10/2026):** se publicaron migración aditiva `journal_post_idempotency`, servicio de recibos inmutables por empresa/usuario, respuestas HTTP 201/200/409, reutilización controlada de clave UUID en Vue y pruebas Docker PG18 ampliadas de 19 a 20 migraciones. **Docker PG18 y Vue (16/16 tests, typecheck y build) APROBADOS; migración aditiva Laravel aplicada y verificada en Neon DEV (22 migraciones, recibos FORCE RLS).** **HTTP 201/200/409 probado en Neon con app_backend/Sanctum**, extorno, RLS y ROLLBACK; sin recibos ni asientos persistidos. **F2.2 APROBADA**. Nota operativa: el .env local aún necesita CACHE_STORE, SESSION_DRIVER y QUEUE_CONNECTION para ejecución normal, aunque el ensayo integrador aisló esos drivers en memoria. [Plan y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).
 >
 > **Decisión: NO utilizar GitHub Actions.** Los dos workflows fueron retirados de `main`; las pruebas se ejecutan **manualmente** en Windows/PowerShell/PHP/Neon DEV y PostgreSQL Docker desechable. Procedimiento y resultados en [Validación manual y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md). **No hay habilitación automática de matrices ni uso de datos reales.**
 >
@@ -371,7 +371,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 |---|---|---|---|---|
 | F0 | — | — | [Diagnóstico en progreso](docs/FASE-0-DIAGNOSTICO.md) | EN PROGRESO; pendiente de aprobación |
 | F1 | 2026-10-22 (técnica) | Pruebas manuales | [F2.3 HTTP/RLS](docs/F2-3B-MOTOR-ANALITICO-POST.md) y [registro](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) | 3/3 actividades verificadas en DEV; aprobación formal H1 pendiente |
-| F2 | — | — | [F2.3b–h probadas](docs/F2-3B-MOTOR-ANALITICO-POST.md), [decimal](backend/app/Support/Math/Decimal.php) | 1/3 completa; idempotencia y cierre del periodo pendientes |
+| F2 | — | — | [F2.3b–h probadas](docs/F2-3B-MOTOR-ANALITICO-POST.md), [decimal](backend/app/Support/Math/Decimal.php) | 2/3 completas; cierre del periodo F2.3 pendiente |
 | F3 | — | — | [Preflight matriz](backend/scripts/phase2-neon-analytic-promotion-preflight.php) | 1/3 completa; asistente y demás maestros pendientes |
 | F4 | — | — | [Editor único](frontend/src/modules/accounting/views/JournalEntryView.vue) | En implementación; sin aprobación integral de UX |
 | F5 | — | — | — | NO INICIADA |
@@ -386,7 +386,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 **Se prioriza trabajo funcional y validación manual.** El motor contable cuenta con pruebas manuales PASS de HTTP 201/422/403, monedas PEN/USD, contabilización analítica 94/95/79, extornos, trazabilidad, RLS y aislamiento por empresa. F2.3b–h **no equivalen al cierre total de F2.3** porque está pendiente la operación de cierre de periodo.
 
-1. **F2.2:** validar manualmente el código nuevo de idempotencia (migración 20 solo en Docker), después desplegar la migración aditiva controlada en Neon DEV; a continuación verificar reintentos y colisiones. **F2.3:** validar cierre de periodos. [Guía F2.2](docs/F2-2-IDEMPOTENCIA-POST.md).
+1. **F2.3:** implementar y validar cierre, bloqueo y reapertura controlada de períodos con autorización, auditoría, serialización por empresa/periodo y rechazo de POST/extornos en períodos bloqueados. **F2.2 COMPLETADA** mediante pruebas manuales Docker y Neon. [Evidencia F2.2](docs/F2-2-IDEMPOTENCIA-POST.md).
 2. Terminar el flujo real **F3.1**: asistente de empresas, parámetros fiscales, PCGE, alta desde UI y primer asiento, utilizando exclusivamente empresas ficticias.
 3. Completar F4 y F5: editor único, historial con partidas automáticas, Diario/Mayor/Balance, CxC/CxP y cierre.
 4. Continuar F6 (SUNAT) y F7 (NIIF/NPIF/activos/préstamos) por módulos verificables.
@@ -398,7 +398,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ## 10. Checklist de seguimiento
 
-> **Estado reconciliado a 22/10/2026: 5/32 actividades aprobadas (16%).** El total incluye todas las casillas F0.1–F8.3, incluidas F6.4 y F7.0–F7.6. El antiguo indicador **0/27** era incorrecto: existían **32 casillas**, no 27. Cada `[x]` cuenta únicamente con evidencias del alcance completo; `[ ]` puede tener subpruebas PASS sin representar una aprobación global.
+> **Estado reconciliado a 22/10/2026: 6/32 actividades aprobadas (19%).** El total incluye todas las casillas F0.1–F8.3, incluidas F6.4 y F7.0–F7.6. El antiguo indicador **0/27** era incorrecto: existían **32 casillas**, no 27. Cada `[x]` cuenta únicamente con evidencias del alcance completo; `[ ]` puede tener subpruebas PASS sin representar una aprobación global.
 
 ### Fase 0 — Diagnóstico y línea base
 - [ ] **F0.1** Inventariar Supabase, grants/RLS y respaldo con restauración verificada. *Pendiente certificar restauración recuperable y custodia del backup.*
@@ -412,7 +412,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ### Fase 2 — Motor contable
 - [x] **F2.1** Eliminar punto flotante del circuito monetario y validar precisión. [Decimal PHP](backend/app/Support/Math/Decimal.php), [pruebas manuales PEN/USD y partida doble exacta](docs/F2-3B-MOTOR-ANALITICO-POST.md). *Importes DECIMAL 4 y TC 6; cálculos frontend con BigInt.*
-- [ ] **F2.2** Implementar numeración segura, idempotencia y atomicidad. *Pruebas manuales **Docker PostgreSQL 18 / 20 migraciones PASS**, concurrencia e idempotencia HTTP 201/200/409, FORCE RLS, rollback y Vue (16/16 unitarias, typecheck, build) aprobadas. **Migración 22 aplicada y verificada en Neon DEV mediante Laravel:** 3 restricciones, 2 UNIQUE, 2 políticas RLS, 3 DRAFT, 0 asientos/recibos. **Prueba HTTP reversible pendiente:** el primer intento falló con `Manager::createDriver()`, hizo ROLLBACK; corrección de cache/sesión temporales publicada, pendiente reejecución. [Evidencia y procedimiento](docs/F2-2-IDEMPOTENCIA-POST.md).*
+- [x] **F2.2** Implementar numeración segura, idempotencia y atomicidad. **APROBADO:** Docker PostgreSQL 18 con 20 migraciones, concurrencia entre conexiones app_backend, HTTP 201/200/409, clave y recibo inmutables FORCE RLS; migración 22 en Neon DEV, HTTP real Sanctum/app_backend (1 recibo, 1 asiento, 1 auditoría), extorno y rechazo de duplicados, más ROLLBACK con cero movimientos/recibos persistidos. Vue: 16/16 tests, typecheck y build PASS. [Evidencia](docs/F2-2-IDEMPOTENCIA-POST.md).
 - [ ] **F2.3** Validar POST, extornos, cierre y controles de partida doble. *POST/extornos/analítica/partida doble y RLS **PASS F2.3b–h**; **pendiente cierre y reapertura/periodo bloqueado**. [Evidencia](docs/F2-3B-MOTOR-ANALITICO-POST.md).*
 
 ### Fase 3 — Empresas y maestros
@@ -457,16 +457,16 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 | Indicador | Estado real (22/10/2026) | Evidencia / siguiente control |
 |---|---|---|
-| Actividades aprobadas | **5/32 (16%)** | Contar únicamente `[x]` de esta sección |
+| Actividades aprobadas | **6/32 (19%)** | Contar únicamente `[x]` de esta sección |
 | Actividades pendientes | **27/32 (84%)** | Incluyen subtareas parcialmente desarrolladas |
 | Fase de seguridad F1 | **3/3 con validación técnica en DEV** | Pendiente aprobación formal del hito H1 |
-| Fase del motor F2 | **1/3 completa**; **F2.3b–h PASS** | [F2.2 idempotencia preparada](docs/F2-2-IDEMPOTENCIA-POST.md): falta validar Docker/Neon; falta cierre F2.3 |
+| Fase del motor F2 | **2/3 completas**; **F2.3b–h PASS** | F2.2 POST/idempotencia completada; falta cerrar F2.3 (bloqueo de periodos) |
 | Fase de empresas F3 | **1/3 completa** | F3.1 alta E2E y F3.3 maestros restantes |
 | Fases formalmente aprobadas | **0/9** | Hitos y aceptación explícita de sección 8 |
 | Hitos aprobados | **0/4** | H1–H4 requieren puertas completas |
 | Base de desarrollo | **Neon PG18**; 22 migraciones; 3 DRAFT; 0 ACTIVE; 0 asientos/recibos | SQL de solo lectura 22/10/2026 |
 | Modalidad de pruebas | **Manual exclusivamente** | [Guía y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
-| Próximo trabajo funcional | **F2.2 HTTP Neon con ROLLBACK → F2.3 cierre → F3.1/F4.2** | [Nueva corrección y pruebas](docs/F2-2-IDEMPOTENCIA-POST.md) |
+| Próximo trabajo funcional | **F2.3 cierre de períodos → F3.1/F4.2** | Probar HTTP cierre/reapertura con bloqueo concurrente, 403 roles y rollback |
 
 ### Evidencias que justifican las cinco actividades aprobadas
 
@@ -494,4 +494,4 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
 - **Control de versiones:** **v2.0 — 2026-10-22 — checklist reconciliado 5/32, F2.3h certificado, prueba manual sin GitHub Actions, archivo histórico**; v1.7 — 2026-10-19 — Control estricto de decimales y credenciales de migración; v1.6 — 2026-10-19 — Cambios funcionales de seguridad y precisión en Laravel/Vue; v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
-**Estado vigente 2026-10-22:** ver [sección 10](#10-checklist-de-seguimiento): **5/32 (16%)**, modalidad de pruebas manual y 0/4 hitos formalmente aprobados. [Historial del estado al 19/10](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md).
+**Estado vigente 2026-10-22:** ver [sección 10](#10-checklist-de-seguimiento): **6/32 (19%)**, modalidad de pruebas manual y 0/4 hitos formalmente aprobados. [Historial del estado al 19/10](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md).
