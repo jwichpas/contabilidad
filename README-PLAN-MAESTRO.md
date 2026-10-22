@@ -7,6 +7,8 @@
 >
 > **Fase 1 validada técnicamente en Neon DEV.** El motor POST, extornos, analítica 94/95/79 y aislamiento ACTIVE+RLS fueron probados manualmente (F2.3b–F2.3h). Sin embargo **F2.2 no está cerrada hasta validar idempotencia** y **F2.3 no está cerrada hasta validar el cierre de periodos**. F3.2 dispone de 3.401 plantillas PCGE y 3 empresas DEMO con planes operativos de seis dígitos.
 >
+> **F2.2 (22/10/2026):** se publicaron migración aditiva `journal_post_idempotency`, servicio de recibos inmutables por empresa/usuario, respuestas HTTP 201/200/409, reutilización controlada de clave UUID en Vue y pruebas Docker PG18 ampliadas de 19 a 20 migraciones. **Todo sigue PENDIENTE de validación manual; Neon conserva 21 migraciones y 3 DRAFT.** [Plan y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).
+>
 > **Decisión: NO utilizar GitHub Actions.** Los dos workflows fueron retirados de `main`; las pruebas se ejecutan **manualmente** en Windows/PowerShell/PHP/Neon DEV y PostgreSQL Docker desechable. Procedimiento y resultados en [Validación manual y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md). **No hay habilitación automática de matrices ni uso de datos reales.**
 >
 > **Estado de datos verificado 22/10/2026:** 21 migraciones, 3 empresas, 1.362 rutas de destinos, **3 matrices DRAFT / 0 ACTIVE**, 0 asientos y 0 auditorías. **Hitos H1–H4 y las pruebas de aceptación final siguen abiertos.**
@@ -384,7 +386,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 **Se prioriza trabajo funcional y validación manual.** El motor contable cuenta con pruebas manuales PASS de HTTP 201/422/403, monedas PEN/USD, contabilización analítica 94/95/79, extornos, trazabilidad, RLS y aislamiento por empresa. F2.3b–h **no equivalen al cierre total de F2.3** porque está pendiente la operación de cierre de periodo.
 
-1. Completar las pruebas pendientes de **idempotencia F2.2 y cierre contable F2.3**, sin reejecutar automáticamente ensayos que ya pasaron.
+1. **F2.2:** validar manualmente el código nuevo de idempotencia (migración 20 solo en Docker), después desplegar la migración aditiva controlada en Neon DEV; a continuación verificar reintentos y colisiones. **F2.3:** validar cierre de periodos. [Guía F2.2](docs/F2-2-IDEMPOTENCIA-POST.md).
 2. Terminar el flujo real **F3.1**: asistente de empresas, parámetros fiscales, PCGE, alta desde UI y primer asiento, utilizando exclusivamente empresas ficticias.
 3. Completar F4 y F5: editor único, historial con partidas automáticas, Diario/Mayor/Balance, CxC/CxP y cierre.
 4. Continuar F6 (SUNAT) y F7 (NIIF/NPIF/activos/préstamos) por módulos verificables.
@@ -410,7 +412,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ### Fase 2 — Motor contable
 - [x] **F2.1** Eliminar punto flotante del circuito monetario y validar precisión. [Decimal PHP](backend/app/Support/Math/Decimal.php), [pruebas manuales PEN/USD y partida doble exacta](docs/F2-3B-MOTOR-ANALITICO-POST.md). *Importes DECIMAL 4 y TC 6; cálculos frontend con BigInt.*
-- [ ] **F2.2** Implementar numeración segura, idempotencia y atomicidad. *Numeración/concurrencia y atomicidad probadas; falta demostrar idempotencia ante reintentos y colisiones HTTP.*
+- [ ] **F2.2** Implementar numeración segura, idempotencia y atomicidad. *Numeración/concurrencia y atomicidad probadas. Idempotencia HTTP implementada en código (recibos RLS, advisory lock, 201/200/409 y retry Vue), pero **migración Neon y pruebas manuales del nuevo flujo pendientes**. [Diseño y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).*
 - [ ] **F2.3** Validar POST, extornos, cierre y controles de partida doble. *POST/extornos/analítica/partida doble y RLS **PASS F2.3b–h**; **pendiente cierre y reapertura/periodo bloqueado**. [Evidencia](docs/F2-3B-MOTOR-ANALITICO-POST.md).*
 
 ### Fase 3 — Empresas y maestros
@@ -458,13 +460,13 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | Actividades aprobadas | **5/32 (16%)** | Contar únicamente `[x]` de esta sección |
 | Actividades pendientes | **27/32 (84%)** | Incluyen subtareas parcialmente desarrolladas |
 | Fase de seguridad F1 | **3/3 con validación técnica en DEV** | Pendiente aprobación formal del hito H1 |
-| Fase del motor F2 | **1/3 completa**; **F2.3b–h PASS** | Pendientes idempotencia F2.2 y cierre F2.3 |
+| Fase del motor F2 | **1/3 completa**; **F2.3b–h PASS** | [F2.2 idempotencia preparada](docs/F2-2-IDEMPOTENCIA-POST.md): falta validar Docker/Neon; falta cierre F2.3 |
 | Fase de empresas F3 | **1/3 completa** | F3.1 alta E2E y F3.3 maestros restantes |
 | Fases formalmente aprobadas | **0/9** | Hitos y aceptación explícita de sección 8 |
 | Hitos aprobados | **0/4** | H1–H4 requieren puertas completas |
 | Base de desarrollo | **Neon PG18**; 21 migraciones; 3 DRAFT; 0 ACTIVE | Verificación read-only 22/10/2026 |
 | Modalidad de pruebas | **Manual exclusivamente** | [Guía y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
-| Próximo trabajo funcional | **F3.1, F4.2, F2.2/F2.3 pendientes** | No repetir F2.3b–h si no hubo cambios |
+| Próximo trabajo funcional | **F2.2 idempotencia → F2.3 cierre → F3.1/F4.2** | [Validación manual nueva](docs/F2-2-IDEMPOTENCIA-POST.md); no repetir probes sin cambios |
 
 ### Evidencias que justifican las cinco actividades aprobadas
 
