@@ -345,3 +345,31 @@ php scripts/phase1-neon-http-rollback.php --probe=contabilidad-dev
 ```
 
 El script falla cerrado ante cualquier error y no imprime errores SQL/HTTP potencialmente sensibles. Si no completa las ocho comprobaciones o no confirma ROLLBACK, detener pruebas remotas y revisar el resultado antes de reintentar. En esta etapa no ejecutar `php artisan test` general directamente contra Neon.
+
+
+## F1.9 aprobado y F1.10 preparado — Bearer real y revocación (21/10/2026)
+
+El usuario ejecutó sobre Neon contabilidad-dev `php -l scripts/phase1-neon-http-rollback.php` (**sin errores**), `--plan` (**dry-run**) y `--probe=contabilidad-dev`: los **8 escenarios HTTP PASS** (401 anónimo, 422 administrador autorizado, 403 auditor, 200 lectura auditor, 422 contador autorizado, 403 acceso/rol ajeno y digitador) y **ROLLBACK** de empresas/usuarios ficticios confirmado. Esta fase usó `Sanctum::actingAs`, por lo que no prueba el intercambio de credenciales por un token Bearer ni su revocación.
+
+Una nueva consulta independiente Neon `SELECT` en `br-odd-lake-b6wshqv3` confirmó **PG18.6, companies=0, users=0, personal_access_tokens=0, audit_logs=0 y migrations=16**, sin residuos de pruebas.
+
+Se publicó el nuevo script `backend/scripts/phase1-neon-token-rollback.php` como **F1.10**. Está orientado a autenticación REST Sanctum real y solo puede conectarse como `app_backend` a la rama exacta `contabilidad-dev` en PostgreSQL 18. Tiene allowlist de host, usuario y credenciales coherentes, prohíbe claves `.env` duplicadas y rechaza configuración Laravel cacheada.
+
+- **`--plan`**: muestra pasos sin conectar ni escribir.
+- **`--probe=contabilidad-dev`**: abre una transacción exterior Laravel y verifica PG18, `app_backend` y que las tablas de usuarios, empresas y tokens estén inicialmente vacías; crea dos empresas, un usuario con contraseña **aleatoria en memoria y hash**, dos membresías con IDs explícitos; realiza HTTP vía kernel sin `Sanctum::actingAs`: **401** sin token, **422** login incorrecto, **200** login correcto, emisión real de token Sanctum con expiración de **12 horas**, **200** consulta de empresas usando token Bearer, **403** auditor de empresa B sin permiso de escritura usando `X-Company-Id`, **200** cambio a B, **200** logout y revocación, **401** reutilización del token revocado. Verifica 8 estados HTTP, rollback obligatorio y cero filas de empresa, usuario y token persistentes. No imprime contraseñas ni token y configura cache/sesión `array` solo dentro del proceso.
+- **Importante:** una inserción real de token Sanctum utiliza secuencias PostgreSQL; las secuencias **pueden avanzar a pesar del ROLLBACK**. No es una prueba completamente sin efectos numéricos, aunque no deja filas de negocio ni tokens.
+- Esta prueba no publica un asiento contable real; el motor POST balanceado, validación DB diferida, reversión y auditoría de operaciones quedan para F1.11.
+
+### Comandos para el usuario
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-neon-token-rollback.php
+php scripts/phase1-neon-token-rollback.php --plan
+# Ejecutar solo si lint/plan pasan y se acepta el avance no transaccional de secuencias:
+php scripts/phase1-neon-token-rollback.php --probe=contabilidad-dev
+```
+
+**No hay aún ejecución local ni PASS de F1.10; solo código y plan publicados en main.** Ante fallo, no reintentar a ciegas: reportar solo la salida sin secretos para analizar si existe un defecto de autenticación, RLS o persistencia. No ejecutar `php artisan test` general en Neon. Neon production y Supabase intactos.
