@@ -21,6 +21,7 @@ return new class extends Migration
             $table->jsonb('source_sha256');
             $table->jsonb('expected_counts');
             $table->jsonb('verified_counts');
+            $table->jsonb('content_sha256');
             $table->timestampTz('installed_at')->useCurrent();
         });
 
