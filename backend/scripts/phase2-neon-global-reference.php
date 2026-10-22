@@ -273,22 +273,30 @@ try {
             echo '[PASS] Datos globales ya instalados: segunda aplicacion sin escrituras.'.PHP_EOL;
             $ok = true;
         } else {
-            if ($ledgerExists || (int) $state->migrations !== 17
-                || array_sum($counts) !== 0) {
+            if (array_sum($counts) !== 0
+                || (! $ledgerExists && (int) $state->migrations !== 17)
+                || ($ledgerExists && (int) $state->migrations !== 18)
+                || $records !== null) {
                 throw new RuntimeException('Hay carga global parcial o migracion inesperada; no aplicar a ciegas.');
             }
-            echo '[PASS] Preflight: 17 migraciones, globales vacios, 3 empresas existentes protegidas.'.PHP_EOL;
 
-            $result = \Illuminate\Support\Facades\Artisan::call('migrate', [
-                '--database'=>'pgsql_migrations',
-                '--path'=>$migrationPath,
-                '--force'=>true,
-                '--no-interaction'=>true,
-            ]);
-            if ($result !== 0 || ! \Illuminate\Support\Facades\Schema::hasTable('reference_data_versions')) {
-                throw new RuntimeException('Migracion de ledger no aprobada; revisar antes de reintentar.');
+            if (! $ledgerExists) {
+                echo '[PASS] Preflight: 17 migraciones, globales vacios y 3 empresas intactas.'.PHP_EOL;
+                $result = \Illuminate\Support\Facades\Artisan::call('migrate', [
+                    '--database'=>'pgsql_migrations',
+                    '--path'=>$migrationPath,
+                    '--force'=>true,
+                    '--no-interaction'=>true,
+                ]);
+                if ($result !== 0 || ! \Illuminate\Support\Facades\Schema::hasTable('reference_data_versions')) {
+                    throw new RuntimeException('Migracion de ledger no aprobada; revisar estado antes de reintentar.');
+                }
+                echo '[PASS] Ledger portable instalado como migracion 18.'.PHP_EOL;
+            } else {
+                // Recuperacion segura tras DDL exitoso y DML fallido:
+                // el ledger existe sin filas y todos los catalogos continuan vacios.
+                echo '[PASS] Ledger 18 ya instalado sin datos parciales; reanudando fase transaccional.'.PHP_EOL;
             }
-            echo '[PASS] Ledger portable instalado como migracion 18.'.PHP_EOL;
 
             // Todas las inserciones globales y el registro de version se
             // confirman o revierten juntas. Nunca TRUNCATE ni db:seed general.
