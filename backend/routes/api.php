@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\Catalogs\ListChartOfAccountsTemplatesController;
 use App\Http\Controllers\Api\V1\Catalogs\ListCurrenciesController;
 use App\Http\Controllers\Api\V1\Catalogs\ListFinancialStatementRubricsController;
 use App\Http\Controllers\Api\V1\Catalogs\ListSunatCatalogController;
+use App\Http\Controllers\Api\V1\Catalogs\ListSunatRucReferenceController;
 use App\Http\Controllers\Api\V1\Catalogs\ListTaxCalendarDeadlinesController;
 use App\Http\Controllers\Api\V1\Company\GetCompanyExchangeRatesController;
 use App\Http\Controllers\Api\V1\Company\GetCompanySettingsController;
@@ -66,6 +67,11 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/sunat/{tableNumber}', ListSunatCatalogController::class)
                 ->name('api.v1.catalogs.sunat');
+
+            // Anexos SUNAT del RUC e INEI CIIU Rev.4: no son códigos PLE.
+            Route::get('/sunat-ruc/{dataset}', ListSunatRucReferenceController::class)
+                ->whereIn('dataset',['contributor-types','ciiu','tax-codes'])
+                ->name('api.v1.catalogs.sunat-ruc');
 
             Route::get('/accounting-standards', ListAccountingStandardsController::class)
                 ->name('api.v1.catalogs.accounting-standards');
