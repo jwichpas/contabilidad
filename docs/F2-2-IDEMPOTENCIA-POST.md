@@ -1,12 +1,24 @@
 # F2.2 — Idempotencia de asientos contables: implementación y validación manual
 
-**Fecha:** 22/10/2026 · **Rama:** `main` · **Estado:** pruebas Docker/Frontend **PASS**; migración aditiva y HTTP en **Neon DEV pendientes**.
+**Fecha:** 22/10/2026 · **Rama:** `main` · **Estado F2.2: APROBADO 22/10/2026.** Docker PostgreSQL 18, Vue, migración 22 y HTTP Sanctum/app_backend real en Neon DEV con idempotencia 201/200/409 y ROLLBACK verificados.
+
+## Certificación F2.2 — Neon HTTP real PASS (22/10/2026)
+
+**Evidencia proporcionada por el usuario:**
+
+- `php scripts/phase2-neon-analytic-http.php --probe=contabilidad-dev`: **PASS** idempotencia en `app_backend`, HTTP **201/200/409**, **1 recibo, 1 asiento y 1 auditoría**; POST/GET tenant A/B, 422 por cuenta/centro ajeno y descuadre, 403 de rol, extorno HTTP 201 y doble extorno 422; desencadenó `ROLLBACK`; comprobación final **0 asientos/líneas/links/periodos/tipos de cambio/auditorías y 3 DRAFT**.
+- `php scripts/phase2-neon-journal-idempotency.php --verify`: **PASS** esquema Neon PG18 con **22 migraciones**, 3 constraints, 2 índices UNIQUE, 2 políticas RLS, `app_backend` con SELECT/INSERT solamente, 3 DRAFT, **0 asientos ni recibos persistidos**.
+- Docker PG18: segunda conexión no logra tomar advisory lock; RLS entre tenants; UPDATE denegado. Frontend: typecheck/build y 16 unitarias PASS.
+
+**Decisión:** actividad **F2.2 [x]**. Incidencia local no bloqueante para el ensayo: faltan `CACHE_STORE`, `SESSION_DRIVER` y `QUEUE_CONNECTION` en el `.env`; en las pruebas se utilizaron drivers array/sync **temporales y solo en memoria**. Para operación normal del API se debe configurar su cache/sesión/cola y repetir diagnóstico.
+
+---
 
 ## Neon DEV — migración 22 PASS y ajuste del ensayo HTTP (22/10/2026)
 
 **Evidencia manual del usuario:** `phase2-neon-journal-idempotency.php --apply=contabilidad-dev` terminó PASS. Segundo `--verify` confirmó 22 migraciones, 3 constraints, 2 índices UNIQUE, 2 políticas FORCE RLS, `app_backend` SELECT/INSERT sin UPDATE/DELETE y 3 DRAFT. Una verificación independiente de Neon comprobó 22 migraciones, cero asientos/líneas/auditoría/recibos y 0 ACTIVE.
 
-**Pendiente:** el primer `phase2-neon-analytic-http.php --probe=contabilidad-dev` terminó con un error Laravel `Illuminate\\Support\\Manager::createDriver()` antes de publicar un PASS de HTTP y luego efectuó ROLLBACK. El ensayo Docker equivalente funcionaba porque el wrapper aislaba cache/sesión/cola en drivers locales de prueba. Se corrigió el *harness* de Neon para configurar `cache.default=array`, `session.driver=array`, `queue.default=sync` **solo en memoria durante esa ejecución**, sin alterar `.env`, ni la configuración global ni el esquema Neon. El manejador de excepciones ahora identifica la fase, con SQLSTATE ante errores SQL.
+**Incidencia resuelta:** el primer `phase2-neon-analytic-http.php --probe=contabilidad-dev` terminó con un error Laravel `Illuminate\\Support\\Manager::createDriver()` antes de publicar un PASS de HTTP y luego efectuó ROLLBACK. El ensayo Docker equivalente funcionaba porque el wrapper aislaba cache/sesión/cola en drivers locales de prueba. Se corrigió el *harness* de Neon para configurar `cache.default=array`, `session.driver=array`, `queue.default=sync` **solo en memoria durante esa ejecución**, sin alterar `.env`, ni la configuración global ni el esquema Neon. El manejador de excepciones ahora identifica la fase, con SQLSTATE ante errores SQL.
 
 **Distinción:** este ajuste permite ejecutar el HTTP real de Laravel sin depender de una caché/sesión local mal configurada; **no certifica** que la configuración normal del servidor web esté correcta. La aplicación real debería usar un `CACHE_STORE` y `SESSION_DRIVER` válidos (por ejemplo `file` en desarrollo), y `QUEUE_CONNECTION=sync` si no hay workers. Si se usa `database`, deben existir las tablas correspondientes.
 
@@ -21,7 +33,7 @@ php scripts/phase2-neon-analytic-http.php --probe=contabilidad-dev
 php scripts/phase2-neon-journal-idempotency.php --verify
 ```
 
-Esperado: HTTP 201 creación, 200 reintento, 409 conflicto, reversión/roles/RLS, ROLLBACK confirmado y cero movimientos. La casilla F2.2 permanece `[ ]` hasta recibir PASS.
+**PASS recibido:** HTTP 201 creación, 200 reintento, 409 conflicto, extorno/roles/RLS, ROLLBACK confirmado y cero movimientos. F2.2 figura `[x]` en el plan maestro.
 
 ---
 
@@ -43,7 +55,7 @@ php scripts/phase2-neon-connection-diagnostic.php --check
 
 Corregir las condiciones `[FAIL]` en **`backend/.env` privado**, teniendo en cuenta variables heredadas de PowerShell. **No** pegar ni subir `.env`, contraseñas, tokens o conexiones completas; compartir solo etiquetas PASS/FAIL del diagnóstico. No usar `migrate:fresh`, desactivar guards ni aplicar la migración hasta que este preflight pase. Después ejecutar `--verify` (puede decir PENDIENTE porque la tabla aún no existe), y finalmente el instalador con `--apply=contabilidad-dev` como se describe abajo.
 
-**Estado F2.2:** Docker PG18 y Vue aprobados; integración en Neon aún pendiente y F2.2 permanece `[ ]` en el plan maestro.
+**Estado histórico de este bloqueo:** quedó resuelto. F2.2 se aprobó posteriormente con la migración 22 e integración HTTP real en Neon.
 
 ---
 
