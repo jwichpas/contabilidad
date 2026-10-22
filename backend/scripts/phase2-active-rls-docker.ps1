@@ -109,6 +109,7 @@ try{
         'database/portable_migrations/2026_10_22_110000_create_accounting_destination_rules_v2.php'
         'database/portable_migrations/2026_10_22_120000_add_journal_line_cost_centers.php'
         'database/portable_migrations/2026_10_22_130000_create_journal_analytic_allocations.php'
+        'database/portable_migrations/2026_10_22_140000_create_journal_post_idempotency.php'
     )
     foreach($migration in $migrations){
         if(-not (Test-Path $migration)){throw "Falta $migration"}
