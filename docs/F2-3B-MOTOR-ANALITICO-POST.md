@@ -136,6 +136,31 @@ php scripts/phase2-neon-analytic-allocations.php --verify
 
 **GitHub Actions:** el workflow YAML tenía un `:` no escapado en un nombre de step y era inválido; al entrecomillarlo GitHub reconoció el workflow y creó tres jobs reales. Sin embargo los runs posteriores muestran `failure` y algunos jobs terminan sin pasos ni logs disponibles desde el conector, otros quedaron en cola. **No considerar el CI aprobado**: requiere revisar el diagnóstico del runner/facturación/autorización de Actions sin asumir una causa.
 
+## F2.3f PASS / F2.3g promoción auditada con rollback (22/10/2026)
+
+**F2.3f confirmada por el usuario**: `--verify` y los tres `--preflight=RUC` PASS; cada empresa tiene exactamente 227 cuentas fuente, 2 centros activos, 454 rutas y SHA-256 idéntico al snapshot versionado; 3 matrices DRAFT, sin activar ni modificar datos.
+
+**F2.3g — código publicado, prueba por ejecutar:** `backend/app/Services/Accounting/AnalyticMatrixPromotionService.php` implementa una transición `DRAFT → ACTIVE` o `ACTIVE → RETIRED` en transacción OWNER exclusiva de Neon DEV, con validación de un actor usuario ADMIN/CHIEF_ACCOUNTANT activo en la empresa, SHA-256 esperado, comparación del snapshot, integridad de 227×2 rutas, bloqueo sobre empresa y advisory lock por tenant, UPDATE condicionado al estado anterior y un evento persistible de auditoría **en la misma transacción**. El servicio aún **no tiene ruta HTTP ni comando de activación permanente**; nada ha sido activado. Los retiros conservan la versión y sus enlaces históricos (no existe REACTIVATE de una versión RETIRED).
+
+`AnalyticRoutingService::activeVersionId()` adquirirá un advisory lock compartido por empresa en cada POST; la promoción usa el mismo nombre de lock exclusivo. Así se evita publicar partidas contables mientras se cambia el estado de la regla. Se utiliza advisory lock porque el rol `app_backend` sólo puede hacer SELECT a la tabla de versiones y no tiene privilegio UPDATE necesario para `SELECT FOR SHARE` en PostgreSQL.
+
+**F2.3g ensayo reversible, PENDIENTE de ejecutar:** `backend/scripts/phase2-neon-analytic-promotion-rollback.php` usa conexión OWNER y transacción externa sin COMMIT. Prueba actor AUDITOR rechazado, SHA esperado erróneo, DRAFT→ACTIVE, prohibición de segunda activación, ACTIVE→RETIRED, prohibición de segundo retiro, dos eventos auditados con usuario ADMIN; hace ROLLBACK y verifica por otra lectura 3 DRAFT, 0 ACTIVE/RETIRED, 0 asientos/auditoría. **No certifica el flujo HTTP ACTIVE+RLS simultáneo**, ni se autoriza activación persistente hasta superar pruebas.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l app/Services/Accounting/AnalyticMatrixPromotionService.php
+php -l app/Services/Accounting/AnalyticRoutingService.php
+php -l scripts/phase2-neon-analytic-promotion-rollback.php
+php scripts/phase2-neon-analytic-promotion-rollback.php --plan
+php scripts/phase2-neon-analytic-promotion-rollback.php --probe=contabilidad-dev
+php scripts/phase2-neon-analytic-promotion-preflight.php --verify
+php scripts/phase2-neon-analytic-allocations.php --verify
+```
+
+**CI:** al corregir el YAML, GitHub ya reconoce los jobs, pero los tres se marcaron failure y los jobs investigados no exponían ningún step ni log (posible dificultad de runner/configuración, causa no certificada). Estado CI: **no aprobado**.
+
 ## Estado y barrera de activación
 
 **Todo el código de generación está detrás de la condición `status=ACTIVE`.**
