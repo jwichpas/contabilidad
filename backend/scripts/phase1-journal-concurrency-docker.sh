@@ -11,6 +11,8 @@ if [[ $# -gt 1 || ( $# -eq 1 && "${1:-}" != '--f23' ) ]]; then
 fi
 if [[ "${1:-}" == '--f23' ]]; then
   export F23_PERIOD_CONCURRENCY=1
+else
+  unset F23_PERIOD_CONCURRENCY
 fi
 
 backend="$(cd "$(dirname "$0")/.." && pwd)"
