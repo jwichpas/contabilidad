@@ -93,7 +93,7 @@ try{
         SQL);
     if(!$state||$state->actor!=='neondb_owner'||$state->db!=='neondb'
         ||intdiv((int)$state->server_version,10000)!==18
-        ||(int)$state->migrations!==21||(int)$state->companies!==3
+        ||!in_array((int)$state->migrations,[21,22],true)||(int)$state->companies!==3
         ||(int)$state->memberships!==8||(int)$state->drafts!==3
         ||(int)$state->active!==0||(int)$state->routes!==1362
         ||(int)$state->entries!==0||(int)$state->lines!==0
