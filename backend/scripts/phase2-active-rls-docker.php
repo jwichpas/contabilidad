@@ -63,9 +63,9 @@ try{
         SQL,[(string)getenv('F23H_GUARD_TOKEN')]);
     if(!$pre||$pre->role_name!=='postgres'||$pre->database_name!=='contabilidad_ci'
         ||intdiv((int)$pre->version,10000)!==18||(int)$pre->guard!==1
-        ||(int)$pre->migrations!==19||(int)$pre->companies!==0
+        ||(int)$pre->migrations!==20||(int)$pre->companies!==0
         ||(int)$pre->entries!==0||(int)$pre->versions!==0){
-        throw new RuntimeException('Migraciones/guardia Docker no corresponden al escenario 19 migraciones.');
+        throw new RuntimeException('Migraciones/guardia Docker no corresponden al escenario 20 migraciones.');
     }
     $db->beginTransaction();$begun=true;
     $db->selectOne("SELECT set_config('statement_timeout','25000',true)");
@@ -203,11 +203,20 @@ try{
     $actor=\App\Models\User::query()->findOrFail($adminId);
     $auditor=\App\Models\User::query()->findOrFail($auditorId);
     \Laravel\Sanctum\Sanctum::actingAs($actor,['*'],'sanctum');
-    $http=static function(string $verb,string $uri,int $tenant,?array $payload=null)use($kernel):array{
-        $request=\Illuminate\Http\Request::create($uri,$verb,[],[],[],[
+    $http=static function(
+        string $verb,string $uri,int $tenant,?array $payload=null,?string $idempotencyKey=null
+    )use($kernel):array{
+        $headers=[
             'HTTP_ACCEPT'=>'application/json','CONTENT_TYPE'=>'application/json',
             'HTTP_X_COMPANY_ID'=>(string)$tenant,
-        ],$payload===null?null:json_encode($payload,JSON_THROW_ON_ERROR));
+        ];
+        if ($idempotencyKey !== null) {
+            $headers['HTTP_IDEMPOTENCY_KEY']=$idempotencyKey;
+        }
+        $request=\Illuminate\Http\Request::create(
+            $uri,$verb,[],[],[],$headers,
+            $payload===null?null:json_encode($payload,JSON_THROW_ON_ERROR)
+        );
         $response=$kernel->handle($request);
         return [$response->getStatusCode(),
             json_decode((string)$response->getContent(),true,512,JSON_THROW_ON_ERROR)];
@@ -246,9 +255,10 @@ try{
     };
 
     $created=[];
+    $idempotencyKey='f23h-idempotency-retry-0001';
     foreach(['CC-ADM','CC-VTA'] as $cc){
         [$status,$body]=$http('POST','/api/v1/accounting/journal-entries',$A,
-            $payload($cc,'F23H-'.$cc));
+            $payload($cc,'F23H-'.$cc),$cc==='CC-ADM'?$idempotencyKey:null);
         $lines=$body['data']['lines']??[];
         $assert($status===201 && count($lines)===4,
             'HTTP ACTIVE '.$cc.' esperado 201/4 líneas; status '.$status.' '.substr((string)($body['message']??''),0,200));
@@ -269,6 +279,29 @@ try{
         $created[$cc]=$body['data'];
         echo "[PASS] HTTP app_backend ACTIVE ".$cc.": 6xx -> ".$expectedCode."/791000, 4 lineas y 1 enlace RLS.\n";
     }
+
+    // Replaying must return the same voucher without new FX, lines or audit.
+    $samePayload=$payload('CC-ADM','F23H-CC-ADM');
+    [$replayStatus,$replay]=$http('POST','/api/v1/accounting/journal-entries',
+        $A,$samePayload,$idempotencyKey);
+    $assert($replayStatus===200
+        &&(int)($replay['data']['id']??0)===(int)$created['CC-ADM']['id'],
+        'Reintento HTTP no recupero el asiento original.');
+    $different=$samePayload;
+    $different['description']='CONTENIDO DIFERENTE CON MISMA CLAVE';
+    [$conflictStatus]=$http('POST','/api/v1/accounting/journal-entries',
+        $A,$different,$idempotencyKey);
+    $assert($conflictStatus===409,'Payload distinto con misma clave no respondió 409.');
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$A]);
+    $idemCounts=$db->selectOne(<<<'SQL'
+        SELECT (SELECT count(*) FROM public.journal_post_idempotency WHERE company_id=?)::integer AS receipts,
+          (SELECT count(*) FROM public.journal_entries WHERE company_id=?)::integer AS entries,
+          (SELECT count(*) FROM public.audit_logs WHERE company_id=? AND event_type='JOURNAL_ENTRY_CREATED')::integer AS audits
+        SQL,[$A,$A,$A]);
+    $assert((int)$idemCounts->receipts===1&&(int)$idemCounts->entries===2
+        &&(int)$idemCounts->audits===2,'Reintentos duplicaron asientos o auditoria.');
+    $db->selectOne("SELECT set_config('app.current_company_id','',true)");
+    echo "[PASS] F2.2 HTTP idempotencia RLS: 201 -> 200 replay, 409 conflicto, 2 asientos/2 auditorias/1 recibo.\n";
 
     [$listA,$a]=$http('GET','/api/v1/accounting/journal-entries',$A);
     [$listB,$b]=$http('GET','/api/v1/accounting/journal-entries',$B);
