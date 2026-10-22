@@ -301,7 +301,33 @@ try{
     $assert((int)$idemCounts->receipts===1&&(int)$idemCounts->entries===2
         &&(int)$idemCounts->audits===2,'Reintentos duplicaron asientos o auditoria.');
     $db->selectOne("SELECT set_config('app.current_company_id','',true)");
-    echo "[PASS] F2.2 HTTP idempotencia RLS: 201 -> 200 replay, 409 conflicto, 2 asientos/2 auditorias/1 recibo.\n";
+
+    // Explicit negative tenant isolation: company B sees neither receipt nor
+    // journal that was generated under company A.
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$B]);
+    $visibleB=$db->selectOne(
+        'SELECT count(*)::integer AS n FROM public.journal_post_idempotency'
+    );
+    $assert((int)$visibleB->n===0,'RLS revela recibos idempotentes entre empresas.');
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$A]);
+
+    // Receipts are append-only to the app role. Test against actual SQL ACL
+    // without causing a broken outer transaction.
+    $immutabilityDenied=false;
+    $db->beginTransaction(); // Laravel SAVEPOINT
+    try {
+        $db->table('journal_post_idempotency')
+            ->where('company_id',$A)
+            ->where('idempotency_key',$idempotencyKey)
+            ->update(['request_sha256'=>str_repeat('0',64)]);
+    }catch(\Illuminate\Database\QueryException $e){
+        $immutabilityDenied=($e->errorInfo[0]??'')==='42501';
+    }finally{
+        $db->rollBack(); // ROLLBACK TO SAVEPOINT
+    }
+    $assert($immutabilityDenied,'app_backend pudo modificar un recibo idempotente inmutable.');
+    $db->selectOne("SELECT set_config('app.current_company_id','',true)");
+    echo "[PASS] F2.2 HTTP idempotencia RLS: 201 -> 200 replay, 409 conflicto, 2 asientos/2 auditorias/1 recibo; RLS B aislado, UPDATE denegado.\n";
 
     [$listA,$a]=$http('GET','/api/v1/accounting/journal-entries',$A);
     [$listB,$b]=$http('GET','/api/v1/accounting/journal-entries',$B);
