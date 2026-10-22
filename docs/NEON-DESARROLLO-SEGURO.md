@@ -460,3 +460,45 @@ Ambos `--probe` hacen escrituras dentro de transacciones y hacen ROLLBACK; puede
 Se corrigió una debilidad del control final: las tablas `journal_entries`, `accounting_accounts` y `audit_logs` tienen FORCE RLS, por lo que `COUNT(*)=0` **sin contexto tenant no prueba ausencia de filas**. Tras el ROLLBACK principal, el script abre una segunda transacción de `READ ONLY`, declara el `app.current_company_id` ficticio con `set_config(...,true)` y comprueba explícitamente cero filas del tenant para cabeceras, partidas, cuentas, períodos, membresías y eventos de auditoría, además de empresas y usuarios. Siempre hace rollback también de esta segunda transacción de lectura.
 
 Combinada con la prueba negativa del trigger diferido usando SAVEPOINT, esta validación evita dos falsos positivos: «partida doble aprobada sin ejecutar el trigger SQL» y «limpieza aprobada porque RLS oculta el dato». **Aún pendiente de php -l y prueba local en entorno del usuario**; no afirmar F1.11 PASS hasta contar con esa salida.
+
+
+## F1.11 PASS; F1.10 detención tras HTTP 200 y causa verificada (21/10/2026)
+
+**Resultado del usuario:** F1.10 `phase1-neon-token-rollback.php --probe=contabilidad-dev` confirmó login real HTTP 200, pero falló antes de confirmar emisión/token y empresas; `ROLLBACK` devolvió empresas, usuarios y tokens ficticios a cero. **No declarar F1.10 PASS todavía.**
+
+F1.11 `phase1-neon-journal-rollback.php --probe=contabilidad-dev` terminó con **7/7 PASS**: HTTP 201, partida doble exacta en ambas monedas, triggers diferidos forzados, HTTP 422 al descuadrar, UPDATE inmutable SQLSTATE 23514, SQL directo descuadrado rechazado 23514 y auditoría; comprobación de ROLLBACK en una nueva transacción READ ONLY con GUC tenant confirmó cero empresas, usuarios, asientos, cuentas, periodos, líneas, membresías y auditorías ficticias persistentes. **F1.11 completada.**
+
+**Causa comprobada de F1.10:** una consulta SELECT a los catálogos de Neon `contabilidad-dev` reveló **únicamente** `company_user_tenant_isolation_policy` en la tabla `company_user`. No existe `company_user_authenticated_member_listing_policy`. `ListUserCompaniesService` consulta a través de `app.current_user_id` con el tenant sin fijar; sin esta política adicional de SELECT, RLS puede devolver cero empresas pese al login HTTP 200. En el repositorio ya existía la migración Supabase-only `2026_10_20_010000_scope_company_listing_to_authenticated_user` que crea dicha política, pero se excluyó intencionalmente del primer bootstrap Neon (necesita `postgres`/host Supabase). La ausencia está **verificada**; el punto exacto de excepción sigue siendo una inferencia hasta repetir F1.10, por ello también se agregaron diagnósticos por etapa sin valores sensibles.
+
+Se crearon archivos dedicados exclusivamente a Neon dev:
+
+- `backend/database/neon_migrations/2026_10_21_030000_allow_authenticated_company_membership_listing.php`: agrega UNA política `FOR SELECT TO app_backend USING (user_id = nullif(current_setting('app.current_user_id',true),'')::bigint)`, sin tocar la política tenant `FOR ALL` ni permisos de DML. Fija hostname de la rama `contabilidad-dev`, usuario `neondb_owner`, neondb, PostgreSQL 18 y exige que la política base siga intacta.
+- `backend/scripts/phase1-neon-membership-policy.php`: `--plan` SIN Laravel ni SQL; `--verify` lectura exclusiva de catálogos, estado de migraciones y roles; `--apply=contabilidad-dev` es **DDL explícito** luego de verificar 16 migraciones originales, cero empresas/usuarios/tokens, política nueva ausente, conexión admin correcta, SSL y claves privadas coherentes. Ejecuta solo la migración de `database/neon_migrations` usando Artisan y verifica **17 migraciones, una política SELECT y política tenant previa conservada**. No ejecutar `php artisan migrate` general ni el bootstrap anterior. La migración separada preserva el inventario histórico de 21 archivos del bootstrap original.
+- `backend/scripts/phase1-neon-token-rollback.php` ahora **falla ANTES de crear fixtures** si no existe la política de lectura multiempresa; marca las etapas en errores sin mostrar valores de token, contraseña, correo ni SQL. No se ejecutó otra vez hasta instalar la política.
+
+**Verificación SELECT independiente actual de Neon dev:** PostgreSQL 18.6, 16 migraciones, 0 empresas, 0 usuarios, 0 tokens, 0 asientos, 0 líneas, 0 auditorías y **0 políticas de listado multiempresa**. No hubo SQL de escritura de ChatGPT.
+
+### Procedimiento F1.10 corregido
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-neon-membership-policy.php
+php -l database/neon_migrations/2026_10_21_030000_allow_authenticated_company_membership_listing.php
+php -l scripts/phase1-neon-token-rollback.php
+php scripts/phase1-neon-membership-policy.php --plan
+php scripts/phase1-neon-membership-policy.php --verify
+```
+
+Si el modo `--verify` confirma explícitamente migraciones=16, `NO INSTALADA` y rol correcto, autorizar la migración **solo** en Neon dev:
+
+```bash
+php scripts/phase1-neon-membership-policy.php --apply=contabilidad-dev
+php scripts/phase1-neon-membership-policy.php --verify
+php scripts/phase1-neon-token-rollback.php --probe=contabilidad-dev
+```
+
+**Estado:** scripts publicados en main; no se ha hecho `--apply` ni se ha reejecutado F1.10 todavía. Si cualquier acción falla, NO usar `migrate:fresh`, `migrate` general o eliminar manualmente políticas; reportar nombre de etapa y códigos no sensibles.
+
+Neon `production` y Supabase se mantienen fuera de alcance.
