@@ -58,13 +58,16 @@ final readonly class CreateCompanyFromWizardController
             'business_name' => ['required', 'string', 'min:3', 'max:200'],
             'legal_address' => ['required', 'string', 'min:5', 'max:300'],
             'legal_form' => ['required', 'string', Rule::in(CompanyEconomicProfile::LEGAL_FORMS)],
+            'sunat_contributor_type_code' => ['required', 'string', Rule::exists('sunat_ruc_contributor_types', 'code')->where('is_active', true)],
             'tax_regime' => ['required', 'string', Rule::in(['NRUS', 'RER', 'MYPE_TRIBUTARIO', 'GENERAL'])],
             'economic_activities' => ['required', 'array', 'min:1', 'max:10'],
             'economic_activities.*' => ['required', 'array:sector_code,ciiu_code,description,is_primary'],
             'economic_activities.*.sector_code' => ['required', Rule::in(CompanyEconomicProfile::SECTORS)],
-            'economic_activities.*.ciiu_code' => ['required', 'string', 'regex:/^\d{4}$/'],
+            'economic_activities.*.ciiu_code' => ['required', 'string', 'regex:/^\d{4}$/', Rule::exists('sunat_ciiu_rev4_classes','code')->where('is_active',true)],
             'economic_activities.*.description' => ['required', 'string', 'max:200'],
             'economic_activities.*.is_primary' => ['required', 'boolean'],
+            'tax_codes' => ['required','array','max:38'],
+            'tax_codes.*' => ['string','distinct',Rule::exists('sunat_ruc_tax_codes','code')->where('is_active',true)],
             'fiscal_year' => ['required', 'integer', 'between:2000,2100'],
             'income_reference_year' => ['required', 'integer', 'between:2000,2100', 'lte:fiscal_year'],
             'annual_income' => ['required', 'string', 'regex:/^\d{1,14}(?:\.\d{1,2})?$/'],
@@ -77,6 +80,13 @@ final readonly class CreateCompanyFromWizardController
         ])->validate();
 
         CompanyEconomicProfile::assertValidActivities($validated['economic_activities']);
+        CompanyEconomicProfile::assertContributorTypeMatchesLegalForm(
+            (string)$validated['legal_form'],(string)$validated['sunat_contributor_type_code']
+        );
+        // Canonicalize description at the server, never trust typed CIIU names.
+        $officialCiiu=DB::table('sunat_ciiu_rev4_classes')
+            ->whereIn('code',array_column($validated['economic_activities'],'ciiu_code'))
+            ->pluck('name','code');
         CompanyEconomicProfile::assertTaxRegimeEligibility(
             (string) $validated['tax_regime'], (string) $validated['legal_form']
         );
@@ -132,7 +142,7 @@ final readonly class CreateCompanyFromWizardController
         }
 
         try {
-            $outcome = DB::transaction(function () use ($validated, $currencyMap, $currencyCodes, $taxId, $user, $request): array {
+            $outcome = DB::transaction(function () use ($validated, $currencyMap, $currencyCodes, $taxId, $user, $request, $officialCiiu): array {
                 $company = Company::query()->create([
                     'tax_id' => $taxId,
                     'business_name' => trim($validated['business_name']),
@@ -145,7 +155,7 @@ final readonly class CreateCompanyFromWizardController
                 // Si falla algún paso o el PCGE, la transacción EXTERNA revierte
                 // empresa, membresía, monedas, actividades y todas sus cuentas.
                 $plan = $this->tenantContext->run($companyId, function () use (
-                    $company, $companyId, $validated, $currencyMap, $currencyCodes, $taxId, $user, $request
+                    $company, $companyId, $validated, $currencyMap, $currencyCodes, $taxId, $user, $request, $officialCiiu
                 ): array {
                     $now = now();
                     DB::table('company_user')->insert([
@@ -163,6 +173,7 @@ final readonly class CreateCompanyFromWizardController
                             ? $currencyMap[$validated['secondary_currency_codes'][0]]->id : null,
                         'tax_regime' => $validated['tax_regime'],
                         'legal_form' => $validated['legal_form'],
+                        'sunat_contributor_type_code' => $validated['sunat_contributor_type_code'],
                         'initial_fiscal_year' => $validated['fiscal_year'],
                         'income_reference_year' => $validated['income_reference_year'],
                         'annual_income' => $validated['annual_income'],
@@ -186,7 +197,7 @@ final readonly class CreateCompanyFromWizardController
                         CompanyEconomicActivity::query()->create([
                             'sector_code' => $activity['sector_code'],
                             'ciiu_code' => $activity['ciiu_code'],
-                            'description' => trim($activity['description']),
+                            'description' => mb_substr((string)$officialCiiu[$activity['ciiu_code']],0,200),
                             'is_primary' => DB::raw($activity['is_primary'] ? 'TRUE' : 'FALSE'),
                             'created_by' => $user->id,
                             'updated_by' => $user->id,
@@ -195,6 +206,13 @@ final readonly class CreateCompanyFromWizardController
 
                     // F3.1: PostgreSQL JSONB bulk copy, one INSERT per PCGE
                     // level instead of many large INSERTs over the Neon link.
+                    // La elección de tributos es explícita: no crea obligaciones o tasas automáticamente.
+                    foreach ($validated['tax_codes'] as $taxCode) {
+                        DB::table('company_tax_codes')->insert([
+                            'company_id'=>$companyId,'tax_code'=>$taxCode,
+                        ]);
+                    }
+
                     $plan = $this->chartInitializer->initialize(
                         $companyId, (string) $validated['pcge_version'], false, true
                     );
@@ -218,6 +236,8 @@ final readonly class CreateCompanyFromWizardController
                             'tax_id' => $taxId,
                             'pcge_version' => $validated['pcge_version'],
                             'sector_count' => count($validated['economic_activities']),
+                            'sunat_contributor_type_code'=>$validated['sunat_contributor_type_code'],
+                            'tax_code_count'=>count($validated['tax_codes']),
                         ],
                         'ip_address' => substr((string) ($request->ip() ?? '127.0.0.1'), 0, 45),
                         'user_agent' => substr((string) ($request->userAgent() ?? 'system'), 0, 500),
