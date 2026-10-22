@@ -2,6 +2,18 @@
 
 **Vigente desde:** 2026-10-22 · **Responsable de ejecución:** desarrollador autorizado en su equipo local · **Repositorio:** `jwichpas/contabilidad` · **Rama única:** `main`
 
+## Resultado funcional real F2.3 — 22/10/2026
+
+**Aprobado: fase F2.3 del motor contable (7/32 actividades; 22%).** El usuario abrió enero de 2026 desde el panel `http://localhost:5180/#periodos` y recibió el mensaje de éxito; la tabla cambió a «Abierto», 1 período abierto y 0 asientos. La lectura SQL independiente a Neon DEV confirmó para DEMO A `2026-01-01–2026-01-31`, `OPEN`, `closed_at NULL`, **1 evento FISCAL_PERIOD_OPENED**, **0 asientos**.
+
+**Aislamiento independiente de la interfaz:** SQL SELECT bajo `app_backend` y RLS con contexto local transaccional de DEMO B mostró **0 períodos**; con DEMO A, **1 período**. Sin cambios de datos derivados de esta comprobación.
+
+**Ensayos previos completados:** F2.2 201/200/409 y extorno; F2.3 CLOSE/REOPEN/LOCK 403/409/422, auditoría de cambios y ROLLBACK; concurrencia entre dos sesiones PostgreSQL 18 Docker, 55P03/NOWAIT; Vue typecheck, 16 pruebas y build aprobados previamente. La apertura E2E completó el flujo desde navegador.
+
+**Persistencia esperada en desarrollo:** ya existe un período válido de enero. Los scripts reversibles antiguos que exigían 0 períodos/auditorías se adaptaron en `main` para permitir exclusivamente la apertura auditada de enero como baseline DEMO y comprobar que sus pruebas con ROLLBACK no cambian el estado previo. **Estos cambios del harness requieren nueva validación sintáctica/manual antes de reutilizarse**; no borrar los registros de la aplicación para hacer pasar pruebas.
+
+---
+
 ## Decisión operativa
 
 **GitHub Actions no se utilizará.** Los workflows `.github/workflows/phase0-static-baseline.yml` y `.github/workflows/phase1-security-static.yml` se eliminaron de `main`. GitHub continúa siendo repositorio de código; **las compilaciones, pruebas, migraciones y verificaciones serán ejecutadas expresamente en Windows/terminal local**, y las evidencias se consignarán en este documento y en el checklist del [plan maestro](../README-PLAN-MAESTRO.md#10-checklist-de-seguimiento). Los runs antiguos de Actions pueden seguir visibles como historial, pero **no representan la política de validación vigente**.
