@@ -1,6 +1,6 @@
 # Plan de solución — instalación y migración reproducible del ERP contable
 
-**Estado:** plan aprobado a nivel de diseño, implementación y carga **PENDIENTES**.  
+**Estado:** plan propuesto, implementación y carga **PENDIENTES**.  
 **Destino inicial:** Neon, proyecto `soft-bonus-52215969`, rama `contabilidad-dev` (`br-odd-lake-b6wshqv3`), base `neondb`; solo `main` en GitHub.  
 **Fuera de alcance:** Neon `production`, Supabase `Nexus Contable Dev` y Supabase `contabilidad-database` para cualquier escritura; **ambos Supabase son fuentes de lectura solamente**.
 
