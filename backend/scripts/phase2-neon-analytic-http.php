@@ -398,8 +398,8 @@ try{
         "SELECT count(*) AS n FROM public.audit_logs "
         ."WHERE company_id=? AND event_type='FISCAL_PERIOD_OPENED'",[$companyA]
     );
-    $check((int)($openedAudit->n??0)===1,
-        'Opening must insert precisely one audit record');
+    $check((int)($openedAudit->n??0)===(int)$pre->approved_january_audit+1,
+        'Opening must insert precisely one NEW audit record without altering existing January audit');
     $db->selectOne("SELECT set_config('app.current_company_id','',true)");
     echo "[PASS] F2.3 OPEN: HTTP 201, reason 422, duplicate 409, role 403, tenant A/B GET, audit.
 ";
