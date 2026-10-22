@@ -340,23 +340,42 @@ try {
     auth()->forgetGuards();
 }
 if ($rolledBack) {
+    $verificationStarted = false;
     try {
+        // RLS sin tenant siempre muestra cero. Verificar la limpieza BAJO
+        // el mismo tenant de prueba, pero en una nueva transaccion READ ONLY.
+        $db->beginTransaction();
+        $verificationStarted = true;
+        $db->statement('SET TRANSACTION READ ONLY');
+        $db->selectOne("SELECT set_config('app.current_company_id',?,true) AS value",[(string)$companyId]);
         $left = $db->selectOne(<<<'SQL'
             SELECT (SELECT count(*) FROM public.companies WHERE id=?)::integer AS companies,
                    (SELECT count(*) FROM public.users WHERE id=?)::integer AS users,
-                   (SELECT count(*) FROM public.journal_entries WHERE id=?)::integer AS entries,
+                   (SELECT count(*) FROM public.journal_entries WHERE company_id=?)::integer AS entries,
                    (SELECT count(*) FROM public.accounting_accounts WHERE company_id=?)::integer AS accounts,
-                   (SELECT count(*) FROM public.audit_logs WHERE company_id=?)::integer AS audits
-            SQL,[$companyId,$userId,$entryId ?? 0,$companyId,$companyId]);
-        if ((int)$left->companies !== 0 || (int)$left->users !== 0
-            || (int)$left->entries !== 0 || (int)$left->accounts !== 0
-            || (int)$left->audits !== 0) {
-            throw new \RuntimeException('Filas de prueba persistidas.');
+                   (SELECT count(*) FROM public.audit_logs WHERE company_id=?)::integer AS audits,
+                   (SELECT count(*) FROM public.fiscal_periods WHERE company_id=?)::integer AS periods,
+                   (SELECT count(*) FROM public.journal_entry_lines WHERE company_id=?)::integer AS lines,
+                   (SELECT count(*) FROM public.company_user WHERE company_id=?)::integer AS memberships
+            SQL,[$companyId,$userId,$companyId,$companyId,$companyId,$companyId,$companyId,$companyId]);
+        foreach (['companies','users','entries','accounts','audits','periods','lines','memberships'] as $field) {
+            if ((int) ($left->{$field} ?? -1) !== 0) {
+                throw new \RuntimeException('Filas de prueba persistidas: '.$field);
+            }
         }
-        echo "[PASS] ROLLBACK confirmado: sin empresa, usuario, asiento, cuentas ni auditoria.\n";
+        echo "[PASS] ROLLBACK verificado bajo RLS del tenant: 0 empresas, usuarios, asientos, cuentas, periodos, lineas, membresias y auditorias.\n";
     } catch (\Throwable $error) {
         $passed = false;
-        fwrite(STDERR,"[FAIL] Verificacion posterior a ROLLBACK no aprobada.\n");
+        fwrite(STDERR,"[FAIL] Verificacion READ ONLY posterior al ROLLBACK no aprobada.\n");
+    } finally {
+        if ($verificationStarted) {
+            try {
+                while ($db->transactionLevel() > 0) { $db->rollBack(); }
+            } catch (\Throwable $error) {
+                $passed = false;
+                fwrite(STDERR,"[FAIL] No se pudo cerrar transaccion READ ONLY de verificacion.\n");
+            }
+        }
     }
 }
 $db->disconnect();
