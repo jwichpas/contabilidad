@@ -3,6 +3,15 @@
 # Invoke: bash scripts/phase1-journal-concurrency-docker.sh
 set -Eeuo pipefail
 umask 077
+# Optional F2.3 extension: two concurrent connections test the same
+# fiscal-period FOR UPDATE used by posting and closing. Docker ONLY.
+if [[ $# -gt 1 || ( $# -eq 1 && "${1:-}" != '--f23' ) ]]; then
+  echo '[USO] bash scripts/phase1-journal-concurrency-docker.sh [--f23]' >&2
+  exit 2
+fi
+if [[ "${1:-}" == '--f23' ]]; then
+  export F23_PERIOD_CONCURRENCY=1
+fi
 
 backend="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$backend"
@@ -126,3 +135,6 @@ export DB_USERNAME=app_backend DB_PASSWORD="$appPassword"
 php -l scripts/phase1-journal-concurrency-docker.php
 php scripts/phase1-journal-concurrency-docker.php --probe=ephemeral-docker
 echo '[PASS] F1.14: DOS sesiones, bloqueo FOR UPDATE, 55P03 y correlativos consecutivos.'
+if [[ "${F23_PERIOD_CONCURRENCY:-}" == 1 ]]; then
+  echo '[PASS] F2.3: concurrencia close/POST/reopen sobre dos conexiones verificada solo en Docker.'
+fi
