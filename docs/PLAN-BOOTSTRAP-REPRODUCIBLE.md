@@ -180,3 +180,14 @@ Por lo tanto estos registros **NO se pueden etiquetar como catálogos oficiales 
 El otro catálogo `accounting_plan_reference_accounts` de Nexus Contable Dev tiene 3.522 cuentas distribuidas en dos versiones (1.764 y 1.758). En una versión están las 1.764 cuentas con `posting_allowed=false`; en la otra, 1.202 cuentas están marcadas para movimiento. El identificador de versión es UUID específico de la fuente y exige mapearlo a una clave semántica antes de trasladarlo. Ninguna fila debe adquirir carácter operativo por una equivalencia de IDs supuesta.
 
 **Puerta obligatoria:** preservar campos `source_file`, `code_review_status`, `validity_review_status`, `review_status`, las fechas de vigencia y versiones de referencia, y no habilitar como utilizable ninguna fila no aprobada.
+
+## 9. Históricos fuente ya archivados en Git (sin activación normativa)
+
+Se generaron snapshots desde consultas **SELECT** de Supabase `Nexus Contable Dev`, sin exportar usuarios ni operaciones empresariales:
+
+- `backend/database/reference_data/historical/ple_234_tablas_2026-10-21.json` — **247 filas PLE**, preserva `table_number`, `source_row_number`, código/descripción originales, `source_file`, `source_metadata` y los estados `EXTRACTED` / `HISTORICAL_NOT_VERIFIED`.
+- `backend/database/reference_data/historical/sunat_book_catalog_codes_draft_2026-10-21.json` — **23 códigos DRAFT**, conserva `catalog_version_id`, código, descripción, vigencia y metadatos. **No implica aprobación SUNAT**.
+
+Ambos archivos están referenciados con hash Git blob en `backend/database/reference_data/manifest.json` bajo `historical_sources`, con `loaded_operationally=false`. El instalador `phase2-neon-global-reference.php --plan` valida sus SHA y contenidos, incluyendo número de filas, claves naturales y que no hayan sido aprobados sin revisión. **No los instala en tablas operativas de SUNAT**.
+
+La etapa de integración histórica posterior deberá definir una migración PostgreSQL portable para tablas de `fuentes históricas/no verificadas`, conservar su trazabilidad y mantenerlas segregadas de los catálogos operativos hasta contar con evidencia normativa y revisión explícita. Esta operación **no forma parte de Fase Global 1**.
