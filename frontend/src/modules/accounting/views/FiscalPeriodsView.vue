@@ -265,33 +265,33 @@ onMounted(() => { void loadPeriods(); });
       </p>
     </div>
 
-    <div v-if="pendingAction" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4" role="presentation" @click.self="cancelAction">
-      <div role="dialog" aria-modal="true" aria-labelledby="period-action-title" class="w-full max-w-lg rounded-xl border border-line bg-card p-5 shadow-2xl">
+    <div v-if="pendingAction" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/65 p-4" role="presentation" @click.self="cancelAction">
+      <div role="dialog" aria-modal="true" aria-labelledby="period-action-title" aria-describedby="period-action-description" class="w-full max-w-lg rounded-xl border border-border bg-surface p-5 text-foreground shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-2">
             <LockOpen v-if="pendingAction.action === 'reopen' || pendingAction.action === 'open'" class="h-5 w-5 text-amber-500" />
             <LockKeyhole v-else class="h-5 w-5 text-brand" />
-            <h2 id="period-action-title" class="text-base font-semibold">
+            <h2 id="period-action-title" class="text-base font-semibold text-foreground">
               {{ actionLabels[pendingAction.action] }}
             </h2>
           </div>
-          <button type="button" :disabled="isSaving" class="rounded-md p-1 text-muted hover:bg-soft" aria-label="Cancelar operación" @click="cancelAction"><X class="h-4 w-4" /></button>
+          <button type="button" :disabled="isSaving" class="rounded-md p-1 text-muted hover:bg-soft focus-visible:ring-2 focus-visible:ring-brand" aria-label="Cancelar operación" @click="cancelAction"><X class="h-4 w-4" /></button>
         </div>
-        <p class="mt-3 text-xs leading-relaxed text-muted">
+        <p id="period-action-description" class="mt-3 text-sm leading-relaxed text-muted">
           {{ monthNames[pendingAction.month - 1] }} {{ pendingAction.year }} ·
           {{ pendingAction.period?.entry_count ?? 0 }} asientos.
           <span v-if="pendingAction.action === 'lock'" class="font-semibold text-rose-600 dark:text-rose-300">Este bloqueo no podrá revertirse desde el flujo ordinario.</span>
           <span v-else-if="pendingAction.action === 'open'">Se creará el período en estado abierto; no se generarán asientos automáticamente y la apertura quedará auditada.</span>
           <span v-else>La operación dejará constancia en la auditoría contable.</span>
         </p>
-        <label for="period-reason" class="mt-4 block text-xs font-semibold">Motivo obligatorio (10–500 caracteres)</label>
+        <label for="period-reason" class="mt-4 block text-xs font-semibold text-foreground">Motivo obligatorio (10–500 caracteres)</label>
         <textarea
           id="period-reason"
           v-model="reason"
           :disabled="isSaving"
           maxlength="500"
           rows="4"
-          class="mt-2 w-full resize-y rounded-lg border border-line bg-background p-3 text-sm text-foreground outline-none focus:border-brand"
+          class="mt-2 w-full resize-y rounded-lg border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-brand"
           placeholder="Explica el motivo y la autorización correspondiente…"
         />
         <div class="mt-1 text-right text-[11px] text-muted">{{ reason.trim().length }}/500</div>
@@ -299,8 +299,8 @@ onMounted(() => { void loadPeriods(); });
           {{ errorMessage }}
         </p>
         <div class="mt-4 flex justify-end gap-2">
-          <button type="button" :disabled="isSaving" class="rounded-lg border border-line px-4 py-2 text-xs font-semibold hover:bg-soft disabled:opacity-50" @click="cancelAction">Cancelar</button>
-          <button type="button" :disabled="!confirmValid" class="rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50" @click="confirmAction">
+          <button type="button" :disabled="isSaving" class="rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground hover:bg-soft disabled:opacity-50" @click="cancelAction">Cancelar</button>
+          <button type="button" :disabled="!confirmValid" class="rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-on-brand hover:opacity-90 disabled:opacity-50" @click="confirmAction">
             {{ isSaving ? 'Registrando…' : 'Confirmar y auditar' }}
           </button>
         </div>
