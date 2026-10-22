@@ -2,6 +2,29 @@
 
 **Fecha:** 22/10/2026 · **Rama:** `main` · **Estado:** pruebas Docker/Frontend **PASS**; migración aditiva y HTTP en **Neon DEV pendientes**.
 
+## Neon DEV — migración 22 PASS y ajuste del ensayo HTTP (22/10/2026)
+
+**Evidencia manual del usuario:** `phase2-neon-journal-idempotency.php --apply=contabilidad-dev` terminó PASS. Segundo `--verify` confirmó 22 migraciones, 3 constraints, 2 índices UNIQUE, 2 políticas FORCE RLS, `app_backend` SELECT/INSERT sin UPDATE/DELETE y 3 DRAFT. Una verificación independiente de Neon comprobó 22 migraciones, cero asientos/líneas/auditoría/recibos y 0 ACTIVE.
+
+**Pendiente:** el primer `phase2-neon-analytic-http.php --probe=contabilidad-dev` terminó con un error Laravel `Illuminate\\Support\\Manager::createDriver()` antes de publicar un PASS de HTTP y luego efectuó ROLLBACK. El ensayo Docker equivalente funcionaba porque el wrapper aislaba cache/sesión/cola en drivers locales de prueba. Se corrigió el *harness* de Neon para configurar `cache.default=array`, `session.driver=array`, `queue.default=sync` **solo en memoria durante esa ejecución**, sin alterar `.env`, ni la configuración global ni el esquema Neon. El manejador de excepciones ahora identifica la fase, con SQLSTATE ante errores SQL.
+
+**Distinción:** este ajuste permite ejecutar el HTTP real de Laravel sin depender de una caché/sesión local mal configurada; **no certifica** que la configuración normal del servidor web esté correcta. La aplicación real debería usar un `CACHE_STORE` y `SESSION_DRIVER` válidos (por ejemplo `file` en desarrollo), y `QUEUE_CONNECTION=sync` si no hay workers. Si se usa `database`, deben existir las tablas correspondientes.
+
+**Prueba pendiente tras actualizar `main`:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-analytic-http.php
+php scripts/phase2-neon-analytic-http.php --probe=contabilidad-dev
+php scripts/phase2-neon-journal-idempotency.php --verify
+```
+
+Esperado: HTTP 201 creación, 200 reintento, 409 conflicto, reversión/roles/RLS, ROLLBACK confirmado y cero movimientos. La casilla F2.2 permanece `[ ]` hasta recibir PASS.
+
+---
+
 ## Bloqueo preventivo de configuración local en Windows — 22/10/2026
 
 **Resultado informado:** `php -l` y `--plan` del instalador PASS; los cinco comandos que pretendían verificar/aplicar contra Neon terminaron en `[BLOQUEO] Entorno distinto a Neon contabilidad-dev directo` (o mensaje equivalente). Estos scripts verifican primero la configuración Laravel/Neon; **no ejecutaron migración ni cambios de esquema**.
