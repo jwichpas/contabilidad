@@ -198,6 +198,9 @@ try {
             $must((int)$database->table('journal_analytic_allocations')
                 ->where('journal_entry_id',$posted->id)->count()===1,
                 'app_backend no pudo INSERT/SELECT en su tenant.');
+            // Flush deferred triggers while this company's RLS GUC is active.
+            $database->statement('SET CONSTRAINTS ALL IMMEDIATE');
+            $database->statement('SET CONSTRAINTS ALL DEFERRED');
             return $link;
         });
     };
