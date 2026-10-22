@@ -28,6 +28,7 @@ import type {
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
+  SunatContributorType, SunatCiiuClass, SunatTaxCode,
 } from '@/modules/company/types/companyOnboarding.types';
 import type {
   CompanyExchangeRatesResponse,
@@ -410,6 +411,30 @@ export class AccountingApiClient {
    * Alta de empresas (no requiere un tenant NUEVO; sí exige Sanctum).
    * El servidor comprobará rol y migraciones pendientes antes de admitir la creación.
    */
+  /** RUC Annex 2, independent of SUNAT PLE table 02. */
+  public async fetchSunatContributorTypes(): Promise<readonly SunatContributorType[]> {
+    const response = await this.request<{data: SunatContributorType[]}>(
+      '/api/v1/catalogs/sunat-ruc/contributor-types', {method:'GET'}, false,
+    );
+    return response.data;
+  }
+
+  /** INEI/SUNAT CIIU Revision 4 snapshot, full official descriptions. */
+  public async fetchSunatCiiuRev4(): Promise<readonly SunatCiiuClass[]> {
+    const response = await this.request<{data: SunatCiiuClass[]}>(
+      '/api/v1/catalogs/sunat-ruc/ciiu', {method:'GET'}, false,
+    );
+    return response.data;
+  }
+
+  /** RUC Annex 10 tax codes, not PLE electronic-document table 10. */
+  public async fetchSunatRucTaxCodes(): Promise<readonly SunatTaxCode[]> {
+    const response = await this.request<{data: SunatTaxCode[]}>(
+      '/api/v1/catalogs/sunat-ruc/tax-codes', {method:'GET'}, false,
+    );
+    return response.data;
+  }
+
   public async fetchCompanyOnboardingCapability(): Promise<{ can_create: boolean; reason: string | null }> {
     const response = await this.request<{
       data: { can_create: boolean; reason: string | null };
