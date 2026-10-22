@@ -11,8 +11,9 @@ declare(strict_types=1);
 $root=dirname(__DIR__);
 $host='ep-sweet-king-b6hxra2r.c-2.sa-east-1.aws.neon.tech';
 $mode=$argv[1]??'--plan';
-if ($argc!==2||!in_array($mode,['--plan','--probe=contabilidad-dev'],true)) {
-    fwrite(STDERR,"[FAIL] Uso: --plan|--probe=contabilidad-dev\n");exit(2);
+$periodOnly=$mode==='--period-only=contabilidad-dev';
+if ($argc!==2||!in_array($mode,['--plan','--probe=contabilidad-dev','--period-only=contabilidad-dev'],true)) {
+    fwrite(STDERR,"[FAIL] Uso: --plan|--probe=contabilidad-dev|--period-only=contabilidad-dev\n");exit(2);
 }
 if ($mode==='--plan') {
     echo "[PLAN] F2.3d: HTTP Kernel Sanctum real; ADMIN/ACCOUNTANT; 201 POST+extorno, 422 errores, 403 rol ajeno.\n";
@@ -206,6 +207,10 @@ try{
     $check($entryId>0&&$periodId>0&&count($entry['lines']??[])===2,
         'HTTP DRAFT debe devolver asiento con 2 lineas, sin automaticas.');
 
+    // Faster focused repeat: retain only the initial guarded POST fixture,
+    // skip earlier full F2.2/legacy F2.3d HTTP checks (already independently
+    // passed) and execute the new F2.3 lifecycle cases below.
+    if(!$periodOnly){
     if($idempotencyKey!==null){
         $again=$request('POST','/api/v1/accounting/journal-entries',$companyA,$post,$idempotencyKey);
         $againJson=json_decode((string)$again->getContent(),true,512,JSON_THROW_ON_ERROR);
@@ -314,6 +319,9 @@ try{
     $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
     echo "[PASS] HTTP 201 extorno + 422 doble extorno; auditoria y triggers bimoneda.\n";
     echo "[PASS] F2.3d: HTTP harness usa cache/session=array y cola sync solo en memoria.\n";
+    }else{
+        echo "[FOCUS] F2.3 periodo: se omitieron pruebas HTTP anteriores ya aprobadas.\n";
+    }
     // Earlier check forced deferred balance triggers immediately; return to
     // deferred mode before posting additional F2.3 fixtures in this transaction.
     $db->statement('SET CONSTRAINTS ALL DEFERRED');
