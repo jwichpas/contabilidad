@@ -252,7 +252,7 @@ final readonly class CreateJournalEntryController
             severity: 'INFO',
         );
 
-        $journalEntry->load(['lines.account', 'fiscalPeriod']);
+        $journalEntry->load(['lines.account', 'lines.costCenter', 'fiscalPeriod']);
 
         return response()->json([
             'message' => 'Asiento contable registrado exitosamente con Partida Doble balanceada.',
