@@ -96,6 +96,7 @@ try{
           (SELECT count(*) FROM public.fiscal_periods)::integer AS periods,
           (SELECT count(*) FROM public.exchange_rates)::integer AS rates,
           (SELECT count(*) FROM public.audit_logs)::integer AS audit,
+          (SELECT count(*) FROM public.audit_logs WHERE event_type NOT IN ('AUTH_LOGIN','AUTH_LOGOUT','AUTH_LOGIN_FAILED','TENANT_SWITCH'))::integer AS accounting_audit,
           (SELECT count(*) FROM public.accounting_destination_rule_versions WHERE status='DRAFT')::integer AS drafts,
           (SELECT count(*) FROM public.accounting_destination_rule_versions WHERE status='ACTIVE')::integer AS active
         SQL);
@@ -103,7 +104,7 @@ try{
         ||intdiv((int)$pre->version,10000)!==18
         ||!in_array((int)$pre->migrations,[21,22],true)||(int)$pre->companies!==3
         ||(int)$pre->entries!==0||(int)$pre->lines!==0||(int)$pre->analytic!==0
-        ||(int)$pre->periods!==0||(int)$pre->rates!==0||(int)$pre->audit!==0
+        ||(int)$pre->periods!==0||(int)$pre->rates!==0||(int)$pre->accounting_audit!==0
         ||(int)$pre->drafts!==3||(int)$pre->active!==0){
         throw new RuntimeException('Precondiciones demo de Neon incumplidas (21 migraciones, 0 movimientos, 3 DRAFT).');
     }
@@ -527,10 +528,10 @@ if($successful){
             : 0;
         $successful=$receipts===0 && $after&&(int)$after->entries===0&&(int)$after->lines===0
             &&(int)$after->allocations===0&&(int)$after->periods===0
-            &&(int)$after->rates===0&&(int)$after->audits===0
+            &&(int)$after->rates===0&&(int)$after->audits===(int)$pre->audit
             &&(int)$after->drafts===3&&(int)$after->active===0;
         echo $successful
-            ? "[PASS] HTTP POST-ROLLBACK: 0 asientos/lineas/links/periodos/TC/auditoria, 3 DRAFT.\n"
+            ? "[PASS] HTTP POST-ROLLBACK: 0 asientos/lineas/links/periodos/TC, auditoria sin cambios, 3 DRAFT.\n"
             : "[BLOQUEO] HTTP POST-ROLLBACK no coincide con baseline.\n";
     }catch(\Throwable){$successful=false;fwrite(STDERR,"[BLOQUEO] Verificacion HTTP post-rollback fallida.\n");}
 }
