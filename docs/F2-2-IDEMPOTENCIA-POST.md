@@ -2,6 +2,28 @@
 
 **Fecha:** 22/10/2026 · **Rama:** `main` · **Estado:** pruebas Docker/Frontend **PASS**; migración aditiva y HTTP en **Neon DEV pendientes**.
 
+## Bloqueo preventivo de configuración local en Windows — 22/10/2026
+
+**Resultado informado:** `php -l` y `--plan` del instalador PASS; los cinco comandos que pretendían verificar/aplicar contra Neon terminaron en `[BLOQUEO] Entorno distinto a Neon contabilidad-dev directo` (o mensaje equivalente). Estos scripts verifican primero la configuración Laravel/Neon; **no ejecutaron migración ni cambios de esquema**.
+
+El fallo compartido no demuestra aún qué variable está mal. Puede ser `APP_ENV`, `NEON_TEST_BRANCH_NAME/HOST`, host directo de `DB_HOST` o `DB_MIGRATIONS_HOST`, puerto, nombres de roles, SSL, `DB_URL`/`DATABASE_URL`, `DB_MIGRATIONS_URL`, pooling o variables de proceso que prevalecen sobre `.env`. La prueba HTTP también exige `APP_KEY` válido y credencial `DB_APP_BACKEND_ROLE_PASSWORD` coincidente con `DB_PASSWORD`.
+
+**Se añadió diagnóstico seguro, 100% local, sin consultas SQL, escrituras, contraseñas ni URLs en la salida:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-connection-diagnostic.php
+php scripts/phase2-neon-connection-diagnostic.php --check
+```
+
+Corregir las condiciones `[FAIL]` en **`backend/.env` privado**, teniendo en cuenta variables heredadas de PowerShell. **No** pegar ni subir `.env`, contraseñas, tokens o conexiones completas; compartir solo etiquetas PASS/FAIL del diagnóstico. No usar `migrate:fresh`, desactivar guards ni aplicar la migración hasta que este preflight pase. Después ejecutar `--verify` (puede decir PENDIENTE porque la tabla aún no existe), y finalmente el instalador con `--apply=contabilidad-dev` como se describe abajo.
+
+**Estado F2.2:** Docker PG18 y Vue aprobados; integración en Neon aún pendiente y F2.2 permanece `[ ]` en el plan maestro.
+
+---
+
 ## Evidencia manual confirmada — 22/10/2026
 
 **PASS informado por el usuario:** Docker PostgreSQL 18 con 20 migraciones; HTTP bajo `app_backend` sin BYPASSRLS y matriz ACTIVE solo dentro de transacción; idempotencia 201→200 replay / 409 conflicto, un recibo para un asiento, protección de recibos por tenant, denegación UPDATE, prueba de segunda conexión sin obtener el advisory lock, extorno y auditoría, ROLLBACK, eliminación efectiva del contenedor. **Vue**: `pnpm typecheck` PASS; **16/16** pruebas unitarias PASS; `pnpm build` PASS con 1.615 módulos compilados.
