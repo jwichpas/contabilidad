@@ -72,7 +72,7 @@ function statusClasses(status: FiscalPeriodStatus | null): string {
   if (status === 'OPEN') return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
   if (status === 'CLOSED') return 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30';
   if (status === 'LOCKED') return 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30';
-  return 'bg-soft text-muted border-line';
+  return 'bg-soft text-muted border-border';
 }
 
 async function loadPeriods(): Promise<void> {
@@ -178,7 +178,7 @@ onMounted(() => { void loadPeriods(); });
       <button
         type="button"
         :disabled="isLoading || isSaving"
-        class="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold hover:bg-soft disabled:opacity-50"
+        class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold hover:bg-soft disabled:opacity-50"
         @click="loadPeriods"
       >
         <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': isLoading }" />
@@ -186,11 +186,11 @@ onMounted(() => { void loadPeriods(); });
       </button>
     </header>
 
-    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-card p-3">
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3">
       <div class="flex items-center gap-2">
-        <button type="button" :disabled="selectedYear <= 2000 || isLoading" class="rounded-md border border-line px-3 py-1.5 text-xs hover:bg-soft disabled:opacity-40" aria-label="Año anterior" @click="navigateYear(-1)">‹</button>
+        <button type="button" :disabled="selectedYear <= 2000 || isLoading" class="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-soft disabled:opacity-40" aria-label="Año anterior" @click="navigateYear(-1)">‹</button>
         <span class="min-w-16 text-center font-mono text-base font-bold">{{ selectedYear }}</span>
-        <button type="button" :disabled="selectedYear >= 2100 || isLoading" class="rounded-md border border-line px-3 py-1.5 text-xs hover:bg-soft disabled:opacity-40" aria-label="Año siguiente" @click="navigateYear(1)">›</button>
+        <button type="button" :disabled="selectedYear >= 2100 || isLoading" class="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-soft disabled:opacity-40" aria-label="Año siguiente" @click="navigateYear(1)">›</button>
       </div>
       <div class="flex flex-wrap items-center gap-2 text-xs">
         <span class="rounded-md bg-emerald-500/10 px-2.5 py-1 font-semibold text-emerald-700 dark:text-emerald-300">{{ totals.open }} abiertos</span>
@@ -209,7 +209,7 @@ onMounted(() => { void loadPeriods(); });
       <span>{{ successMessage }}</span>
     </div>
 
-    <div class="overflow-hidden rounded-xl border border-line bg-card">
+    <div class="overflow-hidden rounded-xl border border-border bg-surface">
       <div v-if="isLoading" class="p-4 text-xs text-muted" role="status">Consultando períodos de la empresa seleccionada…</div>
       <div class="overflow-x-auto">
         <table class="w-full min-w-[610px] text-left text-xs">
@@ -239,7 +239,7 @@ onMounted(() => { void loadPeriods(); });
                   <button v-if="!row.period" type="button" :disabled="isSaving || isLoading" class="rounded-md border border-emerald-500/40 px-2.5 py-1.5 font-semibold text-emerald-700 hover:bg-emerald-500/10 disabled:opacity-50 dark:text-emerald-300" @click="requestOpen(row.month)">Abrir</button>
                   <button v-else-if="row.period?.status === 'OPEN'" type="button" :disabled="isSaving" class="rounded-md border border-amber-500/40 px-2.5 py-1.5 text-amber-700 hover:bg-amber-500/10 disabled:opacity-50 dark:text-amber-300" @click="requestAction(row.period!, 'close')">Cerrar</button>
                   <template v-else-if="row.period?.status === 'CLOSED'">
-                    <button type="button" :disabled="isSaving" class="rounded-md border border-line px-2.5 py-1.5 text-foreground hover:bg-soft disabled:opacity-50" @click="requestAction(row.period!, 'reopen')">Reabrir</button>
+                    <button type="button" :disabled="isSaving" class="rounded-md border border-border px-2.5 py-1.5 text-foreground hover:bg-soft disabled:opacity-50" @click="requestAction(row.period!, 'reopen')">Reabrir</button>
                     <button type="button" :disabled="isSaving" class="rounded-md border border-rose-500/40 px-2.5 py-1.5 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50 dark:text-rose-300" @click="requestAction(row.period!, 'lock')">Bloquear</button>
                   </template>
                   <span v-else-if="row.period?.status === 'LOCKED'" class="flex items-center gap-1 text-muted"><LockKeyhole class="h-3.5 w-3.5" /> Definitivo</span>
@@ -250,13 +250,13 @@ onMounted(() => { void loadPeriods(); });
           </tbody>
         </table>
       </div>
-      <p class="border-t border-line bg-soft/50 p-3 text-[11px] text-muted">
+      <p class="border-t border-border bg-soft/50 p-3 text-[11px] text-muted">
         <Clock3 class="mr-1 inline h-3.5 w-3.5" />
         “Sin registrar” indica que aún no existe un período guardado. Un administrador puede abrirlo de forma explícita; nunca se crea al consultar la pantalla.
       </p>
     </div>
 
-    <div class="flex items-start gap-2 rounded-lg border border-line bg-card p-4 text-xs text-muted">
+    <div class="flex items-start gap-2 rounded-lg border border-border bg-surface p-4 text-xs text-muted">
       <ShieldCheck class="mt-0.5 h-4 w-4 shrink-0 text-brand" />
       <p>
         Solo un administrador o contador principal de la empresa activa puede cambiar estados. El cierre
