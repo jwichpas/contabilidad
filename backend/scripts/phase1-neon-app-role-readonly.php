@@ -144,13 +144,15 @@ try {
     }
 
     $access = $db->selectOne(<<<'SQL'
-        SELECT pg_catalog.has_table_privilege(current_user, 'public.company_areas','SELECT') AS can_read_areas,
-               pg_catalog.has_table_privilege(current_user, 'public.company_areas','INSERT') AS can_insert_areas,
-               pg_catalog.has_table_privilege(current_user, 'public.audit_logs','SELECT') AS can_read_audit,
-               pg_catalog.has_table_privilege(current_user, 'public.accounting_standards','SELECT') AS can_read_standards
+        SELECT CASE WHEN pg_catalog.has_table_privilege(current_user, 'public.company_areas','SELECT') THEN 1 ELSE 0 END AS can_read_areas,
+               CASE WHEN pg_catalog.has_table_privilege(current_user, 'public.company_areas','INSERT') THEN 1 ELSE 0 END AS can_insert_areas,
+               CASE WHEN pg_catalog.has_table_privilege(current_user, 'public.audit_logs','SELECT') THEN 1 ELSE 0 END AS can_read_audit,
+               CASE WHEN pg_catalog.has_table_privilege(current_user, 'public.accounting_standards','SELECT') THEN 1 ELSE 0 END AS can_read_standards
         SQL);
-    if (! (bool) $access->can_read_areas || ! (bool) $access->can_insert_areas
-        || ! (bool) $access->can_read_audit || ! (bool) $access->can_read_standards) {
+    if ((int) ($access->can_read_areas ?? 0) !== 1
+        || (int) ($access->can_insert_areas ?? 0) !== 1
+        || (int) ($access->can_read_audit ?? 0) !== 1
+        || (int) ($access->can_read_standards ?? 0) !== 1) {
         throw new \RuntimeException('Faltan GRANTs de la aplicacion.');
     }
     echo '[PASS] Rol restringido, GRANTs y 13 tablas FORCE RLS confirmados.'.PHP_EOL;
