@@ -62,7 +62,7 @@ try{
           (SELECT count(*) FROM public.accounting_destination_rule_versions)::integer AS versions
         SQL,[(string)getenv('F23H_GUARD_TOKEN')]);
     if(!$pre||$pre->role_name!=='postgres'||$pre->database_name!=='contabilidad_ci'
-        ||intdiv((int)$pre->version,10000)!==18||$pre->guard!==1
+        ||intdiv((int)$pre->version,10000)!==18||(int)$pre->guard!==1
         ||(int)$pre->migrations!==19||(int)$pre->companies!==0
         ||(int)$pre->entries!==0||(int)$pre->versions!==0){
         throw new RuntimeException('Migraciones/guardia Docker no corresponden al escenario 19 migraciones.');
@@ -192,10 +192,10 @@ try{
     $db->statement('SET LOCAL ROLE app_backend');
     $role=$db->selectOne(<<<'SQL'
         SELECT current_user AS current_role,session_user AS session_role,
-          (SELECT rolbypassrls FROM pg_roles WHERE rolname=current_user) AS bypass_rls
+          (SELECT CASE WHEN rolbypassrls THEN 1 ELSE 0 END FROM pg_roles WHERE rolname=current_user) AS bypass_rls
         SQL);
     if(!$role||$role->current_role!=='app_backend'
-        ||$role->session_role!=='postgres'||$role->bypass_rls){
+        ||$role->session_role!=='postgres'||(int)$role->bypass_rls!==0){
         throw new RuntimeException('SET LOCAL ROLE no aplicó restricciones reales.');
     }
     echo "[PASS] HTTP bajo current_user=app_backend, session_user=postgres, sin BYPASSRLS.\n";
