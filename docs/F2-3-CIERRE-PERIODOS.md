@@ -201,6 +201,35 @@ Si esas variables están presentes en el proceso, pueden prevalecer sobre `backe
 
 ---
 
+## Captura de interfaz validada y apertura explícita añadida (22/10/2026)
+
+El usuario mostró la vista local `http://localhost:5180/#periodos` funcionando: 2026, 12 meses «Sin registrar», totales y selector anual. Es coherente con el baseline Neon sin períodos. Se detectó una brecha real de operatividad: no existía ningún botón para crear un mes y los controles `close/reopen/lock` requerían un registro ya existente.
+
+Se añadió **Abrir** por mes exclusivamente para roles ADMIN / CHIEF_ACCOUNTANT. La nueva ruta `POST /api/v1/accounting/fiscal-periods` recibe `year`, `month` y `reason` (10–500 caracteres), crea el período `OPEN` con fecha inicial y final, y registra `FISCAL_PERIOD_OPENED` atómicamente. Protege el tenant con middleware y FORCE RLS, rechaza períodos existentes con 409 y las carreras concurrentes mediante el UNIQUE `(company_id,year,month)`. No sobrescribe `CLOSED/LOCKED`; la reapertura sigue siendo otra operación auditada.
+
+En Vue se habilitó la acción de fila `Abrir` para meses «Sin registrar», con diálogo de confirmación y motivo. Tras crear, actualiza el listado para habilitar `Cerrar`, `Reabrir` y `Bloquear` según el estado. La consulta GET continúa sin crear nada automáticamente.
+
+**Aún por aprobar:** esta funcionalidad de apertura es nueva y no ha sido probada manualmente. Se amplió el ensayo reversible `--period-only=contabilidad-dev`: exige HTTP 422 por motivo corto, 201 al abrir noviembre, 409 al repetir, 403 para auditor, GET correcto para empresa A y aislamiento en empresa B, y una auditoría `FISCAL_PERIOD_OPENED`. El mismo ensayo termina en ROLLBACK, no debe confirmar períodos.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l app/Services/Accounting/FiscalPeriodStatusService.php
+php -l app/Http/Controllers/Api/V1/Accounting/OpenFiscalPeriodController.php
+php -l scripts/phase2-neon-analytic-http.php
+php artisan route:list --path=api/v1/accounting/fiscal-periods
+php scripts/phase2-neon-analytic-http.php --period-only=contabilidad-dev
+cd ..\frontend
+pnpm typecheck
+pnpm build
+```
+
+**Estado remoto leído tras la captura:** 22 migraciones, 3 matrices DRAFT, 0 ACTIVE, 0 períodos, 0 asientos. Existen 3 eventos de auditoría de autenticación/selector de empresa (1 AUTH_LOGIN y 2 TENANT_SWITCH); **no son residuos de F2.3**. No se hizo INSERT de períodos en Neon durante la implementación.
+
+F2.3 permanece abierto hasta aprobar el nuevo endpoint y verificar el diálogo en navegador.
+
+---
 ## Puertas todavía abiertas
 
 1. El flujo HTTP nuevo **superó** la ejecución manual del usuario; F2.3 seguirá `[ ]` hasta verificar las carreras de concurrencia y completar los criterios de aceptación restantes.
