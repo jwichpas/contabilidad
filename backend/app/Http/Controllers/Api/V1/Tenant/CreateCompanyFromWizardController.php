@@ -11,6 +11,7 @@ use App\Models\CompanySetting;
 use App\Models\Currency;
 use App\Models\User;
 use App\Services\Accounting\InitializeCompanyChartOfAccountsService;
+use App\Services\Company\CompanyOperationalDefaultsService;
 use App\Services\Security\AuditLoggerService;
 use App\Support\Company\CompanyEconomicProfile;
 use App\Support\Company\CompanyOnboardingGuard;
@@ -37,6 +38,7 @@ final readonly class CreateCompanyFromWizardController
         private CompanyOnboardingGuard $guard,
         private TenantContext $tenantContext,
         private InitializeCompanyChartOfAccountsService $chartInitializer,
+        private CompanyOperationalDefaultsService $operationalDefaults,
         private AuditLoggerService $auditLogger,
     ) {}
 
@@ -185,6 +187,11 @@ final readonly class CreateCompanyFromWizardController
                     $plan = $this->chartInitializer->initialize(
                         $companyId, (string) $validated['pcge_version'], false
                     );
+
+                    // En la misma transaccion: 6 áreas organizacionales y 9
+                    // áreas NIC 7 aisladas por tenant. No importar personas,
+                    // bancos ni centros de costo con cuentas ficticias 94/95.
+                    $this->operationalDefaults->installForCompany($companyId);
 
                     $this->auditLogger->log(
                         eventType: 'COMPANY_ONBOARDED',
