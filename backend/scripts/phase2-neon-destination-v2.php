@@ -83,7 +83,7 @@ try {
           (SELECT count(*) FROM public.users)::integer AS users,
           (SELECT count(*) FROM public.company_user)::integer AS members,
           (SELECT count(*) FROM public.journal_entries)::integer AS entries,
-          to_regclass('public.accounting_destination_rule_versions') IS NOT NULL AS schema_present
+          CASE WHEN to_regclass('public.accounting_destination_rule_versions') IS NULL THEN 0 ELSE 1 END AS schema_present
         SQL, [$migration]);
     if ($base === null || $base->db_user !== 'neondb_owner' || $base->db_name !== 'neondb'
         || intdiv((int)$base->pg_version,10000) !== 18
@@ -91,7 +91,7 @@ try {
         || (int)$base->global_versions !== 1 || (int)$base->templates !== 3401
         || (int)$base->companies !== 3 || (int)$base->users !== 3
         || (int)$base->members !== 8 || (int)$base->entries !== 0
-        || ((int)$base->migration_present === 1) !== (bool)$base->schema_present
+        || ((int)$base->migration_present === 1) !== ((int)$base->schema_present === 1)
         || (int)$base->migration_present !== (int)$base->migrations - 18) {
         throw new RuntimeException('Estado de referencia no autorizado.');
     }
@@ -162,7 +162,7 @@ try {
         if ($exit !== 0) throw new RuntimeException('Migracion v2 no se completo.');
         echo "[PASS] Migracion aditiva F2.2 registrada.\n";
     }
-    if ($mode === '--verify' && ! $base->schema_present) {
+    if ($mode === '--verify' && (int)$base->schema_present === 0) {
         echo "[PENDIENTE] No existe la matriz versionada; ninguna escritura.\n";
         exit(1);
     }
