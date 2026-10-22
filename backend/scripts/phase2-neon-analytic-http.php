@@ -410,9 +410,11 @@ try{
       SQL,[$companyA]);
     $check((int)$periodEvents->c===2&&(int)$periodEvents->r===1
         &&(int)$periodEvents->l===1,'F2.3 auditoria atomica de cambios incompleta');
-    $db->selectOne("SELECT set_config('app.current_company_id','',true)");
+    // Verify the deferred balance trigger while company A remains visible
+    // through FORCE RLS. Clearing the GUC first yields false missing lines.
     $probePhase='F2.3 verify deferred balance triggers';
     $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
+    $db->selectOne("SELECT set_config('app.current_company_id','',true)");
     echo "[PASS] F2.3 Neon HTTP: CLOSE, REOPEN, LOCK, 403 RBAC, 409 transiciones, 422 POST/extorno bloqueados y 4 auditorias.\n";
     $successful=true;
 }catch(\Throwable $e){
