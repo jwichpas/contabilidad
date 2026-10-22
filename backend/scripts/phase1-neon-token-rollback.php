@@ -110,11 +110,38 @@ $begun = false;
 $rolledBack = false;
 $passed = false;
 $assertions = 0;
+$stage = 'preflight politica membresias';
+
+// La politica SELECT de login es adicional al RLS por empresa. Sin ella,
+// el login puede devolver HTTP 200 con listado companies=[] y false FAIL.
+// Detectarlo ANTES de insertar usuarios/tokens para no repetir la prueba.
+try {
+    $policyState = $db->selectOne(<<<'SQL'
+        SELECT count(*)::integer AS n
+        FROM pg_catalog.pg_policy p
+        JOIN pg_catalog.pg_class c ON c.oid=p.polrelid
+        JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relname='company_user'
+          AND p.polname='company_user_authenticated_member_listing_policy'
+          AND p.polcmd='r'
+          AND pg_catalog.pg_get_expr(p.polqual,p.polrelid)
+                LIKE '%app.current_user_id%'
+        SQL);
+    if ((int) ($policyState->n ?? 0) !== 1) {
+        fwrite(STDERR, "[BLOQUEO] Falta politica SELECT de membresias para login. Ejecutar primero el runner F1.10 de politica Neon dev.\n");
+        exit(1);
+    }
+    echo '[PASS] Politica SELECT de membresias autenticadas presente.'.PHP_EOL;
+} catch (\Throwable $error) {
+    fwrite(STDERR, "[FAIL] No se pudo verificar la politica de membresias en Neon dev.\n");
+    exit(1);
+}
 
 // El throttle del login y la sesion no deben dejar estado persistente
 // fuera de PostgreSQL durante esta prueba CLI.
 config(['cache.default'=>'array','session.driver'=>'array']);
 try {
+    $stage = 'comienzo transaccion y fixtures';
     $db->beginTransaction();
     $begun = true;
     $db->selectOne("SELECT set_config('statement_timeout','15000',true) AS val");
@@ -185,24 +212,30 @@ try {
         $assertions++;
     };
 
+    $stage = 'auth anonimo';
     $check('Sin token, empresas protegidas',401,$request('GET','/api/v1/tenant/companies')->getStatusCode());
+    $stage = 'auth credenciales incorrectas';
     $check('Contraseña incorrecta',422,$request('POST','/api/v1/auth/login',[
         'email'=>$email,'password'=>'incorrecta','device_name'=>'f1.10-test',
     ])->getStatusCode());
 
+    $stage = 'auth login real';
     $login = $request('POST','/api/v1/auth/login',[
         'email'=>$email,'password'=>$secret,'device_name'=>'f1.10-test',
     ]);
     $check('Login con credenciales reales',200,$login->getStatusCode());
+    $stage = 'decodificar respuesta login';
     $loginData = json_decode((string) $login->getContent(),true,512,JSON_THROW_ON_ERROR);
     $token = $loginData['data']['token'] ?? null;
     if (! is_string($token) || ! preg_match('/^[0-9]+\|.+$/', $token)) {
         throw new \RuntimeException('Token Sanctum no emitido.');
     }
+    $stage = 'verificar listado membresias en login';
     $companiesAtLogin = $loginData['data']['companies'] ?? [];
     if (! is_array($companiesAtLogin) || count($companiesAtLogin) !== 2) {
         throw new \RuntimeException('Login no devolvio ambas empresas.');
     }
+    $stage = 'verificar token y expiracion 12h';
     $tokenId = (int) explode('|',$token,2)[0];
     $issued = $db->selectOne(<<<'SQL'
         SELECT count(*)::integer AS n,
@@ -218,6 +251,7 @@ try {
     }
     echo '[PASS] Token real emitido con vencimiento de 12 horas.'.PHP_EOL;
 
+    $stage = 'GET membresias con Bearer real';
     $companies = $request('GET','/api/v1/tenant/companies',[],$token);
     $check('Bearer real accede a empresas',200,$companies->getStatusCode());
     $companyData = json_decode((string)$companies->getContent(),true,512,JSON_THROW_ON_ERROR);
@@ -229,9 +263,11 @@ try {
         throw new \RuntimeException('Bearer devolvio empresas ajenas o incompletas.');
     }
 
+    $stage = 'restriccion auditor en B';
     $check('Auditor B sin permisos de asiento',403,
         $request('POST','/api/v1/accounting/journal-entries',[],$token,$companyB)->getStatusCode()
     );
+    $stage = 'cambio de empresa';
     $switch = $request('POST','/api/v1/tenant/switch-company',
         ['company_id'=>$companyB],$token);
     $check('Cambio autorizado de empresa',200,$switch->getStatusCode());
@@ -239,12 +275,14 @@ try {
         throw new \RuntimeException('No se actualizo empresa activa.');
     }
 
+    $stage = 'revocacion logout';
     $check('Logout revoca token',200,
         $request('POST','/api/v1/auth/logout',[],$token)->getStatusCode());
     $gone = $db->selectOne('SELECT count(*)::integer AS n FROM public.personal_access_tokens WHERE id=?',[$tokenId]);
     if ((int) ($gone->n ?? -1) !== 0) {
         throw new \RuntimeException('Logout no revoco token.');
     }
+    $stage = 'token revocado no autentica';
     $check('Token revocado ya no autentica',401,
         $request('GET','/api/v1/tenant/companies',[],$token)->getStatusCode());
 
@@ -253,8 +291,14 @@ try {
     }
     $passed = true;
 } catch (\Throwable $error) {
-    // Errores/SQL pueden contener token o email; no imprimir valores sensibles.
-    fwrite(STDERR,"[FAIL] F1.10 Bearer/Auth no completo; revertir transaccion y diagnosticar en entorno controlado.\n");
+    // Solo etapa predeterminada, clase y SQLSTATE validado; nunca exponer
+    // texto de excepcion, SQL, email, token ni secretos.
+    $sqlState = (string) ($error->errorInfo[0] ?? $error->getCode());
+    $sqlState = preg_match('/^[A-Z0-9]{5}$/', $sqlState) ? $sqlState : 'N/A';
+    fwrite(STDERR, '[FAIL] F1.10 etapa: '.$stage
+        .' | tipo: '.get_debug_type($error)
+        .' | SQLSTATE: '.$sqlState
+        .'. Transaccion en ROLLBACK.'.PHP_EOL);
 } finally {
     if ($begun) {
         try {
