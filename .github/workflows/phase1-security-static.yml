@@ -47,6 +47,7 @@ jobs:
           php -l backend/scripts/phase1-permissions-audit.php
           php -l backend/scripts/phase1-neon-app-role-readonly.php
           php -l backend/scripts/phase1-neon-rls-rollback.php
+          php -l backend/scripts/phase1-neon-http-rollback.php
           php -l backend/app/Http/Middleware/RequireCompanyRole.php
           php -l backend/app/Support/Tenant/TenantContext.php
           php -l backend/app/Providers/AppServiceProvider.php
