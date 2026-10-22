@@ -36,6 +36,29 @@ return new class extends Migration
             || intdiv((int) ($who?->version ?? 0), 10000) !== 18) {
             throw new \RuntimeException('F3.1: solo rol migrador, PostgreSQL 18 Neon DEV y SSL directo.');
         }
+        // Guardas de datos: solo instalar sobre la rama de desarrollo acordada.
+        // El instalador migratorio registra la fila #23 DESPUES de up().
+        $baseline = $db->selectOne(<<<'SQL'
+            SELECT
+                (SELECT count(*) FROM public.migrations)::integer AS migrations,
+                (SELECT count(*) FROM public.companies)::integer AS companies,
+                (SELECT count(*) FROM public.users)::integer AS users,
+                (SELECT count(*) FROM public.journal_entries)::integer AS entries,
+                (SELECT count(*) FROM public.fiscal_periods)::integer AS periods,
+                (SELECT count(*) FROM public.fiscal_periods
+                    WHERE year=2026 AND month=1 AND status='OPEN')::integer AS january_open,
+                (SELECT count(*) FROM public.accounting_account_templates)::integer AS templates
+            SQL);
+        if (! $baseline || (int) $baseline->migrations !== 22
+            || (int) $baseline->companies !== 3
+            || (int) $baseline->users !== 3
+            || (int) $baseline->entries !== 0
+            || (int) $baseline->periods !== 1
+            || (int) $baseline->january_open !== 1
+            || (int) $baseline->templates !== 3401) {
+            throw new \RuntimeException('F3.1: baseline de tres empresas y enero abierto no coincide.');
+        }
+
         if (Schema::connection('pgsql_migrations')->hasTable('company_economic_activities')
             || Schema::connection('pgsql_migrations')->hasColumn('company_settings', 'legal_form')) {
             throw new \RuntimeException('F3.1: esquema ya modificado o migracion previa parcial; revisar antes de continuar.');
