@@ -108,7 +108,7 @@ try {
             $database->statement('RELEASE SAVEPOINT '.$name);
         }
         if ($seenState!==$state) {
-            throw new RuntimeException('SQLSTATE inesperado: se esperaba '.$state.' en prueba negativa.');
+            throw new RuntimeException('SQLSTATE inesperado: se esperaba '.$state.' y se obtuvo '.($seenState ?? 'NINGUNO').' en prueba negativa.');
         }
     };
 
@@ -226,8 +226,15 @@ try {
             $database->table('journal_analytic_allocations')->insert($linkB);
         },'42501');
         $expectSql(static function()use($database,$linkA,$linkB):void {
+            // Every referenced line must be from B; otherwise the unique
+            // debit/credit keys from the already inserted A link can fail
+            // with 23505 before the intended composite FK is evaluated.
             $illegal=$linkA;
             $illegal['source_line_id']=$linkB['source_line_id'];
+            $illegal['debit_line_id']=$linkB['debit_line_id'];
+            $illegal['credit_line_id']=$linkB['credit_line_id'];
+            // Keep tenant A and voucher A: the B line IDs must be rejected
+            // by the same-(tenant,voucher) composite foreign key (23503).
             $database->table('journal_analytic_allocations')->insert($illegal);
         },'23503');
         $expectSql(static function()use($database,$linkA):void {
