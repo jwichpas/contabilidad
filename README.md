@@ -52,7 +52,7 @@
 
 > 🏢 **Fase 3 — Asistente Vue de alta implementado en código:** [cinco pasos para crear una empresa](frontend/src/modules/company/views/CompanyOnboardingWizard.vue), con API Laravel, revisión de RUC/CIIU, monedas y copia privada del PCGE. [Especificación y estado](docs/F3-EMPRESAS-SECTORES-Y-LIBROS-SUNAT.md). **Las migraciones y pruebas E2E siguen pendientes**; el cálculo automático de libros SUNAT aún no está implementado.
 
-> 📌 **Plan maestro y seguimiento del proyecto:** [README-PLAN-MAESTRO.md](README-PLAN-MAESTRO.md) — 9 fases (F0–F8), hoja de ruta estimada, 4 hitos, criterios de aprobación y checklist de 27 actividades. **Fase 0 EN PROGRESO (sin tareas aprobadas).** Desarrollo exclusivamente sobre la base `contabilidad-database`, sin base aislada. [Diagnóstico y riesgos](docs/FASE-0-DIAGNOSTICO.md).
+> **Estado Neon F2 verificado (22/10/2026 UTC):** 17 migraciones y 3 empresas DEMO; 6 áreas y 9 flujos por empresa probados con RLS. Las 3.401 plantillas PCGE y 13 conjuntos globales permanecen sin instalar. [Diagnóstico, comandos seguros y pendientes](docs/F2-CATALOGOS-NEON-ESTADO-VERIFICADO.md). No usar `db:seed` general.\n\n> 📌 **Plan maestro y seguimiento del proyecto:** [README-PLAN-MAESTRO.md](README-PLAN-MAESTRO.md) — 9 fases (F0–F8), hoja de ruta estimada, 4 hitos, criterios de aprobación y checklist de 27 actividades. **Fase 0 EN PROGRESO (sin tareas aprobadas).** Desarrollo exclusivamente sobre la base `contabilidad-database`, sin base aislada. [Diagnóstico y riesgos](docs/FASE-0-DIAGNOSTICO.md).
 
 > ⚠️ **Seguridad de desarrollo:** La contraseña literal incluida anteriormente en `backend/phpunit.xml` fue retirada del archivo actual. **Falta rotarla** en Supabase y actualizar las conexiones; la contraseña anterior permanece potencialmente visible en el historial Git. No guardar contraseñas en el repositorio.
 
@@ -71,10 +71,13 @@ cd contabilidad
 cd backend
 composer install
 cp .env.example .env
-# Configura tus credenciales PostgreSQL / Supabase en .env
-php artisan key:generate
-php artisan migrate
-php artisan db:seed
+# Configura las credenciales privadas de Neon contabilidad-dev en .env.
+# NO ejecutar migrate general ni db:seed sobre la rama Neon ya inicializada.
+# Antes de crear empresas: instalar los 13 catálogos globales versionados de F2.
+php scripts/phase2-neon-global-reference.php --plan
+php scripts/phase2-neon-global-reference.php --verify
+# Únicamente después del preflight y con el entorno dev comprobado:
+# php scripts/phase2-neon-global-reference.php --apply=contabilidad-dev
 php artisan serve --port=8000
 ```
 
