@@ -71,6 +71,8 @@ php scripts/phase2-neon-analytic-allocations.php --verify
 php scripts/phase2-neon-tenant-integrity.php --verify
 ```
 
+**Corrección del test negativo 23503 (22/10/2026):** la primera ejecución reportó `[FAIL] SQLSTATE inesperado: se esperaba 23503`, después de verificar que INSERT/SELECT de A/B funcionaban. La prueba originalmente reemplazaba únicamente `source_line_id` con el de B, pero reutilizaba `debit_line_id` y `credit_line_id` ya insertados en A; las dos restricciones UNIQUE podían interceptar la operación (23505) antes de validar FK. Se actualizó el caso para reemplazar **los tres IDs de línea** con los de B y mantener `company_id/journal_entry_id` de A, aislando la infracción de FK compuesta. El script ahora informa también el SQLSTATE observado. El ROLLBACK y el esquema de las 21 migraciones sí habían pasado; la prueba completa F2.3c sigue pendiente de repetición.
+
 **Importante:** la verificación puede fallar con `[FAIL]` y revertir igualmente la transacción. No activar reglas ni modificar manualmente datos en ese caso; analizar SQLSTATE y middleware/contexto.
 
 ## Estado y barrera de activación
