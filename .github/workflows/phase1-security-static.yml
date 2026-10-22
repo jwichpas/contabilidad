@@ -53,6 +53,7 @@ jobs:
         run: |
           php -l backend/scripts/phase1-permissions-audit.php
           php -l backend/scripts/phase2-neon-global-reference.php
+          php -l backend/scripts/phase2-neon-tenant-integrity.php
           php -l backend/database/portable_migrations/2026_10_21_040000_create_reference_data_versions.php
           php -l backend/database/seeders/MasterChartOfAccountsSeeder.php
           php -l backend/database/seeders/DatabaseSeeder.php
