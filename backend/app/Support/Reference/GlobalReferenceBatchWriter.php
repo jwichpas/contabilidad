@@ -44,6 +44,12 @@ final class GlobalReferenceBatchWriter
             throw new RuntimeException('Clase de catálogo inválida para carga global.');
         }
 
+        // A batch writer must never be called as a stand-alone seeder.
+        // F2 owns the outer transaction, rollback and source SHA validation.
+        if (DB::transactionLevel() < 1 || DB::getDefaultConnection() !== 'pgsql_migrations') {
+            throw new RuntimeException('Carga global sin transaccion/rol migrador F2.');
+        }
+
         $table = (new $modelClass)->getTable();
         if (! in_array($table, self::TABLES, true) || $rows === []) {
             throw new RuntimeException('Tabla o fuente no aprobada para carga global.');
