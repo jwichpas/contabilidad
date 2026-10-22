@@ -363,14 +363,37 @@ try {
 
             // Todas las inserciones globales y el registro de version se
             // confirman o revierten juntas. Nunca TRUNCATE ni db:seed general.
+            // Los seeders de referencia usan un modo batched INSERT-ONLY que
+            // conserva la fuente y los defaults SQL, evitando centenares de
+            // llamadas updateOrCreate a Neon en conexiones WAN.
+            $step = static function (string $name, callable $action): void {
+                $started = microtime(true);
+                echo '[CARGANDO] '.$name.' (transaccion pendiente, sin COMMIT)'.PHP_EOL;
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+                $action();
+                echo '[ETAPA OK] '.$name.'; '.round(microtime(true)-$started, 2).' s. Sin COMMIT.'.PHP_EOL;
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+            };
+
             $db->transaction(static function () use (
                 $db, $getCounts, $getHashes, $expectedTables, $manifest,
-                $manifestSha, $sourceHashes
+                $manifestSha, $sourceHashes, $step
             ): void {
-                app(\Database\Seeders\CurrenciesSeeder::class)->run();
-                app(\Database\Seeders\SunatCatalogSeeder::class)->run();
-                app(\Database\Seeders\AccountingStandardsAndRubricsSeeder::class)->run();
-                app(\Database\Seeders\MasterChartOfAccountsSeeder::class)->seedTemplates();
+                // Limites por consulta, no por transaccion. En caso de timeout
+                // se deshacen TODAS las filas del dataset F2.
+                $db->statement("SET LOCAL lock_timeout = '10000ms'");
+                $db->statement("SET LOCAL statement_timeout = '60000ms'");
+
+                $step('Monedas', static fn () => app(\Database\Seeders\CurrenciesSeeder::class)->runForGlobalInstall());
+                $step('9 catalogos SUNAT', static fn () => app(\Database\Seeders\SunatCatalogSeeder::class)->runForGlobalInstall());
+                $step('Normas NIC/NIIF y rubros', static fn () => app(\Database\Seeders\AccountingStandardsAndRubricsSeeder::class)->runForGlobalInstall());
+                $step('Matrices PCGE 2019 y 2026', static fn () => app(\Database\Seeders\MasterChartOfAccountsSeeder::class)->seedTemplates());
 
                 $actual = $getCounts();
                 if ($actual !== $expectedTables) {
@@ -383,6 +406,8 @@ try {
                         throw new RuntimeException('Cantidad PCGE inesperada en '.$version);
                     }
                 }
+                echo '[COMPROBANDO] 13 tablas, hashes SHA256 y versiones PCGE (sin COMMIT).'.PHP_EOL;
+                flush();
                 $hashes = $getHashes();
                 $db->table('reference_data_versions')->insert([
                     'dataset_key'=>$manifest['dataset'],
@@ -411,6 +436,7 @@ try {
                 || (int) $identityAfter->memberships !== 8) {
                 throw new RuntimeException('Estado multiempresa alterado inesperadamente.');
             }
+            echo '[COMMIT] Carga global F2 confirmada en una sola transaccion.'.PHP_EOL;
             echo '[PASS] GLOBAL_REFERENCE_OK: 13 catálogos, 3401 plantillas PCGE; datos y hashes confirmados.'.PHP_EOL;
             echo '[PASS] 3 empresas, 3 usuarios y 8 membresias preservados.'.PHP_EOL;
             $ok = true;
