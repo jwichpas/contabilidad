@@ -19,6 +19,7 @@ if ($mode === '--plan') {
     echo "[PLAN] Crear empresa, admin, periodo y dos cuentas nivel 4 con jerarquia PCGE.\n";
     echo "[PLAN] HTTP 201 balanceado; 2 partidas; SET CONSTRAINTS ALL IMMEDIATE para trigger diferido.\n";
     echo "[PLAN] GET next-number no reserva; dos POST automaticos generan 10-00001 y 10-00002.\n";
+    echo "[PLAN] F1.13 POST reverse automatico 10-00003, doble extorno bloqueado 422 y auditoria.\n";
     echo "[PLAN] HTTP 422 descuadrado; UPDATE inmutable y trigger diferido SQL 23514; auditoria.\n";
     echo "[PLAN] ROLLBACK y SELECT de limpieza de todos los datos ficticios.\n";
     echo "[AVISO] Secuencias journal_entries/audit_logs pueden avanzar pese al ROLLBACK.\n";
@@ -360,7 +361,77 @@ try {
     }
     echo "[PASS] Auditoria JOURNAL_ENTRY_CREATED bajo el tenant.\n";
     $checks++;
-    if ($db->transactionLevel() !== 1 || $checks !== 8) {
+
+    // F1.13: Extorno real HTTP bajo RLS, invertido y con correlativo
+    // automatico. Rehabilitar triggers diferidos ANTES de insertar cabecera.
+    $db->statement('SET CONSTRAINTS ALL DEFERRED');
+    $db->selectOne("SELECT set_config('app.current_company_id','',true) AS value");
+    $reverseUri = '/api/v1/accounting/journal-entries/'.$entryId.'/reverse';
+    $reverseBody = [
+        'fiscal_period_id'=>$periodId,
+        'reversal_date'=>'2026-10-21',
+        'reason'=>'Correccion en pruebas transaccionales',
+    ];
+    $reverseRequest = \Illuminate\Http\Request::create(
+        $reverseUri,'POST',[],[],[],[
+            'HTTP_ACCEPT'=>'application/json',
+            'CONTENT_TYPE'=>'application/json',
+            'HTTP_X_COMPANY_ID'=>(string)$companyId,
+        ],json_encode($reverseBody,JSON_THROW_ON_ERROR)
+    );
+    $reverseResponse = $kernel->handle($reverseRequest);
+    if ($reverseResponse->getStatusCode() !== 201) {
+        throw new \RuntimeException('Extorno HTTP no devolvio 201.');
+    }
+    $reverseData = json_decode((string)$reverseResponse->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $reverseId = (int)($reverseData['data']['id'] ?? 0);
+    if ($reverseId <= 0 || ($reverseData['data']['entry_type'] ?? '') !== 'REVERSAL'
+        || ($reverseData['data']['entry_number'] ?? '') !== '10-00003'
+        || (int)($reverseData['data']['reversed_entry_id'] ?? 0) !== $entryId) {
+        throw new \RuntimeException('Extorno no referencio el original o no reservo el numero esperado.');
+    }
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true) AS value",[(string)$companyId]);
+    $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
+    $originalStatus = $db->table('journal_entries')->where('id',$entryId)->value('status');
+    $reverseLines = $db->table('journal_entry_lines')->where('journal_entry_id',$reverseId)
+        ->orderBy('line_number')->get();
+    if ($originalStatus !== 'REVERSED' || $reverseLines->count() !== 2
+        || (string)($reverseLines[0]->debit_local ?? '') !== '0.0000'
+        || (string)($reverseLines[0]->credit_local ?? '') !== '120.0000'
+        || (string)($reverseLines[1]->debit_local ?? '') !== '120.0000'
+        || (string)($reverseLines[1]->credit_local ?? '') !== '0.0000') {
+        throw new \RuntimeException('Extorno no invirtio Debe/Haber o estado del original.');
+    }
+    $auditReverse = $db->selectOne(<<<'SQL'
+        SELECT count(*)::integer AS n FROM public.audit_logs
+        WHERE company_id=? AND event_type='JOURNAL_ENTRY_REVERSED'
+        SQL,[$companyId]);
+    if ((int)($auditReverse->n ?? 0) !== 1) {
+        throw new \RuntimeException('Falta auditoria de extorno.');
+    }
+    echo "[PASS] F1.13 HTTP 201 extorno automatico 10-00003, 2 partidas invertidas, original REVERSED, auditoria y triggers.\n";
+    $checks++;
+
+    // Extornar nuevamente el original debe devolver 422 sin cambios.
+    $db->selectOne("SELECT set_config('app.current_company_id','',true) AS value");
+    $retryRequest = \Illuminate\Http\Request::create(
+        $reverseUri,'POST',[],[],[],[
+            'HTTP_ACCEPT'=>'application/json',
+            'CONTENT_TYPE'=>'application/json',
+            'HTTP_X_COMPANY_ID'=>(string)$companyId,
+        ],json_encode($reverseBody,JSON_THROW_ON_ERROR)
+    );
+    if ($kernel->handle($retryRequest)->getStatusCode() !== 422) {
+        throw new \RuntimeException('El extorno duplicado no fue denegado.');
+    }
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true) AS value",[(string)$companyId]);
+    if ((int)$db->table('journal_entries')->where('company_id',$companyId)->count() !== 4) {
+        throw new \RuntimeException('El reintento genero un asiento adicional.');
+    }
+    echo "[PASS] F1.13 segundo extorno del mismo asiento rechazado HTTP 422.\n";
+    $checks++;
+
+    if ($db->transactionLevel() !== 1 || $checks !== 10) {
         throw new \RuntimeException('Profundidad de transaccion o numero de checks incorrecto.');
     }
     $passed = true;
@@ -419,5 +490,5 @@ if ($rolledBack) {
     }
 }
 $db->disconnect();
-if (! $passed || ! $rolledBack || $checks !== 8) { exit(1); }
+if (! $passed || ! $rolledBack || $checks !== 10) { exit(1); }
 echo "[PASS] F1.12: motor POST y triggers SQL validados sin filas persistentes.\n";
