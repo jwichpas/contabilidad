@@ -52,6 +52,8 @@ jobs:
           php -l backend/scripts/phase1-neon-membership-policy.php
           php -l backend/database/neon_migrations/2026_10_21_030000_allow_authenticated_company_membership_listing.php
           php -l backend/scripts/phase1-neon-journal-rollback.php
+          php -l backend/scripts/phase1-neon-journal-number-rollback.php
+          php -l backend/app/Services/Accounting/JournalEntryNumberService.php
           php -l backend/app/Http/Middleware/RequireCompanyRole.php
           php -l backend/app/Support/Tenant/TenantContext.php
           php -l backend/app/Providers/AppServiceProvider.php
