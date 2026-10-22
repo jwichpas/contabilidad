@@ -1289,7 +1289,7 @@ onMounted(() => {
                             <td class="py-1.5 px-3 font-semibold text-foreground">
                               {{ l.account ? `${l.account.code} · ${l.account.name}` : `ID ${l.accounting_account_id}` }}
                             </td>
-                            <td class="py-1.5 px-3 text-muted text-[11px]">{{ costCenters.find((cc) => cc.id === l.cost_center_id)?.code || '—' }}</td>
+                            <td class="py-1.5 px-3 text-muted text-[11px]">{{ l.cost_center?.code || costCenters.find((cc) => cc.id === l.cost_center_id)?.code || '—' }}</td>
                             <td class="py-1.5 px-3 text-muted text-xs">{{ l.description || entry.description }}</td>
                             <td class="py-1.5 px-3 text-right font-medium num">
                               {{ formatPostedAmount(l.debit_local) }}
