@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property int $journal_entry_id
  * @property int $line_number
  * @property int $accounting_account_id
+ * @property int|null $cost_center_id
  * @property string|null $description
  * @property string $debit_local
  * @property string $credit_local
@@ -38,6 +39,7 @@ final class JournalEntryLine extends Model
         'journal_entry_id',
         'line_number',
         'accounting_account_id',
+        'cost_center_id',
         'description',
         'debit_local',
         'credit_local',
@@ -57,6 +59,7 @@ final class JournalEntryLine extends Model
             'journal_entry_id' => 'integer',
             'line_number' => 'integer',
             'accounting_account_id' => 'integer',
+            'cost_center_id' => 'integer',
             'description' => 'string',
             'debit_local' => 'decimal:4',
             'credit_local' => 'decimal:4',
@@ -82,5 +85,11 @@ final class JournalEntryLine extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(AccountingAccount::class, 'accounting_account_id');
+    }
+
+    /** @return BelongsTo<CostCenter, $this> */
+    public function costCenter(): BelongsTo
+    {
+        return $this->belongsTo(CostCenter::class, 'cost_center_id');
     }
 }
