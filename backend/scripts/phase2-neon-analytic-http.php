@@ -362,6 +362,14 @@ try{
     $repeated=$request('POST','/api/v1/accounting/fiscal-periods',$companyA,$opening);
     $check($repeated->getStatusCode()===409,
         'Duplicate period opening must return 409');
+    $probePhase='F2.3 list periods after opening';
+    $listResult=$request('GET','/api/v1/accounting/fiscal-periods?year=2026',$companyA);
+    $listBody=json_decode((string)$listResult->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $check($listResult->getStatusCode()===200
+        &&count($listBody['data']??[])===2
+        &&(int)($listBody['data'][1]['month']??0)===11
+        &&(int)($listBody['data'][1]['entry_count']??-1)===0,
+        'The new OPEN month must appear without vouchers');
     $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
     $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
 
