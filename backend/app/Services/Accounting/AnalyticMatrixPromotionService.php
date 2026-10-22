@@ -61,14 +61,17 @@ final readonly class AnalyticMatrixPromotionService
             }
 
             $company = $db->table('companies')->where('tax_id', $taxId)
-                ->where('is_active', true)->lockForUpdate()->first();
+                ->where('is_active', true)->first();
             if (! $company) {
                 throw new DomainException('Empresa DEMO inactiva o inexistente.');
             }
             $companyId = (int)$company->id;
 
-            // Serializes promotion within this tenant. Posting must acquire a
-            // matching shared advisory lock before reading ACTIVE versions.
+            // Serialize exclusively with all POST readers of ACTIVE state.
+            // Do NOT lock companies FOR UPDATE: INSERT journal_entries takes
+            // an FK KEY SHARE on companies before POST obtains its shared
+            // advisory lock. Holding the companies row UPDATE lock while
+            // waiting for POST could otherwise produce a deadlock.
             $db->selectOne('SELECT pg_advisory_xact_lock(hashtextextended(?,0))', [
                 'nexus:analytic-routing:'.$companyId,
             ]);
