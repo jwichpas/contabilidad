@@ -7,6 +7,7 @@ namespace App\Services\Accounting;
 use App\Models\AccountingAccount;
 use App\Models\AccountingAccountTemplate;
 use App\Models\Company;
+use App\Support\Accounting\SixDigitChartExpander;
 use App\Support\Tenant\TenantContext;
 use DomainException;
 use Illuminate\Support\Carbon;
@@ -86,32 +87,9 @@ final readonly class InitializeCompanyChartOfAccountsService
             );
         }
 
-        // Regla contable de Nexus: solo cuentas de 6 dígitos reciben movimientos.
-        // La plantilla PCGE permanece intacta. Para cada hoja original de 3-5
-        // dígitos sintetizamos una subcuenta exclusiva de la empresa con sufijo
-        // cero; la hoja original pasa a ser un nodo no imputable.
-        $sixDigitAccounts = [];
-        foreach ($templates as $tpl) {
-            if (! $tpl->is_operational || strlen((string) $tpl->code) >= 6) {
-                continue;
-            }
-
-            $code = str_pad((string) $tpl->code, 6, '0', STR_PAD_RIGHT);
-            if ($templates->contains('code', $code) || isset($sixDigitAccounts[$code])) {
-                throw new DomainException('Colisión al preparar la subcuenta de movimiento: '.$code);
-            }
-
-            $child = clone $tpl;
-            $child->code = $code;
-            $child->name = mb_substr((string) $tpl->name.' - Movimiento', 0, 180);
-            $child->level = ((int) $tpl->level) + 1;
-            $child->parent_code = (string) $tpl->code;
-            $child->is_operational = true;
-            $sixDigitAccounts[$code] = $child;
-        }
-
-        // No mutar la colección original de referencias PCGE ni sus modelos.
-        $expandedTemplates = $templates->concat(array_values($sixDigitAccounts));
+        // Clonación pura: la matriz global es inmutable y cada empresa recibe
+        // sus propias hojas operativas de 6 dígitos, sin colisiones.
+        $expandedTemplates = SixDigitChartExpander::expand($templates);
 
         // 4. Ejecutar la clonación aislada bajo el contexto del Tenant en una transacción
         $totalInserted = $this->tenantContext->run($companyId, function () use ($companyId, $planVersion, $expandedTemplates, $existingAccountsCount): int {
