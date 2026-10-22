@@ -79,7 +79,7 @@ try{
         (SELECT count(*) FROM public.accounting_destination_rule_versions WHERE status='ACTIVE')::integer AS active_versions,
         (SELECT count(*) FROM public.journal_entries)::integer AS entries,
         (SELECT count(*) FROM public.journal_entry_lines)::integer AS lines,
-        (SELECT count(*) FROM public.audit_logs)::integer AS audits
+        (SELECT count(*) FROM public.audit_logs WHERE event_type NOT IN ('AUTH_LOGIN','AUTH_LOGOUT','AUTH_LOGIN_FAILED','TENANT_SWITCH'))::integer AS accounting_audits
       SQL,[$migration]);
     if(!$state||$state->actor!=='neondb_owner'||$state->database_name!=='neondb'
         ||intdiv((int)$state->postgres_version,10000)!==18
@@ -87,7 +87,7 @@ try{
         ||(int)$state->companies!==3||(int)$state->users!==3||(int)$state->members!==8
         ||(int)$state->pcge!==3401||(int)$state->routes!==1362
         ||(int)$state->drafts!==3||(int)$state->active_versions!==0
-        ||(int)$state->entries!==0||(int)$state->lines!==0||(int)$state->audits!==0
+        ||(int)$state->entries!==0||(int)$state->lines!==0||(int)$state->accounting_audits!==0
         ||(int)$state->migration_record!==((int)$state->migrations-21)
         ||(int)$state->table_exists!==(int)$state->migration_record){
         throw new RuntimeException('Baseline inesperado: verificar 21/22 migraciones, DEMO, RLS y tabla.');
@@ -97,7 +97,7 @@ try{
         !==['20999990011','20999990012','20999990013']){
         throw new RuntimeException('Las empresas no son las tres DEMO autorizadas.');
     }
-    echo "[PASS] Neon PG18 DEV, ".$state->migrations." migraciones, 3 DRAFT, 1362 rutas, 0 asientos/auditoría.\n";
+    echo "[PASS] Neon PG18 DEV, ".$state->migrations." migraciones, 3 DRAFT, 1362 rutas, 0 asientos/auditoría contable (se permiten eventos de inicio de sesión).\n";
 
     if($mode==='--verify' && (int)$state->table_exists===0){
         echo "[PENDIENTE] La migración de idempotencia todavía no está instalada.\n";
