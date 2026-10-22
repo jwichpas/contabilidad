@@ -453,3 +453,10 @@ php scripts/phase1-neon-journal-rollback.php --probe=contabilidad-dev
 ```
 
 Ambos `--probe` hacen escrituras dentro de transacciones y hacen ROLLBACK; pueden avanzar secuencias PostgreSQL. Sus resultados aún son **PENDIENTES** y los archivos deberán pasar lint PHP en el entorno local, pese al chequeo CI configurado. No ejecutar `php artisan test` general contra Neon. Neon production y Supabase siguen intactos.
+
+
+### F1.11 — verificación de rollback realmente sujeta al tenant
+
+Se corrigió una debilidad del control final: las tablas `journal_entries`, `accounting_accounts` y `audit_logs` tienen FORCE RLS, por lo que `COUNT(*)=0` **sin contexto tenant no prueba ausencia de filas**. Tras el ROLLBACK principal, el script abre una segunda transacción de `READ ONLY`, declara el `app.current_company_id` ficticio con `set_config(...,true)` y comprueba explícitamente cero filas del tenant para cabeceras, partidas, cuentas, períodos, membresías y eventos de auditoría, además de empresas y usuarios. Siempre hace rollback también de esta segunda transacción de lectura.
+
+Combinada con la prueba negativa del trigger diferido usando SAVEPOINT, esta validación evita dos falsos positivos: «partida doble aprobada sin ejecutar el trigger SQL» y «limpieza aprobada porque RLS oculta el dato». **Aún pendiente de php -l y prueba local en entorno del usuario**; no afirmar F1.11 PASS hasta contar con esa salida.
