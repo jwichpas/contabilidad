@@ -343,6 +343,21 @@ try{
         &&($periodListJson['data'][0]['status']??'')==='OPEN'
         &&(int)($periodListJson['data'][0]['entry_count']??0)>=2,
         'F2.3 GET period must include OPEN and real journal count');
+    $probePhase='F2.3 month creation validation';
+    $bad=$request('POST','/api/v1/accounting/fiscal-periods',$companyA,[
+        'year'=>2026,'month'=>11,'reason'=>'corto'
+    ]);
+    $check($bad->getStatusCode()===422,'Opening must validate reason');
+
+    $probePhase='F2.3 open new period';
+    $opening=['year'=>2026,'month'=>11,
+        'reason'=>'Apertura contable para ensayo transaccional reversible'];
+    $result=$request('POST','/api/v1/accounting/fiscal-periods',$companyA,$opening);
+    $body=json_decode((string)$result->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $check($result->getStatusCode()===201
+        &&($body['data']['status']??'')==='OPEN',
+        'New monthly period must return 201 OPEN');
+
     $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
     $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
 
