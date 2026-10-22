@@ -40,7 +40,7 @@ final readonly class InitializeCompanyChartOfAccountsService
      *     initialized_at: string
      * }
      */
-    public function initialize(int $companyId, string $planVersion = 'PCGE_2019', bool $force = false): array
+    public function initialize(int $companyId, string $planVersion = 'PCGE_2019', bool $force = false, bool $fastCopy = false): array
     {
         $company = Company::query()->find($companyId);
         if ($company === null) {
@@ -92,8 +92,8 @@ final readonly class InitializeCompanyChartOfAccountsService
         $expandedTemplates = SixDigitChartExpander::expand($templates);
 
         // 4. Ejecutar la clonación aislada bajo el contexto del Tenant en una transacción
-        $totalInserted = $this->tenantContext->run($companyId, function () use ($companyId, $planVersion, $expandedTemplates, $existingAccountsCount): int {
-            return DB::transaction(function () use ($companyId, $expandedTemplates, $existingAccountsCount): int {
+        $totalInserted = $this->tenantContext->run($companyId, function () use ($companyId, $planVersion, $expandedTemplates, $existingAccountsCount, $fastCopy): int {
+            return DB::transaction(function () use ($companyId, $expandedTemplates, $existingAccountsCount, $fastCopy): int {
                 // Si existían cuentas previas y estamos en modo forzado (sin movimientos contables),
                 // desvincular parámetros de configuración y centros de costo antes de eliminar en cascada ascendente
                 if ($existingAccountsCount > 0) {
@@ -177,6 +177,37 @@ final readonly class InitializeCompanyChartOfAccountsService
                         ];
                     }
 
+                    // F3.1: reducir de multiples viajes HTTP->Neon por lote
+                    // a una sola insercion por nivel, preservando el trigger
+                    // de jerarquia, RLS y todas las columnas PCGE.
+                    // La ruta legacy permanece intacta para otros consumidores.
+                    if ($fastCopy && $batchRows !== []) {
+                        $sourceRows = [];
+                        foreach ($levelTemplates as $tpl) {
+                            $sourceRows[(string) $tpl->code] = $level > 1
+                                ? (string) $tpl->parent_code : null;
+                        }
+                        foreach ($batchRows as $row) {
+                            unset($row['parent_id'], $row['path']);
+                            $row['parent_code'] = $sourceRows[$row['code']] ?? null;
+                            $source[] = $row;
+                        }
+                        $results = $this->insertLevelFromJson(
+                            $companyId, $source, $level
+                        );
+                        if (count($results) !== count($batchRows)) {
+                            throw new DomainException(
+                                'PCGE: no todas las cuentas del nivel '.$level.' fueron insertadas; se revierte el alta.'
+                            );
+                        }
+                        foreach ($results as $res) {
+                            $codeToIdMap[$res->code] = (int) $res->id;
+                            $codeToPathMap[$res->code] = $res->path;
+                        }
+                        $insertedCount += count($results);
+                        continue;
+                    }
+
                     // Inserción en bloques con RETURNING id, code, path para resolver los padres de niveles subsecuentes
                     $chunks = array_chunk($batchRows, 200);
                     foreach ($chunks as $chunk) {
@@ -257,4 +288,62 @@ final readonly class InitializeCompanyChartOfAccountsService
             'initialized_at' => Carbon::now()->toIso8601String(),
         ];
     }
+    /**
+     * One INSERT ... SELECT per PCGE level using the PostgreSQL 18 JSONB
+     * recordset. Parents are always from an earlier committed-in-transaction
+     * level; the hierarchy trigger still verifies each row under FORCE RLS.
+     *
+     * @param list<array<string,mixed>> $source
+     * @return list<object{id:int,code:string,path:string}>
+     */
+    private function insertLevelFromJson(int $companyId, array $source, int $level): array
+    {
+        $json = json_encode(array_values($source), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        $sql = <<<'SQL'
+            INSERT INTO public.accounting_accounts (
+                uuid,company_id,parent_id,code,name,level,path,account_type,
+                balance_type,currency_mode,requires_currency,requires_auxiliary,
+                entity_requirement_type,requires_cost_center,has_automatic_destination,
+                destination_debit_code,destination_credit_code,requires_cash_flow_area,
+                cash_flow_category,financial_statement_rubric,is_operational,is_active,
+                created_at,updated_at
+            )
+            SELECT
+                src.uuid::uuid,?::bigint,parent.id,src.code,src.name,src.level,
+                CASE WHEN src.level=1 THEN src.code
+                    ELSE parent.path || '.' || src.code END,
+                src.account_type,src.balance_type,src.currency_mode,
+                src.requires_currency,src.requires_auxiliary,
+                src.entity_requirement_type,src.requires_cost_center,
+                src.has_automatic_destination,src.destination_debit_code,
+                src.destination_credit_code,src.requires_cash_flow_area,
+                src.cash_flow_category,src.financial_statement_rubric,
+                src.is_operational,src.is_active,src.created_at,src.updated_at
+            FROM jsonb_to_recordset(?::jsonb) AS src (
+                uuid text,code text,name text,parent_code text,level integer,
+                account_type text,balance_type text,currency_mode text,
+                requires_currency boolean,requires_auxiliary boolean,
+                entity_requirement_type text,requires_cost_center boolean,
+                has_automatic_destination boolean,destination_debit_code text,
+                destination_credit_code text,requires_cash_flow_area boolean,
+                cash_flow_category text,financial_statement_rubric text,
+                is_operational boolean,is_active boolean,
+                created_at timestamptz,updated_at timestamptz
+            )
+            LEFT JOIN public.accounting_accounts parent
+                ON parent.company_id=?::bigint
+               AND parent.code=src.parent_code
+            WHERE src.level=1 OR parent.id IS NOT NULL
+            RETURNING id,code,path
+            SQL;
+        /** @var list<object{id:int,code:string,path:string}> $rows */
+        $rows = DB::select($sql, [$companyId, $json, $companyId]);
+        if (count($rows) !== count($source)) {
+            throw new DomainException(
+                'PCGE: faltan cuentas padre en el nivel '.$level.'. Toda la operación será revertida.'
+            );
+        }
+        return $rows;
+    }
+
 }
