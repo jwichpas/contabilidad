@@ -55,6 +55,9 @@ jobs:
           php -l backend/scripts/phase2-neon-global-reference.php
           php -l backend/scripts/phase2-neon-tenant-integrity.php
           php -l backend/scripts/phase2-neon-destination-v2.php
+          php -l backend/scripts/phase2-neon-journal-cost-centers.php
+          php -l backend/database/portable_migrations/2026_10_22_120000_add_journal_line_cost_centers.php
+          php -l backend/app/Models/JournalEntryLine.php
           php -l backend/database/portable_migrations/2026_10_22_110000_create_accounting_destination_rules_v2.php
           php -l backend/database/portable_migrations/2026_10_21_040000_create_reference_data_versions.php
           php -l backend/database/seeders/MasterChartOfAccountsSeeder.php
@@ -87,6 +90,7 @@ jobs:
         run: |
           php backend/scripts/phase2-neon-global-reference.php --plan
           php backend/scripts/phase2-neon-destination-v2.php --plan
+          php backend/scripts/phase2-neon-journal-cost-centers.php --plan
       - name: Validar sintaxis Bash de Docker F1.14
         run: bash -n backend/scripts/phase1-journal-concurrency-docker.sh
       - name: Verificar barreras de seguridad del script
@@ -256,6 +260,13 @@ jobs:
           actual=$(PGPASSWORD=temporary-ci-only psql -h 127.0.0.1 -U postgres -d contabilidad_ci -X -At -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM public.migrations')
           echo "Migraciones registradas en CI: $actual/$expected"
           test "$actual" = "$expected"
+      - name: F2.3a - migrar dimension analitica opcional en PostgreSQL temporal
+        run: |
+          php artisan migrate --database=pgsql_migrations --path=database/portable_migrations/2026_10_22_120000_add_journal_line_cost_centers.php --force --no-interaction
+          PGPASSWORD=temporary-ci-only psql -h 127.0.0.1 -U postgres -d contabilidad_ci -X -At -v ON_ERROR_STOP=1 -c "SELECT CASE WHEN EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='journal_entry_lines' AND column_name='cost_center_id' AND is_nullable='YES') AND EXISTS(SELECT 1 FROM pg_constraint WHERE conname='fk_journal_lines_cost_center_same_tenant' AND contype='f') THEN 'PASS' ELSE 'FAIL' END" | grep -qx PASS
+      - name: Comprobar que no se crean asientos ni se habilita POST automatico
+        run: |
+          PGPASSWORD=temporary-ci-only psql -h 127.0.0.1 -U postgres -d contabilidad_ci -X -At -v ON_ERROR_STOP=1 -c "SELECT CASE WHEN (SELECT COUNT(*) FROM public.journal_entries)=0 THEN 'PASS' ELSE 'FAIL' END" | grep -qx PASS
       - name: Verificar rol app_backend y RLS reales
         working-directory: .
         env:
