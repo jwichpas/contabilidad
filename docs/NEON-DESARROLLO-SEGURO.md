@@ -582,3 +582,44 @@ bash scripts/phase1-journal-concurrency-docker.sh
 ```
 
 El CI está configurado para validar `php -l` y `bash -n` sin conectar a las bases de datos. **El script de concurrencia F1.14 aún no cuenta con salida PASS**, y no debe confundirse la prueba de bloqueo secuenciado con una carga masiva paralela. Neon `contabilidad-dev`, Neon production y Supabase no reciben escrituras de este wrapper.
+
+
+## Datos persistentes de desarrollo: 3 empresas y 3 usuarios (21/10/2026)
+
+Por petición expresa del usuario se dejó de requerir una base vacía para la operación diaria de `contabilidad-dev`: se crearon **3 empresas ficticias, 3 usuarios autenticables y 8 membresías activas**, dentro de una transacción Neo​​n administrada, tras comprobar el nombre/ID de rama `br-odd-lake-b6wshqv3`, `neondb_owner`, 17 migraciones, RLS y ausencia de datos previos. No se insertó nada en Neon `production` ni Supabase.
+
+| Empresa | ID demo (bigint) | RUC ficticio |
+|---|---|---|
+| DEMO A - Comercial Andina S.A.C. | 3000000000101 | 20999990011 |
+| DEMO B - Servicios del Sur S.A.C. | 3000000000102 | 20999990012 |
+| DEMO C - Distribuidora Pacifico S.A.C. | 3000000000103 | 20999990013 |
+
+| Usuario | ID demo | E-mail reservado | Roles |
+|---|---|---|---|
+| Administrador Demo | 3000000000201 | demo.admin@contabilidad.test | ADMIN A/B/C |
+| Contador Demo | 3000000000202 | demo.contador@contabilidad.test | ACCOUNTANT A/B, DATA_ENTRY C |
+| Auditor Demo | 3000000000203 | demo.auditor@contabilidad.test | AUDITOR B/C |
+
+Contraseñas aleatorias distintas, hashes BCrypt en `users.password`; los valores no se publican en el repositorio ni en documentos. Un archivo de credenciales local privado se entregó exclusivamente al usuario. Los `current_company_id` válidos corresponden a A para admin, B para contador y C para auditor. Un SELECT independiente confirmó **3 empresas, 3 usuarios, 8 membresías, 17 migraciones, 0 tokens y 0 asientos**.
+
+**Falta de datos maestros identificada:** `currencies`, `company_settings` y `company_currencies` permanecen vacías; el modelo de moneda tiene `sunat_code VARCHAR(2)`, mientras la Tabla 4 de SUNAT utiliza códigos ISO 4217 de **3 letras** (PEN/USD/CLP). No insertar códigos monetarios artificiales/inválidos para sortear el límite; corregir formalmente el contrato y completar el onboarding multiempresa en una etapa posterior. Hasta entonces las empresas de prueba son válidas para autenticación/roles y pruebas contables básicas, pero **no están completamente configuradas** para uso fiscal o multinacional.
+
+Los probes antiguos `phase1-neon-token-rollback.php`, `phase1-neon-journal-rollback.php` y `phase1-neon-journal-number-rollback.php` habían pasado sobre una rama vacía, pero exigen explícitamente 0 empresas/usuarios y ahora **no deben repetirse sobre estos seeds permanentes**. Mantener la evidencia histórica PASS y utilizar runners nuevos compatibles con datos persistentes.
+
+### F1.14 sin Docker: dos sesiones usando las empresas DEMO de Neon
+
+El usuario reportó `[BLOQUEO] Falta Docker` al ejecutar el wrapper Bash. Se preparó `backend/scripts/phase1-neon-concurrency-demo.php` con `--plan` sin SQL y **`--apply=contabilidad-dev` de escritura PERSISTENTE explícita**. Este script es independiente de Docker y falla cerrado salvo que haya exactamente las 3 empresas demo, 3 usuarios, 17 migraciones y cero asientos/cuentas/periodos (es prueba de **una sola ejecución**). Comprueba host directo exacto, rol `app_backend`, SSL y branch. Verifica la membresía ADMIN de la empresa A bajo RLS.
+
+El script crea **solo en DEMO A** un período octubre 2026 OPEN y 8 cuentas PCGE básicas, prueba bloqueo `FOR UPDATE NOWAIT` con dos conexiones reales (`55P03`) y graba dos asientos con cuatro líneas balanceadas: `10-00001` y `10-00002`. Confirma triggers diferidos, restricción única y conteos. Esos registros **permanecerán en DEMO A** y no deben tratarse como datos reales. En caso de fallo después del primer COMMIT, parte del fixture puede persistir: **no reintentar ciegamente**; revisar el estado antes de corregir.
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-neon-concurrency-demo.php
+php scripts/phase1-neon-concurrency-demo.php --plan
+# Si ambos son correctos, crea asientos/periodo/cuentas ficticios persistentes:
+php scripts/phase1-neon-concurrency-demo.php --apply=contabilidad-dev
+```
+
+Aún no se ha ejecutado el test F1.14 directamente desde el equipo del usuario. No se requieren Docker ni migraciones. **No ejecutar simultáneamente** el runner Docker o probes históricos sobre Neon seeded. Las credenciales de `neondb_owner` siguen reservadas para administracion; la concurrencia usa solo `app_backend`.
