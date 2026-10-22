@@ -120,7 +120,9 @@ try {
             WHERE schemaname='public'
               AND indexname='uq_dest_versions_one_active_per_company')::integer AS active_index,
         has_table_privilege('app_backend',
-            'public.journal_analytic_allocations','SELECT,INSERT') AS can_read_insert,
+            'public.journal_analytic_allocations','SELECT') AS can_read,
+        has_table_privilege('app_backend',
+            'public.journal_analytic_allocations','INSERT') AS can_insert,
         has_table_privilege('app_backend',
             'public.journal_analytic_allocations','UPDATE') AS can_update,
         has_table_privilege('app_backend',
@@ -128,7 +130,7 @@ try {
       SQL,[$migration]);
     if (!$check||(int)$check->migrations!==21||(int)$check->migration_record!==1
         ||(int)$check->fks!==5||!$check->force_rls
-        ||(int)$check->active_index!==1||!$check->can_read_insert
+        ||(int)$check->active_index!==1||!$check->can_read||!$check->can_insert
         ||$check->can_update||$check->can_delete) {
         throw new RuntimeException('Contrato PostgreSQL RLS/FK F2.3b incompleto.');
     }
