@@ -335,6 +335,14 @@ try{
         'F2.3 no pudo crear fixture previa al cierre');
     $fixtureId=(int)($fixtureBody['data']['id']??0);
     $check($fixtureId>0,'F2.3 no obtuvo id fixture');
+    $probePhase='F2.3 GET fiscal periods';
+    $periodList=$request('GET','/api/v1/accounting/fiscal-periods?year=2026',$companyA);
+    $periodListJson=json_decode((string)$periodList->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $check($periodList->getStatusCode()===200
+        &&count($periodListJson['data']??[])===1
+        &&($periodListJson['data'][0]['status']??'')==='OPEN'
+        &&(int)($periodListJson['data'][0]['entry_count']??0)>=2,
+        'F2.3 GET period must include OPEN and real journal count');
     $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
     $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
 
