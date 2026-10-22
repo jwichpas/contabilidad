@@ -64,9 +64,16 @@ php scripts/phase2-neon-analytic-promotion-preflight.php --verify
 
 **No ejecutar las pruebas anteriores automáticamente ni en un entorno de producción.** Cada script impone sus guardas sobre host, rol y base. La activación permanente no forma parte de ninguna rutina manual vigente.
 
+## Resultado actualizado de Neon DEV — 22/10/2026
+
+- **Migración F2.2 aprobada:** Laravel Artisan instaló la número 22; preflight posterior verificó 3 constraints, 2 UNIQUE, 2 políticas FORCE RLS, SELECT/INSERT únicamente para app_backend.
+- **Estado posterior confirmado por SQL independiente:** 3 matrices DRAFT, 0 ACTIVE, 0 asientos, 0 líneas, 0 recibos y 0 auditorías.
+- **Prueba HTTP todavía pendiente:** primer intento con Sanctum y rol app_backend falló en `Illuminate\\Support\\Manager::createDriver()` y registró ROLLBACK. Se corrigió el *harness* con `cache.default=array`, `session.driver=array`, `queue.default=sync` **solo en memoria**, como hace el ensayo Docker ya aprobado; fase de fallo ahora identificable.
+- **No modificar** una matriz DRAFT ni repetir la migración aplicada como reparación de un fallo de configuración de drivers. Siguiente ejecución: `php scripts/phase2-neon-analytic-http.php --probe=contabilidad-dev`.
+
 ## Prueba nueva pendiente — F2.2 idempotencia (22/10/2026)
 
-El backend y frontend ya incluyen deduplicación optativa de POST mediante `Idempotency-Key` y una migración aditiva para recibos protegidos por RLS. **La ejecución manual de Docker PG18 con 20 migraciones y frontend ya fue aprobada.** F2.2 sigue `[ ]` hasta aplicar la migración en Neon DEV y demostrar reintentos HTTP 201/200/409 con ROLLBACK.
+El backend y frontend ya incluyen deduplicación optativa de POST mediante `Idempotency-Key` y una migración aditiva para recibos protegidos por RLS. **La ejecución manual de Docker PG18 con 20 migraciones y frontend ya fue aprobada.** **La migración 22 ya se aplicó mediante Laravel en Neon DEV y está verificada**. F2.2 sigue `[ ]` hasta demostrar reintentos HTTP 201/200/409 con ROLLBACK en Neon.
 
 El mismo wrapper Windows `phase2-active-rls-docker.ps1` instala ahora **20 migraciones** solo en PostgreSQL 18 Docker descartable y prueba HTTP **201 creación / 200 reintento / 409 conflicto**, separación tenant y recibos inmutables, además del antiguo motor 94/95/79. Tras ejecutarlo, correr manualmente `pnpm typecheck`, `pnpm test:unit` y `pnpm build` en `frontend`. [Diseño y puerta de calidad](F2-2-IDEMPOTENCIA-POST.md).
 
