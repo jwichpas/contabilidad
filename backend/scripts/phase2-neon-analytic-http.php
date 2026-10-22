@@ -313,7 +313,81 @@ try{
         'Auditoria/contabilidad extorno HTTP inconsistentes.');
     $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
     echo "[PASS] HTTP 201 extorno + 422 doble extorno; auditoria y triggers bimoneda.\n";
-    echo "[PASS] F2.3d: HTTP harness usa cache/session=array y cola sync solo en memoria.\n";    $successful=true;
+    echo "[PASS] F2.3d: HTTP harness usa cache/session=array y cola sync solo en memoria.\n";    // F2.3: all changes run under existing app_backend transaction (ROLLBACK).
+    $probePhase='F2.3 HTTP CLOSE/REOPEN/LOCK';
+    $fixture=$post;$fixture['entry_number']='F23-REVERSAL-GUARD';
+    $fixtureRes=$request('POST','/api/v1/accounting/journal-entries',$companyA,$fixture);
+    $fixtureBody=json_decode((string)$fixtureRes->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $check($fixtureRes->getStatusCode()===201,
+        'F2.3 no pudo crear fixture previa al cierre');
+    $fixtureId=(int)($fixtureBody['data']['id']??0);
+    $check($fixtureId>0,'F2.3 no obtuvo id fixture');
+    $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
+    $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
+
+    $close=$request('POST',$periodUri.'/close',$companyA,$reason);
+    $closeBody=json_decode((string)$close->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $check($close->getStatusCode()===200
+        &&($closeBody['data']['status']??'')==='CLOSED',
+        'F2.3 cierre OPEN->CLOSED debe ser 200');
+    $closeAgain=$request('POST',$periodUri.'/close',$companyA,$reason);
+    $check($closeAgain->getStatusCode()===409,'F2.3 cierre duplicado debe ser 409');
+
+    $blocked=$post;$blocked['entry_number']='F23-CLOSED-BLOCKED';
+    $closedPost=$request('POST','/api/v1/accounting/journal-entries',$companyA,$blocked);
+    $check($closedPost->getStatusCode()===422,'F2.3 POST en CLOSED debe ser 422');
+    $closedReverse=$request('POST','/api/v1/accounting/journal-entries/'.$fixtureId.'/reverse',
+        $companyA,['fiscal_period_id'=>$periodId,
+          'reversal_date'=>'2026-10-22',
+          'reason'=>'Extorno prohibido en periodo cerrado']);
+    $check($closedReverse->getStatusCode()===422,
+        'F2.3 extorno con destino CLOSED debe ser 422');
+
+    \Laravel\Sanctum\Sanctum::actingAs($auditorUser,['*'],'sanctum');
+    $auditorDenied=$request('POST',$periodUri.'/reopen',$companyA,[
+        'reason'=>'Reapertura por rol auditor no autorizado']);
+    $check($auditorDenied->getStatusCode()===403,'F2.3 auditor debe recibir 403');
+    \Laravel\Sanctum\Sanctum::actingAs($adminUser,['*'],'sanctum');
+
+    $reopen=$request('POST',$periodUri.'/reopen',$companyA,[
+        'reason'=>'Reapertura auditada para ajuste contable de prueba']);
+    $reopenBody=json_decode((string)$reopen->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $check($reopen->getStatusCode()===200
+        &&($reopenBody['data']['status']??'')==='OPEN',
+        'F2.3 CLOSED->OPEN debe responder 200');
+    $allowed=$post;$allowed['entry_number']='F23-REOPENED-OK';
+    $reopenedPost=$request('POST','/api/v1/accounting/journal-entries',$companyA,$allowed);
+    $check($reopenedPost->getStatusCode()===201,
+        'F2.3 no admite POST tras reapertura');
+
+    $closed=$request('POST',$periodUri.'/close',$companyA,$reason);
+    $check($closed->getStatusCode()===200,'F2.3 segundo cierre fallido');
+    $lock=$request('POST',$periodUri.'/lock',$companyA,[
+        'reason'=>'Bloqueo definitivo para impedir reapertura ordinaria']);
+    $lockBody=json_decode((string)$lock->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $check($lock->getStatusCode()===200
+        &&($lockBody['data']['status']??'')==='LOCKED',
+        'F2.3 CLOSED->LOCKED debe ser 200');
+    $reopenDenied=$request('POST',$periodUri.'/reopen',$companyA,[
+        'reason'=>'Intento de reabrir un periodo bloqueado']);
+    $check($reopenDenied->getStatusCode()===409,
+        'F2.3 LOCKED no debe reabrir sin autorización extraordinaria');
+    $lockedPost=$post;$lockedPost['entry_number']='F23-LOCKED-BLOCKED';
+    $r=$request('POST','/api/v1/accounting/journal-entries',$companyA,$lockedPost);
+    $check($r->getStatusCode()===422,'F2.3 POST en LOCKED debe ser 422');
+
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$companyA]);
+    $periodEvents=$db->selectOne(<<<'SQL'
+      SELECT COUNT(*) FILTER (WHERE event_type='FISCAL_PERIOD_CLOSED') AS c,
+        COUNT(*) FILTER (WHERE event_type='FISCAL_PERIOD_REOPENED') AS r,
+        COUNT(*) FILTER (WHERE event_type='FISCAL_PERIOD_LOCKED') AS l
+      FROM public.audit_logs WHERE company_id=?
+      SQL,[$companyA]);
+    $check((int)$periodEvents->c===2&&(int)$periodEvents->r===1
+        &&(int)$periodEvents->l===1,'F2.3 auditoria atomica de cambios incompleta');
+    $db->selectOne("SELECT set_config('app.current_company_id','',true)");
+    echo "[PASS] F2.3 Neon HTTP: CLOSE, REOPEN, LOCK, 403 RBAC, 409 transiciones, 422 POST/extorno bloqueados y 4 auditorias.\n";
+    $successful=true;
 }catch(\Throwable $e){
     // Errors from integration assertions are safe to show, not SQL with secrets.
     // Phased error labels, not raw SQL or full environment values.
