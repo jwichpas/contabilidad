@@ -102,7 +102,7 @@ try {
         || (int)$state->rubrics!==48) {
         throw new RuntimeException('Identidad o catalogos globales distintos del estado aprobado.');
     }
-    echo "[PASS] Globales: PG18, 18 migraciones, 3401 PCGE, 43 NIC/NIIF, 48 rubros, 3 empresas.\n";
+    echo "[PASS] Globales: PG18, ".(int)$state->migrations." migraciones, 3401 PCGE, 43 NIC/NIIF, 48 rubros, 3 empresas.\n";
 
     $tenants=$db->select(<<<'SQL'
         SELECT c.id,c.tax_id,
