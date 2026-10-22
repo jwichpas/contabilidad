@@ -97,20 +97,26 @@ try{
     $phase='POST company wizard';
     $payload=[
       'tax_id'=>'20999990020',
-      'business_name'=>'F3.1 Empresa Ficticia Temporal S.A.C.',
+      'business_name'=>'F3.1 Transporte Temporal E.I.R.L.',
       'legal_address'=>'Av. Desarrollo 100 - Prueba reversible',
-      'legal_form'=>'SAC','tax_regime'=>'GENERAL',
+      'legal_form'=>'EIRL','tax_regime'=>'MYPE_TRIBUTARIO',
       'economic_activities'=>[[
-        'sector_code'=>'COMERCIAL','ciiu_code'=>'4752',
-        'description'=>'Comercio minorista de pinturas','is_primary'=>true
+        'sector_code'=>'TRANSPORTE_LOGISTICA','ciiu_code'=>'4923',
+        'description'=>'Transporte de carga terrestre ficticio','is_primary'=>true
       ]],
       'fiscal_year'=>2026,'income_reference_year'=>2025,
-      'annual_income'=>'0.00','base_currency_code'=>'PEN',
+      'annual_income'=>'100.00','base_currency_code'=>'PEN',
       'secondary_currency_codes'=>['USD'],
       'pcge_version'=>'PCGE_2019','confirm_early_adoption'=>false,
       'confirm_legal_data'=>true,
     ];
+    $startPost=microtime(true);
     $response=$http('POST','/api/v1/tenant/companies',$payload);
+    $postDuration=round(microtime(true)-$startPost,2);
+    echo "[METRICA] F3.1 POST HTTP clonado PCGE: ".number_format($postDuration,2,'.','')." segundos.\n";
+    if($postDuration>25){
+        echo "[AVISO] F3.1 alta >25 s. Evitar reintento web antes de revisar rendimiento.\n";
+    }
     $body=json_decode((string)$response->getContent(),true,512,JSON_THROW_ON_ERROR);
     $id=(int)($body['data']['id']??0);
     $check($response->getStatusCode()===201&&$id>0
@@ -122,7 +128,7 @@ try{
     $detail=$db->selectOne(<<<'SQL'
        SELECT
          (SELECT count(*) FROM public.company_user WHERE company_id=? AND user_id=? AND role='ADMIN') AS members,
-         (SELECT count(*) FROM public.company_settings WHERE company_id=? AND legal_form='SAC' AND tax_regime='GENERAL') AS settings,
+         (SELECT count(*) FROM public.company_settings WHERE company_id=? AND legal_form='EIRL' AND tax_regime='MYPE_TRIBUTARIO') AS settings,
          (SELECT count(*) FROM public.company_currencies WHERE company_id=?) AS currencies,
          (SELECT count(*) FROM public.company_economic_activities WHERE company_id=? AND is_primary=true) AS activities,
          (SELECT count(*) FROM public.accounting_accounts WHERE company_id=?) AS accounts,
@@ -137,7 +143,7 @@ try{
         &&(int)$detail->audits===1,
         'F3.1 configuracion incompleta / auditoria ausente');
     $db->selectOne("SELECT set_config('app.current_company_id','',true)");
-    echo "[PASS] F3.1 HTTP 201: 1 empresa, ADMIN, SAC/GENERAL, PEN/USD, CIIU, PCGE, 6 areas, 9 flujos, 1 auditoria.\n";
+    echo "[PASS] F3.1 HTTP 201: 1 empresa, ADMIN, EIRL/RMT, PEN/USD, CIIU 4923, PCGE, 6 areas, 9 flujos, 1 auditoria.\n";
     $passed=true;
 }catch(\Throwable $e){
     $code=$e instanceof \Illuminate\Database\QueryException
