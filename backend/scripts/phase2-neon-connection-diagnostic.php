@@ -98,6 +98,15 @@ $add('SSL exigido en ambas conexiones',
 $add('Pooling desactivado para estos ensayos',
     !filter_var(env('NEON_USE_POOLING',false),FILTER_VALIDATE_BOOLEAN),
     'Configurar NEON_USE_POOLING=false; no usar host -pooler.');
+$add('Driver de caché Laravel configurado',
+    is_string(config('cache.default')) && trim((string)config('cache.default'))!=='',
+    'En backend/.env usar CACHE_STORE=file (o un cache store configurado).');
+$add('Driver de sesión Laravel configurado',
+    is_string(config('session.driver')) && trim((string)config('session.driver'))!=='',
+    'En backend/.env usar SESSION_DRIVER=file (o un driver configurado).');
+$add('Driver de cola Laravel configurado',
+    is_string(config('queue.default')) && trim((string)config('queue.default'))!=='',
+    'En backend/.env usar QUEUE_CONNECTION=sync durante desarrollo local.');
 $add('Contraseña APP configurada (sin probar login)',
     is_string($traffic['password']??null)&&(string)$traffic['password']!=='',
     'Revisar DB_PASSWORD de app_backend en .env privado.');
