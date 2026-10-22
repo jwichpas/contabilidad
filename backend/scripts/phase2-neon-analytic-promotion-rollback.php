@@ -58,7 +58,7 @@ try{
       SQL);
     if(!$state||$state->actor!=='neondb_owner'||$state->db!=='neondb'
         ||intdiv((int)$state->ver,10000)!==18
-        ||(int)$state->migrations!==21||(int)$state->drafts!==3
+        ||!in_array((int)$state->migrations,[21,22],true)||(int)$state->drafts!==3
         ||(int)$state->active!==0||(int)$state->routes!==1362
         ||(int)$state->entries!==0||(int)$state->audits!==0){
         throw new RuntimeException('Baseline original incompatible con F2.3g.');
