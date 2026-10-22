@@ -277,3 +277,31 @@ php scripts/phase1-neon-schema-bootstrap.php --apply=contabilidad-dev
 ```
 
 La ejecución --apply crea roles, funciones, tablas y políticas **solo** en `contabilidad-dev`. No ejecuta seeds ni copia datos Supabase. Si una migración se detiene, **no reejecutar desde cero**: el inicializador requiere cero tablas iniciales. Registrar el nombre de migración fallida y recuperar el estado read-only antes de decidir un ajuste; no borrar tablas ni hacer `migrate:fresh`. Después comprobar el resumen 16/16, rol `app_backend` y RLS antes de pruebas HTTP.
+
+
+## F1.8 — Esquema realmente instalado y siguiente ronda de pruebas
+
+El usuario ejecutó el bootstrap local explícito y reportó **16/16 migraciones PASS**, 13 tablas FORCE RLS, 5 funciones search_path, auditoría tenant-only y rol app_backend limitado. Se contrastó con SELECT independientes mediante Neon apuntando explícitamente a contabilidad-dev: PostgreSQL **18.6**, **31 tablas public**, **16 registros en migrations**, **13 FORCE RLS**, **5 funciones endurecidas**, app_backend sin privilegios administrativos y audit_logs_select_policy sin eventos globales. No se tocaron Neon production ni Supabase.
+
+Para la siguiente etapa están publicadas dos herramientas nuevas, **no ejecutadas** todavía en la máquina Windows del usuario:
+
+1. `scripts/phase1-neon-app-role-readonly.php` — verifica conexión real con DB_USERNAME=app_backend, PostgreSQL 18, permisos SQL, 13 tablas FORCE RLS y contexto local 101/202 sin crear datos. Usa BEGIN READ ONLY y ROLLBACK; restringida a la rama contabilidad-dev. **No prueba HTTP ni denegación de escrituras cruzadas**.
+2. `scripts/phase1-neon-rls-rollback.php` — `--plan` por defecto sin SQL; `--probe=contabilidad-dev` es **opt-in**. Crea datos A/B dentro de una transacción con app_backend y IDs explícitos (sin nextval), verifica INSERT legítimo, lectura tenant A/B, UPDATE y DELETE cruzados con 0 cambios, INSERT cruzado rechazado por SQLSTATE 42501, sin contexto no hay filas, y termina siempre en ROLLBACK seguido de SELECT de limpieza. No copia ni borra datos existentes; sin embargo, **sí realiza escrituras temporales y debe ejecutarse solo en desarrollo**.
+   
+Pasos seguros desde backend:
+
+```powershell
+git pull --ff-only origin main
+php -l scripts/phase1-neon-app-role-readonly.php
+php -l scripts/phase1-neon-rls-rollback.php
+php scripts/phase1-neon-app-role-readonly.php
+php scripts/phase1-neon-rls-rollback.php --plan
+```
+
+Si los anteriores son PASS, solo cuando se desea realizar la prueba transaccional explícita de dev:
+
+```powershell
+php scripts/phase1-neon-rls-rollback.php --probe=contabilidad-dev
+```
+
+Las pruebas HTTP Pest `CompanyRoleAuthorizationTest` y `TenantContextNestedTest` se habían validado (12 tests/37 assertions) sobre Docker PG18.6 efímero. **No ejecutarlas directamente sobre Neon** sin diseñar antes un runner independiente con comprobación del entorno y limpieza verificable. La ejecución de CI GitHub Actions también se debe tratar como pendiente mientras no haya jobs exitosos.
