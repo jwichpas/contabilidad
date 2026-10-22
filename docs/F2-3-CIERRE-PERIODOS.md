@@ -122,11 +122,55 @@ bash scripts/phase1-journal-concurrency-docker.sh --f23
 
 ---
 
+## Concurrencia Docker aprobada y frontend integrado — 22/10/2026
+
+**Evidencia de ejecución manual aportada por el usuario:**
+
+```text
+[PASS] Concurrencia real: B recibe 55P03 mientras A retiene FOR UPDATE.
+[PASS] Dos conexiones: 10-00001 y 10-00002, dos cabeceras, cuatro partidas, sin duplicados.
+[PASS] F2.3 race CLOSE-first: B 55P03; after commit POST rejected in CLOSED, authorized reopen OK.
+[PASS] F2.3 race POST-first: CLOSE waits, journal 10-00003 posted, then CLOSED.
+[PASS] F2.3 verified: 3 immutable vouchers / 6 lines / 2 closes / 1 reopen, Docker-only.
+[LIMPIEZA] PostgreSQL Docker descartable eliminado.
+```
+
+**F2.3 motor backend de cierre:** aprobación técnica de HTTP, roles, RLS, FOR UPDATE, partida doble, secuencia de estados, auditoría y ambas órdenes concurrentes en PostgreSQL 18. Los ensayos guardaron los asientos únicamente en el contenedor descartable, no en Neon.
+
+**Frontend nuevo publicado en `main` (pendiente compilación y aceptación UI):**
+- `GET /api/v1/accounting/fiscal-periods?year=2026`: consulta de períodos realmente persistidos en la empresa activa, con `status`, `closed_at`, `entry_count`; no crea períodos implícitos ni muestra datos de otros tenants.
+- `FiscalPeriodsView.vue`: ruta hash `#periodos` y menú **Períodos contables**, doce meses, navegación por año, indicadores y estados `OPEN/CLOSED/LOCKED`. Un mes sin período persistido aparece como **Sin registrar** y no permite cambiar estados.
+- **Acciones solo para ADMIN/CHIEF_ACCOUNTANT**: botones según la transición permitida, confirmación con motivo de 10 a 500 caracteres, advertencia explícita para `LOCKED`, errores 409 de concurrencia y recarga. La autorización efectiva sigue estando en el middleware Laravel.
+- El estado activo de empresa se obtiene del selector global ya existente: no se solicita seleccionar otra empresa por cada vista.
+
+**Pruebas manuales siguientes:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l app/Http/Controllers/Api/V1/Accounting/ListFiscalPeriodsController.php
+php -l app/Services/Accounting/FiscalPeriodStatusService.php
+php artisan route:list --path=api/v1/accounting/fiscal-periods
+# Prueba reversible actualizada, incluye GET de período y conteo para empresa A:
+php scripts/phase2-neon-analytic-http.php --period-only=contabilidad-dev
+php scripts/phase2-neon-journal-idempotency.php --verify
+
+cd ..\frontend
+pnpm typecheck
+pnpm test:unit
+pnpm build
+```
+
+**Aceptación visual:** navegar al módulo tras autenticarte; comprobar la pantalla vacía en Neon DEV (cero períodos confirmados), filtros anuales y responsividad; en desarrollo usar fixtures descartables o el API con datos ficticios aislados para probar los diálogos, sin bloquear permanentemente períodos en Neon. **No marcar F2.3 [x] hasta pruebas y aceptación frontend.**
+
+---
+
 ## Puertas todavía abiertas
 
 1. El flujo HTTP nuevo **superó** la ejecución manual del usuario; F2.3 seguirá `[ ]` hasta verificar las carreras de concurrencia y completar los criterios de aceptación restantes.
-2. Ejecutar el nuevo ensayo de concurrencia Docker con dos conexiones `app_backend`: cierre primero y asiento primero, NOWAIT/55P03, posterior observación del estado y auditorías.
-3. Completar exposición UX/UI del estado del período y revisión de procedimientos de cierre (conciliaciones previas y permisos de reapertura extraordinaria), si forman parte de la aprobación operativa.
+2. **Aprobado:** las dos carreras CLOSE-first y POST-first superaron la prueba Docker con 55P03, correlativos únicos y auditoría.
+3. **Frontend implementado, pendiente pruebas:** ejecutar `pnpm typecheck`, `pnpm build`, verificar el GET de períodos en Neon y revisar los diálogos y controles. Las conciliaciones previas y la reapertura extraordinaria de LOCKED quedan como diseño/procedimiento separado.
 4. Corregir `CACHE_STORE=file`, `SESSION_DRIVER=file` y `QUEUE_CONNECTION=sync` en el `.env` privado local si el diagnóstico de Laravel sigue marcando `FAIL`. El *harness* HTTP usa drivers `array/sync` temporales solo para pruebas.
 
 **No habilitar matrices analíticas ACTIVE de forma persistente ni ejecutar `migrate:fresh`.**
