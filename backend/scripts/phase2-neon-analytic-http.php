@@ -82,7 +82,7 @@ try{
         SQL);
     if(!$pre||$pre->database_name!=='neondb'
         ||intdiv((int)$pre->version,10000)!==18
-        ||(int)$pre->migrations!==21||(int)$pre->companies!==3
+        ||!in_array((int)$pre->migrations,[21,22],true)||(int)$pre->companies!==3
         ||(int)$pre->entries!==0||(int)$pre->lines!==0||(int)$pre->analytic!==0
         ||(int)$pre->periods!==0||(int)$pre->rates!==0||(int)$pre->audit!==0
         ||(int)$pre->drafts!==3||(int)$pre->active!==0){
@@ -131,12 +131,15 @@ try{
     $db->selectOne("SELECT set_config('app.current_company_id','',true)");
     if(!$route||!$offset||!$foreignCenter)throw new RuntimeException('Faltan fixtures contables demo.');
 
-    $request=static function(string $method,string $path,int $companyId,?array $payload=null) use($kernel):\Symfony\Component\HttpFoundation\Response {
+    $request=static function(
+        string $method,string $path,int $companyId,?array $payload=null,?string $key=null
+    ) use($kernel):\Symfony\Component\HttpFoundation\Response {
         $headers=[
             'HTTP_ACCEPT'=>'application/json',
             'CONTENT_TYPE'=>'application/json',
             'HTTP_X_COMPANY_ID'=>(string)$companyId,
         ];
+        if($key!==null)$headers['HTTP_IDEMPOTENCY_KEY']=$key;
         $req=\Illuminate\Http\Request::create(
             $path,$method,[],[],[],$headers,
             $payload!==null?json_encode($payload,JSON_THROW_ON_ERROR):null
@@ -168,7 +171,10 @@ try{
             ],
         ],
     ];
-    $createdResponse=$request('POST','/api/v1/accounting/journal-entries',$companyA,$post);
+    // Schema 21: original DRAFT POST test; schema 22: F2.2 Idempotency-Key
+    // exercises real Neon app_backend, same transaction and ROLLBACK.
+    $idempotencyKey=(int)$pre->migrations===22?'f22-neon-draft-lookup-key-001':null;
+    $createdResponse=$request('POST','/api/v1/accounting/journal-entries',$companyA,$post,$idempotencyKey);
     $created=json_decode((string)$createdResponse->getContent(),true,512,JSON_THROW_ON_ERROR);
     $check($createdResponse->getStatusCode()===201,
         'HTTP POST esperado 201: '.(string)$createdResponse->getStatusCode()
@@ -178,6 +184,31 @@ try{
     $periodId=(int)($entry['fiscal_period_id']??0);
     $check($entryId>0&&$periodId>0&&count($entry['lines']??[])===2,
         'HTTP DRAFT debe devolver asiento con 2 lineas, sin automaticas.');
+
+    if($idempotencyKey!==null){
+        $again=$request('POST','/api/v1/accounting/journal-entries',$companyA,$post,$idempotencyKey);
+        $againJson=json_decode((string)$again->getContent(),true,512,JSON_THROW_ON_ERROR);
+        $check($again->getStatusCode()===200
+            &&(int)($againJson['data']['id']??0)===$entryId
+            &&$again->headers->get('Idempotency-Replayed')==='true',
+            'HTTP Neon idempotencia no devolvio mismo asiento con 200.');
+        $different=$post;
+        $different['description']='F22 CLAVE REPETIDA CONTENIDO DISTINTO';
+        $conflict=$request('POST','/api/v1/accounting/journal-entries',
+            $companyA,$different,$idempotencyKey);
+        $check($conflict->getStatusCode()===409,
+            'HTTP Neon misma clave con diferente contenido no devolvio 409.');
+        $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$companyA]);
+        $idem=$db->selectOne(<<<'SQL'
+            SELECT (SELECT count(*) FROM public.journal_post_idempotency WHERE company_id=?) AS receipts,
+              (SELECT count(*) FROM public.journal_entries WHERE company_id=?) AS entries,
+              (SELECT count(*) FROM public.audit_logs WHERE company_id=? AND event_type='JOURNAL_ENTRY_CREATED') AS audits
+            SQL,[$companyA,$companyA,$companyA]);
+        $check((int)$idem->receipts===1&&(int)$idem->entries===1&&(int)$idem->audits===1,
+            'F2.2 Neon duplico recibos, asientos o auditoria.');
+        $db->selectOne("SELECT set_config('app.current_company_id','',true)");
+        echo "[PASS] F2.2 Neon app_backend: HTTP 201/200/409, 1 recibo, 1 asiento, 1 auditoria.\n";
+    }
 
     $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$companyA]);
     $counts=$db->selectOne(<<<'SQL'
@@ -284,7 +315,10 @@ if($successful){
               (SELECT count(*) FROM public.accounting_destination_rule_versions WHERE status='DRAFT')::integer AS drafts,
               (SELECT count(*) FROM public.accounting_destination_rule_versions WHERE status='ACTIVE')::integer AS active
           SQL);
-        $successful=$after&&(int)$after->entries===0&&(int)$after->lines===0
+        $receipts=(int)$pre->migrations===22
+            ? (int)$owner->selectOne('SELECT count(*) AS n FROM public.journal_post_idempotency')->n
+            : 0;
+        $successful=$receipts===0 && $after&&(int)$after->entries===0&&(int)$after->lines===0
             &&(int)$after->allocations===0&&(int)$after->periods===0
             &&(int)$after->rates===0&&(int)$after->audits===0
             &&(int)$after->drafts===3&&(int)$after->active===0;
