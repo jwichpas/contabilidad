@@ -418,3 +418,38 @@ php scripts/phase1-neon-journal-rollback.php --probe=contabilidad-dev
 Al concluir usar lecturas independientes de Neon para constatar que no hay empresas, usuarios, tokens, asientos, partidas ni auditoría persistentes. En las pruebas transaccionales jamás correr `migrate:fresh`, ni usar el propietario `neondb_owner` para tráfico o tests de seguridad. Neon `production` y Supabase se conservan intactos.
 
 Verificación independiente antes de estas nuevas pruebas: PG18.6, 16 migraciones, 0 empresas, 0 usuarios, 0 tokens, 0 asientos, 0 líneas, 0 eventos de auditoría y 2 triggers de partida doble configurados como DEFERRABLE INITIALLY DEFERRED.
+
+
+## Continuación F1.10–F1.11 — hardening del motor contable (21/10/2026)
+
+Se revisaron los controladores REST de login/logout, servicio de asientos y permisos PostgreSQL directamente en Neon `contabilidad-dev`. La consulta de catálogos confirmó `app_backend` con SELECT/INSERT/DELETE en `personal_access_tokens` (necesarios para login y revocación), sin DELETE en `journal_entries`, `journal_entry_lines` ni `audit_logs`. `personal_access_tokens.expires_at` es TIMESTAMPTZ; Laravel genera token con vencimiento de 12 h.
+
+**F1.11 se amplió para comprobar el trigger diferido en el caso negativo.** Además de la validación PHP/HTTP 422, el nuevo test inserta directamente mediante app_backend una cabecera y dos líneas que descuadran la moneda local, dentro de `SAVEPOINT f111_deferred_bad`; configura `SET CONSTRAINTS ALL DEFERRED` y luego `SET CONSTRAINTS ALL IMMEDIATE` para exigir SQLSTATE 23514. Siempre ejecuta `ROLLBACK TO SAVEPOINT` y verifica que la cabecera inválida desaparezca antes del ROLLBACK global. Ahora espera **7 comprobaciones** (antes eran 6). Esto evita considerar probado el trigger solo por haber pasado por la validación previa de PHP.
+
+**Verificación independiente antes de ejecutar pruebas**: Neon PG18.6, 16 migraciones, cero empresas, usuarios, tokens, asientos, partidas y auditorías. No hubo escrituras remotas en esta revisión.
+
+Comandos recomendados, en orden y sin reintentos ciegos:
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-neon-token-rollback.php
+php -l scripts/phase1-neon-journal-rollback.php
+php scripts/phase1-neon-token-rollback.php --plan
+php scripts/phase1-neon-journal-rollback.php --plan
+```
+
+Si ambos lint y planes terminan correctamente, ejecutar solo **F1.10** en la rama `contabilidad-dev`:
+
+```bash
+php scripts/phase1-neon-token-rollback.php --probe=contabilidad-dev
+```
+
+Solo cuando ese comando termina PASS con limpieza confirmada, proseguir con **F1.11**:
+
+```bash
+php scripts/phase1-neon-journal-rollback.php --probe=contabilidad-dev
+```
+
+Ambos `--probe` hacen escrituras dentro de transacciones y hacen ROLLBACK; pueden avanzar secuencias PostgreSQL. Sus resultados aún son **PENDIENTES** y los archivos deberán pasar lint PHP en el entorno local, pese al chequeo CI configurado. No ejecutar `php artisan test` general contra Neon. Neon production y Supabase siguen intactos.
