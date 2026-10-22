@@ -93,7 +93,7 @@ final readonly class InitializeCompanyChartOfAccountsService
 
         // 4. Ejecutar la clonación aislada bajo el contexto del Tenant en una transacción
         $totalInserted = $this->tenantContext->run($companyId, function () use ($companyId, $planVersion, $expandedTemplates, $existingAccountsCount): int {
-            return DB::transaction(function () use ($companyId, $templates, $existingAccountsCount): int {
+            return DB::transaction(function () use ($companyId, $expandedTemplates, $existingAccountsCount): int {
                 // Si existían cuentas previas y estamos en modo forzado (sin movimientos contables),
                 // desvincular parámetros de configuración y centros de costo antes de eliminar en cascada ascendente
                 if ($existingAccountsCount > 0) {
