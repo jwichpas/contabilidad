@@ -166,11 +166,34 @@ pnpm build
 
 ---
 
+## Frontend compilado — bloqueo de preflight local Windows (22/10/2026)
+
+**Resultados manuales aportados:** `php -l ListFiscalPeriodsController.php` PASS; `artisan route:list` confirma rutas GET y POST de períodos; `pnpm typecheck` PASS; `pnpm test:unit` **16/16 PASS**; `pnpm build` producción **PASS** (Vite 6.4.4). La interfaz está construida y compila.
+
+**Pendiente GET HTTP y aceptación visual:** `phase2-neon-analytic-http.php --period-only=contabilidad-dev` devolvió `[BLOQUEO] Solo Neon PG18 DEV app_backend + SSL, credenciales coincidentes.` **antes de conectar a Neon y antes de ejecutar SQL**. Esto no representa un fallo del endpoint GET, RLS, cierre ni auditoría; el bloque de validación compara `APP_ENV`, `DB_CONNECTION`, host/puerto/base/roles APP y ADMIN, URLs, SSL, pooling, APP_KEY y coincidencia `DB_PASSWORD` / `DB_APP_BACKEND_ROLE_PASSWORD`. La prueba HTTP antigua de cierre y la concurrencia Docker ya quedaron aprobadas.
+
+**Siguiente ejecución local (no compartir secretos):**
+
+```powershell
+cd C:\Proyectos\contabilidad\backend
+php scripts/phase2-neon-connection-diagnostic.php --check
+# Si falla por variables heredadas, revisar SOLO sus nombres:
+Get-ChildItem Env: |
+  Where-Object { $_.Name -match '^(APP_ENV|APP_KEY|DB_|NEON_|DATABASE_URL)' } |
+  Select-Object -ExpandProperty Name
+```
+
+Si esas variables están presentes en el proceso, pueden prevalecer sobre `backend/.env`. Limpiar solo los overrides de la **sesión actual** luego de verificar que todas las credenciales y configuraciones estén guardadas en `.env`; no revelar valores, regenerar claves ni trasladar credenciales a Git. Volver a ejecutar diagnóstico `--check`; cuando termine 100% PASS, repetir **solamente** `--period-only=contabilidad-dev`. La prueba termina con ROLLBACK.
+
+**F2.3 permanece `[ ]`** hasta comprobar GET real y evaluar UI de navegación, motivo, roles y cambio de estado en el navegador. Plan global **6/32 (19%)**.
+
+---
+
 ## Puertas todavía abiertas
 
 1. El flujo HTTP nuevo **superó** la ejecución manual del usuario; F2.3 seguirá `[ ]` hasta verificar las carreras de concurrencia y completar los criterios de aceptación restantes.
 2. **Aprobado:** las dos carreras CLOSE-first y POST-first superaron la prueba Docker con 55P03, correlativos únicos y auditoría.
-3. **Frontend implementado, pendiente pruebas:** ejecutar `pnpm typecheck`, `pnpm build`, verificar el GET de períodos en Neon y revisar los diálogos y controles. Las conciliaciones previas y la reapertura extraordinaria de LOCKED quedan como diseño/procedimiento separado.
+3. **Frontend typecheck/tests/build PASS:** falta únicamente desbloquear preflight de Windows, verificar GET RLS real en Neon y aceptar visualmente los diálogos y controles. Las conciliaciones previas y la reapertura extraordinaria de LOCKED quedan como diseño/procedimiento separado.
 4. Corregir `CACHE_STORE=file`, `SESSION_DRIVER=file` y `QUEUE_CONNECTION=sync` en el `.env` privado local si el diagnóstico de Laravel sigue marcando `FAIL`. El *harness* HTTP usa drivers `array/sync` temporales solo para pruebas.
 
 **No habilitar matrices analíticas ACTIVE de forma persistente ni ejecutar `migrate:fresh`.**
