@@ -479,6 +479,11 @@ async function handleSubmit(): Promise<void> {
       errorMessage.value = `Seleccione una cuenta contable operativa en la línea #${i + 1}.`;
       return;
     }
+    const chosenAccount = operationalAccounts.value.find((account) => account.id === l.accountId);
+    if (chosenAccount?.requires_cost_center && !l.costCenterId) {
+      errorMessage.value = `La cuenta ${chosenAccount.code} requiere centro de costos en la línea #${i + 1}.`;
+      return;
+    }
     const d = parseAmount(l.debitLocal);
     const c = parseAmount(l.creditLocal);
     if (d.isZero() && c.isZero()) {
@@ -938,7 +943,7 @@ onMounted(() => {
               <tr class="bg-surface-muted border-b border-border text-[11px] font-bold text-muted uppercase">
                 <th class="py-2.5 px-3 w-10 text-center">#</th>
                 <th class="py-2.5 px-3 w-[340px]">Cuenta Contable Operativa</th>
-                <th class="py-2.5 px-3 w-44">Centro de costo</th>
+                <th class="py-2.5 px-3 w-44" title="Obligatorio solo si la cuenta contable lo exige; no genera transferencia automática">Centro de costo</th>
                 <th class="py-2.5 px-3">Glosa Específica</th>
                 <th class="py-2.5 px-3 w-36 text-right">Debe ({{ baseCurrencyInfo.code }})</th>
                 <th class="py-2.5 px-3 w-36 text-right">Haber ({{ baseCurrencyInfo.code }})</th>
