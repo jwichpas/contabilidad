@@ -63,6 +63,7 @@ jobs:
           php -l backend/scripts/phase2-neon-analytic-rls.php
           php -l backend/scripts/phase2-neon-analytic-http.php
           php -l backend/scripts/phase2-neon-analytic-http-active.php
+          php -l backend/scripts/phase2-neon-analytic-promotion-preflight.php
           php -l backend/app/Http/Controllers/Api/V1/Accounting/ListJournalEntriesController.php
           php -l backend/database/portable_migrations/2026_10_22_130000_create_journal_analytic_allocations.php
           php -l backend/app/Services/Accounting/AnalyticRoutingService.php
@@ -122,6 +123,7 @@ jobs:
           php backend/scripts/phase2-neon-analytic-rls.php --plan
           php backend/scripts/phase2-neon-analytic-http.php --plan
           php backend/scripts/phase2-neon-analytic-http-active.php --plan
+          php backend/scripts/phase2-neon-analytic-promotion-preflight.php --plan
       - name: Validar sintaxis Bash de Docker F1.14
         run: bash -n backend/scripts/phase1-journal-concurrency-docker.sh
       - name: Verificar barreras de seguridad del script
