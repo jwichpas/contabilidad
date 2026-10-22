@@ -97,6 +97,8 @@ try{
           (SELECT count(*) FROM public.exchange_rates)::integer AS rates,
           (SELECT count(*) FROM public.audit_logs)::integer AS audit,
           (SELECT count(*) FROM public.audit_logs WHERE event_type NOT IN ('AUTH_LOGIN','AUTH_LOGOUT','AUTH_LOGIN_FAILED','TENANT_SWITCH'))::integer AS accounting_audit,
+          (SELECT count(*) FROM public.fiscal_periods f JOIN public.companies c ON c.id=f.company_id WHERE c.tax_id='20999990011' AND f.year=2026 AND f.month=1 AND f.status='OPEN' AND f.closed_at IS NULL)::integer AS approved_january,
+          (SELECT count(*) FROM public.audit_logs a JOIN public.fiscal_periods f ON a.company_id=f.company_id AND a.auditable_id=f.id::text JOIN public.companies c ON c.id=f.company_id WHERE c.tax_id='20999990011' AND f.year=2026 AND f.month=1 AND a.event_type='FISCAL_PERIOD_OPENED')::integer AS approved_january_audit,
           (SELECT count(*) FROM public.accounting_destination_rule_versions WHERE status='DRAFT')::integer AS drafts,
           (SELECT count(*) FROM public.accounting_destination_rule_versions WHERE status='ACTIVE')::integer AS active
         SQL);
@@ -104,9 +106,12 @@ try{
         ||intdiv((int)$pre->version,10000)!==18
         ||!in_array((int)$pre->migrations,[21,22],true)||(int)$pre->companies!==3
         ||(int)$pre->entries!==0||(int)$pre->lines!==0||(int)$pre->analytic!==0
-        ||(int)$pre->periods!==0||(int)$pre->rates!==0||(int)$pre->accounting_audit!==0
+        ||(int)$pre->rates!==0||!in_array((int)$pre->periods,[0,1],true)
+        ||(int)$pre->approved_january!==(int)$pre->periods
+        ||(int)$pre->accounting_audit!==(int)$pre->periods
+        ||(int)$pre->approved_january_audit!==(int)$pre->periods
         ||(int)$pre->drafts!==3||(int)$pre->active!==0){
-        throw new RuntimeException('Precondiciones demo de Neon incumplidas (21 migraciones, 0 movimientos, 3 DRAFT).');
+        throw new RuntimeException('Precondiciones DEMO: 21/22 migraciones, 0 asientos y periodo de enero E2E opcional.');
     }
     $all=$owner->select('SELECT id,tax_id FROM public.companies ORDER BY tax_id');
     if(array_column($all,'tax_id')!==['20999990011','20999990012','20999990013']) {
@@ -340,9 +345,11 @@ try{
     $periodList=$request('GET','/api/v1/accounting/fiscal-periods?year=2026',$companyA);
     $periodListJson=json_decode((string)$periodList->getContent(),true,512,JSON_THROW_ON_ERROR);
     $check($periodList->getStatusCode()===200
-        &&count($periodListJson['data']??[])===1
-        &&($periodListJson['data'][0]['status']??'')==='OPEN'
-        &&(int)($periodListJson['data'][0]['entry_count']??0)>=2,
+        &&count($periodListJson['data']??[])===(int)$pre->periods+1
+        &&count(array_filter($periodListJson['data']??[],
+            static fn(array $p):bool=>(int)$p['month']===10
+                &&$p['status']==='OPEN'
+                &&(int)$p['entry_count']>=2))===1,
         'F2.3 GET period must include OPEN and real journal count');
     $probePhase='F2.3 month creation validation';
     $bad=$request('POST','/api/v1/accounting/fiscal-periods',$companyA,[
@@ -367,9 +374,11 @@ try{
     $listResult=$request('GET','/api/v1/accounting/fiscal-periods?year=2026',$companyA);
     $listBody=json_decode((string)$listResult->getContent(),true,512,JSON_THROW_ON_ERROR);
     $check($listResult->getStatusCode()===200
-        &&count($listBody['data']??[])===2
-        &&(int)($listBody['data'][1]['month']??0)===11
-        &&(int)($listBody['data'][1]['entry_count']??-1)===0,
+        &&count($listBody['data']??[])===(int)$pre->periods+2
+        &&count(array_filter($listBody['data']??[],
+            static fn(array $p):bool=>(int)$p['month']===11
+                &&$p['status']==='OPEN'
+                &&(int)$p['entry_count']===0))===1,
         'The new OPEN month must appear without vouchers');
     $probePhase='F2.3 list periods company B';
     $otherPeriods=$request('GET','/api/v1/accounting/fiscal-periods?year=2026',$companyB);
@@ -527,11 +536,11 @@ if($successful){
             ? (int)$owner->selectOne('SELECT count(*) AS n FROM public.journal_post_idempotency')->n
             : 0;
         $successful=$receipts===0 && $after&&(int)$after->entries===0&&(int)$after->lines===0
-            &&(int)$after->allocations===0&&(int)$after->periods===0
+            &&(int)$after->allocations===0&&(int)$after->periods===(int)$pre->periods
             &&(int)$after->rates===0&&(int)$after->audits===(int)$pre->audit
             &&(int)$after->drafts===3&&(int)$after->active===0;
         echo $successful
-            ? "[PASS] HTTP POST-ROLLBACK: 0 asientos/lineas/links/periodos/TC, auditoria sin cambios, 3 DRAFT.\n"
+            ? "[PASS] HTTP POST-ROLLBACK: 0 nuevos asientos/lineas/links/periodos/TC, auditoria sin cambios, 3 DRAFT.\n"
             : "[BLOQUEO] HTTP POST-ROLLBACK no coincide con baseline.\n";
     }catch(\Throwable){$successful=false;fwrite(STDERR,"[BLOQUEO] Verificacion HTTP post-rollback fallida.\n");}
 }
