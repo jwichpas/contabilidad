@@ -53,6 +53,29 @@ final class CompanyEconomicProfile
         }
     }
 
+    /**
+     * Clearly-mappable legal forms from SUNAT RUC Annex 2.
+     * SACS and OTRA intentionally have no invented one-to-one mapping.
+     */
+    public static function assertContributorTypeMatchesLegalForm(string $form,string $type):void
+    {
+        $known=[
+            'PERSONA_NATURAL'=>['02'],
+            'EIRL'=>['07'],
+            'SRL'=>['28'],
+            'SA'=>['26'],
+            'SAA'=>['38'],
+            'SAC'=>['39'],
+        ];
+        if(isset($known[$form]) && !in_array($type,$known[$form],true)){
+            throw ValidationException::withMessages([
+                'sunat_contributor_type_code'=>[
+                    'El tipo SUNAT seleccionado no corresponde a la forma jurídica. Revise el anexo 2.',
+                ],
+            ]);
+        }
+    }
+
     public static function assertTaxRegimeEligibility(string $taxRegime, ?string $legalForm): void
     {
         if ($taxRegime === 'NRUS' && $legalForm !== 'PERSONA_NATURAL') {
