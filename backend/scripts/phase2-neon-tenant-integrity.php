@@ -18,7 +18,7 @@ if ($argc > 2 || ! in_array($mode, ['--plan','--verify'],true)) {
     exit(2);
 }
 if ($mode === '--plan') {
-    echo "[PLAN] READ ONLY: 19/20 migraciones, catalogos globales y 3 empresas existentes.\n";
+    echo "[PLAN] READ ONLY: 19/20/21/22 migraciones, catalogos globales y 3 empresas existentes.\n";
     echo "[PLAN] Por empresa: 2966 cuentas, 1214 operativas de 6 digitos, jerarquia sin huerfanos.\n";
     echo "[PLAN] Valida areas, centros, monedas, configuracion, cuentas vinculadas y RLS.\n";
     echo "[PLAN] Verifica 454 rutas versionadas por empresa; codigos 9411/7911 legacy NO son destinos activos.\n";
@@ -91,7 +91,7 @@ try {
     if ($state===null || $state->role_name!=='neondb_owner'
         || $state->db_name!=='neondb'
         || intdiv((int)$state->pg_ver,10000)!==18
-        || ! in_array((int)$state->migrations,[19,20,21],true)
+        || ! in_array((int)$state->migrations,[19,20,21,22],true)
         || (int)$state->templates!==3401
         || (int)$state->ledger!==1
         || (int)$state->companies!==3
