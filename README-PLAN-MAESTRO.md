@@ -7,7 +7,7 @@
 >
 > **Fase 1 validada técnicamente en Neon DEV.** El motor POST, extornos, analítica 94/95/79 y aislamiento ACTIVE+RLS fueron probados manualmente (F2.3b–F2.3h). Sin embargo **F2.2 no está cerrada hasta validar idempotencia** y **F2.3 no está cerrada hasta validar el cierre de periodos**. F3.2 dispone de 3.401 plantillas PCGE y 3 empresas DEMO con planes operativos de seis dígitos.
 >
-> **F2.2 (22/10/2026):** se publicaron migración aditiva `journal_post_idempotency`, servicio de recibos inmutables por empresa/usuario, respuestas HTTP 201/200/409, reutilización controlada de clave UUID en Vue y pruebas Docker PG18 ampliadas de 19 a 20 migraciones. **Todo sigue PENDIENTE de validación manual; Neon conserva 21 migraciones y 3 DRAFT.** [Plan y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).
+> **F2.2 (22/10/2026):** se publicaron migración aditiva `journal_post_idempotency`, servicio de recibos inmutables por empresa/usuario, respuestas HTTP 201/200/409, reutilización controlada de clave UUID en Vue y pruebas Docker PG18 ampliadas de 19 a 20 migraciones. **Las pruebas manuales Docker con 20 migraciones y Vue (16/16 tests, typecheck, build) están APROBADAS.** Neon aún tiene 21 migraciones, tres DRAFT y cero asientos; falta aplicar la migración Laravel protegida y probar HTTP 201/200/409 reversible en Neon DEV. [Plan y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).
 >
 > **Decisión: NO utilizar GitHub Actions.** Los dos workflows fueron retirados de `main`; las pruebas se ejecutan **manualmente** en Windows/PowerShell/PHP/Neon DEV y PostgreSQL Docker desechable. Procedimiento y resultados en [Validación manual y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md). **No hay habilitación automática de matrices ni uso de datos reales.**
 >
@@ -412,7 +412,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ### Fase 2 — Motor contable
 - [x] **F2.1** Eliminar punto flotante del circuito monetario y validar precisión. [Decimal PHP](backend/app/Support/Math/Decimal.php), [pruebas manuales PEN/USD y partida doble exacta](docs/F2-3B-MOTOR-ANALITICO-POST.md). *Importes DECIMAL 4 y TC 6; cálculos frontend con BigInt.*
-- [ ] **F2.2** Implementar numeración segura, idempotencia y atomicidad. *Numeración/concurrencia y atomicidad probadas. Idempotencia HTTP implementada en código (recibos RLS, advisory lock, 201/200/409 y retry Vue), pero **migración Neon y pruebas manuales del nuevo flujo pendientes**. [Diseño y comandos](docs/F2-2-IDEMPOTENCIA-POST.md).*
+- [ ] **F2.2** Implementar numeración segura, idempotencia y atomicidad. *Pruebas manuales **Docker PostgreSQL 18 / 20 migraciones PASS**, concurrencia e idempotencia HTTP 201/200/409, FORCE RLS, rollback y Vue (16/16 unitarias, typecheck, build) aprobadas. **Falta instalar/verificar la migración Laravel en Neon DEV y repetir el POST idempotente bajo app_backend con ROLLBACK.** [Evidencia y procedimiento](docs/F2-2-IDEMPOTENCIA-POST.md).*
 - [ ] **F2.3** Validar POST, extornos, cierre y controles de partida doble. *POST/extornos/analítica/partida doble y RLS **PASS F2.3b–h**; **pendiente cierre y reapertura/periodo bloqueado**. [Evidencia](docs/F2-3B-MOTOR-ANALITICO-POST.md).*
 
 ### Fase 3 — Empresas y maestros
