@@ -121,6 +121,16 @@ final readonly class CreateCompanyFromWizardController
             ]);
         }
 
+        // The browser request normally uses PHP's 30-second web limit.
+        // Keep a higher limit only around this unusually heavy, atomic PCGE
+        // setup; restore the previous PHP limit for a reused worker.
+        $previousTimeLimit = (int) ini_get('max_execution_time');
+        $extendedTimeLimit = $previousTimeLimit > 0 && $previousTimeLimit < 120
+            && function_exists('set_time_limit');
+        if ($extendedTimeLimit) {
+            @set_time_limit(120);
+        }
+
         try {
             $outcome = DB::transaction(function () use ($validated, $currencyMap, $currencyCodes, $taxId, $user, $request): array {
                 $company = Company::query()->create([
@@ -183,8 +193,10 @@ final readonly class CreateCompanyFromWizardController
                         ]);
                     }
 
+                    // F3.1: PostgreSQL JSONB bulk copy, one INSERT per PCGE
+                    // level instead of many large INSERTs over the Neon link.
                     $plan = $this->chartInitializer->initialize(
-                        $companyId, (string) $validated['pcge_version'], false
+                        $companyId, (string) $validated['pcge_version'], false, true
                     );
 
                     // En la misma transaccion: 6 áreas organizacionales y 9
@@ -236,6 +248,10 @@ final readonly class CreateCompanyFromWizardController
             throw ValidationException::withMessages([
                 'pcge_version' => [$exception->getMessage()],
             ]);
+        } finally {
+            if ($extendedTimeLimit) {
+                @set_time_limit($previousTimeLimit);
+            }
         }
 
         return response()->json(['data' => $outcome], Response::HTTP_CREATED);
