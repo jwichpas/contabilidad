@@ -1,0 +1,2927 @@
+{
+  "dataset": "sunat_ciiu_rev4",
+  "version": "2026-10-22-v1",
+  "source": "TablaOficialCIIURev4.xls Hoja1 (archivo suministrado)",
+  "source_kind": "user_supplied_reference_transcription",
+  "rows": [
+    {
+      "division": "01",
+      "group": "1",
+      "class_number": "1",
+      "code": "0111",
+      "name": "CULTIVO DE CEREALES (EXCEPTO ARROZ), LEGUMBRES Y SEMILLAS OLEAGINOSAS"
+    },
+    {
+      "division": "01",
+      "group": "1",
+      "class_number": "2",
+      "code": "0112",
+      "name": "CULTIVO DE ARROZ"
+    },
+    {
+      "division": "01",
+      "group": "1",
+      "class_number": "3",
+      "code": "0113",
+      "name": "CULTIVO DE HORTALIZAS Y MELONES, RAÍCES Y TUBÉRCULOS."
+    },
+    {
+      "division": "01",
+      "group": "1",
+      "class_number": "4",
+      "code": "0114",
+      "name": "CULTIVO DE CAÑA DE AZÚCAR"
+    },
+    {
+      "division": "01",
+      "group": "1",
+      "class_number": "5",
+      "code": "0115",
+      "name": "CULTIVO DE TABACO"
+    },
+    {
+      "division": "01",
+      "group": "1",
+      "class_number": "6",
+      "code": "0116",
+      "name": "CULTIVO DE PLANTAS DE FIBRA"
+    },
+    {
+      "division": "01",
+      "group": "1",
+      "class_number": "9",
+      "code": "0119",
+      "name": "CULTIVO DE OTRAS PLANTAS NO PERENNES"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "1",
+      "code": "0121",
+      "name": "CULTIVO DE UVA"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "2",
+      "code": "0122",
+      "name": "CULTIVO DE FRUTAS TROPICALES Y SUBTROPICALES"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "3",
+      "code": "0123",
+      "name": "CULTIVO DE CÍTRICOS"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "4",
+      "code": "0124",
+      "name": "CULTIVO DE FRUTAS DE PEPITA Y DE HUESO"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "5",
+      "code": "0125",
+      "name": "CULTIVO DE OTROS FRUTOS Y NUECES DE ÁRBOLES Y ARBUSTOS"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "6",
+      "code": "0126",
+      "name": "CULTIVO DE FRUTOS OLEAGINOSOS"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "7",
+      "code": "0127",
+      "name": "CULTIVO DE PLANTAS CON LAS QUE SE PREPARAN BEBIDAS"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "8",
+      "code": "0128",
+      "name": "CULTIVO DE ESPECIAS Y DE PLANTAS AROMÁTICAS, MEDICINALES Y FARMACEUTICAS"
+    },
+    {
+      "division": "01",
+      "group": "2",
+      "class_number": "9",
+      "code": "0129",
+      "name": "CULTIVO DE OTRAS PLANTAS NO PERENNES"
+    },
+    {
+      "division": "01",
+      "group": "3",
+      "class_number": "0",
+      "code": "0130",
+      "name": "PROPAGACIÓN DE PLANTAS"
+    },
+    {
+      "division": "01",
+      "group": "4",
+      "class_number": "1",
+      "code": "0141",
+      "name": "CRÍA DE GANADO BOVINO Y BÚFALOS"
+    },
+    {
+      "division": "01",
+      "group": "4",
+      "class_number": "2",
+      "code": "0142",
+      "name": "CRÍA DE CABALLOS Y OTROS EQUINOS"
+    },
+    {
+      "division": "01",
+      "group": "4",
+      "class_number": "3",
+      "code": "0143",
+      "name": "CRÍA DE CAMELLOS Y OTROS CAMÉLIDOS"
+    },
+    {
+      "division": "01",
+      "group": "4",
+      "class_number": "4",
+      "code": "0144",
+      "name": "CRÍA DE OVEJAS Y CABRAS"
+    },
+    {
+      "division": "01",
+      "group": "4",
+      "class_number": "5",
+      "code": "0145",
+      "name": "CRÍA DE CERDOS"
+    },
+    {
+      "division": "01",
+      "group": "4",
+      "class_number": "6",
+      "code": "0146",
+      "name": "CRÍA DE AVES DE CORRAL"
+    },
+    {
+      "division": "01",
+      "group": "4",
+      "class_number": "9",
+      "code": "0149",
+      "name": "CRÍA DE OTROS ANIMALES"
+    },
+    {
+      "division": "01",
+      "group": "5",
+      "class_number": "0",
+      "code": "0150",
+      "name": "CULTIVO DE PRODUCTOS AGRÌCOLAS EN COMBINACIÒN CON LA CRÌA DE ANIMALES"
+    },
+    {
+      "division": "01",
+      "group": "6",
+      "class_number": "1",
+      "code": "0161",
+      "name": "ACTIVIDADES DE APOYO A LA AGRICULTURA"
+    },
+    {
+      "division": "01",
+      "group": "6",
+      "class_number": "2",
+      "code": "0162",
+      "name": "ACTIVIDADES DE APOYO A LA GANADERÍA"
+    },
+    {
+      "division": "01",
+      "group": "6",
+      "class_number": "3",
+      "code": "0163",
+      "name": "ACTIVIDADES POSCOSECHA"
+    },
+    {
+      "division": "01",
+      "group": "6",
+      "class_number": "4",
+      "code": "0164",
+      "name": "TRATAMIENTO DE SEMILLAS PARA PROPAGACIÓN"
+    },
+    {
+      "division": "01",
+      "group": "7",
+      "class_number": "0",
+      "code": "0170",
+      "name": "CAZA ORDINARIA Y MEDIANTE TRAMPAS Y ACTIVIDADES DE SERVICIOS CONEXAS"
+    },
+    {
+      "division": "02",
+      "group": "1",
+      "class_number": "0",
+      "code": "0210",
+      "name": "SILVICULTURA Y OTRAS ACTIVIDADES FORESTALES"
+    },
+    {
+      "division": "02",
+      "group": "2",
+      "class_number": "0",
+      "code": "0220",
+      "name": "EXTRACCIÓN DE MADERA"
+    },
+    {
+      "division": "02",
+      "group": "3",
+      "class_number": "0",
+      "code": "0230",
+      "name": "RECOLECCIÓN DE PRODUCTOS FORESTALES DISTINTOS DE LA MADERA"
+    },
+    {
+      "division": "02",
+      "group": "4",
+      "class_number": "0",
+      "code": "0240",
+      "name": "SERVICIOS DE APOYO A LA SILVICULTURA"
+    },
+    {
+      "division": "03",
+      "group": "1",
+      "class_number": "1",
+      "code": "0311",
+      "name": "PESCA MARÍTIMA"
+    },
+    {
+      "division": "03",
+      "group": "1",
+      "class_number": "2",
+      "code": "0312",
+      "name": "PESCA DE AGUA DULCE"
+    },
+    {
+      "division": "03",
+      "group": "2",
+      "class_number": "1",
+      "code": "0321",
+      "name": "ACUICULTURA MARÍTIMA"
+    },
+    {
+      "division": "03",
+      "group": "2",
+      "class_number": "2",
+      "code": "0322",
+      "name": "ACUICULTURA DE AGUA DULCE"
+    },
+    {
+      "division": "05",
+      "group": "1",
+      "class_number": "0",
+      "code": "0510",
+      "name": "EXTRACCIÓN DE CARBÓN DE PIEDRA"
+    },
+    {
+      "division": "05",
+      "group": "2",
+      "class_number": "0",
+      "code": "0520",
+      "name": "EXTRACCIÓN DE LIGNITO"
+    },
+    {
+      "division": "06",
+      "group": "1",
+      "class_number": "0",
+      "code": "0610",
+      "name": "EXTRACCIÓN DE PETRÓLEO CRUDO"
+    },
+    {
+      "division": "06",
+      "group": "2",
+      "class_number": "0",
+      "code": "0620",
+      "name": "EXTRACCIÓN DE GAS NATURAL"
+    },
+    {
+      "division": "07",
+      "group": "1",
+      "class_number": "0",
+      "code": "0710",
+      "name": "EXTRACCIÓN DE MINERALES DE HIERRO"
+    },
+    {
+      "division": "07",
+      "group": "2",
+      "class_number": "1",
+      "code": "0721",
+      "name": "EXTRACCIÓN DE MINERALES DE URANIO Y TORIO"
+    },
+    {
+      "division": "07",
+      "group": "2",
+      "class_number": "9",
+      "code": "0729",
+      "name": "EXTRACCIÓN DE OTROS MINERALES METALÍFEROS NO FERROSOS"
+    },
+    {
+      "division": "08",
+      "group": "1",
+      "class_number": "0",
+      "code": "0810",
+      "name": "EXTRACCIÓN DE PIEDRA, ARENA Y ARCILLA"
+    },
+    {
+      "division": "08",
+      "group": "9",
+      "class_number": "1",
+      "code": "0891",
+      "name": "EXTRACCIÓN DE MINERALES PARA LA FABRICACIÓN DE ABONOS Y PRODUCTOS QUÍMICOS"
+    },
+    {
+      "division": "08",
+      "group": "9",
+      "class_number": "2",
+      "code": "0892",
+      "name": "EXTRACCIÓN DE TURBA"
+    },
+    {
+      "division": "08",
+      "group": "9",
+      "class_number": "3",
+      "code": "0893",
+      "name": "EXTRACCIÓN DE SAL"
+    },
+    {
+      "division": "08",
+      "group": "9",
+      "class_number": "9",
+      "code": "0899",
+      "name": "EXPLOTACIÓN DE OTRAS MINAS Y CANTERAS N.C.P."
+    },
+    {
+      "division": "09",
+      "group": "1",
+      "class_number": "0",
+      "code": "0910",
+      "name": "ACTIVIDADES DE APOYO PARA LA EXTRACCIÓN DE PETRÓLEO Y GAS NATURAL"
+    },
+    {
+      "division": "09",
+      "group": "9",
+      "class_number": "0",
+      "code": "0990",
+      "name": "ACTIVIDADES DE APOYO PARA OTRAS ACTIVIDADES DE EXPLOTACIÓN DE MINAS Y CANTERAS"
+    },
+    {
+      "division": "10",
+      "group": "1",
+      "class_number": "0",
+      "code": "1010",
+      "name": "ELABORACIÒN Y CONSERVACIÓN DE CARNE"
+    },
+    {
+      "division": "10",
+      "group": "2",
+      "class_number": "0",
+      "code": "1020",
+      "name": "ELABORACIÒN Y CONSERVACIÓN DE PESCADOS, CRUSTÁCEOS Y MOLUSCOS"
+    },
+    {
+      "division": "10",
+      "group": "3",
+      "class_number": "0",
+      "code": "1030",
+      "name": "ELABORACIÒN Y CONSERVACIÓN DE FRUTAS,LEGUMBRES Y HORTALIZAS"
+    },
+    {
+      "division": "10",
+      "group": "4",
+      "class_number": "0",
+      "code": "1040",
+      "name": "ELABORACIÓN DE ACEITES Y GRASAS DE ORIGEN VEGETAL Y ANIMAL"
+    },
+    {
+      "division": "10",
+      "group": "5",
+      "class_number": "0",
+      "code": "1050",
+      "name": "ELABORACIÓN DE PRODUCTOS LÁCTEOS"
+    },
+    {
+      "division": "10",
+      "group": "6",
+      "class_number": "1",
+      "code": "1061",
+      "name": "ELABORACIÓN DE PRODUCTOS DE MOLINERÍA."
+    },
+    {
+      "division": "10",
+      "group": "6",
+      "class_number": "2",
+      "code": "1062",
+      "name": "ELABORACIÓN DE ALMIDONES Y PRODUCTOS DERIVADOS DEL ALMIDÓN."
+    },
+    {
+      "division": "10",
+      "group": "7",
+      "class_number": "1",
+      "code": "1071",
+      "name": "ELABORACIÓN DE PRODUCTOS DE PANADERÍA"
+    },
+    {
+      "division": "10",
+      "group": "7",
+      "class_number": "2",
+      "code": "1072",
+      "name": "ELABORACIÓN DE AZÚCAR"
+    },
+    {
+      "division": "10",
+      "group": "7",
+      "class_number": "3",
+      "code": "1073",
+      "name": "ELABORACIÓN DE CACAO Y CHOCOLATE Y DE PRODUCTOS DE CONFITERÍA"
+    },
+    {
+      "division": "10",
+      "group": "7",
+      "class_number": "4",
+      "code": "1074",
+      "name": "ELABORACIÓN DE MACARRONES, FIDEOS, ALCUZCUS Y PRODUCTOS FARINÁCEOS SIMILARES"
+    },
+    {
+      "division": "10",
+      "group": "7",
+      "class_number": "5",
+      "code": "1075",
+      "name": "ELABORACIÓN DE COMIDAS Y PLATOS PREPARADOS"
+    },
+    {
+      "division": "10",
+      "group": "7",
+      "class_number": "9",
+      "code": "1079",
+      "name": "ELABORACIÓN DE OTROS PRODUCTOS ALIMENTICIOS N.C.P."
+    },
+    {
+      "division": "10",
+      "group": "8",
+      "class_number": "0",
+      "code": "1080",
+      "name": "ELABORACIÓN DE PIENSOS PREPARADOS PARA ANIMALES"
+    },
+    {
+      "division": "11",
+      "group": "0",
+      "class_number": "1",
+      "code": "1101",
+      "name": "DESTILACIÓN, RECTIFICACIÓN Y MEZCLA DE BEBIDAS ALCOHÓLICAS"
+    },
+    {
+      "division": "11",
+      "group": "0",
+      "class_number": "2",
+      "code": "1102",
+      "name": "ELABORACIÓN DE VINOS"
+    },
+    {
+      "division": "11",
+      "group": "0",
+      "class_number": "3",
+      "code": "1103",
+      "name": "ELABORACIÓN DE BEBIDAS MALTEADAS Y DE MALTA"
+    },
+    {
+      "division": "11",
+      "group": "0",
+      "class_number": "4",
+      "code": "1104",
+      "name": "ELABORACIÓN DE BEBIDAS NO ALCOHÓLICAS; PRODUCCIÓN DE AGUAS MINERALES Y OTRAS AGUAS EMBOTELLADAS"
+    },
+    {
+      "division": "12",
+      "group": "0",
+      "class_number": "0",
+      "code": "1200",
+      "name": "ELABORACIÓN DE PRODUCTOS DE TABACO"
+    },
+    {
+      "division": "13",
+      "group": "1",
+      "class_number": "1",
+      "code": "1311",
+      "name": "PREPARACIÓN E HILATURA DE FIBRAS TEXTILES"
+    },
+    {
+      "division": "13",
+      "group": "1",
+      "class_number": "2",
+      "code": "1312",
+      "name": "TEJEDURA DE PRODUCTOS TEXTILES"
+    },
+    {
+      "division": "13",
+      "group": "1",
+      "class_number": "3",
+      "code": "1313",
+      "name": "ACABADO DE PRODUCTOS TEXTILES"
+    },
+    {
+      "division": "13",
+      "group": "9",
+      "class_number": "1",
+      "code": "1391",
+      "name": "FABRICACIÓN DE TEJIDOS DE PUNTO Y GANCHILLO"
+    },
+    {
+      "division": "13",
+      "group": "9",
+      "class_number": "2",
+      "code": "1392",
+      "name": "FABRICACIÓN DE ARTÍCULOS CONFECCIONADOS DE MATERIALES TEXTILES, EXCEPTO PRENDAS DE VESTIR"
+    },
+    {
+      "division": "13",
+      "group": "9",
+      "class_number": "3",
+      "code": "1393",
+      "name": "FABRICACIÓN DE TAPICES Y ALFOMBRAS"
+    },
+    {
+      "division": "13",
+      "group": "9",
+      "class_number": "4",
+      "code": "1394",
+      "name": "FABRICACIÓN DE CUERDAS, CORDELES, BRAMANTES Y REDES"
+    },
+    {
+      "division": "13",
+      "group": "9",
+      "class_number": "9",
+      "code": "1399",
+      "name": "FABRICACIÓN DE OTROS PRODUCTOS TEXTILES N.C.P."
+    },
+    {
+      "division": "14",
+      "group": "1",
+      "class_number": "0",
+      "code": "1410",
+      "name": "FABRICACIÓN DE PRENDAS DE VESTIR, EXCEPTO PRENDAS DE PIEL"
+    },
+    {
+      "division": "14",
+      "group": "2",
+      "class_number": "0",
+      "code": "1420",
+      "name": "FABRICACIÓN DE ARTÍCULOS DE PIEL"
+    },
+    {
+      "division": "14",
+      "group": "3",
+      "class_number": "0",
+      "code": "1430",
+      "name": "FABRICACIÓN DE ARTICULOS DE PUNTO Y GANCHILLO"
+    },
+    {
+      "division": "15",
+      "group": "1",
+      "class_number": "1",
+      "code": "1511",
+      "name": "CURTIDO Y ADOBO DE CUEROS; ADOBO Y TEÑIDO DE PIELES"
+    },
+    {
+      "division": "15",
+      "group": "1",
+      "class_number": "2",
+      "code": "1512",
+      "name": "FABRICACIÓN DE MALETAS, BOLSOS DE MANO, Y ARTÍCULOS SIMILARES,Y DE ARTICULOS DE TALABARTERÍA Y GUARNICIONERÍA"
+    },
+    {
+      "division": "15",
+      "group": "2",
+      "class_number": "0",
+      "code": "1520",
+      "name": "FABRICACIÓN DE CALZADO"
+    },
+    {
+      "division": "16",
+      "group": "1",
+      "class_number": "0",
+      "code": "1610",
+      "name": "ASERRADOS Y ACEPILLADURA DE MADERA"
+    },
+    {
+      "division": "16",
+      "group": "2",
+      "class_number": "1",
+      "code": "1621",
+      "name": "FABRICACIÓN DE HOJAS DE MADERA PARA ENCHAPADO Y TABLEROS A BASE DE MADERA"
+    },
+    {
+      "division": "16",
+      "group": "2",
+      "class_number": "2",
+      "code": "1622",
+      "name": "FABRICACIÓN DE PARTES Y PIEZAS DE CARPINTERÍA PARA EDIFICIOS Y CONSTRUCCIONES"
+    },
+    {
+      "division": "16",
+      "group": "2",
+      "class_number": "3",
+      "code": "1623",
+      "name": "FABRICACIÓN DE RECIPIENTES DE MADERA"
+    },
+    {
+      "division": "16",
+      "group": "2",
+      "class_number": "9",
+      "code": "1629",
+      "name": "FABRICACIÓN DE OTROS PRODUCTOS DE MADERA; FABRICACIÓN DE ARTÍCULOS DE CORCHO, PAJA Y MATERIALES TRENZABLES."
+    },
+    {
+      "division": "17",
+      "group": "0",
+      "class_number": "1",
+      "code": "1701",
+      "name": "FABRICACIÓN DE PASTA DE MADERA, PAPEL Y CARTÓN"
+    },
+    {
+      "division": "17",
+      "group": "0",
+      "class_number": "2",
+      "code": "1702",
+      "name": "FABRICACIÓN DEL PAPEL Y CARTÓN ONDULADO Y DE ENVASES DE PAPEL Y CARTÓN"
+    },
+    {
+      "division": "17",
+      "group": "0",
+      "class_number": "9",
+      "code": "1709",
+      "name": "FABRICACIÓN DE OTROS ARTÍCULOS DEL PAPEL Y CARTÓN"
+    },
+    {
+      "division": "18",
+      "group": "1",
+      "class_number": "1",
+      "code": "1811",
+      "name": "IMPRESIÓN"
+    },
+    {
+      "division": "18",
+      "group": "1",
+      "class_number": "2",
+      "code": "1812",
+      "name": "ACTIVIDADES DE SERVICIOS RELACIONADAS CON LA IMPRESIÓN"
+    },
+    {
+      "division": "18",
+      "group": "2",
+      "class_number": "0",
+      "code": "1820",
+      "name": "REPRODUCCIÓN DE GRABACIONES"
+    },
+    {
+      "division": "19",
+      "group": "1",
+      "class_number": "0",
+      "code": "1910",
+      "name": "FABRICACIÓN DE PRODUCTOS DE HORNOS DE COQUE"
+    },
+    {
+      "division": "19",
+      "group": "2",
+      "class_number": "0",
+      "code": "1920",
+      "name": "FABRICACIÓN DE PRODUCTOS DE LA REFINACIÓN DEL PETRÓLEO"
+    },
+    {
+      "division": "20",
+      "group": "1",
+      "class_number": "1",
+      "code": "2011",
+      "name": "FABRICACIÓN DE SUSTANCIAS QUÍMICAS BÁSICAS"
+    },
+    {
+      "division": "20",
+      "group": "1",
+      "class_number": "2",
+      "code": "2012",
+      "name": "FABRICACIÓN ABONOS Y COMPUESTOS DE NITRÓGENO"
+    },
+    {
+      "division": "20",
+      "group": "1",
+      "class_number": "3",
+      "code": "2013",
+      "name": "FABRICACIÓN DE PLÁSTICOS Y DE CAUCHO SINTÉTICO EN FORMAS PRIMARIAS"
+    },
+    {
+      "division": "20",
+      "group": "2",
+      "class_number": "1",
+      "code": "2021",
+      "name": "FABRICACIÓN DE PLAGUICIDAS Y OTROS PRODUCTOS QUÍMICOS DE USO AGROPECUARIO"
+    },
+    {
+      "division": "20",
+      "group": "2",
+      "class_number": "2",
+      "code": "2022",
+      "name": "FABRICACIÓN DE PINTURAS, BARNICES Y PRODUCTOS DE REVESTIMIENTO SIMILARES, TINTAS DE IMPRENTA Y MASILLAS"
+    },
+    {
+      "division": "20",
+      "group": "2",
+      "class_number": "3",
+      "code": "2023",
+      "name": "FABRICACIÓN DE JABONES Y DETERGENTES, PREPARADOS PARA LIMPIAR Y PULIR, PERFUMES Y PREPARADOS DE TOCADOR."
+    },
+    {
+      "division": "20",
+      "group": "2",
+      "class_number": "9",
+      "code": "2029",
+      "name": "FABRICACIÓN DE OTROS PRODUCTOS QUÍMICOS N.C.P."
+    },
+    {
+      "division": "20",
+      "group": "3",
+      "class_number": "0",
+      "code": "2030",
+      "name": "FABRICACIÓN DE FIBRAS ARTIFICIALES"
+    },
+    {
+      "division": "21",
+      "group": "0",
+      "class_number": "0",
+      "code": "2100",
+      "name": "FABRICACIÓN DE PRODUCTOS FARMACÉUTICOS, SUSTANCIAS QUÍMICAS MEDICINALES Y PRODUCTOS BOTÁNICOS DE USO FARMACÉUTICO"
+    },
+    {
+      "division": "22",
+      "group": "1",
+      "class_number": "1",
+      "code": "2211",
+      "name": "FABRICACIÓN DE CUBIERTAS Y CÁMARAS DE CAUCHO; RECAUCHUTADO Y RENOVACIÓN DE CUBIERTAS DE CAUCHO"
+    },
+    {
+      "division": "22",
+      "group": "1",
+      "class_number": "9",
+      "code": "2219",
+      "name": "FABRICACIÓN DE OTROS PRODUCTOS DE CAUCHO"
+    },
+    {
+      "division": "22",
+      "group": "2",
+      "class_number": "0",
+      "code": "2220",
+      "name": "FABRICACIÓN DE PRODUCTOS DE PLÁSTICO"
+    },
+    {
+      "division": "23",
+      "group": "1",
+      "class_number": "0",
+      "code": "2310",
+      "name": "FABRICACIÓN DE VIDRIO Y DE PRODUCTOS DE VIDRIO"
+    },
+    {
+      "division": "23",
+      "group": "9",
+      "class_number": "1",
+      "code": "2391",
+      "name": "FABRICACIÓN DE PRODUCTOS REFRACTARIOS"
+    },
+    {
+      "division": "23",
+      "group": "9",
+      "class_number": "2",
+      "code": "2392",
+      "name": "FABRICACIÓN DE MATERIALES DE CONSTRUCCIÓN DE ARCILLA"
+    },
+    {
+      "division": "23",
+      "group": "9",
+      "class_number": "3",
+      "code": "2393",
+      "name": "FABRICACIÓN DE OTROS PRODUCTOS DE PORCELANA Y DE CERÁMICA"
+    },
+    {
+      "division": "23",
+      "group": "9",
+      "class_number": "4",
+      "code": "2394",
+      "name": "FABRICACIÓN DE CEMENTO, CAL Y YESO"
+    },
+    {
+      "division": "23",
+      "group": "9",
+      "class_number": "5",
+      "code": "2395",
+      "name": "FABRICACIÓN DE ARTÍCULOS DE HORMIGÓN, DE CEMENTO Y DE YESO"
+    },
+    {
+      "division": "23",
+      "group": "9",
+      "class_number": "6",
+      "code": "2396",
+      "name": "CORTE, TALLA Y ACABADO DE LA PIEDRA"
+    },
+    {
+      "division": "23",
+      "group": "9",
+      "class_number": "9",
+      "code": "2399",
+      "name": "FABRICACIÓN DE OTROS PRODUCTOS MINERALES NO METÁLICOS N.C.P."
+    },
+    {
+      "division": "24",
+      "group": "1",
+      "class_number": "0",
+      "code": "2410",
+      "name": "INDUSTRIAS BÁSICAS DE HIERRO Y ACERO"
+    },
+    {
+      "division": "24",
+      "group": "2",
+      "class_number": "0",
+      "code": "2420",
+      "name": "FABRICACIÓN DE PRODUCTOS PRIMARIOS DE METALES PRECIOSOS Y OTROS METALES NO FERROSOS"
+    },
+    {
+      "division": "24",
+      "group": "3",
+      "class_number": "1",
+      "code": "2431",
+      "name": "FUNDICIÓN DE HIERRO Y ACERO"
+    },
+    {
+      "division": "24",
+      "group": "3",
+      "class_number": "2",
+      "code": "2432",
+      "name": "FUNDICIÓN DE METALES NO FERROSOS"
+    },
+    {
+      "division": "25",
+      "group": "1",
+      "class_number": "1",
+      "code": "2511",
+      "name": "FABRICACIÓN DE PRODUCTOS METÁLICOS PARA USO ESTRUCTURAL"
+    },
+    {
+      "division": "25",
+      "group": "1",
+      "class_number": "2",
+      "code": "2512",
+      "name": "FABRICACIÓN DE TANQUES, DEPÓSITOS Y RECIPIENTES DE METAL"
+    },
+    {
+      "division": "25",
+      "group": "1",
+      "class_number": "3",
+      "code": "2513",
+      "name": "FABRICACIÓN DE LOS GENERADORES DEL VAPOR, EXCEPTO CALDERAS DE AGUA CALIENTE PARA CALEFACCIÓN CENTRAL"
+    },
+    {
+      "division": "25",
+      "group": "2",
+      "class_number": "0",
+      "code": "2520",
+      "name": "FABRICACIÓN DE ARMAS Y MUNICIONES"
+    },
+    {
+      "division": "25",
+      "group": "9",
+      "class_number": "1",
+      "code": "2591",
+      "name": "FORJA, PRENSADO, ESTAMPADO Y LAMINADO DE METALES; PULVIMETALURGIA"
+    },
+    {
+      "division": "25",
+      "group": "9",
+      "class_number": "2",
+      "code": "2592",
+      "name": "TRATAMIENTO Y REVESTIMIENTO DE METALES; MAQUINADO"
+    },
+    {
+      "division": "25",
+      "group": "9",
+      "class_number": "3",
+      "code": "2593",
+      "name": "FABRICACIÓN DE ARTÍCULOS DE CUCHILLERÍA, HERRAMIENTAS DE MANO Y ARTÍCULOS DE FERRETERÍA"
+    },
+    {
+      "division": "25",
+      "group": "9",
+      "class_number": "9",
+      "code": "2599",
+      "name": "FABRICACIÓN DE OTROS PRODUCTOS ELABORADOS DE METAL N.C.P."
+    },
+    {
+      "division": "26",
+      "group": "1",
+      "class_number": "0",
+      "code": "2610",
+      "name": "FABRICACIÓN DE COMPONENTES Y TABLEROS ELECTRÓNICOS"
+    },
+    {
+      "division": "26",
+      "group": "2",
+      "class_number": "0",
+      "code": "2620",
+      "name": "FABRICACIÓN DE ORDENADORES Y EQUIPO PERIFÉRICO"
+    },
+    {
+      "division": "26",
+      "group": "3",
+      "class_number": "0",
+      "code": "2630",
+      "name": "FABRICACIÓN DE EQUIPOS DE COMUNICACIONES"
+    },
+    {
+      "division": "26",
+      "group": "4",
+      "class_number": "0",
+      "code": "2640",
+      "name": "FABRICACIÓN DE APARATOS ELECTRÓNICOS DE CONSUMO"
+    },
+    {
+      "division": "26",
+      "group": "5",
+      "class_number": "1",
+      "code": "2651",
+      "name": "FABRICACIÓN DE EQUIPO DE MEDICIÓN, PRUEBA, NAVEGACIÓN Y CONTROL"
+    },
+    {
+      "division": "26",
+      "group": "5",
+      "class_number": "2",
+      "code": "2652",
+      "name": "FABRICACIÓN DE RELOJES"
+    },
+    {
+      "division": "26",
+      "group": "6",
+      "class_number": "0",
+      "code": "2660",
+      "name": "FABRICACIÓN DE EQUIPO DE IRRADIACIÓN Y EQUIPO ELECTRÓNICO DE USO MÉDICO Y TERAPÉUTICO"
+    },
+    {
+      "division": "26",
+      "group": "7",
+      "class_number": "0",
+      "code": "2670",
+      "name": "FABRICACIÓN DE INSTRUMENTOS ÓPTICOS Y EQUIPO FOTOGRÁFICO"
+    },
+    {
+      "division": "26",
+      "group": "8",
+      "class_number": "0",
+      "code": "2680",
+      "name": "FABRICACIÓN DE SOPORTES MAGNÉTICOS Y ÓPTICOS"
+    },
+    {
+      "division": "27",
+      "group": "1",
+      "class_number": "0",
+      "code": "2710",
+      "name": "FABRICACIÓN DE MOTORES, GENERADORES Y TRANSFORMADORES ELÉCTRICOS Y APARATOS DE DISTRIBUCIÓN Y CONTROL DE LA ENERGÍA ELÉCTRICA"
+    },
+    {
+      "division": "27",
+      "group": "2",
+      "class_number": "0",
+      "code": "2720",
+      "name": "FABRICACIÓN DE PILAS, BATERÍAS Y ACUMULADORES"
+    },
+    {
+      "division": "27",
+      "group": "3",
+      "class_number": "1",
+      "code": "2731",
+      "name": "FABRICACIÓN DE CABLES DE FIBRA ÓPTICA"
+    },
+    {
+      "division": "27",
+      "group": "3",
+      "class_number": "2",
+      "code": "2732",
+      "name": "FABRICACIÓN DE OTROS HILOS Y CABLES ELÉCTRICOS"
+    },
+    {
+      "division": "27",
+      "group": "3",
+      "class_number": "3",
+      "code": "2733",
+      "name": "FABRICACIÓN DE DISPOSITIVOS DE CABLEADO"
+    },
+    {
+      "division": "27",
+      "group": "4",
+      "class_number": "0",
+      "code": "2740",
+      "name": "FABRICACIÓN DE EQUIPO ELÉCTRICO DE ILUMINACIÓN"
+    },
+    {
+      "division": "27",
+      "group": "5",
+      "class_number": "0",
+      "code": "2750",
+      "name": "FABRICACIÓN DE APARATOS DE USO DOMÉSTICO"
+    },
+    {
+      "division": "27",
+      "group": "9",
+      "class_number": "0",
+      "code": "2790",
+      "name": "FABRICACIÓN DE OTROS TIPOS DE EQUIPO ELÉCTRICO"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "1",
+      "code": "2811",
+      "name": "FABRICACIÓN DE MOTORES Y TURBINAS, EXCEPTO MOTORES PARA AERONAVES, VEHÍCULOS AUTOMOTORES Y MOTOCICLETAS"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "2",
+      "code": "2812",
+      "name": "FABRICACIÓN DE EQUIPO DE PROPULSIÓN DE FLUIDOS"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "3",
+      "code": "2813",
+      "name": "FABRICACIÓN DE BOMBAS, COMPRESORES, GRIFOS Y VÁLVULAS"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "4",
+      "code": "2814",
+      "name": "FABRICACIÓN DE COJINETES, ENGRANAJES, TRENES DE ENGRANAJES Y PIEZAS DE TRANSMISIÓN"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "5",
+      "code": "2815",
+      "name": "FABRICACIÓN DE HORNOS, HOGARES Y QUEMADORES"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "6",
+      "code": "2816",
+      "name": "FABRICACIÓN DE EQUIPO DE ELEVACIÓN Y MANIPULACIÓN"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "7",
+      "code": "2817",
+      "name": "FABRICACIÓN DE MAQUINARIA Y EQUIPO DE OFICINA (EXCEPTO ORDENADORES Y EQUIPO PERIFÉRICO)"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "8",
+      "code": "2818",
+      "name": "FABRICACIÓN DE HERRAMIENTAS DE MANO MOTORIZADAS"
+    },
+    {
+      "division": "28",
+      "group": "1",
+      "class_number": "9",
+      "code": "2819",
+      "name": "FABRICACIÓN DE OTROS TIPOS DE MAQUINARIA DE USO GENERAL"
+    },
+    {
+      "division": "28",
+      "group": "2",
+      "class_number": "1",
+      "code": "2821",
+      "name": "FABRICACIÓN DE MAQUINARIA AGROPECUARIA Y FORESTAL"
+    },
+    {
+      "division": "28",
+      "group": "2",
+      "class_number": "2",
+      "code": "2822",
+      "name": "FABRICACIÓN DE MAQUINARIA PARA LA CONFORMACIÓN DE METALES Y DE MÁQUINAS HERRAMIENTA"
+    },
+    {
+      "division": "28",
+      "group": "2",
+      "class_number": "3",
+      "code": "2823",
+      "name": "FABRICACIÓN DE MAQUINARIA METALÚRGICA"
+    },
+    {
+      "division": "28",
+      "group": "2",
+      "class_number": "4",
+      "code": "2824",
+      "name": "FABRICACIÓN DE MAQUINARIA PARA EXPLOTACIÓN DE MINAS Y CANTERAS Y PARA OBRAS DE CONSTRUCCIÓN"
+    },
+    {
+      "division": "28",
+      "group": "2",
+      "class_number": "5",
+      "code": "2825",
+      "name": "FABRICACIÓN DE MAQUINARIA PARA LA ELABORACIÓN DE ALIMENTOS, BEBIDAS Y TABACO"
+    },
+    {
+      "division": "28",
+      "group": "2",
+      "class_number": "6",
+      "code": "2826",
+      "name": "FABRICACIÓN DE MAQUINARIA PARA LA ELABORACIÓN DE PRODUCTOS TEXTILES, PRENDAS DE VESTIR Y CUEROS"
+    },
+    {
+      "division": "28",
+      "group": "2",
+      "class_number": "9",
+      "code": "2829",
+      "name": "FABRICACIÓN DE OTROS TIPOS DE MAQUINARIA DE USO ESPECIAL"
+    },
+    {
+      "division": "29",
+      "group": "1",
+      "class_number": "0",
+      "code": "2910",
+      "name": "FABRICACIÓN DE VEHÍCULOS AUTOMOTORES"
+    },
+    {
+      "division": "29",
+      "group": "2",
+      "class_number": "0",
+      "code": "2920",
+      "name": "FABRICACIÓN DE CARROCERÍAS PARA VEHÍCULOS AUTOMOTORES; FABRICACIÓN DE REMOLQUES Y SEMIRREMOLQUES"
+    },
+    {
+      "division": "29",
+      "group": "3",
+      "class_number": "0",
+      "code": "2930",
+      "name": "FABRICACIÓN DE PARTES, PIEZAS Y ACCESORIOS PARA VEHÍCULOS DE AUTOMOTORES"
+    },
+    {
+      "division": "30",
+      "group": "1",
+      "class_number": "1",
+      "code": "3011",
+      "name": "CONSTRUCCIÓN DE BUQUES Y ESTRUCTURAS FLOTANTES"
+    },
+    {
+      "division": "30",
+      "group": "1",
+      "class_number": "2",
+      "code": "3012",
+      "name": "CONSTRUCCIÓN DE EMBARCACIONES DE RECREO Y DEPORTE"
+    },
+    {
+      "division": "30",
+      "group": "2",
+      "class_number": "0",
+      "code": "3020",
+      "name": "FABRICACIÓN DE LOCOMOTORAS Y DE MATERIAL RODANTE"
+    },
+    {
+      "division": "30",
+      "group": "3",
+      "class_number": "0",
+      "code": "3030",
+      "name": "FABRICACIÓN DE AERONAVES Y NAVES ESPACIALES Y MAQUINARIA CONEXA"
+    },
+    {
+      "division": "30",
+      "group": "4",
+      "class_number": "0",
+      "code": "3040",
+      "name": "FABRICACIÓN DE VEHÍCULOS MILITARES DE COMBATE"
+    },
+    {
+      "division": "30",
+      "group": "9",
+      "class_number": "1",
+      "code": "3091",
+      "name": "FABRICACIÓN DE MOTOCICLETAS"
+    },
+    {
+      "division": "30",
+      "group": "9",
+      "class_number": "2",
+      "code": "3092",
+      "name": "FABRICACIÓN DE BICICLETAS Y DE SILLONES DE RUEDAS PARA INVÁLIDOS"
+    },
+    {
+      "division": "30",
+      "group": "9",
+      "class_number": "9",
+      "code": "3099",
+      "name": "FABRICACIÓN DE OTROS TIPOS DE EQUIPO DE TRANSPORTE N.C.P."
+    },
+    {
+      "division": "31",
+      "group": "0",
+      "class_number": "0",
+      "code": "3100",
+      "name": "FABRICACIÓN DE MUEBLES"
+    },
+    {
+      "division": "32",
+      "group": "1",
+      "class_number": "1",
+      "code": "3211",
+      "name": "FABRICACIÓN DE JOYAS Y ARTÍCULOS CONEXOS"
+    },
+    {
+      "division": "32",
+      "group": "1",
+      "class_number": "2",
+      "code": "3212",
+      "name": "FABRICACIÓN DE BISUTERÍA Y ARTÍCULOS CONEXOS"
+    },
+    {
+      "division": "32",
+      "group": "2",
+      "class_number": "0",
+      "code": "3220",
+      "name": "FABRICACIÓN DE INSTRUMENTOS DE MÚSICA"
+    },
+    {
+      "division": "32",
+      "group": "3",
+      "class_number": "0",
+      "code": "3230",
+      "name": "FABRICACIÓN DE ARTÍCULOS DE DEPORTE"
+    },
+    {
+      "division": "32",
+      "group": "4",
+      "class_number": "0",
+      "code": "3240",
+      "name": "FABRICACIÓN DE JUEGOS Y JUGUETES"
+    },
+    {
+      "division": "32",
+      "group": "5",
+      "class_number": "0",
+      "code": "3250",
+      "name": "FABRICACIÓN DE INSTRUMENTOS Y MATERIALES MÉDICOS Y ODONTOLÓGICOS"
+    },
+    {
+      "division": "32",
+      "group": "9",
+      "class_number": "0",
+      "code": "3290",
+      "name": "OTRAS INDUSTRIAS MANUFACTURERAS N.C.P."
+    },
+    {
+      "division": "33",
+      "group": "1",
+      "class_number": "1",
+      "code": "3311",
+      "name": "REPARACIÓN DE PRODUCTOS ELABORADOS DE METAL"
+    },
+    {
+      "division": "33",
+      "group": "1",
+      "class_number": "2",
+      "code": "3312",
+      "name": "REPARACIÓN DE MAQUINARIA"
+    },
+    {
+      "division": "33",
+      "group": "1",
+      "class_number": "3",
+      "code": "3313",
+      "name": "REPARACIÓN DE EQUIPO ELECTRÓNICO Y ÓPTICO"
+    },
+    {
+      "division": "33",
+      "group": "1",
+      "class_number": "4",
+      "code": "3314",
+      "name": "REPARACIÓN DE EQUIPO ELÉCTRICO"
+    },
+    {
+      "division": "33",
+      "group": "1",
+      "class_number": "5",
+      "code": "3315",
+      "name": "REPARACIÓN DE EQUIPO DE TRANSPORTE, EXCEPTO VEHÍCULOS AUTOMOTORES"
+    },
+    {
+      "division": "33",
+      "group": "1",
+      "class_number": "9",
+      "code": "3319",
+      "name": "REPARACIÓN DE OTROS TIPOS DE EQUIPO"
+    },
+    {
+      "division": "33",
+      "group": "2",
+      "class_number": "0",
+      "code": "3320",
+      "name": "INSTALACIÓN DE MAQUINARIA Y EQUIPO INDUSTRIALES"
+    },
+    {
+      "division": "35",
+      "group": "1",
+      "class_number": "0",
+      "code": "3510",
+      "name": "GENERACIÓN, TRANSMISIÓN Y DISTRIBUCIÓN DE ENERGÍA ELÉCTRICA"
+    },
+    {
+      "division": "35",
+      "group": "2",
+      "class_number": "0",
+      "code": "3520",
+      "name": "FABRICACIÓN DEL GAS; DISTRIBUCIÓN DE COMBUSTIBLES GASEOSOS POR TUBERÍAS"
+    },
+    {
+      "division": "35",
+      "group": "3",
+      "class_number": "0",
+      "code": "3530",
+      "name": "SUMINISTRO DE VAPOR Y AIRE ACONDICIONADO"
+    },
+    {
+      "division": "36",
+      "group": "0",
+      "class_number": "0",
+      "code": "3600",
+      "name": "CAPTACIÓN, TRATAMIENTO Y DISTRIBUCIÓN DE AGUA"
+    },
+    {
+      "division": "37",
+      "group": "0",
+      "class_number": "0",
+      "code": "3700",
+      "name": "EVACUACIÓN DE AGUAS RESIDUALES"
+    },
+    {
+      "division": "38",
+      "group": "1",
+      "class_number": "1",
+      "code": "3811",
+      "name": "RECOGIDA DE DESECHOS NO PELIGROSOS"
+    },
+    {
+      "division": "38",
+      "group": "1",
+      "class_number": "2",
+      "code": "3812",
+      "name": "RECOGIDA DE DESECHOS PELIGROSOS"
+    },
+    {
+      "division": "38",
+      "group": "2",
+      "class_number": "1",
+      "code": "3821",
+      "name": "TRATAMIENTO Y ELIMINACIÓN DE DESECHOS NO PELIGROSOS"
+    },
+    {
+      "division": "38",
+      "group": "2",
+      "class_number": "2",
+      "code": "3822",
+      "name": "TRATAMIENTO Y ELIMINACIÓN DE DESECHOS PELIGROSOS"
+    },
+    {
+      "division": "38",
+      "group": "3",
+      "class_number": "0",
+      "code": "3830",
+      "name": "RECUPERACIÓN DE MATERIALES"
+    },
+    {
+      "division": "39",
+      "group": "0",
+      "class_number": "0",
+      "code": "3900",
+      "name": "ACTIVIDADES DE DESCONTAMINACIÓN Y OTROS SERVICIOS DE GESTIÓN DE DESECHOS"
+    },
+    {
+      "division": "41",
+      "group": "0",
+      "class_number": "0",
+      "code": "4100",
+      "name": "CONSTRUCCIÓN DE EDIFICIOS"
+    },
+    {
+      "division": "42",
+      "group": "1",
+      "class_number": "0",
+      "code": "4210",
+      "name": "CONSTRUCCIÓN DE CARRETERAS Y LÍNEAS DE FERROCARRIL"
+    },
+    {
+      "division": "42",
+      "group": "2",
+      "class_number": "0",
+      "code": "4220",
+      "name": "CONSTRUCCIÓN DE PROYECTOS DE SERVICIO PÚBLICO"
+    },
+    {
+      "division": "42",
+      "group": "9",
+      "class_number": "0",
+      "code": "4290",
+      "name": "CONSTRUCCIÓN DE OTRAS OBRAS DE INGENIERÍA CIVIL"
+    },
+    {
+      "division": "43",
+      "group": "1",
+      "class_number": "1",
+      "code": "4311",
+      "name": "DEMOLICIÓN"
+    },
+    {
+      "division": "43",
+      "group": "1",
+      "class_number": "2",
+      "code": "4312",
+      "name": "PREPARACIÓN DEL TERRENO"
+    },
+    {
+      "division": "43",
+      "group": "2",
+      "class_number": "1",
+      "code": "4321",
+      "name": "INSTALACIONES ELÉCTRICAS"
+    },
+    {
+      "division": "43",
+      "group": "2",
+      "class_number": "2",
+      "code": "4322",
+      "name": "INSTALACIONES DE FONTANERÍA, CALEFACCIÓN Y AIRE ACONDICIONADO"
+    },
+    {
+      "division": "43",
+      "group": "2",
+      "class_number": "9",
+      "code": "4329",
+      "name": "OTRAS INSTALACIONES PARA OBRAS DE CONSTRUCCIÓN"
+    },
+    {
+      "division": "43",
+      "group": "3",
+      "class_number": "0",
+      "code": "4330",
+      "name": "TERMINACIÓN Y ACABADO DE EDIFICIOS"
+    },
+    {
+      "division": "43",
+      "group": "9",
+      "class_number": "0",
+      "code": "4390",
+      "name": "OTRAS ACTIVIDADES ESPECIALIZADAS DE LA CONSTRUCCIÓN"
+    },
+    {
+      "division": "45",
+      "group": "1",
+      "class_number": "0",
+      "code": "4510",
+      "name": "VENTA DE VEHÍCULOS AUTOMOTORES"
+    },
+    {
+      "division": "45",
+      "group": "2",
+      "class_number": "0",
+      "code": "4520",
+      "name": "MANTENIMIENTO Y REPARACIÓN DE VEHÍCULOS AUTOMOTORES"
+    },
+    {
+      "division": "45",
+      "group": "3",
+      "class_number": "0",
+      "code": "4530",
+      "name": "VENTAS DE PARTES, PIEZAS Y ACCESORIOS PARA VEHÍCULOS AUTOMOTORES"
+    },
+    {
+      "division": "45",
+      "group": "4",
+      "class_number": "0",
+      "code": "4540",
+      "name": "VENTA, MANTENIMIENTO Y REPARACIÓN DE MOTOCICLETAS Y DE SUS PARTES, PIEZAS Y ACCESORIOS."
+    },
+    {
+      "division": "46",
+      "group": "1",
+      "class_number": "0",
+      "code": "4610",
+      "name": "VENTA AL POR MAYOR A CAMBIO DE UNA RETRIBUCIÓN O POR CONTRATA"
+    },
+    {
+      "division": "46",
+      "group": "2",
+      "class_number": "0",
+      "code": "4620",
+      "name": "VENTA AL POR MAYOR DE MATERIAS PRIMAS AGROPECUARIAS Y ANIMALES VIVOS."
+    },
+    {
+      "division": "46",
+      "group": "3",
+      "class_number": "0",
+      "code": "4630",
+      "name": "VENTA AL POR MAYOR DE ALIMENTOS, BEBIDAS Y TABACO."
+    },
+    {
+      "division": "46",
+      "group": "4",
+      "class_number": "1",
+      "code": "4641",
+      "name": "VENTA AL POR MAYOR DE PRODUCTOS TEXTILES, PRENDAS DE VESTIR Y CALZADO"
+    },
+    {
+      "division": "46",
+      "group": "4",
+      "class_number": "9",
+      "code": "4649",
+      "name": "VENTA AL POR MAYOR DE OTROS ENSERES DOMÉSTICOS"
+    },
+    {
+      "division": "46",
+      "group": "5",
+      "class_number": "1",
+      "code": "4651",
+      "name": "VENTA AL POR MAYOR DE ORDENADORES, EQUIPO PERIFÉRICO Y PROGRAMAS DE INFORMÁTICA"
+    },
+    {
+      "division": "46",
+      "group": "5",
+      "class_number": "2",
+      "code": "4652",
+      "name": "VENTA AL POR MAYOR DE EQUIPO, PARTES Y PIEZAS ELECTRÓNICOS Y DE TELECOMUNICACIONES"
+    },
+    {
+      "division": "46",
+      "group": "5",
+      "class_number": "3",
+      "code": "4653",
+      "name": "VENTA AL POR MAYOR DE MAQUINARIA, EQUIPO Y MATERIALES AGROPECUARIOS"
+    },
+    {
+      "division": "46",
+      "group": "5",
+      "class_number": "9",
+      "code": "4659",
+      "name": "VENTA AL POR MAYOR DE OTROS TIPOS DE MAQUINARIA Y EQUIPO"
+    },
+    {
+      "division": "46",
+      "group": "6",
+      "class_number": "1",
+      "code": "4661",
+      "name": "VENTA AL POR MAYOR DE COMBUSTIBLES SÓLIDOS, LÍQUIDOS Y GASEOSOS Y PRODUCTOS CONEXOS"
+    },
+    {
+      "division": "46",
+      "group": "6",
+      "class_number": "2",
+      "code": "4662",
+      "name": "VENTA AL POR MAYOR DE METALES Y MINERALES METALÍFEROS"
+    },
+    {
+      "division": "46",
+      "group": "6",
+      "class_number": "3",
+      "code": "4663",
+      "name": "VENTA AL POR MAYOR DE MATERIALES DE CONSTRUCCIÓN, ARTÍCULOS DE FERRETERÍA Y EQUIPO Y MATERIALES DE FONTANERÍA Y CALEFACCIÓN."
+    },
+    {
+      "division": "46",
+      "group": "6",
+      "class_number": "9",
+      "code": "4669",
+      "name": "VENTA AL POR MAYOR DE DESPERDICIOS, DESECHOS, CHATARRA Y OTROS PRODUCTOS N.C.P"
+    },
+    {
+      "division": "46",
+      "group": "9",
+      "class_number": "0",
+      "code": "4690",
+      "name": "VENTA AL POR MAYOR NO ESPECIALIZADA"
+    },
+    {
+      "division": "47",
+      "group": "1",
+      "class_number": "1",
+      "code": "4711",
+      "name": "VENTA AL POR MENOR EN COMERCIOS NO ESPECIALIZADOS CON PREDOMINIO DE LA VENTA DE ALIMENTOS, BEBIDAS O TABACO"
+    },
+    {
+      "division": "47",
+      "group": "1",
+      "class_number": "9",
+      "code": "4719",
+      "name": "OTRAS ACTIVIDADES DE VENTA AL POR MENOR EN COMERCIOS NO ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "2",
+      "class_number": "1",
+      "code": "4721",
+      "name": "VENTA AL POR MENOR DE ALIMENTOS EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "2",
+      "class_number": "2",
+      "code": "4722",
+      "name": "VENTA AL POR MENOR DE BEBIDAS EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "2",
+      "class_number": "3",
+      "code": "4723",
+      "name": "VENTA AL POR MENOR DE PRODUCTOS DE TABACO EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "3",
+      "class_number": "0",
+      "code": "4730",
+      "name": "VENTA AL POR MENOR DE COMBUSTIBLES PARA VEHÍCULOS AUTOMOTORES EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "4",
+      "class_number": "1",
+      "code": "4741",
+      "name": "VENTA AL POR MENOR DE ORDENADORES, EQUIPO PERIFÉRICO, PROGRAMAS INFORMÁTICOS Y EQUIPO DE TELECOMUNICACIONES EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "4",
+      "class_number": "2",
+      "code": "4742",
+      "name": "VENTA AL POR MENOR DE EQUIPO DE SONIDO Y DE VÍDEO EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "5",
+      "class_number": "1",
+      "code": "4751",
+      "name": "VENTA AL POR MENOR DE PRODUCTOS TEXTILES EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "5",
+      "class_number": "2",
+      "code": "4752",
+      "name": "VENTA AL POR MENOR DE ARTÍCULOS DE FERRETERÍA, PINTURAS Y PRODUCTOS DE VIDRIO EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "5",
+      "class_number": "3",
+      "code": "4753",
+      "name": "VENTA AL POR MENOR DE TAPICES, ALFOMBRAS Y CUBRIMIENTOS PARA PAREDES Y PISOS EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "5",
+      "class_number": "9",
+      "code": "4759",
+      "name": "VENTA AL POR MENOR DE APARATOS ELÉCTRICOS DE USO DOMÉSTICO, MUEBLES, EQUIPO DE ILUMINACIÓN Y OTROS ENSERES DOMÉSTICOS EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "6",
+      "class_number": "1",
+      "code": "4761",
+      "name": "VENTA AL POR MENOR DE LIBROS, PERIÓDICOS Y ARTÍCULOS DE PAPELERÍA EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "6",
+      "class_number": "2",
+      "code": "4762",
+      "name": "VENTA AL POR MENOR DE GRABACIONES DE MÚSICA Y DE VÍDEO EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "6",
+      "class_number": "3",
+      "code": "4763",
+      "name": "VENTA AL POR MENOR DE EQUIPO DE DEPORTE EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "6",
+      "class_number": "4",
+      "code": "4764",
+      "name": "VENTA AL POR MENOR DE JUEGOS Y JUGUETES EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "7",
+      "class_number": "1",
+      "code": "4771",
+      "name": "VENTA AL POR MENOR DE PRENDAS DE VESTIR, CALZADO Y ARTÍCULOS DE CUERO EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "7",
+      "class_number": "2",
+      "code": "4772",
+      "name": "VENTA AL POR MENOR DE PRODUCTOS FARMACÉUTICOS Y MEDICINALES, COSMÉTICOS Y ARTÍCULOS DE TOCADOR EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "7",
+      "class_number": "3",
+      "code": "4773",
+      "name": "VENTA AL POR MENOR DE OTROS PRODUCTOS NUEVOS EN COMERCIOS ESPECIALIZADOS"
+    },
+    {
+      "division": "47",
+      "group": "7",
+      "class_number": "4",
+      "code": "4774",
+      "name": "VENTA AL POR MENOR DE ARTÍCULOS DE SEGUNDA MANO"
+    },
+    {
+      "division": "47",
+      "group": "8",
+      "class_number": "1",
+      "code": "4781",
+      "name": "VENTA AL POR MENOR DE ALIMENTOS, BEBIDAS Y TABACO EN PUESTOS DE VENTA Y MERCADOS"
+    },
+    {
+      "division": "47",
+      "group": "8",
+      "class_number": "2",
+      "code": "4782",
+      "name": "VENTA AL POR MENOR DE PRODUCTOS TEXTILES, PRENDAS DE VESTIR Y CALZADO EN PUESTOS DE VENTA Y MERCADOS"
+    },
+    {
+      "division": "47",
+      "group": "8",
+      "class_number": "9",
+      "code": "4789",
+      "name": "VENTA AL POR MENOR DE OTROS PRODUCTOS EN PUESTOS DE VENTA Y MERCADOS"
+    },
+    {
+      "division": "47",
+      "group": "9",
+      "class_number": "1",
+      "code": "4791",
+      "name": "VENTA AL POR MENOR POR CORREO Y POR INTERNET"
+    },
+    {
+      "division": "47",
+      "group": "9",
+      "class_number": "9",
+      "code": "4799",
+      "name": "OTRAS ACTIVIDADES DE VENTA AL POR MENOR NO REALIZADAS EN COMERCIOS, PUESTOS DE VENTA O MERCADOS"
+    },
+    {
+      "division": "49",
+      "group": "1",
+      "class_number": "1",
+      "code": "4911",
+      "name": "TRANSPORTE INTERURBANO DE PASAJEROS POR FERROCARRIL"
+    },
+    {
+      "division": "49",
+      "group": "1",
+      "class_number": "2",
+      "code": "4912",
+      "name": "TRANSPORTE DE CARGA POR FERROCARRIL"
+    },
+    {
+      "division": "49",
+      "group": "2",
+      "class_number": "1",
+      "code": "4921",
+      "name": "TRANSPORTE URBANO Y SUBURBANO DE PASAJEROS POR VÍA TERRESTRE"
+    },
+    {
+      "division": "49",
+      "group": "2",
+      "class_number": "2",
+      "code": "4922",
+      "name": "OTRAS ACTIVIDADES DE TRANSPORTE POR VÍA TERRESTRE"
+    },
+    {
+      "division": "49",
+      "group": "2",
+      "class_number": "3",
+      "code": "4923",
+      "name": "TRANSPORTE DE CARGA POR CARRETERA"
+    },
+    {
+      "division": "49",
+      "group": "3",
+      "class_number": "0",
+      "code": "4930",
+      "name": "TRANSPORTE POR TUBERÍAS"
+    },
+    {
+      "division": "50",
+      "group": "1",
+      "class_number": "1",
+      "code": "5011",
+      "name": "TRANSPORTE DE PASAJEROS MARÍTIMO Y DE CABOTAJE"
+    },
+    {
+      "division": "50",
+      "group": "1",
+      "class_number": "2",
+      "code": "5012",
+      "name": "TRANSPORTE DE CARGA MARÍTIMO Y DE CABOTAJE"
+    },
+    {
+      "division": "50",
+      "group": "2",
+      "class_number": "1",
+      "code": "5021",
+      "name": "TRANSPORTE DE PASAJEROS POR VÍAS DE NAVEGACIÓN INTERIORES"
+    },
+    {
+      "division": "50",
+      "group": "2",
+      "class_number": "2",
+      "code": "5022",
+      "name": "TRANSPORTE DE CARGA, POR VÍAS DE NAVEGACIÓN INTERIORES"
+    },
+    {
+      "division": "51",
+      "group": "1",
+      "class_number": "0",
+      "code": "5110",
+      "name": "TRANSPORTE DE PASAJEROS POR VÍA AÉREA"
+    },
+    {
+      "division": "51",
+      "group": "2",
+      "class_number": "0",
+      "code": "5120",
+      "name": "TRANSPORTE DE CARGA POR VÍA AÉREA"
+    },
+    {
+      "division": "52",
+      "group": "1",
+      "class_number": "0",
+      "code": "5210",
+      "name": "ALMACENAMIENTO Y DEPÓSITO"
+    },
+    {
+      "division": "52",
+      "group": "2",
+      "class_number": "1",
+      "code": "5221",
+      "name": "ACTIVIDADES DE SERVICIOS VINCULADAS AL TRANSPORTE TERRESTRE"
+    },
+    {
+      "division": "52",
+      "group": "2",
+      "class_number": "2",
+      "code": "5222",
+      "name": "ACTIVIDADES DE SERVICIOS VINCULADAS AL TRANSPORTE ACUÁTICO"
+    },
+    {
+      "division": "52",
+      "group": "2",
+      "class_number": "3",
+      "code": "5223",
+      "name": "ACTIVIDADES DE SERVICIOS VINCULADAS AL TRANSPORTE AÉREO"
+    },
+    {
+      "division": "52",
+      "group": "2",
+      "class_number": "4",
+      "code": "5224",
+      "name": "MANIPULACIÓN DE CARGA"
+    },
+    {
+      "division": "52",
+      "group": "2",
+      "class_number": "9",
+      "code": "5229",
+      "name": "OTRAS ACTIVIDADES DE APOYO AL TRANSPORTE"
+    },
+    {
+      "division": "53",
+      "group": "1",
+      "class_number": "0",
+      "code": "5310",
+      "name": "ACTIVIDADES POSTALES"
+    },
+    {
+      "division": "53",
+      "group": "2",
+      "class_number": "0",
+      "code": "5320",
+      "name": "ACTIVIDADES DE MENSAJERÍA"
+    },
+    {
+      "division": "55",
+      "group": "1",
+      "class_number": "0",
+      "code": "5510",
+      "name": "ACTIVIDADES DE ALOJAMIENTO PARA ESTANCIAS CORTAS"
+    },
+    {
+      "division": "55",
+      "group": "2",
+      "class_number": "0",
+      "code": "5520",
+      "name": "ACTIVIDADES DE CAMPAMENTOS, PARQUES DE VEHÍCULOS RECREATIVOS Y PARQUES DE CARAVANAS"
+    },
+    {
+      "division": "55",
+      "group": "9",
+      "class_number": "0",
+      "code": "5590",
+      "name": "OTRAS ACTIVIDADES DE ALOJAMIENTO"
+    },
+    {
+      "division": "56",
+      "group": "1",
+      "class_number": "0",
+      "code": "5610",
+      "name": "ACTIVIDADES DE RESTAURANTES Y DE SERVICIO MÓVIL DE COMIDAS"
+    },
+    {
+      "division": "56",
+      "group": "2",
+      "class_number": "1",
+      "code": "5621",
+      "name": "SUMINISTRO DE COMIDAS POR ENCARGO"
+    },
+    {
+      "division": "56",
+      "group": "2",
+      "class_number": "9",
+      "code": "5629",
+      "name": "OTRAS ACTIVIDADES DE SERVICIO DE COMIDAS"
+    },
+    {
+      "division": "56",
+      "group": "3",
+      "class_number": "0",
+      "code": "5630",
+      "name": "ACTIVIDADES DE SERVICIO DE BEBIDAS"
+    },
+    {
+      "division": "58",
+      "group": "1",
+      "class_number": "1",
+      "code": "5811",
+      "name": "EDICIÓN DE LIBROS"
+    },
+    {
+      "division": "58",
+      "group": "1",
+      "class_number": "2",
+      "code": "5812",
+      "name": "EDICIÓN DE DIRECTORIOS Y LISTAS DE CORREO"
+    },
+    {
+      "division": "58",
+      "group": "1",
+      "class_number": "3",
+      "code": "5813",
+      "name": "EDICIÓN DE PERIÓDICOS, REVISTAS Y OTRAS PUBLICACIONES PERIÓDICAS"
+    },
+    {
+      "division": "58",
+      "group": "1",
+      "class_number": "9",
+      "code": "5819",
+      "name": "OTRAS ACTIVIDADES DE EDICIÓN"
+    },
+    {
+      "division": "58",
+      "group": "2",
+      "class_number": "0",
+      "code": "5820",
+      "name": "EDICIÓN DE PROGRAMAS DE INFORMÁTICOS"
+    },
+    {
+      "division": "59",
+      "group": "1",
+      "class_number": "1",
+      "code": "5911",
+      "name": "ACTIVIDADES DE PRODUCCIÓN DE PELÍCULAS CINEMATOGRÁFICAS, VÍDEOS Y PROGRAMAS DE TELEVISIÓN"
+    },
+    {
+      "division": "59",
+      "group": "1",
+      "class_number": "2",
+      "code": "5912",
+      "name": "ACTIVIDADES DE POSTPRODUCCIÓN DE PELÍCULAS CINEMATOGRÁFICAS, VÍDEOS Y PROGRAMAS DE TELEVISIÓN"
+    },
+    {
+      "division": "59",
+      "group": "1",
+      "class_number": "3",
+      "code": "5913",
+      "name": "ACTIVIDADES DE DISTRIBUCIÓN DE PELÍCULAS CINEMATOGRÁFICAS, VÍDEOS Y PROGRAMAS DE TELEVISIÓN"
+    },
+    {
+      "division": "59",
+      "group": "1",
+      "class_number": "4",
+      "code": "5914",
+      "name": "ACTIVIDADES DE EXHIBICIÓN DE PELÍCULAS CINEMATOGRÁFICAS Y CINTAS DE VÍDEO"
+    },
+    {
+      "division": "59",
+      "group": "2",
+      "class_number": "0",
+      "code": "5920",
+      "name": "ACTIVIDADES DE GRABACIÓN DE SONIDO Y EDICIÓN DE MÚSICA"
+    },
+    {
+      "division": "60",
+      "group": "1",
+      "class_number": "0",
+      "code": "6010",
+      "name": "TRANSMISIONES DE RADIO"
+    },
+    {
+      "division": "60",
+      "group": "2",
+      "class_number": "0",
+      "code": "6020",
+      "name": "PROGRAMACIÓN Y TRANSMISIONES DE TELEVISIÓN"
+    },
+    {
+      "division": "61",
+      "group": "1",
+      "class_number": "0",
+      "code": "6110",
+      "name": "ACTIVIDADES DE TELECOMUNICACIONES ALÁMBRICAS"
+    },
+    {
+      "division": "61",
+      "group": "2",
+      "class_number": "0",
+      "code": "6120",
+      "name": "ACTIVIDADES DE TELECOMUNICACIONES INALÁMBRICAS"
+    },
+    {
+      "division": "61",
+      "group": "3",
+      "class_number": "0",
+      "code": "6130",
+      "name": "ACTIVIDADES DE TELECOMUNICACIONES POR SATÉLITE."
+    },
+    {
+      "division": "61",
+      "group": "9",
+      "class_number": "0",
+      "code": "6190",
+      "name": "OTRAS ACTIVIDADES DE TELECOMUNICACIÓN."
+    },
+    {
+      "division": "62",
+      "group": "0",
+      "class_number": "1",
+      "code": "6201",
+      "name": "PROGRAMACIÓN INFORMÁTICA"
+    },
+    {
+      "division": "62",
+      "group": "0",
+      "class_number": "2",
+      "code": "6202",
+      "name": "CONSULTORÍA DE INFORMÁTICA Y DE GESTIÓN DE INSTALACIONES INFORMÁTICAS"
+    },
+    {
+      "division": "62",
+      "group": "0",
+      "class_number": "9",
+      "code": "6209",
+      "name": "OTRAS ACTIVIDADES DE TECNOLOGÍA DE LA INFORMACIÓN Y DE SERVICIOS INFORMÁTICOS"
+    },
+    {
+      "division": "63",
+      "group": "1",
+      "class_number": "1",
+      "code": "6311",
+      "name": "PROCESAMIENTO DE DATOS, HOSPEDAJE Y ACTIVIDADES CONEXAS"
+    },
+    {
+      "division": "63",
+      "group": "1",
+      "class_number": "2",
+      "code": "6312",
+      "name": "PORTALES WEB"
+    },
+    {
+      "division": "63",
+      "group": "9",
+      "class_number": "1",
+      "code": "6391",
+      "name": "ACTIVIDADES DE AGENCIAS DE NOTICIAS"
+    },
+    {
+      "division": "63",
+      "group": "9",
+      "class_number": "9",
+      "code": "6399",
+      "name": "OTRAS ACTIVIDADES DE SERVICIOS DE INFORMACIÓN N.C.P."
+    },
+    {
+      "division": "64",
+      "group": "1",
+      "class_number": "1",
+      "code": "6411",
+      "name": "BANCA CENTRAL"
+    },
+    {
+      "division": "64",
+      "group": "1",
+      "class_number": "9",
+      "code": "6419",
+      "name": "OTROS TIPOS DE INTERMEDIACIÓN MONETARIA."
+    },
+    {
+      "division": "64",
+      "group": "2",
+      "class_number": "0",
+      "code": "6420",
+      "name": "ACTIVIDADES DE SOCIEDADES DE CARTERA"
+    },
+    {
+      "division": "64",
+      "group": "3",
+      "class_number": "0",
+      "code": "6430",
+      "name": "FONDOS Y SOCIEDADES DE INVERSIÓN Y ENTIDADES FINANCIERAS SIMILARES"
+    },
+    {
+      "division": "64",
+      "group": "9",
+      "class_number": "1",
+      "code": "6491",
+      "name": "ARRENDAMIENTO FINANCIERO"
+    },
+    {
+      "division": "64",
+      "group": "9",
+      "class_number": "2",
+      "code": "6492",
+      "name": "OTRAS ACTIVIDADES DE CONCESIÓN DE CRÉDITO"
+    },
+    {
+      "division": "64",
+      "group": "9",
+      "class_number": "9",
+      "code": "6499",
+      "name": "OTRAS ACTIVIDADES DE SERVICIOS FINANCIEROS, EXCEPTO LAS DE SEGUROS Y FONDOS DE PENSIONES, N.C.P."
+    },
+    {
+      "division": "65",
+      "group": "1",
+      "class_number": "1",
+      "code": "6511",
+      "name": "SEGUROS DE VIDA"
+    },
+    {
+      "division": "65",
+      "group": "1",
+      "class_number": "2",
+      "code": "6512",
+      "name": "SEGUROS GENERALES"
+    },
+    {
+      "division": "65",
+      "group": "2",
+      "class_number": "0",
+      "code": "6520",
+      "name": "REASEGUROS"
+    },
+    {
+      "division": "65",
+      "group": "3",
+      "class_number": "0",
+      "code": "6530",
+      "name": "FONDOS DE PENSIONES"
+    },
+    {
+      "division": "66",
+      "group": "1",
+      "class_number": "1",
+      "code": "6611",
+      "name": "ADMINISTRACIÓN DE MERCADOS FINANCIEROS"
+    },
+    {
+      "division": "66",
+      "group": "1",
+      "class_number": "2",
+      "code": "6612",
+      "name": "CORRETAJE DE VALORES Y DE CONTRATOS DE PRODUCTOS BÁSICOS"
+    },
+    {
+      "division": "66",
+      "group": "1",
+      "class_number": "9",
+      "code": "6619",
+      "name": "OTRAS ACTIVIDADES AUXILIARES DE LAS ACTIVIDADES DE SERVICIOS FINANCIEROS"
+    },
+    {
+      "division": "66",
+      "group": "2",
+      "class_number": "1",
+      "code": "6621",
+      "name": "EVALUACIÓN DE RIESGOS Y DAÑOS"
+    },
+    {
+      "division": "66",
+      "group": "2",
+      "class_number": "2",
+      "code": "6622",
+      "name": "ACTIVIDADES DE AGENTES Y CORREDORES DE SEGUROS"
+    },
+    {
+      "division": "66",
+      "group": "2",
+      "class_number": "9",
+      "code": "6629",
+      "name": "OTRAS ACTIVIDADES AUXILIARES DE LAS ACTIVIDADES DE SEGUROS Y FONDOS DE PENSIONES"
+    },
+    {
+      "division": "66",
+      "group": "3",
+      "class_number": "0",
+      "code": "6630",
+      "name": "ACTIVIDADES DE GESTIÓN DE FONDOS"
+    },
+    {
+      "division": "68",
+      "group": "1",
+      "class_number": "0",
+      "code": "6810",
+      "name": "ACTIVIDADES INMOBILIARIAS REALIZADAS CON BIENES PROPIOS O ARRENDADOS"
+    },
+    {
+      "division": "68",
+      "group": "2",
+      "class_number": "0",
+      "code": "6820",
+      "name": "ACTIVIDADES INMOBILIARIAS REALIZADAS A CAMBIO DE UNA RETRIBUCIÓN O POR CONTRATA"
+    },
+    {
+      "division": "69",
+      "group": "1",
+      "class_number": "0",
+      "code": "6910",
+      "name": "ACTIVIDADES JURÍDICAS"
+    },
+    {
+      "division": "69",
+      "group": "2",
+      "class_number": "0",
+      "code": "6920",
+      "name": "ACTIVIDADES DE CONTABILIDAD, TENEDURÍA DE LIBROS Y AUDITORÍA; CONSULTORÍA FISCAL"
+    },
+    {
+      "division": "70",
+      "group": "1",
+      "class_number": "0",
+      "code": "7010",
+      "name": "ACTIVIDADES DE OFICINAS CENTRALES"
+    },
+    {
+      "division": "70",
+      "group": "2",
+      "class_number": "0",
+      "code": "7020",
+      "name": "ACTIVIDADES DE CONSULTORÍA DE GESTIÓN"
+    },
+    {
+      "division": "71",
+      "group": "1",
+      "class_number": "0",
+      "code": "7110",
+      "name": "ACTIVIDADES DE ARQUITECTURA E INGENIERÍA Y ACTIVIDADES CONEXAS DE CONSULTORÍA TÉCNICA"
+    },
+    {
+      "division": "71",
+      "group": "2",
+      "class_number": "0",
+      "code": "7120",
+      "name": "ENSAYOS Y ANÁLISIS TÉCNICOS"
+    },
+    {
+      "division": "72",
+      "group": "1",
+      "class_number": "0",
+      "code": "7210",
+      "name": "INVESTIGACIÓN Y DESARROLLO EXPERIMENTAL EN EL CAMPO DE LAS CIENCIAS NATURALES Y LA INGENIERÍA"
+    },
+    {
+      "division": "72",
+      "group": "2",
+      "class_number": "0",
+      "code": "7220",
+      "name": "INVESTIGACIÓN Y DESARROLLO EXPERIMENTAL EN EL CAMPO DE LAS CIENCIAS SOCIALES Y LAS HUMANIDADES"
+    },
+    {
+      "division": "73",
+      "group": "1",
+      "class_number": "0",
+      "code": "7310",
+      "name": "PUBLICIDAD"
+    },
+    {
+      "division": "73",
+      "group": "2",
+      "class_number": "0",
+      "code": "7320",
+      "name": "ESTUDIOS DE MERCADO Y ENCUESTAS DE OPINIÓN PÚBLICA"
+    },
+    {
+      "division": "74",
+      "group": "1",
+      "class_number": "0",
+      "code": "7410",
+      "name": "ACTIVIDADES ESPECIALIZADAS DE DISEÑO"
+    },
+    {
+      "division": "74",
+      "group": "2",
+      "class_number": "0",
+      "code": "7420",
+      "name": "ACTIVIDADES DE FOTOGRAFÍA"
+    },
+    {
+      "division": "74",
+      "group": "9",
+      "class_number": "0",
+      "code": "7490",
+      "name": "OTRAS ACTIVIDADES PROFESIONALES, CIENTÍFICAS Y TÉCNICAS N.C.P."
+    },
+    {
+      "division": "75",
+      "group": "0",
+      "class_number": "0",
+      "code": "7500",
+      "name": "ACTIVIDADES VETERINARIAS"
+    },
+    {
+      "division": "77",
+      "group": "1",
+      "class_number": "0",
+      "code": "7710",
+      "name": "ALQUILER Y ARRENDAMIENTO DE VEHÍCULOS AUTOMOTORES"
+    },
+    {
+      "division": "77",
+      "group": "2",
+      "class_number": "1",
+      "code": "7721",
+      "name": "ALQUILER Y ARRENDAMIENTO DE EQUIPO RECREATIVO Y DEPORTIVO"
+    },
+    {
+      "division": "77",
+      "group": "2",
+      "class_number": "2",
+      "code": "7722",
+      "name": "ALQUILER DE CINTAS DE VÍDEO Y DISCOS"
+    },
+    {
+      "division": "77",
+      "group": "2",
+      "class_number": "9",
+      "code": "7729",
+      "name": "ALQUILER Y ARRENDAMIENTO DE OTROS EFECTOS PERSONALES Y ENSERES DOMÉSTICOS"
+    },
+    {
+      "division": "77",
+      "group": "3",
+      "class_number": "0",
+      "code": "7730",
+      "name": "ALQUILER Y ARRENDAMIENTO DE OTROS TIPOS DE MAQUINARIA, EQUIPO Y BIENES TANGIBLES"
+    },
+    {
+      "division": "77",
+      "group": "4",
+      "class_number": "0",
+      "code": "7740",
+      "name": "ARRENDAMIENTO DE PROPIEDAD INTELECTUAL Y PRODUCTOS SIMILARES, EXCEPTO OBRAS PROTEGIDAS POR DERECHOS DE AUTOR"
+    },
+    {
+      "division": "78",
+      "group": "1",
+      "class_number": "0",
+      "code": "7810",
+      "name": "ACTIVIDADES DE AGENCIAS DE EMPLEO"
+    },
+    {
+      "division": "78",
+      "group": "2",
+      "class_number": "0",
+      "code": "7820",
+      "name": "ACTIVIDADES DE AGENCIAS DE EMPLEO TEMPORAL"
+    },
+    {
+      "division": "78",
+      "group": "3",
+      "class_number": "0",
+      "code": "7830",
+      "name": "OTRAS ACTIVIDADES DE DOTACIÓN DE RECURSOS HUMANOS"
+    },
+    {
+      "division": "79",
+      "group": "1",
+      "class_number": "1",
+      "code": "7911",
+      "name": "ACTIVIDADES DE AGENCIAS DE VIAJES"
+    },
+    {
+      "division": "79",
+      "group": "1",
+      "class_number": "2",
+      "code": "7912",
+      "name": "ACTIVIDADES DE OPERADORES TURÍSTICOS"
+    },
+    {
+      "division": "79",
+      "group": "9",
+      "class_number": "0",
+      "code": "7990",
+      "name": "OTROS SERVICIOS DE RESERVAS Y ACTIVIDADES CONEXAS"
+    },
+    {
+      "division": "80",
+      "group": "1",
+      "class_number": "0",
+      "code": "8010",
+      "name": "ACTIVIDADES DE SEGURIDAD PRIVADA"
+    },
+    {
+      "division": "80",
+      "group": "2",
+      "class_number": "0",
+      "code": "8020",
+      "name": "ACTIVIDADES DE SERVICIO DE SISTEMAS DE SEGURIDAD"
+    },
+    {
+      "division": "80",
+      "group": "3",
+      "class_number": "0",
+      "code": "8030",
+      "name": "ACTIVIDADES DE INVESTIGACIÓN"
+    },
+    {
+      "division": "81",
+      "group": "1",
+      "class_number": "0",
+      "code": "8110",
+      "name": "ACTIVIDADES COMBINADAS DE APOYO A INSTALACIONES"
+    },
+    {
+      "division": "81",
+      "group": "2",
+      "class_number": "1",
+      "code": "8121",
+      "name": "LIMPIEZA GENERAL DE EDIFICIOS"
+    },
+    {
+      "division": "81",
+      "group": "2",
+      "class_number": "9",
+      "code": "8129",
+      "name": "OTRAS ACTIVIDADES DE LIMPIEZA DE EDIFICIOS E INSTALACIONES INDUSTRIALES"
+    },
+    {
+      "division": "81",
+      "group": "3",
+      "class_number": "0",
+      "code": "8130",
+      "name": "ACTIVIDADES DE PAISAJISMO Y SERVICIOS DE MANTENIMIENTO CONEXOS"
+    },
+    {
+      "division": "82",
+      "group": "1",
+      "class_number": "1",
+      "code": "8211",
+      "name": "ACTIVIDADES COMBINADAS DE SERVICIOS ADMINISTRATIVOS DE OFICINA"
+    },
+    {
+      "division": "82",
+      "group": "1",
+      "class_number": "9",
+      "code": "8219",
+      "name": "FOTOCOPIADO, PREPARACIÓN DE DOCUMENTOS Y OTRAS ACTIVIDADES ESPECIALIZADAS DE APOYO DE OFICINA"
+    },
+    {
+      "division": "82",
+      "group": "2",
+      "class_number": "0",
+      "code": "8220",
+      "name": "ACTIVIDADES DE CENTROS DE LLAMADAS"
+    },
+    {
+      "division": "82",
+      "group": "3",
+      "class_number": "0",
+      "code": "8230",
+      "name": "ORGANIZACIÓN DE CONVENCIONES Y EXPOSICIONES COMERCIALES"
+    },
+    {
+      "division": "82",
+      "group": "9",
+      "class_number": "1",
+      "code": "8291",
+      "name": "ACTIVIDADES DE AGENCIAS DE COBRO Y AGENCIAS DE CALIFICACIÓN CREDITICIA"
+    },
+    {
+      "division": "82",
+      "group": "9",
+      "class_number": "2",
+      "code": "8292",
+      "name": "ACTIVIDADES DE ENVASADO Y EMPAQUETADO"
+    },
+    {
+      "division": "82",
+      "group": "9",
+      "class_number": "9",
+      "code": "8299",
+      "name": "OTRAS ACTIVIDADES DE SERVICIOS DE APOYO A LAS EMPRESAS N.C.P"
+    },
+    {
+      "division": "84",
+      "group": "1",
+      "class_number": "1",
+      "code": "8411",
+      "name": "ACTIVIDADES DE LA ADMINISTRACIÓN PÚBLICA EN GENERAL"
+    },
+    {
+      "division": "84",
+      "group": "1",
+      "class_number": "2",
+      "code": "8412",
+      "name": "REGULACIÓN DE LAS ACTIVIDADES DE ORGANISMOS QUE PRESTAN SERVICIOS SANITARIOS, EDUCATIVOS, CULTURALES Y OTROS SERVICIOS SOCIALES, EXCEPTO SERVICIOS DE SEGURIDAD SOCIAL"
+    },
+    {
+      "division": "84",
+      "group": "1",
+      "class_number": "3",
+      "code": "8413",
+      "name": "REGULACIÓN Y FACILITACIÓN DE LA ACTIVIDAD ECONÓMICA"
+    },
+    {
+      "division": "84",
+      "group": "2",
+      "class_number": "1",
+      "code": "8421",
+      "name": "RELACIONES EXTERIORES"
+    },
+    {
+      "division": "84",
+      "group": "2",
+      "class_number": "2",
+      "code": "8422",
+      "name": "ACTIVIDADES DE DEFENSA"
+    },
+    {
+      "division": "84",
+      "group": "2",
+      "class_number": "3",
+      "code": "8423",
+      "name": "ACTIVIDADES DE MANTENIMIENTO DEL ORDEN PÚBLICO Y DE SEGURIDAD"
+    },
+    {
+      "division": "84",
+      "group": "3",
+      "class_number": "0",
+      "code": "8430",
+      "name": "ACTIVIDADES DE PLANES DE SEGURIDAD SOCIAL DE AFILIACIÓN OBLIGATORIA"
+    },
+    {
+      "division": "85",
+      "group": "1",
+      "class_number": "0",
+      "code": "8510",
+      "name": "ENSEÑANZA PREESCOLAR Y PRIMARIA"
+    },
+    {
+      "division": "85",
+      "group": "2",
+      "class_number": "1",
+      "code": "8521",
+      "name": "ENSEÑANZA SECUNDARIA DE FORMACIÓN GENERAL"
+    },
+    {
+      "division": "85",
+      "group": "2",
+      "class_number": "2",
+      "code": "8522",
+      "name": "ENSEÑANZA SECUNDARIA DE FORMACIÓN TÉCNICA Y PROFESIONAL"
+    },
+    {
+      "division": "85",
+      "group": "3",
+      "class_number": "0",
+      "code": "8530",
+      "name": "ENSEÑANZA SUPERIOR"
+    },
+    {
+      "division": "85",
+      "group": "4",
+      "class_number": "1",
+      "code": "8541",
+      "name": "EDUCACIÓN DEPORTIVA Y RECREATIVA"
+    },
+    {
+      "division": "85",
+      "group": "4",
+      "class_number": "2",
+      "code": "8542",
+      "name": "ENSEÑANZA CULTURAL"
+    },
+    {
+      "division": "85",
+      "group": "4",
+      "class_number": "9",
+      "code": "8549",
+      "name": "OTROS TIPOS DE ENSEÑANZA N.C.P."
+    },
+    {
+      "division": "85",
+      "group": "5",
+      "class_number": "0",
+      "code": "8550",
+      "name": "ACTIVIDADES DE APOYO A LA ENSEÑANZA"
+    },
+    {
+      "division": "86",
+      "group": "1",
+      "class_number": "0",
+      "code": "8610",
+      "name": "ACTIVIDADES DE HOSPITALES"
+    },
+    {
+      "division": "86",
+      "group": "2",
+      "class_number": "0",
+      "code": "8620",
+      "name": "ACTIVIDADES DE MÉDICOS Y ODONTÓLOGOS"
+    },
+    {
+      "division": "86",
+      "group": "9",
+      "class_number": "0",
+      "code": "8690",
+      "name": "OTRAS ACTIVIDADES DE ATENCIÓN DE LA SALUD HUMANA"
+    },
+    {
+      "division": "87",
+      "group": "1",
+      "class_number": "0",
+      "code": "8710",
+      "name": "ACTIVIDADES DE ATENCIÓN DE ENFERMERÍA EN INSTITUCIONES"
+    },
+    {
+      "division": "87",
+      "group": "2",
+      "class_number": "0",
+      "code": "8720",
+      "name": "ACTIVIDADES DE ATENCIÓN EN INSTITUCIONES PARA PERSONAS CON RETRASO MENTAL, ENFERMOS MENTALES Y TOXICÓMANOS"
+    },
+    {
+      "division": "87",
+      "group": "3",
+      "class_number": "0",
+      "code": "8730",
+      "name": "ACTIVIDADES DE ATENCIÓN EN INSTITUCIONES PARA PERSONAS DE EDAD PERSONAS CON DISCAPACIDAD"
+    },
+    {
+      "division": "87",
+      "group": "9",
+      "class_number": "0",
+      "code": "8790",
+      "name": "OTRAS ACTIVIDADES DE ATENCIÓN EN INSTITUCIONES"
+    },
+    {
+      "division": "88",
+      "group": "1",
+      "class_number": "0",
+      "code": "8810",
+      "name": "ACTIVIDADES DE ASISTENCIA SOCIAL SIN ALOJAMIENTO PARA PERSONAS DE EDAD Y PERSONAS CON DISCAPACIDAD"
+    },
+    {
+      "division": "88",
+      "group": "9",
+      "class_number": "0",
+      "code": "8890",
+      "name": "OTRAS ACTIVIDADES DE ASISTENCIA SOCIAL SIN ALOJAMIENTO"
+    },
+    {
+      "division": "90",
+      "group": "0",
+      "class_number": "0",
+      "code": "9000",
+      "name": "ACTIVIDADES CREATIVAS, ARTÍSTICAS Y DE ENTRETENIMIENTO"
+    },
+    {
+      "division": "91",
+      "group": "0",
+      "class_number": "1",
+      "code": "9101",
+      "name": "ACTIVIDADES DE BIBLIOTECAS Y ARCHIVOS"
+    },
+    {
+      "division": "91",
+      "group": "0",
+      "class_number": "2",
+      "code": "9102",
+      "name": "ACTIVIDADES DE MUSEOS Y GESTIÓN DE LUGARES Y EDIFICIOS HISTÓRICOS"
+    },
+    {
+      "division": "91",
+      "group": "0",
+      "class_number": "3",
+      "code": "9103",
+      "name": "ACTIVIDADES DE JARDINES BOTÁNICOS Y ZOOLÓGICOS Y RESERVAS NATURALES"
+    },
+    {
+      "division": "92",
+      "group": "0",
+      "class_number": "0",
+      "code": "9200",
+      "name": "ACTIVIDADES DE JUEGOS DE AZAR Y APUESTAS"
+    },
+    {
+      "division": "93",
+      "group": "1",
+      "class_number": "1",
+      "code": "9311",
+      "name": "GESTIÓN DE INSTALACIONES DEPORTIVAS"
+    },
+    {
+      "division": "93",
+      "group": "1",
+      "class_number": "2",
+      "code": "9312",
+      "name": "ACTIVIDADES DE CLUBES DEPORTIVOS"
+    },
+    {
+      "division": "93",
+      "group": "1",
+      "class_number": "9",
+      "code": "9319",
+      "name": "OTRAS ACTIVIDADES DEPORTIVAS"
+    },
+    {
+      "division": "93",
+      "group": "2",
+      "class_number": "1",
+      "code": "9321",
+      "name": "ACTIVIDADES DE PARQUES DE ATRACCIONES Y PARQUES TEMÁTICOS"
+    },
+    {
+      "division": "93",
+      "group": "2",
+      "class_number": "9",
+      "code": "9329",
+      "name": "OTRAS ACTIVIDADES DE ESPARCIMIENTO Y RECREATIVAS N.C.P."
+    },
+    {
+      "division": "94",
+      "group": "1",
+      "class_number": "1",
+      "code": "9411",
+      "name": "ACTIVIDADES DE ASOCIACIONES EMPRESARIALES Y DE EMPLEADORES"
+    },
+    {
+      "division": "94",
+      "group": "1",
+      "class_number": "2",
+      "code": "9412",
+      "name": "ACTIVIDADES DE ASOCIACIONES PROFESIONALES"
+    },
+    {
+      "division": "94",
+      "group": "2",
+      "class_number": "0",
+      "code": "9420",
+      "name": "ACTIVIDADES DE SINDICATOS"
+    },
+    {
+      "division": "94",
+      "group": "9",
+      "class_number": "1",
+      "code": "9491",
+      "name": "ACTIVIDADES DE ORGANIZACIONES RELIGIOSAS"
+    },
+    {
+      "division": "94",
+      "group": "9",
+      "class_number": "2",
+      "code": "9492",
+      "name": "ACTIVIDADES DE ORGANIZACIONES POLÍTICAS"
+    },
+    {
+      "division": "94",
+      "group": "9",
+      "class_number": "9",
+      "code": "9499",
+      "name": "ACTIVIDADES DE OTRAS ASOCIACIONES N.C.P."
+    },
+    {
+      "division": "95",
+      "group": "1",
+      "class_number": "1",
+      "code": "9511",
+      "name": "REPARACIÓN DE ORDENADORES Y EQUIPO PERIFÉRICO"
+    },
+    {
+      "division": "95",
+      "group": "1",
+      "class_number": "2",
+      "code": "9512",
+      "name": "REPARACIÓN DE EQUIPOS COMUNICACIONALES"
+    },
+    {
+      "division": "95",
+      "group": "2",
+      "class_number": "1",
+      "code": "9521",
+      "name": "REPARACIÓN DE APARATOS ELECTRÓNICOS DE CONSUMO"
+    },
+    {
+      "division": "95",
+      "group": "2",
+      "class_number": "2",
+      "code": "9522",
+      "name": "REPARACIÓN DE APARATOS DE USO DOMÉSTICO Y EQUIPO DOMÉSTICO Y DE JARDINERÍA"
+    },
+    {
+      "division": "95",
+      "group": "2",
+      "class_number": "3",
+      "code": "9523",
+      "name": "REPARACIÓN DE CALZADO Y ARTÍCULOS DE CUERO"
+    },
+    {
+      "division": "95",
+      "group": "2",
+      "class_number": "4",
+      "code": "9524",
+      "name": "REPARACIÓN DE MUEBLES Y ACCESORIOS DOMÉSTICOS"
+    },
+    {
+      "division": "95",
+      "group": "2",
+      "class_number": "9",
+      "code": "9529",
+      "name": "REPARACIÓN DE OTROS EFECTOS PERSONALES Y ENSERES DOMÉSTICOS"
+    },
+    {
+      "division": "96",
+      "group": "0",
+      "class_number": "1",
+      "code": "9601",
+      "name": "LAVADO Y LIMPIEZA, INCLUIDA LA LIMPIEZA EN SECO, DE PRODUCTOS TEXTILES Y DE PIEL"
+    },
+    {
+      "division": "96",
+      "group": "0",
+      "class_number": "2",
+      "code": "9602",
+      "name": "PELUQUERÍA Y OTROS TRATAMIENTOS DE BELLEZA"
+    },
+    {
+      "division": "96",
+      "group": "0",
+      "class_number": "3",
+      "code": "9603",
+      "name": "POMPAS FÚNEBRES Y ACTIVIDADES CONEXAS"
+    },
+    {
+      "division": "96",
+      "group": "0",
+      "class_number": "9",
+      "code": "9609",
+      "name": "OTRAS ACTIVIDADES DE SERVICIOS PERSONALES N.C.P."
+    },
+    {
+      "division": "97",
+      "group": "0",
+      "class_number": "0",
+      "code": "9700",
+      "name": "ACTIVIDADES DE LOS HOGARES COMO EMPLEADORES DE PERSONAL DOMÉSTICO"
+    },
+    {
+      "division": "99",
+      "group": "0",
+      "class_number": "0",
+      "code": "9900",
+      "name": "ACTIVIDADES DE ORGANIZACIONES Y ÓRGANOS EXTRATERRITORIALES"
+    }
+  ]
+}
