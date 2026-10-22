@@ -48,7 +48,11 @@ try{
            AND column_name IN ('legal_form','initial_fiscal_year','income_reference_year',
               'annual_income','initial_pcge_version'))::integer AS profile_columns,
          CASE WHEN to_regclass('public.company_economic_activities') IS NULL THEN 0 ELSE 1
-           END AS activity_table
+           END AS activity_table,
+         CASE WHEN to_regclass('public.sunat_ruc_contributor_types') IS NULL THEN 0 ELSE 1 END AS types_table,
+         CASE WHEN to_regclass('public.sunat_ciiu_rev4_classes') IS NULL THEN 0 ELSE 1 END AS ciiu_table,
+         CASE WHEN to_regclass('public.sunat_ruc_tax_codes') IS NULL THEN 0 ELSE 1 END AS tax_table,
+         CASE WHEN to_regclass('public.company_tax_codes') IS NULL THEN 0 ELSE 1 END AS company_tax_table
        SQL);
     if(!$s||$s->db!=='neondb'||$s->actor!=='neondb_owner'
         ||intdiv((int)$s->pg,10000)!==18||(int)$s->companies!==3
@@ -63,6 +67,23 @@ try{
         $ok=true;
     }elseif((int)$s->migrations===23&&(int)$s->profile_columns===5&&(int)$s->activity_table===1){
         echo "[PASS] F3.1: 23 migraciones, 5 columnas fiscales y tabla CIIU instalada.\n";
+        $ok=true;
+        echo "[PENDIENTE] SUNAT RUC: 3 catálogos globales no instalados. Instalar exclusivamente migración 24.\n";
+    }elseif((int)$s->migrations===24&&(int)$s->profile_columns===5&&(int)$s->activity_table===1
+        &&(int)$s->types_table===1&&(int)$s->ciiu_table===1
+        &&(int)$s->tax_table===1&&(int)$s->company_tax_table===1){
+        $counts=$admin->selectOne(<<<'SQL'
+           SELECT (SELECT count(*) FROM public.sunat_ruc_contributor_types)::integer AS types,
+                  (SELECT count(*) FROM public.sunat_ciiu_rev4_classes)::integer AS ciiu,
+                  (SELECT count(*) FROM public.sunat_ruc_tax_codes)::integer AS taxes,
+                  (SELECT count(*) FROM public.sunat_ruc_reference_versions)::integer AS versions,
+                  (SELECT count(*) FROM public.company_tax_codes)::integer AS assignments
+           SQL);
+        if(!$counts || (int)$counts->types!==51 || (int)$counts->ciiu!==417
+            ||(int)$counts->taxes!==38||(int)$counts->versions!==3||(int)$counts->assignments!==0){
+            throw new \RuntimeException('Catálogos SUNAT RUC incompletos');
+        }
+        echo "[PASS] F3.1: 24 migraciones, 3 catálogos SUNAT (51/417/38), empresa DEV intacta.\n";
         $ok=true;
     }else{
         throw new \RuntimeException('Migracion parcial/desconocida: bloquear.');
