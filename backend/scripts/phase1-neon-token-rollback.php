@@ -163,11 +163,14 @@ try {
 
     // Cada petición olvida los guards para no reutilizar el usuario anterior.
     // Sin Sanctum::actingAs: el guard debe validar un Bearer real.
-    $request = static function (string $method, string $uri, array $body = [], ?string $bearer = null) use ($kernel): \Symfony\Component\HttpFoundation\Response {
+    $request = static function (string $method, string $uri, array $body = [], ?string $bearer = null, ?int $tenant = null) use ($kernel): \Symfony\Component\HttpFoundation\Response {
         auth()->forgetGuards();
         $server = ['HTTP_ACCEPT'=>'application/json','CONTENT_TYPE'=>'application/json'];
         if ($bearer !== null) {
             $server['HTTP_AUTHORIZATION'] = 'Bearer '.$bearer;
+        }
+        if ($tenant !== null) {
+            $server['HTTP_X_COMPANY_ID'] = (string) $tenant;
         }
         $json = json_encode($body, JSON_THROW_ON_ERROR);
         $http = \Illuminate\Http\Request::create($uri,$method,[],[],[],$server,$json);
@@ -221,12 +224,8 @@ try {
     }
 
     $check('Auditor B sin permisos de asiento',403,
-        $request('POST','/api/v1/accounting/journal-entries',[],$tokenWithTenant = $token)->getStatusCode()
-        // Esta petición usa la empresa activa A, no B: se valida abajo de forma explícita.
+        $request('POST','/api/v1/accounting/journal-entries',[],$token,$companyB)->getStatusCode()
     );
-    // Nota: la petición de arriba carece del header X-Company-Id.
-    // Volver a probar el acceso al tenant B con el encabezado correcto
-    // queda cubierto por la prueba HTTP previa F1.9.
     $switch = $request('POST','/api/v1/tenant/switch-company',
         ['company_id'=>$companyB],$token);
     $check('Cambio autorizado de empresa',200,$switch->getStatusCode());
