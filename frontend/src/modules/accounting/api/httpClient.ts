@@ -364,8 +364,7 @@ export class AccountingApiClient {
   }
 
   /**
-   * Alta de empresas (no requiere un tenant NUEVO; sí exige Sanctum).
-   * El servidor comprobará rol y migraciones pendientes antes de admitir la creación.
+   * Lectura de períodos existentes en empresa activa.
    */
   public async fetchFiscalPeriods(year: number): Promise<readonly FiscalPeriodSummary[]> {
     const response = await this.request<{ data: FiscalPeriodSummary[] }>(
@@ -392,9 +391,9 @@ export class AccountingApiClient {
   }
 
   /**
-   * Consulta y transición auditable de períodos contables.
+   * Alta de empresas (no requiere un tenant NUEVO; sí exige Sanctum).
+   * El servidor comprobará rol y migraciones pendientes antes de admitir la creación.
    */
-
   public async fetchCompanyOnboardingCapability(): Promise<{ can_create: boolean; reason: string | null }> {
     const response = await this.request<{
       data: { can_create: boolean; reason: string | null };
