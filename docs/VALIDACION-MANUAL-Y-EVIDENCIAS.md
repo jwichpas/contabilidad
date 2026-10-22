@@ -64,11 +64,19 @@ php scripts/phase2-neon-analytic-promotion-preflight.php --verify
 
 **No ejecutar las pruebas anteriores automáticamente ni en un entorno de producción.** Cada script impone sus guardas sobre host, rol y base. La activación permanente no forma parte de ninguna rutina manual vigente.
 
+## Certificación F2.2 HTTP Neon y rollback — 22/10/2026
+
+**PASS por salida de PowerShell del usuario:** `phase2-neon-analytic-http.php --probe=contabilidad-dev` verificó HTTP 201/200/409 sin duplicar asiento, recibo ni auditoría; errores 422/403, GET RLS A/B, extorno correcto, prohibición de doble extorno y ROLLBACK. `phase2-neon-journal-idempotency.php --verify` confirmó **22 migraciones**, FORCE RLS de recibos, **3 DRAFT**, cero asientos/recibos persistidos. Con pruebas Docker y frontend previas, **F2.2 ahora [x] — 6/32 actividades (19%)**. Próximo: F2.3 cierre de períodos.
+
+**Tarea operativa local independiente:** el diagnóstico de `CACHE_STORE`, `SESSION_DRIVER` y `QUEUE_CONNECTION` aún muestra 3 FAIL (ausentes en `.env`). Corregir para iniciar el API habitual; la prueba HTTP se aisló expresamente con cache/session array y queue sync, sin modificar `.env`.
+
+---
+
 ## Resultado actualizado de Neon DEV — 22/10/2026
 
 - **Migración F2.2 aprobada:** Laravel Artisan instaló la número 22; preflight posterior verificó 3 constraints, 2 UNIQUE, 2 políticas FORCE RLS, SELECT/INSERT únicamente para app_backend.
 - **Estado posterior confirmado por SQL independiente:** 3 matrices DRAFT, 0 ACTIVE, 0 asientos, 0 líneas, 0 recibos y 0 auditorías.
-- **Prueba HTTP todavía pendiente:** primer intento con Sanctum y rol app_backend falló en `Illuminate\\Support\\Manager::createDriver()` y registró ROLLBACK. Se corrigió el *harness* con `cache.default=array`, `session.driver=array`, `queue.default=sync` **solo en memoria**, como hace el ensayo Docker ya aprobado; fase de fallo ahora identificable.
+- **Histórico — primer intento fallido (resuelto):** primer intento con Sanctum y rol app_backend falló en `Illuminate\\Support\\Manager::createDriver()` y registró ROLLBACK. Se corrigió el *harness* con `cache.default=array`, `session.driver=array`, `queue.default=sync` **solo en memoria**, como hace el ensayo Docker ya aprobado; fase de fallo ahora identificable.
 - **No modificar** una matriz DRAFT ni repetir la migración aplicada como reparación de un fallo de configuración de drivers. Siguiente ejecución: `php scripts/phase2-neon-analytic-http.php --probe=contabilidad-dev`.
 
 ## Prueba nueva pendiente — F2.2 idempotencia (22/10/2026)
