@@ -23,6 +23,11 @@ export interface JournalEntryLineResponse {
   readonly line_number: number;
   readonly accounting_account_id: number;
   readonly cost_center_id?: number | null;
+  readonly cost_center?: {
+    readonly id: number;
+    readonly code: string;
+    readonly name: string;
+  } | null;
   readonly description: string | null;
   readonly debit_local: string;
   readonly credit_local: string;
