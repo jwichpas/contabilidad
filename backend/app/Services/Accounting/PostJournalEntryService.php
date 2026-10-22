@@ -139,6 +139,7 @@ final readonly class PostJournalEntryService
 
             $versionId = $this->analyticRouting->activeVersionId((int)$period->company_id);
             $analyticSources = [];
+            $manualAccountCodes = [];
             foreach ($payload['lines'] as $index => $line) {
                 $centerId = $line['cost_center_id'] ?? null;
                 $account = DB::table('accounting_accounts')
@@ -148,6 +149,7 @@ final readonly class PostJournalEntryService
                 if ($account === null) {
                     throw new DomainException(sprintf('Cuenta de partida #%d no pertenece a la empresa activa.', $index + 1));
                 }
+                $manualAccountCodes[] = (string)$account->code;
                 if ((bool) $account->requires_cost_center && $centerId === null) {
                     throw new DomainException(sprintf('La partida #%d requiere un centro de costos activo.', $index + 1));
                 }
@@ -188,6 +190,12 @@ final readonly class PostJournalEntryService
                     }
                     $analyticSources[] = [$sourceLine, $line, (int)$centerId];
                 }
+            }
+
+            // Nunca duplicar en el mismo asiento destinos introducidos a mano
+            // y destinos que acabamos de derivar de una cuenta 6xx.
+            if ($analyticSources !== [] && array_intersect($manualAccountCodes, ['941100', '951100', '791000']) !== []) {
+                throw new DomainException('No mezclar las cuentas analiticas 94/95/79 manuales con distribucion automatica en un mismo asiento.');
             }
 
             // SOLO cuando existe una matriz ACTIVE. Mientras sea DRAFT,
