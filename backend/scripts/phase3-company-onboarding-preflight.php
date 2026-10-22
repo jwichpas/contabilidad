@@ -83,6 +83,17 @@ try{
             ||(int)$counts->taxes!==38||(int)$counts->versions!==3||(int)$counts->assignments!==0){
             throw new \RuntimeException('Catálogos SUNAT RUC incompletos');
         }
+        $ledger=$admin->select('SELECT dataset,source_file,sha256,row_count,version FROM public.sunat_ruc_reference_versions ORDER BY dataset');
+        $verified=0;
+        foreach($ledger as $entry){
+            $source=database_path('reference_data/'.$entry->source_file);
+            if(!is_file($source) || !hash_equals((string)$entry->sha256,hash_file('sha256',$source))
+                ||(string)$entry->version!=='2026-10-22-v1'){
+                throw new \RuntimeException('Archivo global versionado cambiado o sin instalación');
+            }
+            $verified++;
+        }
+        if($verified!==3)throw new \RuntimeException('Faltan hashes de catálogo global');
         echo "[PASS] F3.1: 24 migraciones, 3 catálogos SUNAT (51/417/38), empresa DEV intacta.\n";
         $ok=true;
     }else{
