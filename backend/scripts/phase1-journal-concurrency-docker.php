@@ -250,8 +250,150 @@ try {
     }
     $dbA->rollBack();
     $start=false;
-    $passed=true;
     echo "[PASS] Dos conexiones: 10-00001 y 10-00002, dos cabeceras, cuatro partidas, sin duplicados.\n";
+
+    if (getenv('F23_PERIOD_CONCURRENCY') === '1') {
+        // F2.3 uses the already COMMITTED fixture in disposable Docker.
+        // PostgreSQL isolation prevents a second connection from seeing
+        // a fixture first inserted in an uncommitted transaction.
+        $periodPhase='actor/request setup';
+        $databaseManager->setDefaultConnection('pgsql');
+        $context=app(\App\Support\Tenant\TenantContext::class);
+        $context->setCompanyId($company);
+        $actor=\App\Models\User::query()->findOrFail($user);
+        $request=\Illuminate\Http\Request::create(
+            '/api/v1/accounting/fiscal-periods/'.$period.'/close','POST'
+        );
+        $request->setUserResolver(static fn()=>$actor);
+        $periodLifecycle=app(\App\Services\Accounting\FiscalPeriodStatusService::class);
+        $postService=app(\App\Services\Accounting\PostJournalEntryService::class);
+        $reason='Cierre de prueba concurrente F2.3, solo Docker descartable';
+        $assertPeriod=static function(bool $condition,string $description):void{
+            if(!$condition)throw new \RuntimeException($description);
+        };
+        $tryNowait=static function(
+            \Illuminate\Database\Connection $conn,int $companyId,int $periodId
+        ):bool{
+            // Isolate 55P03 in a savepoint so B can continue after A commits.
+            $conn->beginTransaction();
+            $locked=false;
+            try{
+                $conn->selectOne(
+                    'SELECT id FROM public.fiscal_periods WHERE company_id=? AND id=? FOR UPDATE NOWAIT',
+                    [$companyId,$periodId]
+                );
+            }catch(\Illuminate\Database\QueryException $error){
+                $locked=(string)($error->errorInfo[0]??$error->getCode())==='55P03';
+                if(!$locked)throw $error;
+            }finally{
+                $conn->rollBack();
+            }
+            return $locked;
+        };
+        $asTenant=static function(
+            \Illuminate\Database\Connection $conn,int $companyId
+        ):void{
+            $conn->beginTransaction();
+            $conn->selectOne(
+                "SELECT set_config('app.current_company_id',?,true)",[(string)$companyId]
+            );
+            $conn->selectOne("SELECT set_config('lock_timeout','2500',true)");
+        };
+
+        // Race 1: CLOSE holds the row, POST B must wait, then observes CLOSED.
+        $periodPhase='A closes / B cannot lock during closing';
+        $asTenant($dbA,$company);$start=true;
+        $databaseManager->setDefaultConnection('pgsql');
+        $closed=$periodLifecycle->change($period,'close',$reason,$request);
+        $assertPeriod($closed->status==='CLOSED','A did not close OPEN period');
+        $asTenant($dbB,$company);
+        $assertPeriod($tryNowait($dbB,$company,$period),
+            'B acquired row lock while closing transaction A still held it');
+        $dbA->commit();$start=false;
+
+        $periodPhase='B rejects POST after A commits close';
+        $databaseManager->setDefaultConnection('pgsql_f114_b');
+        $view=$dbB->selectOne(
+            'SELECT status FROM public.fiscal_periods WHERE company_id=? AND id=?',
+            [$company,$period]
+        );
+        $assertPeriod(($view->status??'')==='CLOSED',
+            'B did not observe CLOSED after A committed');
+        $blocked=false;
+        try{
+            $postService->post([
+                'fiscal_period_id'=>$period,'entry_number'=>'F23-BLOCKED',
+                'entry_date'=>'2026-10-22','entry_type'=>'STANDARD',
+                'currency'=>'PEN','exchange_rate'=>'1.000000',
+                'exchange_rate_type'=>'SELL','description'=>'Denied by closed period',
+                'created_by_user_id'=>$user,
+                'lines'=>[
+                    ['accounting_account_id'=>$accountIds[0],
+                     'debit_local'=>'15.0000','credit_local'=>'0.0000',
+                     'debit_foreign'=>'15.0000','credit_foreign'=>'0.0000'],
+                    ['accounting_account_id'=>$accountIds[1],
+                     'debit_local'=>'0.0000','credit_local'=>'15.0000',
+                     'debit_foreign'=>'0.0000','credit_foreign'=>'15.0000'],
+                ],
+            ]);
+        }catch(\DomainException $e){
+            $blocked=str_contains($e->getMessage(),'cerrado');
+        }
+        $assertPeriod($blocked,'POST accepted or failed for wrong reason in CLOSED');
+        $reopened=$periodLifecycle->change($period,'reopen',
+            'Reapertura controlada para la segunda carrera concurrente',$request);
+        $assertPeriod($reopened->status==='OPEN','B could not reopen CLOSED');
+        $dbB->commit();
+        echo "[PASS] F2.3 race CLOSE-first: B 55P03; after commit POST rejected in CLOSED, authorized reopen OK.\n";
+
+        // Race 2: POST holds the row before CLOSE. The posting transaction
+        // publishes another balanced voucher; then CLOSE gets the lock.
+        $periodPhase='A posts / B cannot close while post lock is held';
+        $asTenant($dbA,$company);$start=true;
+        $databaseManager->setDefaultConnection('pgsql');
+        $dbA->selectOne(
+            'SELECT id FROM public.fiscal_periods WHERE company_id=? AND id=? FOR UPDATE',
+            [$company,$period]
+        );
+        $asTenant($dbB,$company);
+        $assertPeriod($tryNowait($dbB,$company,$period),
+            'B acquired row lock during an active POST transaction');
+        $n3=$numbers->nextForPeriod($company,$period,10);
+        $assertPeriod($n3==='10-00003',
+            'POST under lock did not obtain next unique entry number');
+        $insertBalanced($dbA,$entryBase+2,4,$n3);
+        $dbA->statement('SET CONSTRAINTS ALL IMMEDIATE');
+        $dbA->commit();$start=false;
+
+        $periodPhase='B closes after post commits';
+        $databaseManager->setDefaultConnection('pgsql_f114_b');
+        $afterPostClose=$periodLifecycle->change($period,'close',
+            'Cierre posterior a asiento concurrente confirmado',$request);
+        $assertPeriod($afterPostClose->status==='CLOSED',
+            'CLOSE did not serialize after POST commit');
+        $dbB->commit();
+
+        $periodPhase='verify final committed Docker state';
+        $asTenant($dbA,$company);$start=true;
+        $counts=$dbA->selectOne(<<<'SQL'
+            SELECT
+              (SELECT count(*) FROM public.journal_entries WHERE company_id=?) AS journals,
+              (SELECT count(*) FROM public.journal_entry_lines WHERE company_id=?) AS lines,
+              (SELECT count(*) FROM public.audit_logs
+                WHERE company_id=? AND event_type='FISCAL_PERIOD_CLOSED') AS closes,
+              (SELECT count(*) FROM public.audit_logs
+                WHERE company_id=? AND event_type='FISCAL_PERIOD_REOPENED') AS reopens,
+              (SELECT status FROM public.fiscal_periods WHERE company_id=? AND id=?) AS state
+            SQL,[$company,$company,$company,$company,$company,$period]);
+        $assertPeriod($counts && (int)$counts->journals===3
+            &&(int)$counts->lines===6 &&(int)$counts->closes===2
+            &&(int)$counts->reopens===1 &&$counts->state==='CLOSED',
+            'Concurrent close/post/reopen left wrong vouchers or audit events');
+        $dbA->rollBack();$start=false;
+        echo "[PASS] F2.3 race POST-first: CLOSE waits, journal 10-00003 posted, then CLOSED.\n";
+        echo "[PASS] F2.3 verified: 3 immutable vouchers / 6 lines / 2 closes / 1 reopen, Docker-only.\n";
+    }
+    $passed=true;
     echo "[PASS] Solo Docker efimero: el contenedor sera destruido por el wrapper.\n";
 } catch (\Throwable $error) {
     // No imprimir payload SQL, credenciales o mensajes completos.
