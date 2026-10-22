@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController
 use App\Http\Controllers\Api\V1\Accounting\GetNextJournalEntryNumberController;
 use App\Http\Controllers\Api\V1\Accounting\ListAccountingAccountTreeController;
 use App\Http\Controllers\Api\V1\Accounting\ListJournalEntriesController;
+use App\Http\Controllers\Api\V1\Accounting\ReverseJournalEntryController;
 use App\Http\Controllers\Api\V1\Accounting\ListOperationalAccountsController;
 use App\Http\Controllers\Api\V1\Accounting\UpdateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
@@ -113,6 +114,11 @@ Route::prefix('v1')->group(function (): void {
                 Route::post('/', CreateJournalEntryController::class)
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
                     ->name('api.v1.accounting.journal-entries.store');
+
+                Route::post('/{entryId}/reverse', ReverseJournalEntryController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                    ->whereNumber('entryId')
+                    ->name('api.v1.accounting.journal-entries.reverse');
             });
 
             // Configuración, Áreas, Centros de Costos y Terceros de la Empresa
