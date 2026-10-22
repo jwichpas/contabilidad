@@ -34,7 +34,7 @@ it('routes administration and sales to distinct six-digit debit accounts and sam
     $centers = Analytics::centerDefinitions();
 
     expect($centers)->toHaveCount(2)
-        ->and(array_column($centers, 'code'))->toEqualCanonicalizing(['CC-ADM', 'CC-VTA']);
+        ->and(array_column($centers, 'code'))->toBe(['CC-ADM', 'CC-VTA']);
 
     foreach ($centers as $center) {
         expect($center['credit_code'])->toBe('791000')
