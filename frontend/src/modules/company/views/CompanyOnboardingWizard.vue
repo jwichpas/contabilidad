@@ -83,6 +83,14 @@ const draftHasErrors = computed(() => !onboardingIsComplete(draft));
 // No simular monedas ni plantillas: se utilizan solo catálogos reales de Laravel.
 const baseCurrencyOptions = computed(() => currencies.value);
 const pcgeOptions = computed(() => templates.value);
+const officialTypeForLegalForm: Partial<Record<LegalForm,string>> = {
+  PERSONA_NATURAL:'02', EIRL:'07', SRL:'28', SA:'26', SAA:'38', SAC:'39',
+};
+const contributorOptions = computed(() => {
+  const corresponding = officialTypeForLegalForm[draft.legal_form as LegalForm];
+  return corresponding ? contributorTypes.value.filter(x => x.code === corresponding) : contributorTypes.value;
+});
+
 const uiField = 'w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/10';
 const api = new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
@@ -340,7 +348,7 @@ onMounted(() => {
           </label>
           <label class="block text-sm font-medium text-foreground">
             Forma jurídica <span class="text-red-500">*</span>
-            <select v-model="draft.legal_form" :class="uiField" class="mt-1">
+            <select v-model="draft.legal_form" :class="uiField" class="mt-1" @change="draft.sunat_contributor_type_code = ''">
               <option value="">Seleccionar…</option>
               <option v-for="item in legalForms" :key="item.value" :value="item.value">{{ item.label }}</option>
             </select>
@@ -348,9 +356,9 @@ onMounted(() => {
           </label>
           <label class="block text-sm font-medium text-foreground md:col-span-2">
             Tipo de contribuyente SUNAT · Anexo 2 <span class="text-red-500">*</span>
-            <select v-model="draft.sunat_contributor_type_code" :class="uiField" class="mt-1">
+            <select v-model="draft.sunat_contributor_type_code" :class="uiField" class="mt-1" :disabled="!draft.legal_form">
               <option value="">Seleccione el tipo declarado en SUNAT…</option>
-              <option v-for="item in contributorTypes" :key="item.code" :value="item.code">{{ item.code }} · {{ item.name }}</option>
+              <option v-for="item in contributorOptions" :key="item.code" :value="item.code">{{ item.code }} · {{ item.name }}</option>
             </select>
             <small class="mt-1 block text-muted">Código SUNAT RUC; distinto de la forma jurídica interna.</small>
             <small v-if="showError('sunat_contributor_type_code')" class="block text-red-600">{{ showError('sunat_contributor_type_code') }}</small>
