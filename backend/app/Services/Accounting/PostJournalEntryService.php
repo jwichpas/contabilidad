@@ -24,10 +24,14 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class PostJournalEntryService
 {
+    public function __construct(
+        private JournalEntryNumberService $entryNumbers,
+    ) {}
+
     /**
      * @param  array{
      *     fiscal_period_id: int,
-     *     entry_number: string,
+     *     entry_number?: string,
      *     entry_date: string,
      *     entry_type?: string,
      *     currency: string,
@@ -101,9 +105,22 @@ final readonly class PostJournalEntryService
                 throw new DomainException('No se puede registrar un asiento en un periodo contable cerrado o bloqueado.');
             }
 
+            // El periodo queda bloqueado en esta transaccion hasta el COMMIT;
+            // no calcular el correlativo en el controlador ANTES del bloqueo.
+            // Los asientos con numero manual mantienen su numero; PostgreSQL
+            // aplica UNIQUE (company_id, fiscal_period_id, entry_number).
+            $entryNumber = trim((string) ($payload['entry_number'] ?? ''));
+            if ($entryNumber === '') {
+                $entryNumber = $this->entryNumbers->nextForPeriod(
+                    (int) $period->company_id,
+                    (int) $period->id,
+                    (int) $period->month
+                );
+            }
+
             $entry = JournalEntry::query()->create([
                 'fiscal_period_id' => $period->id,
-                'entry_number' => trim($payload['entry_number']),
+                'entry_number' => $entryNumber,
                 'entry_date' => $payload['entry_date'],
                 'entry_type' => $payload['entry_type'] ?? 'STANDARD',
                 'status' => 'POSTED',
