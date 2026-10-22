@@ -25,13 +25,9 @@ final class MasterChartOfAccountsSeeder extends Seeder
 {
     public function run(): void
     {
+        // Cargar la matriz global nunca debe modificar por sorpresa
+        // el plan de ninguna empresa; la clonacion requiere empresa explicita.
         $this->seedTemplates();
-
-        // Inicializar el plan contable de la empresa demo (PCGE 2019 vigente)
-        $demoCompany = Company::query()->first();
-        if ($demoCompany !== null) {
-            $this->runForCompany($demoCompany->id, 'PCGE_2019', true);
-        }
     }
 
     public function runForCompany(int $companyId, string $version = 'PCGE_2019', bool $force = false): void
@@ -43,41 +39,80 @@ final class MasterChartOfAccountsSeeder extends Seeder
         $service->initialize($companyId, $version, $force);
     }
 
-    private function seedTemplates(): void
+    public function seedTemplates(): void
     {
-        $currentCount = DB::table('accounting_account_templates')->count();
-        if ($currentCount >= 3400) {
-            // Ya se encuentran cargados ambos planes contables matrices en el catálogo
-            return;
-        }
-
         $baseDir = dirname(__DIR__, 3);
-        $file2019 = $baseDir . DIRECTORY_SEPARATOR . 'plan-contable-2019.md';
-        $file2026 = $baseDir . DIRECTORY_SEPARATOR . 'plan-contable-2026.md';
+        $file2019 = $baseDir.DIRECTORY_SEPARATOR.'plan-contable-2019.md';
+        $file2026 = $baseDir.DIRECTORY_SEPARATOR.'plan-contable-2026.md';
 
-        if (! file_exists($file2019)) {
-            // Alternativa si el comando se corre en una ruta distinta
-            $file2019 = base_path('../plan-contable-2019.md');
-        }
-        if (! file_exists($file2026)) {
-            $file2026 = base_path('../plan-contable-2026.md');
-        }
-
-        if (! file_exists($file2019) || ! file_exists($file2026)) {
-            throw new RuntimeException("Archivos de plan contable no encontrados: {$file2019} o {$file2026}");
+        if (! is_file($file2019) || ! is_file($file2026)) {
+            throw new RuntimeException('Faltan ambas fuentes de PCGE versionadas en el repositorio.');
         }
 
         $rows2019 = $this->buildAccountTemplates($file2019, 'PCGE_2019');
         $rows2026 = $this->buildAccountTemplates($file2026, 'PCGE_2026');
 
-        $allRows = array_merge($rows2019, $rows2026);
-
-        DB::table('accounting_account_templates')->truncate();
-
-        $chunks = array_chunk($allRows, 200);
-        foreach ($chunks as $chunk) {
-            DB::table('accounting_account_templates')->insert($chunk);
+        // Congelar este contrato: cualquier modificacion de las matrices
+        // exige manifiesto/version nueva y revision antes de tocar datos.
+        if (count($rows2019) !== 1764 || count($rows2026) !== 1637) {
+            throw new RuntimeException('La matriz PCGE no coincide con la fuente de referencia verificada.');
         }
+
+        $allRows = array_merge($rows2019, $rows2026);
+        $expected = [];
+        foreach ($allRows as $row) {
+            $key = $row['plan_version'].'|'.$row['code'];
+            if (isset($expected[$key])) {
+                throw new RuntimeException('Codigo PCGE duplicado en fuente versionada.');
+            }
+            $expected[$key] = $row;
+        }
+
+        DB::transaction(static function () use ($allRows, $expected): void {
+            $existingCount = DB::table('accounting_account_templates')->count();
+            if ($existingCount === 0) {
+                // Primera instalacion: solo INSERT. Nunca TRUNCATE ni cambio
+                // de las cuentas de las empresas.
+                foreach (array_chunk($allRows, 200) as $chunk) {
+                    DB::table('accounting_account_templates')->insert($chunk);
+                }
+                $existingCount = DB::table('accounting_account_templates')->count();
+            }
+            if ($existingCount !== count($expected)) {
+                throw new RuntimeException('Matriz PCGE parcial o de version diferente; detener carga sin sobrescribir.');
+            }
+
+            $booleanFields = [
+                'requires_cost_center', 'has_automatic_destination',
+                'requires_cash_flow_area', 'is_operational', 'is_active',
+            ];
+            $columns = array_keys($allRows[0]);
+            $columns = array_values(array_diff($columns, ['created_at','updated_at']));
+            $found = 0;
+            foreach (DB::table('accounting_account_templates')->select($columns)
+                ->orderBy('plan_version')->orderBy('code')->cursor() as $saved) {
+                $key = $saved->plan_version.'|'.$saved->code;
+                if (! isset($expected[$key])) {
+                    throw new RuntimeException('Matriz PCGE contiene un codigo no versionado.');
+                }
+                foreach ($columns as $field) {
+                    $actual = $saved->{$field};
+                    $wanted = $expected[$key][$field];
+                    if (in_array($field, $booleanFields, true)) {
+                        if (filter_var($actual, FILTER_VALIDATE_BOOLEAN) !== (bool) $wanted) {
+                            throw new RuntimeException('Diferencia en definicion del PCGE, campo: '.$field);
+                        }
+                    } elseif (($actual === null) !== ($wanted === null)
+                        || ($actual !== null && (string) $actual !== (string) $wanted)) {
+                        throw new RuntimeException('Diferencia en definicion del PCGE, campo: '.$field);
+                    }
+                }
+                $found++;
+            }
+            if ($found !== count($expected)) {
+                throw new RuntimeException('Matriz PCGE incompleta: no coinciden las cuentas esperadas.');
+            }
+        });
     }
 
     /**
