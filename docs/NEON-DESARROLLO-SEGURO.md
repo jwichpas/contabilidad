@@ -305,3 +305,16 @@ php scripts/phase1-neon-rls-rollback.php --probe=contabilidad-dev
 ```
 
 Las pruebas HTTP Pest `CompanyRoleAuthorizationTest` y `TenantContextNestedTest` se habían validado (12 tests/37 assertions) sobre Docker PG18.6 efímero. **No ejecutarlas directamente sobre Neon** sin diseñar antes un runner independiente con comprobación del entorno y limpieza verificable. La ejecución de CI GitHub Actions también se debe tratar como pendiente mientras no haya jobs exitosos.
+
+
+## F1.8 — Pruebas RLS A/B completadas y limpieza confirmada (21/10/2026)
+
+El usuario ejecutó en su backend conectado a Neon `contabilidad-dev`:
+
+- `php scripts/phase1-neon-app-role-readonly.php`: **PASS** conexión operativa real `app_backend` en PostgreSQL 18, roles limitados y GRANTs, 13 FORCE RLS y contexto tenant 101/202 sin filtraciones.
+- `php scripts/phase1-neon-rls-rollback.php --plan`: **PASS** sin abrir SQL.
+- `php scripts/phase1-neon-rls-rollback.php --probe=contabilidad-dev`: **PASS** RLS A/B: lectura cruzada oculta, UPDATE/DELETE cruzados afectan cero filas, INSERT cruzado denegado, sin contexto no hay visibilidad y **ROLLBACK confirmado** con IDs explícitos sin consumir secuencias.
+
+Después se ejecutó una segunda verificación **SELECT independiente a través del conector Neon**, con proyecto `soft-bonus-52215969`, rama `br-odd-lake-b6wshqv3`, base `neondb`: `companies=0`, `company_areas=0`, `audit_logs=0`, `migrations=16`, PostgreSQL `18.6`. No hay residuos de esas pruebas y se conserva el esquema íntegro.
+
+**F1.8 completada** para RLS con el rol SQL real. No significa que las pruebas HTTP/REST Laravel sobre Neon hayan pasado: todavía falta cubrir autenticación Sanctum, permisos ADMIN/ACCOUNTANT/AUDITOR/DATA_ENTRY por empresa, elección de empresa, rechazo de tenant indebido y flujos de asientos. Las pruebas HTTP existentes con 12 casos y 37 aserciones se ejecutaron sobre Docker efímero, no sobre Neon. Antes de permitir escrituras HTTP sobre Neon, diseñar un runner de pruebas con rollback total y verificación de identidad, sin ejecutar `php artisan test` general contra Neon por error. Mantener Neon `production` y Supabase intactos.
