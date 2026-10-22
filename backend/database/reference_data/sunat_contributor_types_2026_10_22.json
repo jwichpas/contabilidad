@@ -1,0 +1,212 @@
+{
+  "dataset": "sunat_tipo_contribuyente",
+  "version": "2026-10-22-v1",
+  "source": "SUNAT Tabla Anexa 2 - Tipo de contribuyente (archivo suministrado)",
+  "source_kind": "user_supplied_reference_transcription",
+  "rows": [
+    {
+      "code": "01",
+      "name": "PERSONA NATURAL SIN NEGOCIO"
+    },
+    {
+      "code": "02",
+      "name": "PERSONA NATURAL CON NEGOCIO"
+    },
+    {
+      "code": "03",
+      "name": "SOCIEDAD CONYUGAL SIN NEGOCIO"
+    },
+    {
+      "code": "04",
+      "name": "SOCIEDAD CONYUGAL CON NEGOCIO"
+    },
+    {
+      "code": "05",
+      "name": "SUCESION INDIVISA SIN NEGOCIO"
+    },
+    {
+      "code": "06",
+      "name": "SUCESION INDIVISA CON NEGOCIO"
+    },
+    {
+      "code": "07",
+      "name": "EMPRESA INDIVIDUAL DE RESP. LTDA"
+    },
+    {
+      "code": "08",
+      "name": "SOCIEDAD CIVIL"
+    },
+    {
+      "code": "09",
+      "name": "SOCIEDAD IRREGULAR"
+    },
+    {
+      "code": "10",
+      "name": "ASOCIACION EN PARTICIPACION"
+    },
+    {
+      "code": "11",
+      "name": "ASOCIACION"
+    },
+    {
+      "code": "12",
+      "name": "FUNDACION"
+    },
+    {
+      "code": "13",
+      "name": "SOCIEDAD EN COMANDITA SIMPLE"
+    },
+    {
+      "code": "14",
+      "name": "SOCIEDAD COLECTIVA"
+    },
+    {
+      "code": "15",
+      "name": "INSTITUCIONES PUBLICAS"
+    },
+    {
+      "code": "16",
+      "name": "INSTITUCIONES RELIGIOSAS"
+    },
+    {
+      "code": "17",
+      "name": "SOCIEDAD DE BENEFICIENCIA"
+    },
+    {
+      "code": "18",
+      "name": "ENTIDADES DE AUXILIO MUTUO"
+    },
+    {
+      "code": "19",
+      "name": "UNIVERS. CENTROS EDUCAT. Y CULT."
+    },
+    {
+      "code": "20",
+      "name": "GOBIERNO REGIONAL, LOCAL"
+    },
+    {
+      "code": "21",
+      "name": "GOBIERNO CENTRAL"
+    },
+    {
+      "code": "22",
+      "name": "COMUNIDAD LABORAL"
+    },
+    {
+      "code": "23",
+      "name": "COMUNIDAD CAMPESINA,NATIVA,COMUNAL"
+    },
+    {
+      "code": "24",
+      "name": "COOPERATIVAS, SAIS, CAPS"
+    },
+    {
+      "code": "25",
+      "name": "EMPRESA DE PROPIEDAD SOCIAL"
+    },
+    {
+      "code": "26",
+      "name": "SOCIEDAD ANONIMA"
+    },
+    {
+      "code": "27",
+      "name": "SOCIEDAD EN COMANDITA POR ACCIONES"
+    },
+    {
+      "code": "28",
+      "name": "SOC.COM.RESPONS. LTDA"
+    },
+    {
+      "code": "29",
+      "name": "SUC,AG.EMP.EXTRANJ,EST.PERM NO DOM."
+    },
+    {
+      "code": "30",
+      "name": "EMPRESA DE DERECHO PUBLICO"
+    },
+    {
+      "code": "31",
+      "name": "EMPRESA ESTATAL DE DERECHO PRIVADO"
+    },
+    {
+      "code": "32",
+      "name": "EMPRESA DE ECONOMIA MIXTA"
+    },
+    {
+      "code": "33",
+      "name": "ACCIONARIADO DEL ESTADO"
+    },
+    {
+      "code": "34",
+      "name": "MISIONES DIPLOMATICAS Y ORG. INTER."
+    },
+    {
+      "code": "35",
+      "name": "JUNTA DE PROPIETARIOS"
+    },
+    {
+      "code": "36",
+      "name": "OF.REPRESENTACION DE NO DOMICILIADO"
+    },
+    {
+      "code": "37",
+      "name": "FONDOS MUTUOS DE INVERSION"
+    },
+    {
+      "code": "38",
+      "name": "SOCIEDAD ANONIMA ABIERTA"
+    },
+    {
+      "code": "39",
+      "name": "SOCIEDAD ANONIMA CERRADA"
+    },
+    {
+      "code": "40",
+      "name": "CONTRATOS COLABORACION EMPRESARIAL"
+    },
+    {
+      "code": "41",
+      "name": "ENT.INST.COOPERAC.TECNICA - ENIEX"
+    },
+    {
+      "code": "42",
+      "name": "COMUNIDAD DE BIENES"
+    },
+    {
+      "code": "43",
+      "name": "SOCIEDAD MINERA DE RESP.LIMITADA"
+    },
+    {
+      "code": "44",
+      "name": "ASOC. FUNDAC. Y COMITE NO INSCRITOS"
+    },
+    {
+      "code": "45",
+      "name": "PARTIDOS,MOVIM, ALIANZAS POLITICAS"
+    },
+    {
+      "code": "46",
+      "name": "ASOC. DE HECHO DE PROFESIONALES"
+    },
+    {
+      "code": "47",
+      "name": "CAFAES Y SUBCAFAES"
+    },
+    {
+      "code": "48",
+      "name": "SINDICATOS Y FEDERACIONES"
+    },
+    {
+      "code": "49",
+      "name": "COLEGIOS PROFESIONALES"
+    },
+    {
+      "code": "50",
+      "name": "COMITES INSCRITOS"
+    },
+    {
+      "code": "51",
+      "name": "ORGANIZACIONES SOCIALES DE BASE"
+    }
+  ]
+}
