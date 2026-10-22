@@ -60,7 +60,7 @@ try{
     $role=$db->selectOne('SELECT current_user AS actor');
     if(!$pre||$pre->db!=='neondb'||$pre->actor!=='neondb_owner'
         ||intdiv((int)$pre->pg,10000)!==18||$role?->actor!=='app_backend'
-        ||(int)$pre->migrations!==23||(int)$pre->companies!==3
+        ||(int)$pre->migrations!==24||(int)$pre->companies!==3
         ||(int)$pre->users!==3||(int)$pre->members!==8
         ||(int)$pre->january!==1||(int)$pre->journals!==0){
         throw new \RuntimeException('Baseline Neon F3.1 no coincide');
@@ -94,15 +94,26 @@ try{
         'Guard F3.1 bloquea alta de empresa');
     echo "[PASS] F3.1: ADMIN puede crear, migracion y referencias globales listas.\n";
 
+    $phase='GET 3 global SUNAT reference selectors';
+    foreach(['contributor-types'=>51,'ciiu'=>417,'tax-codes'=>38] as $dataset=>$expected){
+        $responseCatalog=$http('GET','/api/v1/catalogs/sunat-ruc/'.$dataset);
+        $payloadCatalog=json_decode((string)$responseCatalog->getContent(),true,512,JSON_THROW_ON_ERROR);
+        $check($responseCatalog->getStatusCode()===200
+            &&count($payloadCatalog['data']??[])===$expected,
+            'SUNAT reference dataset incomplete: '.$dataset);
+    }
+    echo "[PASS] F3.1 global SUNAT: 51 tipos, 417 CIIU, 38 tributos.\n";
+
     $phase='POST company wizard';
     $payload=[
       'tax_id'=>'20999990020',
       'business_name'=>'F3.1 Transporte Temporal E.I.R.L.',
       'legal_address'=>'Av. Desarrollo 100 - Prueba reversible',
-      'legal_form'=>'EIRL','tax_regime'=>'MYPE_TRIBUTARIO',
+      'legal_form'=>'EIRL','sunat_contributor_type_code'=>'07',
+      'tax_regime'=>'MYPE_TRIBUTARIO','tax_codes'=>['1011','3031'],
       'economic_activities'=>[[
         'sector_code'=>'TRANSPORTE_LOGISTICA','ciiu_code'=>'4923',
-        'description'=>'Transporte de carga terrestre ficticio','is_primary'=>true
+        'description'=>'TRANSPORTE DE CARGA POR CARRETERA','is_primary'=>true
       ]],
       'fiscal_year'=>2026,'income_reference_year'=>2025,
       'annual_income'=>'100.00','base_currency_code'=>'PEN',
@@ -128,22 +139,24 @@ try{
     $detail=$db->selectOne(<<<'SQL'
        SELECT
          (SELECT count(*) FROM public.company_user WHERE company_id=? AND user_id=? AND role='ADMIN') AS members,
-         (SELECT count(*) FROM public.company_settings WHERE company_id=? AND legal_form='EIRL' AND tax_regime='MYPE_TRIBUTARIO') AS settings,
+         (SELECT count(*) FROM public.company_settings WHERE company_id=? AND legal_form='EIRL' AND tax_regime='MYPE_TRIBUTARIO' AND sunat_contributor_type_code='07') AS settings,
          (SELECT count(*) FROM public.company_currencies WHERE company_id=?) AS currencies,
-         (SELECT count(*) FROM public.company_economic_activities WHERE company_id=? AND is_primary=true) AS activities,
+         (SELECT count(*) FROM public.company_tax_codes WHERE company_id=? AND tax_code IN ('1011','3031')) AS tax_codes,
+         (SELECT count(*) FROM public.company_economic_activities WHERE company_id=? AND is_primary=true AND ciiu_code='4923' AND description='TRANSPORTE DE CARGA POR CARRETERA') AS activities,
          (SELECT count(*) FROM public.accounting_accounts WHERE company_id=?) AS accounts,
          (SELECT count(*) FROM public.company_areas WHERE company_id=?) AS areas,
          (SELECT count(*) FROM public.cash_flow_areas WHERE company_id=?) AS flow_areas,
          (SELECT count(*) FROM public.audit_logs WHERE company_id=? AND event_type='COMPANY_ONBOARDED') AS audits
-       SQL,[$id,3000000000201,$id,$id,$id,$id,$id,$id,$id]);
+       SQL,[$id,3000000000201,$id,$id,$id,$id,$id,$id,$id,$id]);
     $check($detail && (int)$detail->members===1
         &&(int)$detail->settings===1&&(int)$detail->currencies===2
+        &&(int)$detail->tax_codes===2
         &&(int)$detail->activities===1&&(int)$detail->accounts>1764
         &&(int)$detail->areas===6&&(int)$detail->flow_areas===9
         &&(int)$detail->audits===1,
         'F3.1 configuracion incompleta / auditoria ausente');
     $db->selectOne("SELECT set_config('app.current_company_id','',true)");
-    echo "[PASS] F3.1 HTTP 201: 1 empresa, ADMIN, EIRL/RMT, PEN/USD, CIIU 4923, PCGE, 6 areas, 9 flujos, 1 auditoria.\n";
+    echo "[PASS] F3.1 HTTP 201: 1 empresa, ADMIN, EIRL/RMT, PEN/USD, SUNAT 07, tributos 1011/3031, CIIU 4923, PCGE, 6 areas, 9 flujos, 1 auditoria.\n";
     $passed=true;
 }catch(\Throwable $e){
     $code=$e instanceof \Illuminate\Database\QueryException
