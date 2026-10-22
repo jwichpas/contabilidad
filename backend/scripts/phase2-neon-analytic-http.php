@@ -376,6 +376,12 @@ try{
     $check($otherPeriods->getStatusCode()===200
         &&count($otherBody['data']??[])===0,
         'An unrelated company must not see other accounting periods');
+    $probePhase='F2.3 role check for opening';
+    \Laravel\Sanctum\Sanctum::actingAs($auditorUser,['*'],'sanctum');
+    $deniedOpen=$request('POST','/api/v1/accounting/fiscal-periods',$companyA,$opening);
+    $check($deniedOpen->getStatusCode()===403,
+        'Opening must be restricted to an authorized company role');
+    \Laravel\Sanctum\Sanctum::actingAs($adminUser,['*'],'sanctum');
     $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
     $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
 
