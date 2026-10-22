@@ -121,6 +121,26 @@ try{
       'pcge_version'=>'PCGE_2019','confirm_early_adoption'=>false,
       'confirm_legal_data'=>true,
     ];
+    // Contrato SUNAT: ninguna empresa debe poder inventar tipos, CIIU o tributos.
+    $phase='Reject unknown SUNAT reference code';
+    $invalid=$payload;
+    $invalid['economic_activities'][0]['ciiu_code']='9999';
+    $rejected=$http('POST','/api/v1/tenant/companies',$invalid);
+    $check($rejected->getStatusCode()===422,
+        'Un CIIU inexistente debe rechazarse con HTTP 422.');
+    $invalid=$payload;
+    $invalid['sunat_contributor_type_code']='99';
+    $rejected=$http('POST','/api/v1/tenant/companies',$invalid);
+    $check($rejected->getStatusCode()===422,
+        'Un tipo de contribuyente inexistente debe rechazarse con HTTP 422.');
+    $invalid=$payload;
+    $invalid['tax_codes']=['9999'];
+    $rejected=$http('POST','/api/v1/tenant/companies',$invalid);
+    $check($rejected->getStatusCode()===422,
+        'Un código de tributo inexistente debe rechazarse con HTTP 422.');
+    echo "[PASS] F3.1 SUNAT: CIIU, tipo y tributo desconocidos rechazados 422.\n";
+
+    $phase='POST company wizard';
     $startPost=microtime(true);
     $response=$http('POST','/api/v1/tenant/companies',$payload);
     $postDuration=round(microtime(true)-$startPost,2);
