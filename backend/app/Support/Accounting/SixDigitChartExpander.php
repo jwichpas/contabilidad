@@ -60,6 +60,17 @@ final class SixDigitChartExpander
             $aliases[$code] = $child;
         }
 
-        return $templates->concat(array_values($aliases));
+        // The original source collection remains untouched. Expanded terminal
+        // nodes below 6 digits are non-postable structural parents.
+        $canonical = $templates->map(static function (AccountingAccountTemplate $tpl): AccountingAccountTemplate {
+            if ($tpl->is_operational && strlen((string) $tpl->code) < 6) {
+                $parent = clone $tpl;
+                $parent->is_operational = false;
+                return $parent;
+            }
+            return $tpl;
+        });
+
+        return $canonical->concat(array_values($aliases));
     }
 }
