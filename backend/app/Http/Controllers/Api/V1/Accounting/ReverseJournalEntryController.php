@@ -61,7 +61,7 @@ final readonly class ReverseJournalEntryController
             severity:'INFO',
         );
 
-        $reversal->load(['lines.account','fiscalPeriod']);
+        $reversal->load(['lines.account','lines.costCenter','fiscalPeriod']);
         return response()->json([
             'message'=>'Extorno contable registrado. El asiento original permanece inmutable.',
             'data'=>$reversal,
