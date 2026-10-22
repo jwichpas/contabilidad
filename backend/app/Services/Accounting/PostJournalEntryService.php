@@ -16,8 +16,11 @@ use Illuminate\Support\Facades\DB;
  *
  * Garantiza la Partida Doble en las 3 capas exigidas por la arquitectura:
  * 1. Validación matemática exacta en PHP con `Decimal` (BCMath) sin punto flotante (`SUM(debe) - SUM(haber) = 0.0000`).
- * 2. Transacción con nivel de aislamiento `REPEATABLE READ`.
- * 3. `CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED` en PostgreSQL al hacer COMMIT.
+ * 2. Transaccion atomica Laravel, con bloqueo FOR UPDATE del periodo.
+ *    El aislamiento SQL es el predeterminado de la conexion (no se fuerza
+ *    REPEATABLE READ). Su concurrencia debe cubrirse con tests especificos.
+ * 3. `CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED` en PostgreSQL
+ *    al confirmar la transaccion; en tests ROLLBACK forzar SET CONSTRAINTS.
  */
 final readonly class PostJournalEntryService
 {
