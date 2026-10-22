@@ -9,6 +9,23 @@ use Illuminate\Database\Seeder;
 
 class CurrenciesSeeder extends Seeder
 {
+    private bool $bulkGlobalInstall = false;
+
+    /** Only the F2 guarded installer may request insert-only, batched loading. */
+    public function runForGlobalInstall(): void
+    {
+        if ($this->bulkGlobalInstall) {
+            throw new \RuntimeException('Carga global ya iniciada.');
+        }
+
+        $this->bulkGlobalInstall = true;
+        try {
+            $this->run();
+        } finally {
+            $this->bulkGlobalInstall = false;
+        }
+    }
+
     public function run(): void
     {
         $currencies = [
@@ -43,6 +60,11 @@ class CurrenciesSeeder extends Seeder
                 'is_active' => true,
             ],
         ];
+
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(Currency::class, $currencies);
+            return;
+        }
 
         foreach ($currencies as $currency) {
             Currency::query()->updateOrCreate(
