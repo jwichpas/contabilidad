@@ -217,38 +217,12 @@ final readonly class InitializeCompanyChartOfAccountsService
                     }
                 }
 
-                // Restaurar centros de costos estándar si existen las cuentas de destino
-                $acc9411 = $codeToIdMap['9411'] ?? null;
-                $acc9511 = $codeToIdMap['9511'] ?? null;
-                $acc7911 = $codeToIdMap['7911'] ?? null;
-
-                if ($acc9411 !== null && $acc7911 !== null) {
-                    DB::table('cost_centers')->insert([
-                        'uuid' => (string) Str::uuid(),
-                        'company_id' => $companyId,
-                        'code' => 'CC-ADM',
-                        'name' => 'Centro de Costos de Administración General',
-                        'destination_debit_account_id' => $acc9411,
-                        'destination_credit_account_id' => $acc7911,
-                        'is_active' => DB::raw('TRUE'),
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                }
-
-                if ($acc9511 !== null && $acc7911 !== null) {
-                    DB::table('cost_centers')->insert([
-                        'uuid' => (string) Str::uuid(),
-                        'company_id' => $companyId,
-                        'code' => 'CC-VTA',
-                        'name' => 'Centro de Costos Comercial y Ventas',
-                        'destination_debit_account_id' => $acc9511,
-                        'destination_credit_account_id' => $acc7911,
-                        'is_active' => DB::raw('TRUE'),
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                }
+                // Las cuentas 94/95 no forman parte del PCGE matriz global.
+                // La contabilidad analitica se instala como ampliacion privada
+                // del tenant y solo usa movimientos en seis digitos.
+                // El propio servicio valida la cuenta 791000.
+                app(InitializeCompanyAnalyticAccountsService::class)
+                    ->installForCompany($companyId);
 
                 // Re-vincular cuentas operativas por defecto en company_settings
                 // Solo referencias operativas de seis dígitos para automatismos.
@@ -269,7 +243,10 @@ final readonly class InitializeCompanyChartOfAccountsService
                         'retained_earnings_account_id' => $retEarn,
                     ]);
 
-                return $insertedCount;
+                // Incluir las cuentas analiticas privadas creadas por la misma
+                // transaccion en el total informado al usuario.
+                return (int) DB::table('accounting_accounts')
+                    ->where('company_id', $companyId)->count();
             });
         });
 
