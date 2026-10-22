@@ -26,7 +26,10 @@ const isSaving = shallowRef(false);
 const errorMessage = shallowRef<string | null>(null);
 const successMessage = shallowRef<string | null>(null);
 const periods = shallowRef<readonly FiscalPeriodSummary[]>([]);
-const pendingAction = shallowRef<{ period: FiscalPeriodSummary; action: FiscalPeriodAction } | null>(null);
+type PeriodActionRequest =
+  | { readonly action: 'open'; readonly month: number; readonly year: number; readonly period: null }
+  | { readonly action: FiscalPeriodAction; readonly month: number; readonly year: number; readonly period: FiscalPeriodSummary };
+const pendingAction = shallowRef<PeriodActionRequest | null>(null);
 const reason = ref('');
 let requestVersion = 0;
 
@@ -48,7 +51,8 @@ const totals = computed(() => ({
   entries: periods.value.reduce((sum, p) => sum + p.entry_count, 0),
 }));
 
-const actionLabels: Record<FiscalPeriodAction, string> = {
+const actionLabels: Record<FiscalPeriodAction | 'open', string> = {
+  open: 'Abrir período',
   close: 'Cerrar período',
   reopen: 'Reabrir período',
   lock: 'Bloquear definitivamente',
@@ -98,12 +102,21 @@ function navigateYear(offset: number): void {
   void loadPeriods();
 }
 
+function requestOpen(month: number): void {
+  if (!props.canManagePeriods || isSaving.value || isLoading.value) return;
+  if (periods.value.some((p) => p.year === selectedYear.value && p.month === month)) return;
+  pendingAction.value = { action: 'open', month, year: selectedYear.value, period: null };
+  reason.value = '';
+  errorMessage.value = null;
+  successMessage.value = null;
+}
+
 function requestAction(period: FiscalPeriodSummary, action: FiscalPeriodAction): void {
   if (!props.canManagePeriods || isSaving.value) return;
   // Defense in depth: backend checks this again under SELECT FOR UPDATE.
   if ((action === 'close' && period.status !== 'OPEN')
     || ((action === 'reopen' || action === 'lock') && period.status !== 'CLOSED')) return;
-  pendingAction.value = { period, action };
+  pendingAction.value = { period, action, month: period.month, year: period.year };
   reason.value = '';
   errorMessage.value = null;
   successMessage.value = null;
@@ -123,9 +136,11 @@ async function confirmAction(): Promise<void> {
   successMessage.value = null;
   const companyId = props.activeCompanyId;
   try {
-    const result = await apiClient.value.changeFiscalPeriodStatus(
-      pending.period.id, pending.action, reason.value.trim(),
-    );
+    const result = pending.action === 'open'
+      ? await apiClient.value.openFiscalPeriod(pending.year, pending.month, reason.value.trim())
+      : await apiClient.value.changeFiscalPeriodStatus(
+          pending.period.id, pending.action, reason.value.trim(),
+        );
     if (props.activeCompanyId !== companyId) return;
     pendingAction.value = null;
     reason.value = '';
@@ -220,15 +235,16 @@ onMounted(() => { void loadPeriods(); });
                 {{ row.period?.closed_at ? row.period.closed_at.slice(0, 10) : '—' }}
               </td>
               <td class="px-4 py-3">
-                <div v-if="canManagePeriods && row.period" class="flex items-center justify-end gap-2">
-                  <button v-if="row.period.status === 'OPEN'" type="button" :disabled="isSaving" class="rounded-md border border-amber-500/40 px-2.5 py-1.5 text-amber-700 hover:bg-amber-500/10 disabled:opacity-50 dark:text-amber-300" @click="requestAction(row.period, 'close')">Cerrar</button>
-                  <template v-else-if="row.period.status === 'CLOSED'">
+                <div v-if="canManagePeriods" class="flex items-center justify-end gap-2">
+                  <button v-if="!row.period" type="button" :disabled="isSaving || isLoading" class="rounded-md border border-emerald-500/40 px-2.5 py-1.5 font-semibold text-emerald-700 hover:bg-emerald-500/10 disabled:opacity-50 dark:text-emerald-300" @click="requestOpen(row.month)">Abrir</button>
+                  <button v-else-if="row.period?.status === 'OPEN'" type="button" :disabled="isSaving" class="rounded-md border border-amber-500/40 px-2.5 py-1.5 text-amber-700 hover:bg-amber-500/10 disabled:opacity-50 dark:text-amber-300" @click="requestAction(row.period, 'close')">Cerrar</button>
+                  <template v-else-if="row.period?.status === 'CLOSED'">
                     <button type="button" :disabled="isSaving" class="rounded-md border border-line px-2.5 py-1.5 text-foreground hover:bg-soft disabled:opacity-50" @click="requestAction(row.period, 'reopen')">Reabrir</button>
                     <button type="button" :disabled="isSaving" class="rounded-md border border-rose-500/40 px-2.5 py-1.5 text-rose-700 hover:bg-rose-500/10 disabled:opacity-50 dark:text-rose-300" @click="requestAction(row.period, 'lock')">Bloquear</button>
                   </template>
-                  <span v-else class="flex items-center gap-1 text-muted"><LockKeyhole class="h-3.5 w-3.5" /> Definitivo</span>
+                  <span v-else-if="row.period?.status === 'LOCKED'" class="flex items-center gap-1 text-muted"><LockKeyhole class="h-3.5 w-3.5" /> Definitivo</span>
                 </div>
-                <span v-else class="block text-right text-muted">{{ !canManagePeriods && row.period ? 'Solo lectura' : '—' }}</span>
+                <span v-else class="block text-right text-muted">Solo lectura</span>
               </td>
             </tr>
           </tbody>
@@ -236,7 +252,7 @@ onMounted(() => { void loadPeriods(); });
       </div>
       <p class="border-t border-line bg-soft/50 p-3 text-[11px] text-muted">
         <Clock3 class="mr-1 inline h-3.5 w-3.5" />
-        “Sin registrar” indica que aún no existe un período guardado. Esta pantalla no genera períodos automáticamente.
+        “Sin registrar” indica que aún no existe un período guardado. Un administrador puede abrirlo de forma explícita; nunca se crea al consultar la pantalla.
       </p>
     </div>
 
@@ -253,7 +269,7 @@ onMounted(() => { void loadPeriods(); });
       <div role="dialog" aria-modal="true" aria-labelledby="period-action-title" class="w-full max-w-lg rounded-xl border border-line bg-card p-5 shadow-2xl">
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-2">
-            <LockOpen v-if="pendingAction.action === 'reopen'" class="h-5 w-5 text-amber-500" />
+            <LockOpen v-if="pendingAction.action === 'reopen' || pendingAction.action === 'open'" class="h-5 w-5 text-amber-500" />
             <LockKeyhole v-else class="h-5 w-5 text-brand" />
             <h2 id="period-action-title" class="text-base font-semibold">
               {{ actionLabels[pendingAction.action] }}
@@ -262,9 +278,10 @@ onMounted(() => { void loadPeriods(); });
           <button type="button" :disabled="isSaving" class="rounded-md p-1 text-muted hover:bg-soft" aria-label="Cancelar operación" @click="cancelAction"><X class="h-4 w-4" /></button>
         </div>
         <p class="mt-3 text-xs leading-relaxed text-muted">
-          {{ monthNames[pendingAction.period.month - 1] }} {{ pendingAction.period.year }} ·
-          {{ pendingAction.period.entry_count }} asientos.
+          {{ monthNames[pendingAction.month - 1] }} {{ pendingAction.year }} ·
+          {{ pendingAction.period?.entry_count ?? 0 }} asientos.
           <span v-if="pendingAction.action === 'lock'" class="font-semibold text-rose-600 dark:text-rose-300">Este bloqueo no podrá revertirse desde el flujo ordinario.</span>
+          <span v-else-if="pendingAction.action === 'open'">Se creará el período en estado abierto; no se generarán asientos automáticamente y la apertura quedará auditada.</span>
           <span v-else>La operación dejará constancia en la auditoría contable.</span>
         </p>
         <label for="period-reason" class="mt-4 block text-xs font-semibold">Motivo obligatorio (10–500 caracteres)</label>
