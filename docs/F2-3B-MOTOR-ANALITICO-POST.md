@@ -28,7 +28,23 @@
    - Evita mezclar 94/95/79 manuales y líneas auto-derivadas en el mismo voucher.
    - El extorno crea una copia invertida exacta de todas las partidas, conserva centro de costos y reconstruye los vínculos con los lados Debe/Haber invertidos; **no reejecuta la distribución** al extornar, incluso si las reglas fueron retiradas.
 4. **Tests unitarios:** espejo monetario exacto 4 decimales bimoneda, ajuste de crédito, rechazo de importes contradictorios.
-5. **CI PostgreSQL 18:** lint/plan e instalación real de estructura `F2.2 v2 -> F2.3a -> F2.3b` en base desechable, verificación de FK, unicidad, RLS y privilegios. Los tests HTTP reales/negativos con `ACTIVE` temporal aún están pendientes.
+5. **CI PostgreSQL 18:** lint/plan e instalación real de estructura `F2.2 v2 -> F2.3a -> F2.3b` en base desechable, verificación de FK, unicidad, RLS y privilegios. El probe con `ACTIVE` temporal está publicado, **no ejecutado aún**; faltan pruebas HTTP completas y RLS usando `app_backend`.
+
+## Prueba de integración F2.3b con rollback completo
+
+En `backend/scripts/phase2-neon-analytic-rollback.php` se agregó un probe protegido que **requiere** migración 21, base de desarrollo con 3 empresas DEMO, 0 asientos, 3 matrices DRAFT y 1362 rutas. Usa exclusivamente la conexión administrativa **dentro de una transacción global**, marca una matriz `ACTIVE` de forma transitoria y ejecuta los servicios reales `PostJournalEntryService::post` y `reverse` contra centros administrativos y de ventas. Verifica importes exactos en dos monedas, trazabilidad 6xx-94/95-79, extorno invertido, rechazo de centro faltante/cruzado y `SET CONSTRAINTS ALL IMMEDIATE`; termina con **ROLLBACK**, y vuelve a consultar que existan cero asientos, cero vínculos, cero períodos temporales y cero versiones activas.
+
+Este probe usa `neondb_owner` para poder activar la regla durante su transacción, por lo que **no certifica la política RLS real de `app_backend`**. Es un control adicional, no autorización de activación. La instalación F2.3b no habilita la distribución: sin `ACTIVE`, no genera nuevas líneas.
+
+```bash
+php -l scripts/phase2-neon-analytic-rollback.php
+php scripts/phase2-neon-analytic-rollback.php --plan
+# SOLO despues de instalar y verificar migracion F2.3b:
+php scripts/phase2-neon-analytic-rollback.php --probe=contabilidad-dev
+php scripts/phase2-neon-analytic-allocations.php --verify
+```
+
+Si falla el probe, conservar DRAFT y revisar la causa sin hacer SQL de activación ni modificaciones al código en producción.
 
 ## Estado y barrera de activación
 
