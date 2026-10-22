@@ -11,6 +11,8 @@ function exampleDraft() {
   d.business_name = 'Empresa Demo de Tacna SAC';
   d.legal_address = 'Avenida Principal 123, Tacna';
   d.legal_form = 'SAC';
+  d.sunat_contributor_type_code = '39';
+  d.tax_codes = ['1011', '3031'];
   d.activities = [
     { sector_code: 'COMERCIAL', ciiu_code: '4752', description: 'Venta de artículos de ferretería', is_primary: true },
     { sector_code: 'TRANSPORTE_LOGISTICA', ciiu_code: '4923', description: 'Transporte de carga', is_primary: false },
@@ -72,7 +74,17 @@ test('only emits reviewed, validated payloads with early-adoption consent', () =
   const payload = companyOnboardingPayload(d);
   assert.equal(payload.tax_id, '20100070970');
   assert.equal(payload.economic_activities.length, 2);
+  assert.equal(payload.sunat_contributor_type_code, '39');
+  assert.deepEqual(payload.tax_codes, ['1011', '3031']);
   assert.equal(payload.confirm_early_adoption, false);
   d.confirm_legal_data = false;
   assert.equal(onboardingIsComplete(d), false);
+});
+
+test('requires a selected SUNAT Annex 2 contributor code', () => {
+  const d = exampleDraft();
+  d.sunat_contributor_type_code = '';
+  assert.ok(onboardingStepErrors(0, d).sunat_contributor_type_code);
+  d.sunat_contributor_type_code = '07';
+  assert.deepEqual(onboardingStepErrors(0, d), {});
 });
