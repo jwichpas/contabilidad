@@ -18,6 +18,27 @@
 - Las mutaciones y los eventos de auditoría son **atómicos** dentro de la misma transacción; si falla el INSERT de auditoría, se revierte también el estado. `closed_at` se establece al cerrar y se limpia al reabrir; en `LOCKED` se conserva.
 - `LOCKED` **no tiene operación de reapertura ordinaria**; una corrección extraordinaria necesitaría proceso autorizado y auditado separado, no incluido en esta etapa.
 
+## Incidencia de prueba y modo corto — 22/10/2026
+
+En la primera ejecución manual del usuario, todas las condiciones de conexión fueron **PASS** y los casos históricos F2.2/F2.3d también pasaron, pero la sección nueva terminó con `[FAIL] F2.3d fase=F2.3 HTTP CLOSE/REOPEN/LOCK: SQLSTATE=23514`. El script hizo **ROLLBACK** y el verificador posterior confirmó las **22 migraciones**, 3 DRAFT, cero asientos ni recibos persistidos. Esta evidencia **no aprueba F2.3**.
+
+`23514` indica violación de una restricción del motor PostgreSQL (puede provenir de un trigger). Sin localizar la instrucción concreta no se atribuye todavía a `fiscal_periods`, ni se modifican restricciones ni migraciones por conjetura.
+
+Se agregó `--period-only=contabilidad-dev`: sigue exigiendo todas las guardas de entorno, conexiones y baseline, crea un asiento mínimo en una transacción `app_backend`, omite los HTTP históricos ya aprobados y prueba únicamente F2.3. El mismo `finally` ejecuta siempre ROLLBACK. Cada operación tiene ahora etiqueta de fase propia. Cuando un error es `QueryException`, solo expone SQLSTATE y etiquetas públicas conocidas, nunca SQL con valores.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-analytic-http.php
+php scripts/phase2-neon-analytic-http.php --period-only=contabilidad-dev
+php scripts/phase2-neon-journal-idempotency.php --verify
+```
+
+Si falla, revisar el campo `fase=...` antes de editar la lógica; no repetir el ensayo completo. Si pasa, queda pendiente la prueba de concurrencia con dos conexiones independientes.
+
+---
+
 ## Prueba reversible preparada en Neon DEV
 
 Se amplió `backend/scripts/phase2-neon-analytic-http.php` para probar después de los casos F2.2 existentes: POST de un asiento temporal, cierre correcto, cierre repetido 409, POST/extorno prohibidos 422, auditor 403, reapertura 200, POST permitido 201, segundo cierre, bloqueo definitivo, reapertura denegada 409, POST bloqueado 422 y **cuatro eventos de auditoría**. Se fuerza comprobación de triggers de partida doble. Toda la prueba corre dentro de una transacción `app_backend` iniciada por el script y termina con **ROLLBACK**. La base permanente mantiene 3 DRAFT y 0 movimientos.
