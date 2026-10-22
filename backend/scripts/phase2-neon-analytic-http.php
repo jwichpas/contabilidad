@@ -102,6 +102,9 @@ try{
     $auditorUser=User::query()->findOrFail(3000000000203);
     \Laravel\Sanctum\Sanctum::actingAs($adminUser,['*'],'sanctum');
 
+    // app_backend is protected by FORCE RLS. Even fixture discovery must
+    // happen under a tenant-local GUC (without it, every row is invisible).
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$companyA]);
     $route=$db->selectOne(<<<'SQL'
         SELECT r.source_account_id,r.cost_center_id
         FROM public.accounting_destination_routes r
@@ -121,9 +124,11 @@ try{
           AND length(code)=6 AND code LIKE '4%' AND NOT requires_cost_center
         ORDER BY code LIMIT 1
         SQL,[$companyA]);
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$companyB]);
     $foreignCenter=$db->selectOne(
         'SELECT id FROM public.cost_centers WHERE company_id=? ORDER BY id LIMIT 1',
         [$companyB]);
+    $db->selectOne("SELECT set_config('app.current_company_id','',true)");
     if(!$route||!$offset||!$foreignCenter)throw new RuntimeException('Faltan fixtures contables demo.');
 
     $request=static function(string $method,string $path,int $companyId,?array $payload=null) use($kernel):\Symfony\Component\HttpFoundation\Response {
