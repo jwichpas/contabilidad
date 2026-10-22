@@ -1,3 +1,22 @@
+## F2.3g certificada / F2.3h Docker ACTIVE + app_backend (22/10/2026)
+
+**F2.3g aprobada por ejecución del usuario**: prueba `--probe=contabilidad-dev` con ADMIN demo activó y retiró la versión **solo dentro de transacción sin COMMIT**, rechazó AUDITOR, SHA-256 incorrecto, doble activación y doble retiro. Verificó dos eventos auditados; ROLLBACK dejó 3 DRAFT, 0 ACTIVE, 0 RETIRED, 0 asientos/auditorías. Preflight F2.3f nuevamente PASS con 454 rutas por cada empresa.
+
+**F2.3h disponible, NO EJECUTADA:** nuevo wrapper Windows `backend/scripts/phase2-active-rls-docker.ps1` y runner `backend/scripts/phase2-active-rls-docker.php`. El primero genera PostgreSQL **18 efímero en Docker**, puerto aleatorio solo loopback, contraseñas aleatorias y marca `f23h_guard`. Aplica las 16 migraciones de esquema más las 3 migraciones portables F2.2/F2.3 (19), sin mover archivos ni copiar credenciales Neon. Comprueba cada migración registrada, ejecuta PHP y elimina el contenedor en `finally`.
+
+El runner verifica el token/host/puerto/rol PostgreSQL local, introduce **dos empresas y usuarios ficticios** con cuentas PCGE jerárquicas de seis dígitos, 6xx, 94/95, 79 y contrapartida; centros CC-ADM/CC-VTA, monedas PEN/USD y matriz A `ACTIVE` / B `DRAFT` no confirmadas. En la **misma transacción** cambia de sesión superuser Docker a `SET LOCAL ROLE app_backend`, comprobando `current_user='app_backend'`, `rolbypassrls=false` y luego ejecuta HTTP Laravel con Sanctum y RLS real: POST 201 con 4 líneas analíticas 941100/791000 y 951100/791000, vínculos insertados por app_backend, GET separado por empresa, 403 auditor, nota de ajuste Haber 6, extorno exacto, auditoría y triggers diferidos. Termina ROLLBACK; el wrapper borra el Docker aun ante fallo. A diferencia de F2.3e, este ensayo verifica **ACTIVE + HTTP + RLS** sin activar la instancia Neon. Usa un conjunto mínimo de cuentas y **no sustituye** el preflight real de 227×2 rutas F2.3f.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-active-rls-docker.php
+php scripts/phase2-active-rls-docker.php --plan
+.\scripts\phase2-active-rls-docker.ps1
+```
+
+**Pendiente:** certificar el resultado del ensayo F2.3h en el equipo del usuario. La activación definitiva con credenciales humanas verificadas no está expuesta en CLI ni endpoint. GitHub Actions no está verde: los jobs pudieron crearse tras arreglar YAML, pero terminaron sin steps disponibles; investigar restricciones del runner/cuenta sin suponer cuál aplica.
+
 # F2.3b — Motor de imputación analítica por centro de costos (preparado, desactivado)
 
 **Fecha:** 22/10/2026. **Repositorio:** `jwichpas/contabilidad`, rama única `main`.
