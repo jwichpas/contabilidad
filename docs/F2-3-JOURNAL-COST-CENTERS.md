@@ -14,8 +14,8 @@
 1. `database/portable_migrations/2026_10_22_120000_add_journal_line_cost_centers.php`: añade `journal_entry_lines.cost_center_id NULL`, índice y FK compuesta `(company_id, cost_center_id)` → `cost_centers(company_id,id)` del mismo tenant. Sin `TRUNCATE`, ni cambios en los asientos.
 2. `JournalEntryLine`: atributo, cast, relación con CostCenter.
 3. `CreateJournalEntryController`: valida `lines.*.cost_center_id` como entero opcional y lo envía al servicio.
-4. `PostJournalEntryService`: comprueba el centro **activo y de la misma empresa** dentro de la transacción del asiento, lo guarda junto a la partida y lo **preserva en los extornos**. No crea partidas 94/95/79.
-5. `JournalEntryView.vue`: conserva **un editor y una sola tabla de partidas**; añade columna opcional «Centro de costo» alimentada desde `GET /company/cost-centers` (tenant activo) y visualiza el código en el historial.
+4. `PostJournalEntryService`: comprueba el centro **activo y de la misma empresa** dentro de la transacción del asiento; cuando una cuenta tiene `requires_cost_center=true` **exige** centro, y lo guarda en la partida. En extornos **preserva** exactamente el centro del movimiento original (aunque haya sido desactivado después). No crea partidas 94/95/79.
+5. `JournalEntryView.vue`: conserva **un editor y una sola tabla de partidas**; añade columna «Centro de costo» (obligatoria según reglas de la cuenta) alimentada desde `GET /company/cost-centers` (tenant activo) y visualiza el código en el historial.
 6. CI: PHP lint, `--plan` sin SQL, migración real en PostgreSQL 18 efímero y comprobación de columna nullable + FK, sin crear asientos.
 7. `phase2-neon-tenant-integrity.php --verify`: validador actualizado para matriz v2 DRAFT (19 o 20 migraciones), sin exigir que códigos heredados 9411/7911 sean operativos. La consulta del auditor se probó directamente contra Neon.
 
