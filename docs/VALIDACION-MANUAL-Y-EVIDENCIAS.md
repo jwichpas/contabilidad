@@ -66,11 +66,15 @@ php scripts/phase2-neon-analytic-promotion-preflight.php --verify
 
 ## Prueba nueva pendiente — F2.2 idempotencia (22/10/2026)
 
-El backend y frontend ya incluyen deduplicación optativa de POST mediante `Idempotency-Key` y una migración aditiva para recibos protegidos por RLS. **El nuevo flujo todavía no tiene evidencia de ejecución, por lo que F2.2 sigue `[ ]`.**
+El backend y frontend ya incluyen deduplicación optativa de POST mediante `Idempotency-Key` y una migración aditiva para recibos protegidos por RLS. **La ejecución manual de Docker PG18 con 20 migraciones y frontend ya fue aprobada.** F2.2 sigue `[ ]` hasta aplicar la migración en Neon DEV y demostrar reintentos HTTP 201/200/409 con ROLLBACK.
 
 El mismo wrapper Windows `phase2-active-rls-docker.ps1` instala ahora **20 migraciones** solo en PostgreSQL 18 Docker descartable y prueba HTTP **201 creación / 200 reintento / 409 conflicto**, separación tenant y recibos inmutables, además del antiguo motor 94/95/79. Tras ejecutarlo, correr manualmente `pnpm typecheck`, `pnpm test:unit` y `pnpm build` en `frontend`. [Diseño y puerta de calidad](F2-2-IDEMPOTENCIA-POST.md).
 
 **No ejecutar migraciones nuevas sobre Neon hasta superar los ensayos del contenedor.** En este punto Neon continúa con **21 migraciones**, 3 matrices DRAFT y ningún asiento.
+
+## Aprobación parcial F2.2 — ejecución manual confirmada
+
+**2026-10-22 · PASS usuario:** `phase2-active-rls-docker.ps1` en Windows, PG18 20 migraciones, idempotencia RLS HTTP 201→200/409, 1 recibo sin duplicar auditoría/asiento, denegación de UPDATE, invisibilidad tenant B, concurrencia por segunda conexión, matriz ACTIVE reversible y eliminación del contenedor. Frontend: 16/16 pruebas unitarias, `pnpm typecheck` y `pnpm build` exitosos. **No se ha ejecutado la migración Neon**; [instalador de una sola migración vía Laravel](../backend/scripts/phase2-neon-journal-idempotency.php) y [prueba HTTP reversible](../backend/scripts/phase2-neon-analytic-http.php) preparados. [Runbook detallado](F2-2-IDEMPOTENCIA-POST.md).
 
 ## Registro de evidencias verificadas
 
