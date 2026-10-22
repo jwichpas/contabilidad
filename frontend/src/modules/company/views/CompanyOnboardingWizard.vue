@@ -10,7 +10,7 @@ import {
   COMPANY_ONBOARDING_DRAFT_KEY, companyOnboardingPayload, isValidPeruvianRuc,
   newCompanyOnboardingDraft, onboardingIsComplete, onboardingStepErrors,
   type CompanyOnboardingDraft, type CompanyOnboardingResult, type PcgeTemplateSummary,
-  type TaxRegime,
+  type TaxRegime, type SunatContributorType, type SunatCiiuClass, type SunatTaxCode,
 } from '../types/companyOnboarding.types';
 
 const props = defineProps<{
@@ -69,6 +69,11 @@ const error = ref('');
 const success = ref<CompanyOnboardingResult | null>(null);
 const currencies = ref<readonly CurrencyItem[]>([]);
 const templates = ref<readonly PcgeTemplateSummary[]>([]);
+const contributorTypes = ref<readonly SunatContributorType[]>([]);
+const ciiuClasses = ref<readonly SunatCiiuClass[]>([]);
+const sunatTaxCodes = ref<readonly SunatTaxCode[]>([]);
+const ciiuQueries = reactive<Record<number,string>>({});
+const taxSearch = ref('');
 const canCreateOnServer = ref(false);
 const serverReason = ref('');
 
@@ -84,6 +89,29 @@ const api = new AccountingApiClient('', {
   getActiveCompanyId: () => props.activeCompanyId,
 });
 
+const filteredTaxes = computed(() => sunatTaxCodes.value.filter(x =>
+  `${x.code} ${x.short_name} ${x.name}`.toLowerCase().includes(taxSearch.value.toLowerCase().trim()),
+));
+function matchingCiiu(index: number, selected: string): readonly SunatCiiuClass[] {
+  const q = (ciiuQueries[index] ?? '').trim().toLowerCase();
+  const matched = ciiuClasses.value.filter(x =>
+    `${x.code} ${x.name}`.toLowerCase().includes(q),
+  );
+  const limited = matched.slice(0, 55);
+  const selectedItem = ciiuClasses.value.find(x => x.code === selected);
+  return selectedItem && !limited.some(x => x.code === selected) ? [selectedItem, ...limited] : limited;
+}
+function chooseCiiu(index: number): void {
+  const activity = draft.activities[index];
+  const official = ciiuClasses.value.find(x => x.code === activity?.ciiu_code);
+  if (activity) activity.description = official?.name ?? '';
+}
+function toggleTaxCode(code: string, event: Event): void {
+  const checked = (event.target as HTMLInputElement).checked;
+  draft.tax_codes = checked
+    ? [...draft.tax_codes.filter(x => x !== code), code]
+    : draft.tax_codes.filter(x => x !== code);
+}
 function showError(field: string): string {
   return currentErrors.value[field] ?? '';
 }
@@ -160,6 +188,9 @@ function recoverDraft(): void {
       ...source,
       activities: Array.isArray(source.activities) && source.activities.length <= 10 && source.activities.length
         ? source.activities : initial.activities,
+      tax_codes: Array.isArray(source.tax_codes) ? source.tax_codes : [],
+      sunat_contributor_type_code: typeof source.sunat_contributor_type_code === 'string'
+        ? source.sunat_contributor_type_code : '',
       secondary_currency_codes: Array.isArray(source.secondary_currency_codes)
         ? source.secondary_currency_codes : initial.secondary_currency_codes,
       confirm_legal_data: false,
@@ -172,13 +203,19 @@ function recoverDraft(): void {
 async function loadCatalogs(): Promise<void> {
   loadingCatalogs.value = true;
   try {
-    const [currencyList, pcgeList, capability] = await Promise.all([
+    const [currencyList, pcgeList, capability, types, classes, taxes] = await Promise.all([
       api.fetchCurrencies(), api.fetchPcgeTemplateSummaries(), api.fetchCompanyOnboardingCapability(),
+      api.fetchSunatContributorTypes(), api.fetchSunatCiiuRev4(), api.fetchSunatRucTaxCodes(),
     ]);
+    contributorTypes.value = types;
+    ciiuClasses.value = classes;
+    sunatTaxCodes.value = taxes;
+    for (const [index, activity] of draft.activities.entries()) chooseCiiu(index);
     currencies.value = currencyList.filter(c => c.is_active);
     templates.value = pcgeList;
     canCreateOnServer.value = capability.can_create &&
-      currencies.value.length > 0 && templates.value.length > 0;
+      currencies.value.length > 0 && templates.value.length > 0 &&
+      contributorTypes.value.length === 51 && ciiuClasses.value.length === 417 && sunatTaxCodes.value.length === 38;
     serverReason.value = capability.reason ??
       (canCreateOnServer.value ? '' : 'Faltan catálogos contables o monedas activas. No es posible crear la empresa.');
   } catch {
@@ -194,6 +231,12 @@ async function createCompany(): Promise<void> {
   attempted.value = true;
   error.value = '';
   if (draftHasErrors.value || saving.value) return;
+  if (!contributorTypes.value.some(x => x.code === draft.sunat_contributor_type_code) ||
+      !draft.activities.every(a => ciiuClasses.value.some(x => x.code === a.ciiu_code)) ||
+      !draft.tax_codes.every(code => sunatTaxCodes.value.some(x => x.code === code))) {
+    error.value = 'Seleccione solo códigos SUNAT que existan en los catálogos globales.';
+    return;
+  }
   if (!canCreateOnServer.value) {
     error.value = serverReason.value || 'El backend de alta aún no está habilitado. Guarde el borrador y aplique primero las migraciones Laravel.';
     return;
@@ -304,6 +347,15 @@ onMounted(() => {
             <small v-if="showError('legal_form')" class="mt-1 block text-red-600">{{ showError('legal_form') }}</small>
           </label>
           <label class="block text-sm font-medium text-foreground md:col-span-2">
+            Tipo de contribuyente SUNAT · Anexo 2 <span class="text-red-500">*</span>
+            <select v-model="draft.sunat_contributor_type_code" :class="uiField" class="mt-1">
+              <option value="">Seleccione el tipo declarado en SUNAT…</option>
+              <option v-for="item in contributorTypes" :key="item.code" :value="item.code">{{ item.code }} · {{ item.name }}</option>
+            </select>
+            <small class="mt-1 block text-muted">Código SUNAT RUC; distinto de la forma jurídica interna.</small>
+            <small v-if="showError('sunat_contributor_type_code')" class="block text-red-600">{{ showError('sunat_contributor_type_code') }}</small>
+          </label>
+          <label class="block text-sm font-medium text-foreground md:col-span-2">
             Razón social o nombre del negocio <span class="text-red-500">*</span>
             <input v-model="draft.business_name" :class="uiField" class="mt-1" maxlength="200" placeholder="Ej. Comercial Andina S.A.C." />
             <small v-if="showError('business_name')" class="mt-1 block text-red-600">{{ showError('business_name') }}</small>
@@ -316,7 +368,7 @@ onMounted(() => {
         </section>
 
         <section v-else-if="step === 1" class="space-y-4">
-          <p class="text-sm text-muted">Identifique una actividad principal y hasta nueve secundarias. El código debe corresponder al CIIU oficial, que se validará posteriormente contra su catálogo.</p>
+          <p class="text-sm text-muted">Seleccione una actividad principal y hasta nueve secundarias del catálogo CIIU Rev. 4. La descripción se completa desde la referencia oficial.</p>
           <div v-for="(activity, index) in draft.activities" :key="index" class="rounded-lg border border-border bg-soft/40 p-4">
             <div class="mb-4 flex items-center justify-between">
               <label class="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -334,11 +386,16 @@ onMounted(() => {
                 </select>
               </label>
               <label class="block text-xs font-medium text-foreground">CIIU Rev. 4 (cuatro dígitos)
-                <input v-model.trim="activity.ciiu_code" :class="uiField" class="mt-1" maxlength="4" inputmode="numeric" placeholder="Ej. 4752" />
+                <input v-model="ciiuQueries[index]" type="search" :class="uiField" class="mt-1 mb-1" placeholder="Buscar actividad por código o nombre…" />
+                <select v-model="activity.ciiu_code" :class="uiField" @change="chooseCiiu(index)">
+                  <option value="">Seleccione actividad CIIU…</option>
+                  <option v-for="item in matchingCiiu(index, activity.ciiu_code)" :key="item.code" :value="item.code">{{ item.code }} · {{ item.name }}</option>
+                </select>
                 <small v-if="showError(`ciiu_${index}`)" class="text-red-600">{{ showError(`ciiu_${index}`) }}</small>
               </label>
               <label class="block text-xs font-medium text-foreground sm:col-span-2">Descripción
-                <input v-model="activity.description" :class="uiField" class="mt-1" maxlength="200" placeholder="Actividad económica según CIIU" />
+                <input :value="activity.description" :class="uiField" class="mt-1" readonly placeholder="Se completa al seleccionar un CIIU oficial" />
+                <small class="mt-1 block text-muted">Descripción obtenida del catálogo. No admite texto libre.</small>
                 <small v-if="showError(`description_${index}`)" class="text-red-600">{{ showError(`description_${index}`) }}</small>
               </label>
             </div>
@@ -369,6 +426,19 @@ onMounted(() => {
               <input v-model.trim="draft.annual_income" :class="uiField" class="mt-1" inputmode="decimal" placeholder="Ej. 150000.00" />
               <small v-if="showError('annual_income')" class="block text-red-600">{{ showError('annual_income') }}</small>
             </label>
+          </div>
+          <div class="rounded-lg border border-border bg-surface p-4">
+            <label class="block text-sm font-semibold text-foreground">Códigos de tributos SUNAT · Anexo 10</label>
+            <p class="mt-1 text-xs text-muted">Seleccione los códigos que correspondan a la empresa; no se atribuyen automáticamente tasas, afectaciones ni obligaciones tributarias.</p>
+            <input v-model="taxSearch" :class="uiField" type="search" class="mt-3" placeholder="Buscar por código, denominación o descripción…" />
+            <div class="mt-3 max-h-52 space-y-1 overflow-y-auto rounded-md border border-border p-2">
+              <label v-for="item in filteredTaxes" :key="item.code" class="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-xs text-foreground hover:bg-soft">
+                <input type="checkbox" class="mt-0.5" :checked="draft.tax_codes.includes(item.code)" @change="toggleTaxCode(item.code, $event)" />
+                <span><strong>{{ item.code }} · {{ item.short_name }}</strong> — {{ item.name }}</span>
+              </label>
+              <p v-if="filteredTaxes.length === 0" class="p-2 text-xs text-muted">No hay códigos coincidentes.</p>
+            </div>
+            <p class="mt-2 text-xs text-muted">{{ draft.tax_codes.length }} códigos seleccionados. Esta selección es informativa y revisable.</p>
           </div>
           <div class="flex items-start gap-2 rounded-lg border border-border bg-soft p-3 text-xs text-muted">
             <CircleHelp class="mt-0.5 h-4 w-4 shrink-0" />
@@ -420,12 +490,14 @@ onMounted(() => {
               <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted"><Building2 class="h-4 w-4" /> Empresa</p>
               <p class="text-sm font-semibold text-foreground">{{ draft.business_name }}</p>
               <p class="text-xs text-muted">RUC {{ draft.tax_id }} · {{ legalForms.find(x => x.value === draft.legal_form)?.label }}</p>
+              <p class="mt-1 text-xs text-muted">Tipo SUNAT {{ draft.sunat_contributor_type_code }} · {{ contributorTypes.find(x => x.code === draft.sunat_contributor_type_code)?.name }}</p>
               <p class="mt-2 text-xs text-muted">{{ draft.legal_address }}</p>
             </div>
             <div class="rounded-lg border border-border p-4">
               <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted"><FileText class="h-4 w-4" /> Tributación</p>
               <p class="text-sm font-semibold text-foreground">{{ taxRegimes.find(x => x.value === draft.tax_regime)?.label }}</p>
               <p class="text-xs text-muted">Ejercicio {{ draft.fiscal_year }} · Ingresos {{ draft.income_reference_year }}: S/ {{ draft.annual_income }}</p>
+              <p class="mt-1 text-xs text-muted">{{ draft.tax_codes.length }} códigos SUNAT Anexo 10 elegidos</p>
             </div>
             <div class="rounded-lg border border-border p-4">
               <p class="mb-2 text-xs font-semibold uppercase text-muted">Actividad económica</p>
