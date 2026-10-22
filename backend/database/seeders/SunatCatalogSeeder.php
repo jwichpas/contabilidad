@@ -21,6 +21,23 @@ use Illuminate\Database\Seeder;
  */
 class SunatCatalogSeeder extends Seeder
 {
+    private bool $bulkGlobalInstall = false;
+
+    /** Only the F2 guarded installer may request insert-only, batched loading. */
+    public function runForGlobalInstall(): void
+    {
+        if ($this->bulkGlobalInstall) {
+            throw new \RuntimeException('Carga global ya iniciada.');
+        }
+
+        $this->bulkGlobalInstall = true;
+        try {
+            $this->run();
+        } finally {
+            $this->bulkGlobalInstall = false;
+        }
+    }
+
     public function run(): void
     {
         $this->seedTable01PaymentMethods();
@@ -59,6 +76,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '999', 'name' => 'OTROS MEDIOS DE PAGO (ESPECIFICAR)', 'requires_financial_entity' => false, 'requires_operation_number' => false],
         ];
 
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatPaymentMethod::class, $items);
+            return;
+        }
+
         foreach ($items as $item) {
             SunatPaymentMethod::query()->updateOrCreate(['code' => $item['code']], $item);
         }
@@ -73,6 +95,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '6', 'name' => 'REGISTRO ÚNICO DE CONTRIBUYENTES (RUC)', 'abbreviation' => 'RUC', 'exact_length' => 11, 'max_length' => 11, 'is_numeric_only' => true],
             ['code' => '7', 'name' => 'PASAPORTE', 'abbreviation' => 'PASAPORTE', 'exact_length' => null, 'max_length' => 12, 'is_numeric_only' => false],
         ];
+
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatIdentityDocumentType::class, $items);
+            return;
+        }
 
         foreach ($items as $item) {
             SunatIdentityDocumentType::query()->updateOrCreate(['code' => $item['code']], $item);
@@ -117,6 +144,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '99', 'name' => 'OTRAS ENTIDADES FINANCIERAS', 'short_name' => 'OTROS', 'tax_id' => null],
         ];
 
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatFinancialInstitution::class, $items);
+            return;
+        }
+
         foreach ($items as $item) {
             SunatFinancialInstitution::query()->updateOrCreate(['code' => $item['code']], $item);
         }
@@ -132,6 +164,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '05', 'name' => 'SUMINISTROS DIVERSOS', 'related_account_element' => '25'],
             ['code' => '99', 'name' => 'OTROS (ESPECIFICAR)', 'related_account_element' => '29'],
         ];
+
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatInventoryType::class, $items);
+            return;
+        }
 
         foreach ($items as $item) {
             SunatInventoryType::query()->updateOrCreate(['code' => $item['code']], $item);
@@ -158,6 +195,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '15', 'name' => 'METROS', 'symbol' => 'MTR'],
             ['code' => '99', 'name' => 'OTROS (ESPECIFICAR)', 'symbol' => 'ZZ'],
         ];
+
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatMeasurementUnit::class, $items);
+            return;
+        }
 
         foreach ($items as $item) {
             SunatMeasurementUnit::query()->updateOrCreate(['code' => $item['code']], $item);
@@ -188,6 +230,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '30', 'name' => 'LIBRO DE MATRÍCULA DE ACCIONES', 'ple_book_code' => null, 'is_compulsory_general_regime' => true],
             ['code' => '31', 'name' => 'LIBRO DE PLANILLAS', 'ple_book_code' => null, 'is_compulsory_general_regime' => true],
         ];
+
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatElectronicBook::class, $items);
+            return;
+        }
 
         foreach ($items as $item) {
             SunatElectronicBook::query()->updateOrCreate(['code' => $item['code']], $item);
@@ -223,6 +270,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '98', 'name' => 'NOTA DE DÉBITO - NO DOMICILIADO', 'short_name' => 'ND-ND', 'allows_tax_credit' => true],
         ];
 
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatElectronicDocumentType::class, $items);
+            return;
+        }
+
         foreach ($items as $item) {
             SunatElectronicDocumentType::query()->updateOrCreate(['code' => $item['code']], $item);
         }
@@ -255,6 +307,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '299', 'name' => 'LA TINA'],
         ];
 
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatCustomsDependency::class, $items);
+            return;
+        }
+
         foreach ($items as $item) {
             SunatCustomsDependency::query()->updateOrCreate(['code' => $item['code']], $item);
         }
@@ -281,6 +338,11 @@ class SunatCatalogSeeder extends Seeder
             ['code' => '16', 'name' => 'SALDO INICIAL', 'operation_category' => 'APERTURA'],
             ['code' => '99', 'name' => 'OTROS (ESPECIFICAR)', 'operation_category' => 'GENERAL'],
         ];
+
+        if ($this->bulkGlobalInstall) {
+            \App\Support\Reference\GlobalReferenceBatchWriter::insert(SunatOperationType::class, $items);
+            return;
+        }
 
         foreach ($items as $item) {
             SunatOperationType::query()->updateOrCreate(['code' => $item['code']], $item);
