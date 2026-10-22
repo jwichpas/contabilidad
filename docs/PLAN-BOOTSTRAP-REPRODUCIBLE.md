@@ -191,3 +191,34 @@ Se generaron snapshots desde consultas **SELECT** de Supabase `Nexus Contable De
 Ambos archivos están referenciados con hash Git blob en `backend/database/reference_data/manifest.json` bajo `historical_sources`, con `loaded_operationally=false`. El instalador `phase2-neon-global-reference.php --plan` valida sus SHA y contenidos, incluyendo número de filas, claves naturales y que no hayan sido aprobados sin revisión. **No los instala en tablas operativas de SUNAT**.
 
 La etapa de integración histórica posterior deberá definir una migración PostgreSQL portable para tablas de `fuentes históricas/no verificadas`, conservar su trazabilidad y mantenerlas segregadas de los catálogos operativos hasta contar con evidencia normativa y revisión explícita. Esta operación **no forma parte de Fase Global 1**.
+
+
+## 8. Resultado real F2 + auditoría empresa por empresa (22/10/2026)
+
+El usuario ejecutó `phase2-neon-global-reference.php --apply=contabilidad-dev` y `--verify`:
+
+- **18 migraciones**, ledger registrado; segunda aplicación sin cambios.
+- **GLOBAL_REFERENCE_OK**: 13 tablas, PCGE 3.401, monedas 3, NIC/NIIF 43, rubros 48, 163 códigos SUNAT, checksums SHA-256 coincidentes.
+- **3 empresas y 3 usuarios con 8 membresías** intactos.
+- Consulta Neon independiente confirmó estado global. Las **tres empresas YA estaban configuradas**: cada una tiene **2.966 cuentas**, **1.214 operativas todas de seis dígitos**, 6 áreas organizacionales, 9 áreas de flujo NIC 7, 2 centros de costo, 1 configuración tributaria, PEN/USD habilitadas. No se debe duplicar ni reinicializar estos datos.
+- Todas las cuentas operativas son hojas y no hay referencias parentales rotas. Los 2 centros de costo por empresa tienen targets operativos de 6 dígitos: administración 941100/791000 y comercial 951100/791000. Ajustes usan cuentas operativas y códigos IGV 401110, ganancia FX 776000, pérdida FX 676000, costos 791000 y resultados 591100.
+
+### Nueva brecha de integridad detectada (NO CORREGIDA EN DATOS)
+
+**433 cuentas con `has_automatic_destination = true` por empresa (1.299 en total)** tienen `destination_debit_code='9411'` y `destination_credit_code='7911'`, provenientes del PCGE global versionado. Esos códigos NO identifican cuentas operativas en el plan corporativo: `9411` es estructura, `7911` no existe. Hay **433 destinos de débito y 433 créditos sin resolver por empresa**. Debe corregirse en una **revisión versionada** de las reglas de imputación, sin sobrescribir el ledger inmutable de PCGE v1, porque la contrapartida correcta depende del centro de costos (941100 o 951100, con 791000) y no puede imponerse una sola cuenta de débito para las 433.
+
+- Se publicó `backend/scripts/phase2-neon-tenant-integrity.php`, que dispone de `--plan` SIN SQL y `--verify` únicamente SELECT dentro de **BEGIN READ ONLY y ROLLBACK** en Neon contabilidad-dev, con validaciones de 18 migraciones, 3 empresas, 3 usuarios, 8 membresías, 2966/1214 por tenant, jerarquías sin roturas, moneda, centros de costo, targets y destinos automáticos. El comando sale con estado **1** mientras existan destinos automáticos sin resolver; eso es un bloqueo deliberado y no significa que las tablas globales estén incompletas.
+- No se ejecutaron escrituras correctivas en Neon, ni se modificaron las contraseñas, usuarios, empresas o sus cuentas. Antes de migrar reglas, diseñar **referencias versionadas y motor de distribución por centro de costos**, con doble asiento 94/95 versus 79, pruebas de RLS, cálculo y auditoría, y transformación de v1→v2 reversible/documentada. **No** actualizar masivamente todos los códigos al mismo `941100`: contabilidad de ventas requiere `951100`.
+
+### Comprobación local
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-tenant-integrity.php
+php scripts/phase2-neon-tenant-integrity.php --plan
+php scripts/phase2-neon-tenant-integrity.php --verify
+```
+
+El `--verify` mostrará los tres tenants estructuralmente correctos y un estado bloqueado por destino automático (brecha conocida). No es necesario volver a ejecutar `phase2-neon-global-reference.php --apply`. El resto de catálogos del proyecto `Nexus Contable Dev` (tablas de referencia PLE) y moneda CLP aún requieren un proceso versionado posterior. Las tablas SUNAT para **libros electrónicos** no deben mezclarse con catálogos de **facturación electrónica**. Neon production y ambos Supabase permanecen intactos.
