@@ -373,3 +373,48 @@ php scripts/phase1-neon-token-rollback.php --probe=contabilidad-dev
 ```
 
 **No hay aún ejecución local ni PASS de F1.10; solo código y plan publicados en main.** Ante fallo, no reintentar a ciegas: reportar solo la salida sin secretos para analizar si existe un defecto de autenticación, RLS o persistencia. No ejecutar `php artisan test` general en Neon. Neon production y Supabase intactos.
+
+
+## F1.10 y F1.11 — pruebas preparadas, NO ejecutadas localmente (21/10/2026)
+
+**F1.9 verificada:** el usuario obtuvo PASS en sus 8 escenarios de HTTP con Sanctum simulado y ROLLBACK confirmado, sin datos persistentes. Las pruebas nuevas F1.10 y F1.11 se publicaron para evaluar las dos capacidades que aún faltan antes de acreditar el ciclo contable completo.
+
+### F1.10 — autenticación Bearer real
+
+`backend/scripts/phase1-neon-token-rollback.php` usa el endpoint directo conocido de Neon dev, usuario SQL `app_backend`, claves privadas locales, sin configuración cacheada, sin duplicados y una transacción Laravel externa. Valida un 401 anónimo, un 422 de contraseña incorrecta, login 200 con token Sanctum real expirable en 12 horas, dos empresas visibles mediante token Bearer, un 403 de auditor que intenta escribir en B, cambio de empresa autorizado, logout y rechazo del token revocado. La prueba requiere que empresas, usuarios y tokens estuvieran vacíos, y tras ROLLBACK verifica que continúen así. **No confundir con Sanctum::actingAs**: el token es realmente generado y consultado, pero todo se desarrolla mediante el kernel HTTP dentro de PHP CLI, no una petición remota pública. La secuencia de `personal_access_tokens` puede avanzar pese a ROLLBACK.
+
+### F1.11 — contabilización balanceada con validación diferida real
+
+Se añadió `backend/scripts/phase1-neon-journal-rollback.php`: prueba opt-in en la rama dev exacta, con `app_backend`, dos cuentas operativas del cuarto nivel bajo jerarquías PCGE, una empresa ficticia, usuario ADMIN y período octubre 2026, dentro de una única transacción Laravel que termina en ROLLBACK.
+
+Verifica HTTP **201** del controlador de asientos con dos partidas de **120.0000** en Debe/Haber y ambas monedas, recuento y sumas exactas, `SET CONSTRAINTS ALL IMMEDIATE` para **forzar los triggers PostgreSQL diferidos antes del ROLLBACK** (un rollback por sí solo NO los ejecutaría), HTTP **422** al descuadrar una partida, rechazo SQLSTATE **23514** de UPDATE de asiento inmutable dentro de SAVEPOINT, y evento `JOURNAL_ENTRY_CREATED` en auditoría. Tras restaurar el tenant SQL para consultas sujetas a RLS, comprueba que empresas, usuarios, cuentas, asientos y auditoría ficticios no persistan.
+
+Esta prueba también puede avanzar secuencias, aunque no persistan registros. **No se ha ejecutado todavía contra Neon** y debe pasar primero `php -l`; no confundir la disponibilidad del código con un PASS. Se corrigió la documentación de `PostJournalEntryService`: `DB::transaction` usa el aislamiento por defecto, no fuerza REPEATABLE READ. Las pruebas de concurrencia/correlativos y aislamiento SQL explícito siguen pendientes.
+
+### Orden de ejecución sin mezclar fallos
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-neon-token-rollback.php
+php -l scripts/phase1-neon-journal-rollback.php
+php scripts/phase1-neon-token-rollback.php --plan
+php scripts/phase1-neon-journal-rollback.php --plan
+```
+
+Después, solo si los dos lints y planes están correctos, ejecutar F1.10 primero:
+
+```bash
+php scripts/phase1-neon-token-rollback.php --probe=contabilidad-dev
+```
+
+**No lanzar F1.11** hasta verificar la ejecución y limpieza de F1.10. Si F1.10 pasa y el esquema permanece limpio, se habilita la comprobación F1.11:
+
+```bash
+php scripts/phase1-neon-journal-rollback.php --probe=contabilidad-dev
+```
+
+Al concluir usar lecturas independientes de Neon para constatar que no hay empresas, usuarios, tokens, asientos, partidas ni auditoría persistentes. En las pruebas transaccionales jamás correr `migrate:fresh`, ni usar el propietario `neondb_owner` para tráfico o tests de seguridad. Neon `production` y Supabase se conservan intactos.
+
+Verificación independiente antes de estas nuevas pruebas: PG18.6, 16 migraciones, 0 empresas, 0 usuarios, 0 tokens, 0 asientos, 0 líneas, 0 eventos de auditoría y 2 triggers de partida doble configurados como DEFERRABLE INITIALLY DEFERRED.
