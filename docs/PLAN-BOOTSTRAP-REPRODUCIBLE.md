@@ -165,3 +165,8 @@ php scripts/phase2-neon-global-reference.php --verify
 
 El manifestado permite reconstruir en nuevas bases PostgreSQL, pero el instalador inicial permanece explícitamente limitado a Neon `contabilidad-dev` mientras se verifican las rutas portables y se implementa el orquestador definitivo. **No mutar Neon production ni Supabase**.
 
+
+
+### Protección adicional: seeder genérico deshabilitado
+
+Se reemplazó `backend/database/seeders/DatabaseSeeder.php` por un seeder que **falla cerrado** con una explicación. La versión anterior creaba una cuarta empresa de demostración y un usuario con contraseña fija; sería un riesgo para cualquier migración posterior. La carga global versionada se realiza solamente por el instalador guardado, no por `php artisan db:seed`. Las tres empresas y los usuarios existentes no se modifican por este cambio de código.
