@@ -318,3 +318,30 @@ El usuario ejecutó en su backend conectado a Neon `contabilidad-dev`:
 Después se ejecutó una segunda verificación **SELECT independiente a través del conector Neon**, con proyecto `soft-bonus-52215969`, rama `br-odd-lake-b6wshqv3`, base `neondb`: `companies=0`, `company_areas=0`, `audit_logs=0`, `migrations=16`, PostgreSQL `18.6`. No hay residuos de esas pruebas y se conserva el esquema íntegro.
 
 **F1.8 completada** para RLS con el rol SQL real. No significa que las pruebas HTTP/REST Laravel sobre Neon hayan pasado: todavía falta cubrir autenticación Sanctum, permisos ADMIN/ACCOUNTANT/AUDITOR/DATA_ENTRY por empresa, elección de empresa, rechazo de tenant indebido y flujos de asientos. Las pruebas HTTP existentes con 12 casos y 37 aserciones se ejecutaron sobre Docker efímero, no sobre Neon. Antes de permitir escrituras HTTP sobre Neon, diseñar un runner de pruebas con rollback total y verificación de identidad, sin ejecutar `php artisan test` general contra Neon por error. Mantener Neon `production` y Supabase intactos.
+
+
+## F1.9 — Probar autorización HTTP real sin dejar datos en Neon (21/10/2026)
+
+F1.8 quedó aprobado: el usuario demostró PASS del rol `app_backend` y de las pruebas RLS A/B con transacción ROLLBACK. Una verificación independiente **SELECT** posterior a través del conector Neon confirmó `companies=0`, `company_areas=0`, `audit_logs=0`, `migrations=16`, servidor PostgreSQL `18.6` en `contabilidad-dev`. La rama production y Supabase no fueron tocadas.
+
+Se añadió `backend/scripts/phase1-neon-http-rollback.php`, ejecutor cerrado para `contabilidad-dev` con dos modos:
+
+- `--plan`: solo declara 8 escenarios de HTTP y los fixtures, sin conexiones SQL ni HTTP.
+- `--probe=contabilidad-dev`: valida host directo exacto, base, rama, rol restringido, contraseñas coherentes y sin duplicados; comprueba que el backend nuevo todavía tiene cero empresas/usuarios; abre **una transacción exterior administrada por Laravel** (necesaria para que `TenantContext::run` haga savepoints); inserta dos empresas ficticias, tres usuarios y cuatro membresías con IDs explícitos sin consumir secuencias; hace solicitudes mediante el kernel HTTP y autenticación **simulada en memoria** `Sanctum::actingAs`, bajo `app_backend`; valida una combinación de HTTP **401, 403, 422 y 200**. Verifica que el nivel transaccional sigue siendo 1, realiza ROLLBACK obligatorio y confirma SELECT de limpieza de las dos empresas y tres usuarios. No guarda tokens ni contraseñas reales de usuarios ficticios y no hace llamadas HTTP externas.
+
+**Diferencia importante:** esto prueba middleware `auth:sanctum` y `RequireCompanyRole` con identidades simuladas; **NO comprueba login real, emisión de token Sanctum, revocación, POST contable exitoso ni persistencia de asiento**. Esas serán pruebas posteriores en un escenario diseñado específicamente y verificado sin afectar otros entornos.
+
+Los tests existentes `CompanyRoleAuthorizationTest` y `TenantContextNestedTest` pasaron 12 pruebas/37 aserciones en Docker PG18 efímero; esa referencia no es una ejecución directa del nuevo runner. Su sintaxis PHP en el equipo del usuario **aún debe verificarse**, y el modo `--probe` **no ha sido ejecutado por el asistente**.
+
+Pasos:
+
+```bash
+cd ~/contabilidad/backend
+git pull --ff-only origin main
+php -l scripts/phase1-neon-http-rollback.php
+php scripts/phase1-neon-http-rollback.php --plan
+# ÚNICAMENTE si el lint y --plan pasan y se desea ejecutar fixtures temporales:
+php scripts/phase1-neon-http-rollback.php --probe=contabilidad-dev
+```
+
+El script falla cerrado ante cualquier error y no imprime errores SQL/HTTP potencialmente sensibles. Si no completa las ocho comprobaciones o no confirma ROLLBACK, detener pruebas remotas y revisar el resultado antes de reintentar. En esta etapa no ejecutar `php artisan test` general directamente contra Neon.
