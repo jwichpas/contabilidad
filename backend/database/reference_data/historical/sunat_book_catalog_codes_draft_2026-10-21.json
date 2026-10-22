@@ -1,0 +1,262 @@
+{
+  "dataset": "nexus-historical-sunat-book-codes-2026-10-21-v1",
+  "classification": "DRAFT_NOT_VALIDATED",
+  "source_project": "Nexus Contable Dev",
+  "usage_restriction": "Not approved for automated SUNAT electronic book validation or filing",
+  "row_count": 23,
+  "rows": [
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "00",
+      "description": "Otros (especificar)",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "01",
+      "description": "Factura",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "02",
+      "description": "Recibo por Honorarios",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "03",
+      "description": "Boleta de Venta",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "04",
+      "description": "Liquidación de compra",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "07",
+      "description": "Nota de crédito",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "08",
+      "description": "Nota de débito",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "50",
+      "description": "Declaración Única de Aduanas - Importación definitiva",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "52",
+      "description": "Despacho Simplificado - Importación Simplificada",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "91",
+      "description": "Comprobante de No Domiciliado",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "97",
+      "description": "Nota de Crédito - No Domiciliado",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "3c43c92a-babd-4a25-bf85-3feee5be81e2",
+      "code": "98",
+      "description": "Nota de Débito - No Domiciliado",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "R.S. 169-2015/SUNAT Anexo 3 Tabla 10; verify 2026 validity",
+      "notes": "Candidate from historical R.S. 234-2006 extracted rows. MUST review against official annex before approval or PLE export.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "4858e4e1-b5ce-4156-aed7-4e8aea1da989",
+      "code": "1",
+      "description": "ACTIVOS EN DESUSO",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "4858e4e1-b5ce-4156-aed7-4e8aea1da989",
+      "code": "2",
+      "description": "ACTIVOS OBSOLETOS",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "4858e4e1-b5ce-4156-aed7-4e8aea1da989",
+      "code": "9",
+      "description": "RESTO DE ACTIVOS",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "4eaa5d72-c3aa-43ac-bcb3-07c44dfacd87",
+      "code": "1",
+      "description": "NO REVALUADO O REVALUADO SIN EFECTO TRIBUTARIO",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "4eaa5d72-c3aa-43ac-bcb3-07c44dfacd87",
+      "code": "2",
+      "description": "REVALUADO CON EFECTO TRIBUTARIO",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "725ad73a-6fc8-4900-8f08-94264277b04c",
+      "code": "1",
+      "description": "LINEA RECTA",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "725ad73a-6fc8-4900-8f08-94264277b04c",
+      "code": "2",
+      "description": "UNIDADES PRODUCIDAS",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "725ad73a-6fc8-4900-8f08-94264277b04c",
+      "code": "9",
+      "description": "OTROS",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "a8c221d5-5621-4843-8e15-dbf35197a4e9",
+      "code": "1",
+      "description": "NACIONES UNIDAS",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "a8c221d5-5621-4843-8e15-dbf35197a4e9",
+      "code": "3",
+      "description": "GS1 (EAN-UCC)",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    },
+    {
+      "catalog_version_id": "a8c221d5-5621-4843-8e15-dbf35197a4e9",
+      "code": "9",
+      "description": "OTROS",
+      "effective_from": null,
+      "effective_to": null,
+      "review_status": "DRAFT",
+      "source_locator": "Anexo 3 R.S. 169-2015/SUNAT, Tablas 13/18/19/20 - El Peruano páginas 58-59",
+      "notes": "Candidato contrastado con publicación histórica oficial, no aprobado para generación PLE 2026.",
+      "extra": {}
+    }
+  ]
+}
