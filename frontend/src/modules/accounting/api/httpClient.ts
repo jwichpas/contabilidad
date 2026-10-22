@@ -25,6 +25,7 @@ import type {
   NextCorrelativeResponse,
   OperationalAccount,
 } from '../types/journalEntry.types';
+import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
 } from '@/modules/company/types/companyOnboarding.types';
@@ -366,6 +367,34 @@ export class AccountingApiClient {
    * Alta de empresas (no requiere un tenant NUEVO; sí exige Sanctum).
    * El servidor comprobará rol y migraciones pendientes antes de admitir la creación.
    */
+  public async fetchFiscalPeriods(year: number): Promise<readonly FiscalPeriodSummary[]> {
+    const response = await this.request<{ data: FiscalPeriodSummary[] }>(
+      `/api/v1/accounting/fiscal-periods?year=${encodeURIComponent(String(year))}`,
+      { method: 'GET' },
+      true,
+    );
+    return response.data;
+  }
+
+  public async changeFiscalPeriodStatus(
+    periodId: number,
+    action: FiscalPeriodAction,
+    reason: string,
+  ): Promise<FiscalPeriodTransitionResult> {
+    return await this.request<FiscalPeriodTransitionResult>(
+      `/api/v1/accounting/fiscal-periods/${encodeURIComponent(String(periodId))}/${action}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      },
+      true,
+    );
+  }
+
+  /**
+   * Consulta y transición auditable de períodos contables.
+   */
+
   public async fetchCompanyOnboardingCapability(): Promise<{ can_create: boolean; reason: string | null }> {
     const response = await this.request<{
       data: { can_create: boolean; reason: string | null };
