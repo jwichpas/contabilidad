@@ -68,6 +68,9 @@ final readonly class FiscalPeriodStatusService
             // "closed" period conceal unbalanced vouchers.
             if($action==='close'){
                 $invalid=DB::table('journal_entries as j')
+                    // EXISTS must select only a GROUP BY key: SELECT * would
+                    // attempt non-grouped l.* columns under PostgreSQL.
+                    ->select('j.id')
                     ->leftJoin('journal_entry_lines as l',function($join):void{
                         $join->on('l.journal_entry_id','=','j.id')
                             ->on('l.company_id','=','j.company_id');
