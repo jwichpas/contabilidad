@@ -313,7 +313,12 @@ try{
         'Auditoria/contabilidad extorno HTTP inconsistentes.');
     $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
     echo "[PASS] HTTP 201 extorno + 422 doble extorno; auditoria y triggers bimoneda.\n";
-    echo "[PASS] F2.3d: HTTP harness usa cache/session=array y cola sync solo en memoria.\n";    // F2.3: all changes run under existing app_backend transaction (ROLLBACK).
+    echo "[PASS] F2.3d: HTTP harness usa cache/session=array y cola sync solo en memoria.\n";
+    // Earlier check forced deferred balance triggers immediately; return to
+    // deferred mode before posting additional F2.3 fixtures in this transaction.
+    $db->statement('SET CONSTRAINTS ALL DEFERRED');
+
+    // F2.3: all changes run under existing app_backend transaction (ROLLBACK).
     $probePhase='F2.3 HTTP CLOSE/REOPEN/LOCK';
     $fixture=$post;$fixture['entry_number']='F23-REVERSAL-GUARD';
     $fixtureRes=$request('POST','/api/v1/accounting/journal-entries',$companyA,$fixture);
@@ -386,6 +391,7 @@ try{
     $check((int)$periodEvents->c===2&&(int)$periodEvents->r===1
         &&(int)$periodEvents->l===1,'F2.3 auditoria atomica de cambios incompleta');
     $db->selectOne("SELECT set_config('app.current_company_id','',true)");
+    $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
     echo "[PASS] F2.3 Neon HTTP: CLOSE, REOPEN, LOCK, 403 RBAC, 409 transiciones, 422 POST/extorno bloqueados y 4 auditorias.\n";
     $successful=true;
 }catch(\Throwable $e){
