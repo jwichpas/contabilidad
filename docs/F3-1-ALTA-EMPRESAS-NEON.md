@@ -1,6 +1,16 @@
 # F3.1 — Alta de empresas y configuración fiscal (Neon DEV)
 
-**Fecha:** 22/10/2026 · **Rama:** `main` · **Estado:** código preparado; migración 23 y E2E aún NO ejecutados manualmente. Actividad del plan maestro **[ ]**.
+**Fecha:** 22/10/2026 · **Rama:** `main` · **Estado vigente:** migración 23 y E2E reversible aprobadas; catálogos SUNAT versión 24 aún no instalados; rendimiento de alta 45,97 s pendiente. Actividad del plan maestro **[ ]**.
+
+## Estado más reciente: 3 referencias SUNAT globales preparadas (22/10/2026)
+
+La migración F3.1 del perfil económico **n.º 23 YA ESTÁ instalada y aprobada**. La prueba E2E CLI anterior funcionó con rollback, pero el clonado PCGE tardó **45,97 segundos**, por encima de la meta de 25 s; se mantiene bloqueado el reintento persistente desde Vue.
+
+Por nueva solicitud se versionaron los tres archivos oficiales suministrados: **51 tipos de contribuyente (Anexo 2), 417 CIIU Rev. 4 y 38 códigos de tributos (Anexo 10)**, separados del catálogo PLE/SIRE ya existente. Los desplegables Vue, la validación Laravel y las referencias por empresa ya están implementados en `main`; la **migración n.º 24 aún NO está instalada en Neon**.
+
+**Usar ahora [la guía específica de instalación y pruebas de la migración 24](F3-1-CATALOGOS-SUNAT-GLOBALES.md)**. El texto más antiguo de abajo documenta el procedimiento histórico de la n.º 23 y no debe interpretarse como instrucción para volver a ejecutarla.
+
+---
 
 ## Diagnóstico comprobado
 
