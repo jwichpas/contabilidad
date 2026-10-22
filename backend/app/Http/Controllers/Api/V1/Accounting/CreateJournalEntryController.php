@@ -196,14 +196,9 @@ final readonly class CreateJournalEntryController
             }
         }
 
-        // 3. Genera el correlativo mensual del asiento si no fue proporcionado
+        // 3. El correlativo AUTOMATICO se calcula dentro del servicio
+        // bajo FOR UPDATE del periodo, nunca aqui antes del bloqueo.
         $entryNumber = trim((string) ($validated['entry_number'] ?? ''));
-        if ($entryNumber === '') {
-            $count = JournalEntry::query()
-                ->where('fiscal_period_id', $fiscalPeriod->id)
-                ->count();
-            $entryNumber = sprintf('%02d-%05d', $month, $count + 1);
-        }
 
         $formattedLines = array_map(static function (array $line) use ($validated): array {
             return [
