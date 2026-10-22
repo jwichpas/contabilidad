@@ -3,6 +3,14 @@ import type { EconomicSector, LegalForm } from './companySettings.types';
 export type TaxRegime = 'NRUS' | 'RER' | 'MYPE_TRIBUTARIO' | 'GENERAL';
 export type PcgeVersion = 'PCGE_2019' | 'PCGE_2026';
 
+export interface SunatContributorType { code: string; name: string; is_active: boolean }
+export interface SunatCiiuClass {
+  code: string; division: string; group_code: string;
+  class_number: string; name: string; is_active: boolean;
+}
+export interface SunatTaxCode { code: string; short_name: string; name: string; is_active: boolean }
+
+
 export interface OnboardingActivity {
   sector_code: EconomicSector;
   ciiu_code: string;
@@ -15,8 +23,10 @@ export interface CompanyOnboardingDraft {
   business_name: string;
   legal_address: string;
   legal_form: LegalForm | '';
+  sunat_contributor_type_code: string;
   tax_regime: TaxRegime;
   activities: OnboardingActivity[];
+  tax_codes: string[];
   fiscal_year: number;
   income_reference_year: number;
   annual_income: string;
@@ -53,8 +63,10 @@ export function newCompanyOnboardingDraft(year: number = new Date().getFullYear(
     business_name: '',
     legal_address: '',
     legal_form: '',
+    sunat_contributor_type_code: '',
     tax_regime: 'GENERAL',
     activities: [{ sector_code: 'COMERCIAL', ciiu_code: '', description: '', is_primary: true }],
+    tax_codes: [],
     fiscal_year: year,
     income_reference_year: year - 1,
     annual_income: '',
@@ -92,6 +104,7 @@ export function onboardingStepErrors(step: number, draft: CompanyOnboardingDraft
       errors.legal_address = 'Ingrese el domicilio fiscal (entre 5 y 300 caracteres).';
     }
     if (!draft.legal_form) errors.legal_form = 'Seleccione la forma jurídica.';
+    if (!/^\\d{2}$/.test(draft.sunat_contributor_type_code)) errors.sunat_contributor_type_code = 'Seleccione el tipo de contribuyente del Anexo 2 SUNAT.';
   }
 
   if (step === 1) {
@@ -157,7 +170,9 @@ export function companyOnboardingPayload(draft: CompanyOnboardingDraft) {
     business_name: draft.business_name.trim(),
     legal_address: draft.legal_address.trim(),
     legal_form: draft.legal_form,
+    sunat_contributor_type_code: draft.sunat_contributor_type_code,
     tax_regime: draft.tax_regime,
+    tax_codes: draft.tax_codes,
     economic_activities: draft.activities.map(a => ({
       sector_code: a.sector_code, ciiu_code: a.ciiu_code,
       description: a.description.trim(), is_primary: a.is_primary,
