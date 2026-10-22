@@ -105,6 +105,14 @@ export function onboardingStepErrors(step: number, draft: CompanyOnboardingDraft
     }
     if (!draft.legal_form) errors.legal_form = 'Seleccione la forma jurídica.';
     if (!/^\d{2}$/.test(draft.sunat_contributor_type_code)) errors.sunat_contributor_type_code = 'Seleccione el tipo de contribuyente del Anexo 2 SUNAT.';
+    const knownLegalTypes: Partial<Record<LegalForm, string>> = {
+      PERSONA_NATURAL: '02', EIRL: '07', SRL: '28', SA: '26', SAA: '38', SAC: '39',
+    };
+    const expectedType = knownLegalTypes[draft.legal_form as LegalForm];
+    if (expectedType && draft.sunat_contributor_type_code !== expectedType) {
+      errors.sunat_contributor_type_code =
+        'Seleccione el tipo SUNAT correspondiente a la forma jurídica declarada.';
+    }
   }
 
   if (step === 1) {
