@@ -103,6 +103,8 @@ const activeCompanyIdString = computed<string>({
           {{
             currentModule === 'journal'
               ? 'Libro Diario Bimoneda (Vouchers Contables)'
+              : currentModule === 'fiscal-periods'
+                ? 'Períodos contables · Cierre y auditoría'
               : currentModule === 'company-create'
                 ? 'Nueva empresa · Asistente de creación'
                 : currentModule === 'company'
