@@ -26,7 +26,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-vue-next';
-import { AccountingApiClient } from '../api/httpClient';
+import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import { SystemDecimal } from '../../../shared/types/numeric.types';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { CostCenterItem } from '../types/catalogs.types';
@@ -240,6 +240,14 @@ const lines = ref<EditingLine[]>([
 const journalEntries = shallowRef<readonly JournalEntryResponse[]>([]);
 const expandedEntryIds = shallowRef<Set<number>>(new Set());
 
+// After a network timeout the POST may have committed. Reuse its key only
+// for an identical payload and company; never for a changed journal draft.
+let pendingJournalAttempt: {
+  companyId: number;
+  payloadJson: string;
+  key: string;
+} | null = null;
+
 // ==========================================
 // CÁLCULOS Y TOTALES EN VIVO (PARTIDA DOBLE)
 // ==========================================
@@ -366,6 +374,7 @@ function autoBalance(): void {
 }
 
 function clearForm(): void {
+  pendingJournalAttempt = null;
   headerDescription.value = '';
   lines.value = [
     {
@@ -519,7 +528,20 @@ async function handleSubmit(): Promise<void> {
       })),
     };
 
-    const savedEntry = await apiClient.value.createJournalEntry(payload);
+    const payloadJson = JSON.stringify(payload);
+    const key =
+      pendingJournalAttempt?.companyId === props.activeCompanyId &&
+      pendingJournalAttempt.payloadJson === payloadJson
+        ? pendingJournalAttempt.key
+        : crypto.randomUUID();
+    pendingJournalAttempt = {
+      companyId: props.activeCompanyId,
+      payloadJson,
+      key,
+    };
+
+    const savedEntry = await apiClient.value.createJournalEntry(payload, key);
+    pendingJournalAttempt = null;
     successMessage.value = `¡Asiento ${savedEntry.entry_number} asentado exitosamente en el Libro Diario!`;
 
     // Recargar historial y limpiar formulario
@@ -527,6 +549,11 @@ async function handleSubmit(): Promise<void> {
     const updatedEntries = await apiClient.value.fetchJournalEntries({ limit: 50 });
     journalEntries.value = updatedEntries;
   } catch (e) {
+    // Keep the key after an ambiguous network/server error, but not after
+    // a conclusive client-side rejection (HTTP 400/409/422).
+    if (e instanceof ApiHttpError && e.status >= 400 && e.status < 500) {
+      pendingJournalAttempt = null;
+    }
     errorMessage.value =
       e instanceof Error ? e.message : 'Error al registrar el asiento contable.';
   } finally {
@@ -560,6 +587,7 @@ watch(exchangeRateType, () => {
 watch(
   () => props.activeCompanyId,
   () => {
+    pendingJournalAttempt = null;
     void loadCatalogsAndHistory();
   },
 );
