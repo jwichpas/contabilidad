@@ -20,6 +20,7 @@ if ($argc > 2 || ! in_array($mode, ['--plan', '--probe=contabilidad-dev'], true)
 if ($mode === '--plan') {
     echo "[PLAN] F1.10: credenciales incorrectas 422; login correcto 200 con token REAL 12h.\n";
     echo "[PLAN] GET /tenant/companies usando Bearer, rol A ADMIN/B AUDITOR.\n";
+    echo "[PLAN] Comprueba caducidad a 12h y revocacion real del token.\n";
     echo "[PLAN] Bloqueo de escritura B, cambio a B, logout, token revocado 401.\n";
     echo "[PLAN] Fixture: dos empresas, un usuario y dos membresias, IDs explicitos.\n";
     echo "[PLAN] ROLLBACK de todas las filas y comprobacion externa de limpieza.\n";
@@ -203,14 +204,19 @@ try {
         throw new \RuntimeException('Login no devolvio ambas empresas.');
     }
     $tokenId = (int) explode('|',$token,2)[0];
-    $issued = $db->selectOne(
-        'SELECT count(*)::integer AS n FROM public.personal_access_tokens WHERE id=? AND tokenable_id=?',
-        [$tokenId,$userId]
-    );
-    if ((int) ($issued->n ?? 0) !== 1) {
-        throw new \RuntimeException('No se encontro token emitido en la transaccion.');
+    $issued = $db->selectOne(<<<'SQL'
+        SELECT count(*)::integer AS n,
+               count(*) FILTER (
+                 WHERE expires_at BETWEEN now() + INTERVAL '11 hours 55 minutes'
+                     AND now() + INTERVAL '12 hours 5 minutes'
+               )::integer AS expires_in_12h
+        FROM public.personal_access_tokens
+        WHERE id=? AND tokenable_id=?
+        SQL,[$tokenId,$userId]);
+    if ((int) ($issued->n ?? 0) !== 1 || (int) ($issued->expires_in_12h ?? 0) !== 1) {
+        throw new \RuntimeException('No se encontro token valido con expiracion de 12 horas.');
     }
-    echo '[PASS] Token real generado y registrado dentro de la transaccion.'.PHP_EOL;
+    echo '[PASS] Token real emitido con vencimiento de 12 horas.'.PHP_EOL;
 
     $companies = $request('GET','/api/v1/tenant/companies',[],$token);
     $check('Bearer real accede a empresas',200,$companies->getStatusCode());
