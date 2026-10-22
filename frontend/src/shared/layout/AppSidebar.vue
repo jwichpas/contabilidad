@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import {
   ArrowLeftRight,
   BookOpen,
+  CalendarRange,
   Building2,
   CirclePlus,
   Calculator,
@@ -203,6 +204,22 @@ const activeCompanyIdString = computed<string>({
               >
                 Vouchers
               </span>
+            </button>
+
+            <!-- Gestión de períodos contables (F2.3) -->
+            <button
+              type="button"
+              :class="[
+                'w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs transition-all cursor-pointer text-left',
+                currentModule === 'fiscal-periods'
+                  ? 'bg-white/15 text-white opacity-100 shadow-[inset_3px_0_0_var(--accent)] font-semibold'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white font-medium',
+              ]"
+              title="Cierre, reapertura y bloqueo de períodos contables"
+              @click="emit('navigate', 'fiscal-periods')"
+            >
+              <CalendarRange class="w-4 h-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Períodos contables</span>
             </button>
 
             <!-- Opción: Tipos de Cambio Diarios SUNAT / SBS -->
