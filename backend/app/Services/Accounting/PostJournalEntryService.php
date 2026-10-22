@@ -42,6 +42,7 @@ final readonly class PostJournalEntryService
      *     created_by_user_id: int,
      *     lines: non-empty-list<array{
      *         accounting_account_id: int,
+     *         cost_center_id?: int|null,
      *         description?: string|null,
      *         debit_local: string,
      *         credit_local: string,
@@ -133,10 +134,24 @@ final readonly class PostJournalEntryService
             ]);
 
             foreach ($payload['lines'] as $index => $line) {
+                $centerId = $line['cost_center_id'] ?? null;
+                if ($centerId !== null) {
+                    // RLS + same-tenant composite FK: never accept a center of
+                    // a different company, or one explicitly deactivated.
+                    $isValidCenter = DB::table('cost_centers')
+                        ->where('company_id', (int) $period->company_id)
+                        ->where('id', (int) $centerId)
+                        ->where('is_active', true)
+                        ->exists();
+                    if (! $isValidCenter) {
+                        throw new DomainException(sprintf('Centro de costos no activo o ajeno a la empresa en partida #%d.', $index + 1));
+                    }
+                }
                 JournalEntryLine::query()->create([
                     'journal_entry_id' => $entry->id,
                     'line_number' => $index + 1,
                     'accounting_account_id' => $line['accounting_account_id'],
+                    'cost_center_id' => $centerId,
                     'description' => $line['description'] ?? null,
                     'debit_local' => Decimal::ofMonetary($line['debit_local'])->toString(),
                     'credit_local' => Decimal::ofMonetary($line['credit_local'])->toString(),
@@ -225,6 +240,7 @@ final readonly class PostJournalEntryService
                     'journal_entry_id' => $reversal->id,
                     'line_number' => $index + 1,
                     'accounting_account_id' => $line->accounting_account_id,
+                    'cost_center_id' => $line->cost_center_id,
                     'description' => sprintf('Extorno línea #%d', $line->line_number),
                     // Inversión exacta Debe <-> Haber en ambas monedas
                     'debit_local' => (string) $line->credit_local,
