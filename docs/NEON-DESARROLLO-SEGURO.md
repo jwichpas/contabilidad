@@ -533,3 +533,33 @@ php scripts/phase1-neon-journal-number-rollback.php --probe=contabilidad-dev
 ```
 
 **No ejecutar migraciones adicionales ni tests generales sobre Neon.** El esquema conserva 17 migraciones. Para demostrar serialización concurrente se necesita una prueba posterior con DOS conexiones PostgreSQL bajo el mismo tenant (y rollback/limpieza explícitos), no concluirlo de dos POST secuenciales. Neon `production` y Supabase continúan sin cambios.
+
+
+## F1.12 y F1.13 APROBADAS; F1.14 prueba de concurrencia preparada (21/10/2026)
+
+El usuario ejecutó en `contabilidad-dev` `phase1-neon-journal-number-rollback.php --plan` (sin SQL) y luego `--probe=contabilidad-dev`, obteniendo PASS en todos los escenarios: HTTP 201 manual, dos partidas y sumas exactas, vista previa no reservada, dos POST automáticos con **10-00001** y **10-00002**, trigger PostgreSQL diferido, HTTP 422 por descuadre, inmutabilidad SQLSTATE 23514, trigger negativo SQLSTATE 23514, evento JOURNAL_ENTRY_CREATED, extorno HTTP 201 con **10-00003** y dos partidas invertidas, original REVERSED, evento JOURNAL_ENTRY_REVERSED y rechazo del segundo extorno con HTTP 422. La verificación final bajo contexto RLS del tenant confirmó ROLLBACK completo, sin filas ficticias persistentes.
+
+Un `SELECT` independiente a Neon `br-odd-lake-b6wshqv3` confirmó **PostgreSQL 18.6, 17 migraciones, 0 companies/users/personal_access_tokens/journal_entries/journal_entry_lines/audit_logs**. El índice único `uq_journal_entries_company_period_number` todavía impide que se comprometan dos cabeceras con igual correlativo.
+
+### F1.14 — prueba de dos conexiones físicas en Docker desechable
+
+Se añadió `backend/scripts/phase1-journal-concurrency-docker.php`, y se integró como último bloque al wrapper `backend/scripts/phase1-isolated-writes-docker.ps1` (después de Pest/JUnit, antes de borrar el contenedor PostgreSQL). **Pendiente de ejecución local; no afirmar PASS.**
+
+El script `--plan` no conecta a BD. La opción `--probe=ephemeral-docker` falla cerrada salvo que `APP_ENV=testing`, `DB_HOST=127.0.0.1`, base `contabilidad_ci`, usuario `app_backend`, puerto loopback dinámico y marcador aleatorio `F1_GUARD_TOKEN` coincida con la tabla especial del Docker creada por el wrapper. Comprueba PostgreSQL 18 y rol sin SUPERUSER/BYPASSRLS.
+
+Abre dos conexiones distintas A/B como `app_backend`; crea empresa, usuario, período y dos cuentas PCGE **solo en el contenedor efímero**. La conexión A bloquea el período `FOR UPDATE`; B intenta `FOR UPDATE NOWAIT` y se exige SQLSTATE **55P03**. A ejecuta `JournalEntryNumberService::nextForPeriod` bajo ese lock, inserta asiento **10-00001** con dos partidas balanceadas, fuerza `SET CONSTRAINTS ALL IMMEDIATE` y confirma. Luego B adquiere el bloqueo liberado, ejecuta el mismo servicio real, inserta **10-00002**, valida triggers y confirma. Verifica que existen dos cabeceras con numeración distinta, cuatro partidas y restricción única. Los cambios se **COMMIT** dentro del Docker, exclusivamente para que B vea el resultado confirmado de A. El wrapper destruye el contenedor de manera incondicional incluso si una comprobación falla.
+
+**Límite metodológico:** B intenta NOWAIT mientras A mantiene la fila bloqueada, luego efectúa la segunda emisión después del COMMIT de A. Esto prueba contención real de dos conexiones y recálculo después del bloqueo, pero no es un test de estrés con centenares de workers ni certifica todos los patrones de error HTTP bajo concurrencia.
+
+Desde Windows PowerShell con Docker Desktop Linux:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-journal-concurrency-docker.php
+php scripts/phase1-journal-concurrency-docker.php --plan
+.\scripts\phase1-isolated-writes-docker.ps1 -PostgresVersion 18
+```
+
+**Nunca ejecutar** directamente `--probe=ephemeral-docker` apuntando a Neon: el script debe rechazarlo. No se ejecutaron migraciones/SQL con escrituras sobre Neon desde el asistente. Neon `production` y Supabase intactos.
