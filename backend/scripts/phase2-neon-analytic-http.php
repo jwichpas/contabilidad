@@ -358,6 +358,10 @@ try{
         &&($body['data']['status']??'')==='OPEN',
         'New monthly period must return 201 OPEN');
 
+    $probePhase='F2.3 duplicate opening guard';
+    $repeated=$request('POST','/api/v1/accounting/fiscal-periods',$companyA,$opening);
+    $check($repeated->getStatusCode()===409,
+        'Duplicate period opening must return 409');
     $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
     $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
 
