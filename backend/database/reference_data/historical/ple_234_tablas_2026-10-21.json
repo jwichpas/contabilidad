@@ -1,0 +1,3798 @@
+{
+  "dataset": "nexus-historical-sunat-ple-excel-2026-10-21-v1",
+  "classification": "HISTORICAL_NOT_VERIFIED",
+  "source_project": "Nexus Contable Dev",
+  "source_file": "234_tablas (1).xls",
+  "usage_restriction": "Do not use for live SUNAT validation/filings until each code and effective date is officially verified",
+  "row_count": 247,
+  "counts_by_table": {
+    "1": 20,
+    "2": 5,
+    "3": 33,
+    "4": 3,
+    "5": 6,
+    "6": 16,
+    "7": 3,
+    "8": 31,
+    "9": 35,
+    "10": 48,
+    "11": 30,
+    "12": 17
+  },
+  "rows": [
+    {
+      "table_number": 1,
+      "source_row_number": 4,
+      "source_code": "001",
+      "source_description": "DEPÓSITO EN CUENTA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 5,
+      "source_code": "002",
+      "source_description": "GIRO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 6,
+      "source_code": "003",
+      "source_description": "TRANSFERENCIA DE FONDOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 7,
+      "source_code": "004",
+      "source_description": "ORDEN DE PAGO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 7
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 8,
+      "source_code": "005",
+      "source_description": "TARJETA DE DÉBITO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 8
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 9,
+      "source_code": "006",
+      "source_description": "TARJETA DE CRÉDITO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 9
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 10,
+      "source_code": "007",
+      "source_description": "CHEQUES CON LA CLÁUSULA DE \"NO NEGOCIABLE\", \"INTRANSFERIBLES\", \"NO A LA ORDEN\" U OTRA EQUIVALENTE, A QUE SE REFIERE EL INCISO F) DEL ARTICULO 5° DEL DECRETO LEGISLATIVO.",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 10
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 11,
+      "source_code": "008",
+      "source_description": "EFECTIVO, POR OPERACIONES EN LAS QUE NO EXISTE OBLIGACIÓN DE UTILIZAR MEDIOS DE PAGO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 11
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 12,
+      "source_code": "009",
+      "source_description": "EFECTIVO, EN LOS DEMÁS CASOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 12
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 13,
+      "source_code": "010",
+      "source_description": "MEDIOS DE PAGO DE COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 13
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 14,
+      "source_code": "011",
+      "source_description": "LETRAS DE CAMBIO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 14
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 15,
+      "source_code": "101",
+      "source_description": "TRANSFERENCIAS - COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 15
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 16,
+      "source_code": "102",
+      "source_description": "CHEQUES BANCARIOS  - COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 16
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 17,
+      "source_code": "103",
+      "source_description": "ORDEN DE PAGO SIMPLE  - COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 17
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 18,
+      "source_code": "104",
+      "source_description": "ORDEN DE PAGO DOCUMENTARIO  - COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 18
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 19,
+      "source_code": "105",
+      "source_description": "REMESA SIMPLE  - COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 19
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 20,
+      "source_code": "106",
+      "source_description": "REMESA DOCUMENTARIA  - COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 20
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 21,
+      "source_code": "107",
+      "source_description": "CARTA DE CRÉDITO SIMPLE  - COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 21
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 22,
+      "source_code": "108",
+      "source_description": "CARTA DE CRÉDITO DOCUMENTARIO  - COMERCIO EXTERIOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 22
+      }
+    },
+    {
+      "table_number": 1,
+      "source_row_number": 23,
+      "source_code": "999",
+      "source_description": "OTROS MEDIOS DE PAGO (ESPECIFICAR)",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_1",
+        "original_format": "XLS",
+        "source_excel_row": 23
+      }
+    },
+    {
+      "table_number": 2,
+      "source_row_number": 4,
+      "source_code": "0",
+      "source_description": "OTROS TIPOS DE DOCUMENTOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_2",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 2,
+      "source_row_number": 5,
+      "source_code": "1",
+      "source_description": "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_2",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 2,
+      "source_row_number": 6,
+      "source_code": "4",
+      "source_description": "CARNET DE EXTRANJERIA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 6,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 2,
+      "source_row_number": 7,
+      "source_code": "6",
+      "source_description": "REGISTRO ÚNICO DE CONTRIBUYENTES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 7,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 2,
+      "source_row_number": 8,
+      "source_code": "7",
+      "source_description": "PASAPORTE",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 8,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 4,
+      "source_code": "01",
+      "source_description": "CENTRAL RESERVA DEL PERU",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 4,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 5,
+      "source_code": "02",
+      "source_description": "DE CREDITO DEL PERU",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 5,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 6,
+      "source_code": "03",
+      "source_description": "INTERNACIONAL DEL PERU",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 6,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 7,
+      "source_code": "05",
+      "source_description": "LATINO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 7,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 8,
+      "source_code": "07",
+      "source_description": "CITIBANK DEL PERU S.A.",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 8,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 9,
+      "source_code": "08",
+      "source_description": "STANDARD CHARTERED",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 9,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 10,
+      "source_code": "09",
+      "source_description": "SCOTIABANK PERU",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 10,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 11,
+      "source_code": "11",
+      "source_description": "CONTINENTAL",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 11,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 12,
+      "source_code": "12",
+      "source_description": "DE LIMA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 12,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 13,
+      "source_code": "16",
+      "source_description": "MERCANTIL",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 13,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 14,
+      "source_code": "18",
+      "source_description": "NACION",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 14,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 15,
+      "source_code": "22",
+      "source_description": "SANTANDER CENTRAL HISPANO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 15,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 16,
+      "source_code": "23",
+      "source_description": "DE COMERCIO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 16,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 17,
+      "source_code": "25",
+      "source_description": "REPUBLICA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 17,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 18,
+      "source_code": "26",
+      "source_description": "NBK BANK",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 18,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 19,
+      "source_code": "29",
+      "source_description": "BANCOSUR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 19,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 20,
+      "source_code": "35",
+      "source_description": "FINANCIERO DEL PERU",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 20,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 21,
+      "source_code": "37",
+      "source_description": "DEL PROGRESO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 21,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 22,
+      "source_code": "38",
+      "source_description": "INTERAMERICANO FINANZAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 22,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 23,
+      "source_code": "39",
+      "source_description": "BANEX",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 23,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 24,
+      "source_code": "40",
+      "source_description": "NUEVO MUNDO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 24,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 25,
+      "source_code": "41",
+      "source_description": "SUDAMERICANO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 25,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 26,
+      "source_code": "42",
+      "source_description": "DEL LIBERTADOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 26,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 27,
+      "source_code": "43",
+      "source_description": "DEL TRABAJO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 27,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 28,
+      "source_code": "44",
+      "source_description": "SOLVENTA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 28,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 29,
+      "source_code": "45",
+      "source_description": "SERBANCO SA.",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 29,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 30,
+      "source_code": "46",
+      "source_description": "BANK OF BOSTON",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 30,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 31,
+      "source_code": "47",
+      "source_description": "ORION",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 31,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 32,
+      "source_code": "48",
+      "source_description": "DEL PAIS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 32,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 33,
+      "source_code": "49",
+      "source_description": "MI BANCO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 33,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 34,
+      "source_code": "50",
+      "source_description": "BNP PARIBAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 34,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 35,
+      "source_code": "53",
+      "source_description": "HSBC BANK PERU S.A.",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 35,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 3,
+      "source_row_number": 36,
+      "source_code": "99",
+      "source_description": "OTROS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+        "code_provenance": "OFFICIAL_2015",
+        "original_format": "XLS",
+        "source_excel_row": 36,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 4,
+      "source_row_number": 4,
+      "source_code": "1",
+      "source_description": "NUEVOS SOLES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_4",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 4,
+      "source_row_number": 5,
+      "source_code": "2",
+      "source_description": "DÓLARES AMERICANOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_4",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 4,
+      "source_row_number": 6,
+      "source_code": "9",
+      "source_description": "OTRA MONEDA (ESPECIFICAR)",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_4",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 5,
+      "source_row_number": 4,
+      "source_code": "01",
+      "source_description": "MERCADERÍA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_5",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 5,
+      "source_row_number": 5,
+      "source_code": "02",
+      "source_description": "PRODUCTO TERMINADO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_5",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 5,
+      "source_row_number": 6,
+      "source_code": "03",
+      "source_description": "MATERIAS PRIMAS Y AUXILIARES - MATERIALES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_5",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 5,
+      "source_row_number": 7,
+      "source_code": "04",
+      "source_description": "ENVASES Y EMBALAJES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_5",
+        "original_format": "XLS",
+        "source_excel_row": 7
+      }
+    },
+    {
+      "table_number": 5,
+      "source_row_number": 8,
+      "source_code": "05",
+      "source_description": "SUMINISTROS DIVERSOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_5",
+        "original_format": "XLS",
+        "source_excel_row": 8
+      }
+    },
+    {
+      "table_number": 5,
+      "source_row_number": 9,
+      "source_code": "99",
+      "source_description": "OTROS (ESPECIFICAR)",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_5",
+        "original_format": "XLS",
+        "source_excel_row": 9
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 4,
+      "source_code": "01",
+      "source_description": "KILOGRAMOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 5,
+      "source_code": "02",
+      "source_description": "LIBRAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 6,
+      "source_code": "03",
+      "source_description": "TONELADAS LARGAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 7,
+      "source_code": "04",
+      "source_description": "TONELADAS MÉTRICAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 7
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 8,
+      "source_code": "05",
+      "source_description": "TONELADAS CORTAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 8
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 9,
+      "source_code": "06",
+      "source_description": "GRAMOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 9
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 10,
+      "source_code": "07",
+      "source_description": "UNIDADES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 10
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 11,
+      "source_code": "08",
+      "source_description": "LITROS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 11
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 12,
+      "source_code": "09",
+      "source_description": "GALONES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 12
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 13,
+      "source_code": "10",
+      "source_description": "BARRILES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 13
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 14,
+      "source_code": "11",
+      "source_description": "LATAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 14
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 15,
+      "source_code": "12",
+      "source_description": "CAJAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 15
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 16,
+      "source_code": "13",
+      "source_description": "MILLARES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 16
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 17,
+      "source_code": "14",
+      "source_description": "METROS CÚBICOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 17
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 18,
+      "source_code": "15",
+      "source_description": "METROS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 18
+      }
+    },
+    {
+      "table_number": 6,
+      "source_row_number": 19,
+      "source_code": "99",
+      "source_description": "OTROS (ESPECIFICAR)",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_6",
+        "original_format": "XLS",
+        "source_excel_row": 19
+      }
+    },
+    {
+      "table_number": 7,
+      "source_row_number": 4,
+      "source_code": "01",
+      "source_description": "INTANGIBLE ADQUIRIDO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_7",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 7,
+      "source_row_number": 5,
+      "source_code": "02",
+      "source_description": "INTANGIBLE EN ETAPA DE INVESTIGACIÓN",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_7",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 7,
+      "source_row_number": 6,
+      "source_code": "03",
+      "source_description": "INTANGIBLE EN ETAPA DE DESARROLLO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_7",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 4,
+      "source_code": "1",
+      "source_description": "LIBRO CAJA Y BANCOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 4,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 5,
+      "source_code": "2",
+      "source_description": "LIBRO DE INGRESOS Y GASTOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 5,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 6,
+      "source_code": "3",
+      "source_description": "LIBRO DE INVENTARIOS Y BALANCES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 6,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 7,
+      "source_code": "4",
+      "source_description": "LIBRO DE RETENCIONES INCISOS E) Y F) DEL ARTICULO 34° DE LA LEY DEL IMPUESTO A LA RENTA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 7,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 8,
+      "source_code": "5",
+      "source_description": "LIBRO DIARIO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 8,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 9,
+      "source_code": "6",
+      "source_description": "LIBRO MAYOR",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 9,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 10,
+      "source_code": "7",
+      "source_description": "REGISTRO DE ACTIVOS FIJOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 10,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 11,
+      "source_code": "8",
+      "source_description": "REGISTRO DE COMPRAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 11,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 12,
+      "source_code": "9",
+      "source_description": "REGISTRO DE CONSIGNACIONES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 12,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 13,
+      "source_code": "10",
+      "source_description": "REGISTRO DE COSTOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 13,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 14,
+      "source_code": "11",
+      "source_description": "REGISTRO DE HUÉSPEDES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 14,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 15,
+      "source_code": "12",
+      "source_description": "REGISTRO DE INVENTARIO PERMANENTE EN UNIDADES FÍSICAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 15,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 16,
+      "source_code": "13",
+      "source_description": "REGISTRO DE INVENTARIO PERMANENTE VALORIZADO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 16,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 17,
+      "source_code": "14",
+      "source_description": "REGISTRO DE VENTAS E INGRESOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 17,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 18,
+      "source_code": "15",
+      "source_description": "REGISTRO DE VENTAS E INGRESOS - ARTÍCULO 23° RESOLUCIÓN DE SUPERINTENDENCIA N° 266-2004/SUNAT",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 18,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 19,
+      "source_code": "16",
+      "source_description": "REGISTRO DEL RÉGIMEN DE PERCEPCIONES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 19,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 20,
+      "source_code": "17",
+      "source_description": "REGISTRO DEL RÉGIMEN DE RETENCIONES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 20,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 21,
+      "source_code": "18",
+      "source_description": "REGISTRO IVAP",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 21,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 22,
+      "source_code": "19",
+      "source_description": "REGISTRO(S) AUXILIAR(ES) DE ADQUISICIONES - ARTÍCULO 8° RESOLUCIÓN DE SUPERINTENDENCIA N° 022-98/SUNAT",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 22,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 23,
+      "source_code": "20",
+      "source_description": "REGISTRO(S) AUXILIAR(ES) DE ADQUISICIONES - INCISO A) PRIMER PÁRRAFO ARTÍCULO 5° RESOLUCIÓN DE SUPERINTENDENCIA N° 021-99/SUNAT",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 23,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 24,
+      "source_code": "21",
+      "source_description": "REGISTRO(S) AUXILIAR(ES) DE ADQUISICIONES - INCISO A) PRIMER PÁRRAFO ARTÍCULO 5° RESOLUCIÓN DE SUPERINTENDENCIA N° 142-2001/SUNAT",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 24,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 25,
+      "source_code": "22",
+      "source_description": "REGISTRO(S) AUXILIAR(ES) DE ADQUISICIONES - INCISO C) PRIMER PÁRRAFO ARTÍCULO 5° RESOLUCIÓN DE SUPERINTENDENCIA N° 256-2004/SUNAT",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 25,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 26,
+      "source_code": "23",
+      "source_description": "REGISTRO(S) AUXILIAR(ES) DE ADQUISICIONES - INCISO A) PRIMER PÁRRAFO ARTÍCULO 5° RESOLUCIÓN DE SUPERINTENDENCIA N° 257-2004/SUNAT",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 26,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 27,
+      "source_code": "24",
+      "source_description": "REGISTRO(S) AUXILIAR(ES) DE ADQUISICIONES - INCISO C) PRIMER PÁRRAFO ARTÍCULO 5° RESOLUCIÓN DE SUPERINTENDENCIA N° 258-2004/SUNAT",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 27,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 28,
+      "source_code": "25",
+      "source_description": "REGISTRO(S) AUXILIAR(ES) DE ADQUISICIONES - INCISO A) PRIMER PÁRRAFO ARTÍCULO 5° RESOLUCIÓN DE SUPERINTENDENCIA N° 259-2004/SUNAT",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 28,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 29,
+      "source_code": "26",
+      "source_description": "REGISTRO DE RETENCIONES ARTÍCULO 77-A DE LA LEY DEL IMPUESTO A LA RENTA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 29,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 30,
+      "source_code": "27",
+      "source_description": "LIBRO DE ACTAS DE LA EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 30,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 31,
+      "source_code": "28",
+      "source_description": "LIBRO DE ACTAS DE LA JUNTA GENERAL DE ACCIONISTAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 31,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 32,
+      "source_code": "29",
+      "source_description": "LIBRO DE ACTAS DEL DIRECTORIO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 32,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 33,
+      "source_code": "30",
+      "source_description": "LIBRO DE MATRÍCULA DE ACCIONES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 33,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 8,
+      "source_row_number": 34,
+      "source_code": "31",
+      "source_description": "LIBRO DE PLANILLAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://www.sunat.gob.pe/legislacion/superin/2008/239.pdf",
+        "code_provenance": "historical_table_cross_reference",
+        "original_format": "XLS",
+        "source_excel_row": 34,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 4,
+      "source_code": "10",
+      "source_description": "CAJA Y BANCOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 5,
+      "source_code": "12",
+      "source_description": "CLIENTES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 6,
+      "source_code": "16",
+      "source_description": "CUENTAS POR COBRAR DIVERSAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 7,
+      "source_code": "20",
+      "source_description": "MERCADERÍAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 7
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 8,
+      "source_code": "21",
+      "source_description": "PRODUCTOS TERMINADOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 8
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 9,
+      "source_code": "33",
+      "source_description": "INMUEBLES, MAQUINARIAS Y EQUIPO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 9
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 10,
+      "source_code": "34",
+      "source_description": "INTANGIBLES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 10
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 11,
+      "source_code": "38",
+      "source_description": "CARGAS DIFERIDAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 11
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 12,
+      "source_code": "39",
+      "source_description": "DEPRECIACIÓN Y AMORTIZACIÓN ACUMULADA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 12
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 13,
+      "source_code": "4011D",
+      "source_description": "TRIBUTOS POR PAGAR - IGV - DÉBITOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 13
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 14,
+      "source_code": "4011C",
+      "source_description": "TRIBUTOS POR PAGAR - IGV - CRÉDITOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 14
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 15,
+      "source_code": "4017D",
+      "source_description": "TRIBUTOS POR PAGAR - IMPUESTO A LA RENTA - DÉBITOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 15
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 16,
+      "source_code": "4017C",
+      "source_description": "TRIBUTOS POR PAGAR - IMPUESTO A LA RENTA - CRÉDITOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 16
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 17,
+      "source_code": "402",
+      "source_description": "TRIBUTOS POR PAGAR - OTROS IMPUESTOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 17
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 18,
+      "source_code": "42",
+      "source_description": "PROVEEDORES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 18
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 19,
+      "source_code": "46",
+      "source_description": "CUENTAS POR PAGAR DIVERSAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 19
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 20,
+      "source_code": "50",
+      "source_description": "CAPITAL",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 20
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 21,
+      "source_code": "58",
+      "source_description": "RESERVAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 21
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 22,
+      "source_code": "59",
+      "source_description": "RESULTADOS ACUMULADOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_9",
+        "original_format": "XLS",
+        "source_excel_row": 22
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 23,
+      "source_code": "60",
+      "source_description": "COMPRAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 23,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 24,
+      "source_code": "61",
+      "source_description": "VARIACIÓN DE EXISTENCIAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 24,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 25,
+      "source_code": "62",
+      "source_description": "CARGAS DE PERSONAL",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 25,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 26,
+      "source_code": "63",
+      "source_description": "SERVICIOS PRESTADOS POR TERCEROS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 26,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 27,
+      "source_code": "65",
+      "source_description": "CARGAS DIVERSAS DE GESTIÓN",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 27,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 28,
+      "source_code": "66",
+      "source_description": "CARGAS EXCEPCIONALES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 28,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 29,
+      "source_code": "67",
+      "source_description": "CARGAS FINANCIERAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 29,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 30,
+      "source_code": "68",
+      "source_description": "PROVISIONES DEL EJERCICIO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 30,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 31,
+      "source_code": "69",
+      "source_description": "COSTO DE VENTAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 31,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 32,
+      "source_code": "96",
+      "source_description": "GASTOS ADMINISTRATIVOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 32,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 33,
+      "source_code": "97",
+      "source_description": "GASTOS DE VENTAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 33,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 34,
+      "source_code": "70",
+      "source_description": "VENTAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 34,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 35,
+      "source_code": "75",
+      "source_description": "INGRESOS DIVERSOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 35,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 36,
+      "source_code": "76",
+      "source_description": "INGRESOS EXCEPCIONALES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 36,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 37,
+      "source_code": "77",
+      "source_description": "INGRESOS FINANCIEROS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 37,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 9,
+      "source_row_number": 38,
+      "source_code": "79",
+      "source_description": "CARGAS IMPUTABLES A LA CUENTA DE COSTOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_url": "https://es.scribd.com/document/905476931/Copia-de-Sesion-02-Monografia-de-Empresa-de-Construccion-Civil-1",
+        "code_provenance": "HISTORICAL_CROSSCHECK",
+        "original_format": "XLS",
+        "source_excel_row": 38,
+        "pending_current_revision_check": true,
+        "code_not_legible_in_extracted_xls": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 4,
+      "source_code": "00",
+      "source_description": "Otros (especificar)",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 5,
+      "source_code": "01",
+      "source_description": "Factura",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 6,
+      "source_code": "02",
+      "source_description": "Recibo por Honorarios",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 7,
+      "source_code": "03",
+      "source_description": "Boleta de Venta",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 7
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 8,
+      "source_code": "04",
+      "source_description": "Liquidación de compra",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 8
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 9,
+      "source_code": "05",
+      "source_description": "Boleto de compañía de aviación comercial por el servicio de transporte aéreo de pasajeros",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 9
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 10,
+      "source_code": "06",
+      "source_description": "Carta de porte aéreo por el servicio de transporte de carga aérea",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 10
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 11,
+      "source_code": "07",
+      "source_description": "Nota de crédito",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 11
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 12,
+      "source_code": "08",
+      "source_description": "Nota de débito",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 12
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 13,
+      "source_code": "09",
+      "source_description": "Guía de remisión - Remitente",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 13
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 14,
+      "source_code": "10",
+      "source_description": "Recibo por Arrendamiento",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "account_plan": "HISTORICAL_PCGR_NOT_PCGE",
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 14
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 15,
+      "source_code": "11",
+      "source_description": "Póliza emitida por las Bolsas de Valores, Bolsas de Productos o Agentes de Intermediación por operaciones realizadas en las Bolsas de Valores o Productos o fuera de las mismas, autorizadas por CONASEV",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 15,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 17,
+      "source_code": "12",
+      "source_description": "Ticket o cinta emitido por máquina registradora",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 17,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 18,
+      "source_code": "13",
+      "source_description": "Documento emitido por bancos, instituciones financieras, crediticias y de seguros que se encuentren bajo el control de la Superintendencia de Banca y Seguros",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 18,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 20,
+      "source_code": "14",
+      "source_description": "Recibo por servicios públicos de suministro de energía eléctrica, agua, teléfono, telex y telegráficos y otros servicios complementarios que se incluyan en el recibo de servicio público",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 20,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 22,
+      "source_code": "15",
+      "source_description": "Boleto emitido por las empresas de transporte público urbano de pasajeros",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 22,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 23,
+      "source_code": "16",
+      "source_description": "Boleto de viaje emitido por las empresas de transporte público interprovincial de pasajeros dentro del país",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 23,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 24,
+      "source_code": "17",
+      "source_description": "Documento emitido por la Iglesia Católica por el arrendamiento de bienes inmuebles",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 24,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 25,
+      "source_code": "18",
+      "source_description": "Documento emitido por las Administradoras Privadas de Fondo de Pensiones que se encuentran bajo la supervisión de la Superintendencia de Administradoras Privadas de Fondos de Pensiones",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 25,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 27,
+      "source_code": "19",
+      "source_description": "Boleto o entrada por atracciones y espectáculos públicos",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 27,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 28,
+      "source_code": "20",
+      "source_description": "Comprobante de Retención",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 28,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 29,
+      "source_code": "21",
+      "source_description": "Conocimiento de embarque por el servicio de transporte de carga marítima",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 29,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 30,
+      "source_code": "22",
+      "source_description": "Comprobante por Operaciones No Habituales",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 30,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 31,
+      "source_code": "23",
+      "source_description": "Pólizas de Adjudicación emitidas con ocasión del remate o adjudicación de bienes por venta forzada, por los martilleros o las entidades que rematen o subasten bienes por cuenta de terceros",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 31,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 33,
+      "source_code": "24",
+      "source_description": "Certificado de pago de regalías emitidas por PERUPETRO S.A",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 33,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 34,
+      "source_code": "25",
+      "source_description": "Documento de Atribución (Ley del Impuesto General a las Ventas e Impuesto Selectivo al Consumo, Art. 19º, último párrafo, R.S. N° 022-98-SUNAT).",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 34,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 36,
+      "source_code": "26",
+      "source_description": "Recibo por el Pago de la Tarifa por Uso de Agua Superficial con fines agrarios y por el pago de la Cuota para la ejecución de una determinada obra o actividad acordada por la Asamblea General de la Comisión de Regantes o Resolución expedida por el Jefe de la Unidad de Aguas y de Riego (Decreto Supremo N° 003-90-AG, Arts. 28 y 48)",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 36,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 39,
+      "source_code": "27",
+      "source_description": "Seguro Complementario de Trabajo de Riesgo",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 39,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 40,
+      "source_code": "28",
+      "source_description": "Tarifa Unificada de Uso de Aeropuerto",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 40,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 41,
+      "source_code": "29",
+      "source_description": "Documentos emitidos por la COFOPRI en calidad de oferta de venta de terrenos, los correspondientes a las subastas públicas y a la retribución de los servicios que presta",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 41,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 43,
+      "source_code": "30",
+      "source_description": "Documentos emitidos por las empresas que desempeñan el rol adquirente en los sistemas de pago mediante tarjetas de crédito y débito",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 43,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 45,
+      "source_code": "31",
+      "source_description": "Guía de Remisión - Transportista",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 45,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 46,
+      "source_code": "32",
+      "source_description": "Documentos emitidos por las empresas recaudadoras de la denominada Garantía de Red Principal a la que hace referencia el numeral 7.6 del artículo 7° de la Ley N° 27133 – Ley de Promoción del Desarrollo de la Industria del Gas Natural",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 46,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 48,
+      "source_code": "34",
+      "source_description": "Documento del Operador",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 48,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 49,
+      "source_code": "35",
+      "source_description": "Documento del Partícipe",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 49,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 50,
+      "source_code": "36",
+      "source_description": "Recibo de Distribución de Gas Natural",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 50,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 51,
+      "source_code": "37",
+      "source_description": "Documentos que emitan los concesionarios del servicio de revisiones técnicas vehiculares, por la prestación de dicho servicio",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 51,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 53,
+      "source_code": "50",
+      "source_description": "Declaración Única de Aduanas - Importación definitiva",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 53,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 54,
+      "source_code": "52",
+      "source_description": "Despacho Simplificado - Importación Simplificada",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 54,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 55,
+      "source_code": "53",
+      "source_description": "Declaración de Mensajería o Courier",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 55,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 56,
+      "source_code": "54",
+      "source_description": "Liquidación de Cobranza",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 56,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 57,
+      "source_code": "87",
+      "source_description": "Nota de Crédito Especial",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 57,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 58,
+      "source_code": "88",
+      "source_description": "Nota de Débito Especial",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 58,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 59,
+      "source_code": "91",
+      "source_description": "Comprobante de No Domiciliado",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 59,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 60,
+      "source_code": "96",
+      "source_description": "Exceso de crédito fiscal por retiro de bienes",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 60,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 61,
+      "source_code": "97",
+      "source_description": "Nota de Crédito - No Domiciliado",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 61,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 62,
+      "source_code": "98",
+      "source_description": "Nota de Débito - No Domiciliado",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 62,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 10,
+      "source_row_number": 63,
+      "source_code": "99",
+      "source_description": "Otros -Consolidado de Boletas de Venta",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_10",
+        "original_format": "XLS",
+        "source_excel_row": 63,
+        "continuations_joined": true
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 4,
+      "source_code": "019",
+      "source_description": "TUMBES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 5,
+      "source_code": "028",
+      "source_description": "TALARA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 6,
+      "source_code": "046",
+      "source_description": "PAITA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 7,
+      "source_code": "055",
+      "source_description": "CHICLAYO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 7
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 8,
+      "source_code": "082",
+      "source_description": "SALAVERRY",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 8
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 9,
+      "source_code": "091",
+      "source_description": "CHIMBOTE",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 9
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 10,
+      "source_code": "118",
+      "source_description": "MARÍTIMA DEL CALLAO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 10
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 11,
+      "source_code": "127",
+      "source_description": "PISCO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 11
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 12,
+      "source_code": "145",
+      "source_description": "MOLLENDO MATARANI",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 12
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 13,
+      "source_code": "154",
+      "source_description": "AREQUIPA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 13
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 14,
+      "source_code": "163",
+      "source_description": "ILO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 14
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 15,
+      "source_code": "172",
+      "source_description": "TACNA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 15
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 16,
+      "source_code": "181",
+      "source_description": "PUNO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 16
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 17,
+      "source_code": "190",
+      "source_description": "CUZCO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 17
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 18,
+      "source_code": "217",
+      "source_description": "PUCALLPA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 18
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 19,
+      "source_code": "226",
+      "source_description": "IQUITOS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 19
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 20,
+      "source_code": "235",
+      "source_description": "AÉREA DEL CALLAO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 20
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 21,
+      "source_code": "244",
+      "source_description": "POSTAL DE LIMA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 21
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 22,
+      "source_code": "262",
+      "source_description": "DESAGUADERO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 22
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 23,
+      "source_code": "271",
+      "source_description": "TARAPOTO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 23
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 24,
+      "source_code": "280",
+      "source_description": "PUERTO MALDONADO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 24
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 25,
+      "source_code": "299",
+      "source_description": "LA TINA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 25
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 26,
+      "source_code": "884",
+      "source_description": "DEPENDENCIA FERROVIARIA TACNA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 26
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 27,
+      "source_code": "893",
+      "source_description": "DEPENDENCIA POSTAL TACNA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 27
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 28,
+      "source_code": "910",
+      "source_description": "DEPENDENCIA POSTAL AREQUIPA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 28
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 29,
+      "source_code": "929",
+      "source_description": "COMPLEJO FRONTERIZO STA ROSA TACNA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 29
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 30,
+      "source_code": "938",
+      "source_description": "TERMINAL TERRESTRE TACNA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 30
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 31,
+      "source_code": "947",
+      "source_description": "AEROPUERTO TACNA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 31
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 32,
+      "source_code": "956",
+      "source_description": "CETICOS TACNA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 32
+      }
+    },
+    {
+      "table_number": 11,
+      "source_row_number": 33,
+      "source_code": "965",
+      "source_description": "DEPENDENCIA POSTAL DE SALAVERRY",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_11",
+        "original_format": "XLS",
+        "source_excel_row": 33
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 4,
+      "source_code": "01",
+      "source_description": "VENTA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 4
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 5,
+      "source_code": "02",
+      "source_description": "COMPRA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 5
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 6,
+      "source_code": "03",
+      "source_description": "CONSIGNACIÓN RECIBIDA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 6
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 7,
+      "source_code": "04",
+      "source_description": "CONSIGNACIÓN ENTREGADA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 7
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 8,
+      "source_code": "05",
+      "source_description": "DEVOLUCIÓN RECIBIDA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 8
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 9,
+      "source_code": "06",
+      "source_description": "DEVOLUCIÓN ENTREGADA",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 9
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 10,
+      "source_code": "07",
+      "source_description": "PROMOCIÓN",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 10
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 11,
+      "source_code": "08",
+      "source_description": "PREMIO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 11
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 12,
+      "source_code": "09",
+      "source_description": "DONACIÓN",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 12
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 13,
+      "source_code": "10",
+      "source_description": "SALIDA A PRODUCCIÓN",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 13
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 14,
+      "source_code": "11",
+      "source_description": "TRANSFERENCIA ENTRE ALMACENES",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 14
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 15,
+      "source_code": "12",
+      "source_description": "RETIRO",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 15
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 16,
+      "source_code": "13",
+      "source_description": "MERMAS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 16
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 17,
+      "source_code": "14",
+      "source_description": "DESMEDROS",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 17
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 18,
+      "source_code": "15",
+      "source_description": "DESTRUCCIÓN",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 18
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 19,
+      "source_code": "16",
+      "source_description": "SALDO INICIAL",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 19
+      }
+    },
+    {
+      "table_number": 12,
+      "source_row_number": 20,
+      "source_code": "99",
+      "source_description": "OTROS (ESPECIFICAR)",
+      "code_review_status": "EXTRACTED",
+      "validity_review_status": "HISTORICAL_NOT_VERIFIED",
+      "source_file": "234_tablas (1).xls",
+      "source_metadata": {
+        "source_sheet": "TABLA_12",
+        "original_format": "XLS",
+        "source_excel_row": 20
+      }
+    }
+  ]
+}
