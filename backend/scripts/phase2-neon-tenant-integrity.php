@@ -91,7 +91,7 @@ try {
     if ($state===null || $state->role_name!=='neondb_owner'
         || $state->db_name!=='neondb'
         || intdiv((int)$state->pg_ver,10000)!==18
-        || ! in_array((int)$state->migrations,[19,20],true)
+        || ! in_array((int)$state->migrations,[19,20,21],true)
         || (int)$state->templates!==3401
         || (int)$state->ledger!==1
         || (int)$state->companies!==3
