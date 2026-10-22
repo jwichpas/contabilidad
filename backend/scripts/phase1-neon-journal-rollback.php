@@ -18,7 +18,7 @@ if ($mode === '--plan') {
     echo "[PLAN] Comprobar rol app_backend, Neon contabilidad-dev PG18 y tablas de negocio vacias.\n";
     echo "[PLAN] Crear empresa, admin, periodo y dos cuentas nivel 4 con jerarquia PCGE.\n";
     echo "[PLAN] HTTP 201 balanceado; 2 partidas; SET CONSTRAINTS ALL IMMEDIATE para trigger diferido.\n";
-    echo "[PLAN] HTTP 422 descuadrado, UPDATE SQL inmutable rechazado y auditoria por empresa.\n";
+    echo "[PLAN] HTTP 422 descuadrado; UPDATE inmutable y trigger diferido SQL 23514; auditoria.\n";
     echo "[PLAN] ROLLBACK y SELECT de limpieza de todos los datos ficticios.\n";
     echo "[AVISO] Secuencias journal_entries/audit_logs pueden avanzar pese al ROLLBACK.\n";
     echo "[DRY-RUN] Ninguna conexion o escritura.\n";
@@ -259,6 +259,58 @@ try {
     if (! $blocked) { throw new \RuntimeException('Fallo inmutabilidad SQL.'); }
     echo "[PASS] UPDATE de asiento POSTED bloqueado por trigger 23514.\n";
     $checks++;
+    // Prueba NEGATIVA del motor PostgreSQL, independiente de la validacion
+    // matematica de PHP: insertar directamente un asiento desbalanceado,
+    // forzar la constraint diferida y exigir SQLSTATE 23514.
+    // SAVEPOINT + ROLLBACK TO SAVEPOINT: no sobrevive fila alguna.
+    $badEntryId = random_int(9000000000000, 9499999999999);
+    $badLineIdA = random_int(9500000000000, 9599999999999);
+    $badLineIdB = random_int(9600000000000, 9699999999999);
+    $db->statement('SAVEPOINT f111_deferred_bad');
+    $dbConstraintRejected = false;
+    try {
+        $db->statement('SET CONSTRAINTS ALL DEFERRED');
+        $db->table('journal_entries')->insert([
+            'id'=>$badEntryId, 'company_id'=>$companyId,
+            'fiscal_period_id'=>$periodId, 'entry_number'=>'F111-DB-BAD',
+            'entry_date'=>'2026-10-21', 'entry_type'=>'STANDARD',
+            'status'=>'POSTED', 'currency'=>'PEN',
+            'exchange_rate'=>'1.000000', 'exchange_rate_type'=>'SELL',
+            'description'=>'F1.11 SQL INVAL roll back',
+            'created_by_user_id'=>$userId,
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+        foreach ([
+            [$badLineIdA, 1, $accountIds[0], '120.0000','0.0000','120.0000','0.0000'],
+            [$badLineIdB, 2, $accountIds[1], '0.0000','119.0000','0.0000','120.0000'],
+        ] as [$id,$lineNumber,$accountId,$debitLocal,$creditLocal,$debitForeign,$creditForeign]) {
+            $db->table('journal_entry_lines')->insert([
+                'id'=>$id, 'company_id'=>$companyId,
+                'journal_entry_id'=>$badEntryId, 'line_number'=>$lineNumber,
+                'accounting_account_id'=>$accountId,
+                'description'=>'F1.11 SQL INVAL',
+                'debit_local'=>$debitLocal,'credit_local'=>$creditLocal,
+                'debit_foreign'=>$debitForeign,'credit_foreign'=>$creditForeign,
+                'exchange_rate'=>'1.000000',
+                'created_at'=>now(),'updated_at'=>now(),
+            ]);
+        }
+        $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
+    } catch (\Throwable $error) {
+        $dbConstraintRejected = (string) ($error->errorInfo[0] ?? $error->getCode()) === '23514';
+    } finally {
+        $db->statement('ROLLBACK TO SAVEPOINT f111_deferred_bad');
+        $db->statement('RELEASE SAVEPOINT f111_deferred_bad');
+    }
+    if (! $dbConstraintRejected) {
+        throw new \RuntimeException('Trigger diferido no rechazo el descuadre SQL 23514.');
+    }
+    if ((int) $db->table('journal_entries')->where('id',$badEntryId)->count() !== 0) {
+        throw new \RuntimeException('Savepoint SQL retuvo cabecera del asiento invalido.');
+    }
+    echo "[PASS] Trigger PostgreSQL rechazo descuadre local con 23514; savepoint revertido.\n";
+    $checks++;
+
     $audit = $db->selectOne(<<<'SQL'
         SELECT count(*)::integer AS n FROM public.audit_logs
         WHERE company_id=? AND event_type='JOURNAL_ENTRY_CREATED'
@@ -268,7 +320,7 @@ try {
     }
     echo "[PASS] Auditoria JOURNAL_ENTRY_CREATED bajo el tenant.\n";
     $checks++;
-    if ($db->transactionLevel() !== 1 || $checks !== 6) {
+    if ($db->transactionLevel() !== 1 || $checks !== 7) {
         throw new \RuntimeException('Profundidad de transaccion o numero de checks incorrecto.');
     }
     $passed = true;
@@ -308,5 +360,5 @@ if ($rolledBack) {
     }
 }
 $db->disconnect();
-if (! $passed || ! $rolledBack || $checks !== 6) { exit(1); }
+if (! $passed || ! $rolledBack || $checks !== 7) { exit(1); }
 echo "[PASS] F1.11: motor POST y triggers SQL validados sin filas persistentes.\n";
