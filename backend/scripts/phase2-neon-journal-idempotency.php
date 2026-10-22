@@ -123,9 +123,10 @@ try{
             WHERE conrelid='public.journal_post_idempotency'::regclass
               AND conname IN ('fk_journal_post_idempotency_tenant_voucher',
                               'chk_journal_post_idempotency_sha',
-                              'chk_journal_post_idempotency_key',
-                              'uq_journal_post_idempotency_tenant_key',
-                              'uq_journal_post_idempotency_voucher'))::integer AS constraints_count,
+                              'chk_journal_post_idempotency_key'))::integer AS constraints_count,
+        (SELECT count(*) FROM pg_catalog.pg_indexes
+            WHERE schemaname='public' AND tablename='journal_post_idempotency'
+              AND indexname IN ('uq_journal_post_idempotency_tenant_key','uq_journal_post_idempotency_voucher'))::integer AS unique_indexes,
         CASE WHEN (SELECT relrowsecurity AND relforcerowsecurity
             FROM pg_catalog.pg_class WHERE oid='public.journal_post_idempotency'::regclass)
             THEN 1 ELSE 0 END AS force_rls,
@@ -145,14 +146,14 @@ try{
         (SELECT count(*) FROM public.journal_entries)::integer AS entries
       SQL,[$migration]);
     if(!$check||(int)$check->migrations!==22||(int)$check->registered!==1
-        ||(int)$check->receipts!==0||(int)$check->constraints_count!==5
+        ||(int)$check->receipts!==0||(int)$check->constraints_count!==3||(int)$check->unique_indexes!==2
         ||(int)$check->force_rls!==1||(int)$check->policies!==2
         ||(int)$check->can_read!==1||(int)$check->can_insert!==1
         ||(int)$check->can_update!==0||(int)$check->can_delete!==0
         ||(int)$check->drafts!==3||(int)$check->entries!==0){
         throw new RuntimeException('Contrato RLS/FK/UNIQUE o baseline posterior incompleto.');
     }
-    echo "[PASS] F2.2: 22 migraciones, 5 constraints, 2 políticas RLS, app_backend SELECT/INSERT sin UPDATE/DELETE.\n";
+    echo "[PASS] F2.2: 22 migraciones, 3 constraints, 2 UNIQUE, 2 políticas RLS, app_backend SELECT/INSERT sin UPDATE/DELETE.\n";
     echo "[PASS] Tres matrices DRAFT, sin asientos ni recibos: migración aditiva verificada.\n";
     $success=true;
 }catch(Throwable $e){
