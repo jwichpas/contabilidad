@@ -319,7 +319,7 @@ try{
     $db->statement('SET CONSTRAINTS ALL DEFERRED');
 
     // F2.3: all changes run under existing app_backend transaction (ROLLBACK).
-    $probePhase='F2.3 HTTP CLOSE/REOPEN/LOCK';
+    $probePhase='F2.3 HTTP fixture POST';
     $fixture=$post;$fixture['entry_number']='F23-REVERSAL-GUARD';
     $fixtureRes=$request('POST','/api/v1/accounting/journal-entries',$companyA,$fixture);
     $fixtureBody=json_decode((string)$fixtureRes->getContent(),true,512,JSON_THROW_ON_ERROR);
@@ -330,17 +330,21 @@ try{
     $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
     $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
 
+    $probePhase='F2.3 HTTP close OPEN->CLOSED';
     $close=$request('POST',$periodUri.'/close',$companyA,$reason);
     $closeBody=json_decode((string)$close->getContent(),true,512,JSON_THROW_ON_ERROR);
     $check($close->getStatusCode()===200
         &&($closeBody['data']['status']??'')==='CLOSED',
         'F2.3 cierre OPEN->CLOSED debe ser 200');
+    $probePhase='F2.3 HTTP repeated close';
     $closeAgain=$request('POST',$periodUri.'/close',$companyA,$reason);
     $check($closeAgain->getStatusCode()===409,'F2.3 cierre duplicado debe ser 409');
 
     $blocked=$post;$blocked['entry_number']='F23-CLOSED-BLOCKED';
+    $probePhase='F2.3 HTTP POST rejected CLOSED';
     $closedPost=$request('POST','/api/v1/accounting/journal-entries',$companyA,$blocked);
     $check($closedPost->getStatusCode()===422,'F2.3 POST en CLOSED debe ser 422');
+    $probePhase='F2.3 HTTP reverse rejected CLOSED';
     $closedReverse=$request('POST','/api/v1/accounting/journal-entries/'.$fixtureId.'/reverse',
         $companyA,['fiscal_period_id'=>$periodId,
           'reversal_date'=>'2026-10-22',
@@ -349,11 +353,13 @@ try{
         'F2.3 extorno con destino CLOSED debe ser 422');
 
     \Laravel\Sanctum\Sanctum::actingAs($auditorUser,['*'],'sanctum');
+    $probePhase='F2.3 HTTP auditor 403';
     $auditorDenied=$request('POST',$periodUri.'/reopen',$companyA,[
         'reason'=>'Reapertura por rol auditor no autorizado']);
     $check($auditorDenied->getStatusCode()===403,'F2.3 auditor debe recibir 403');
     \Laravel\Sanctum\Sanctum::actingAs($adminUser,['*'],'sanctum');
 
+    $probePhase='F2.3 HTTP reopen CLOSED->OPEN';
     $reopen=$request('POST',$periodUri.'/reopen',$companyA,[
         'reason'=>'Reapertura auditada para ajuste contable de prueba']);
     $reopenBody=json_decode((string)$reopen->getContent(),true,512,JSON_THROW_ON_ERROR);
@@ -361,27 +367,33 @@ try{
         &&($reopenBody['data']['status']??'')==='OPEN',
         'F2.3 CLOSED->OPEN debe responder 200');
     $allowed=$post;$allowed['entry_number']='F23-REOPENED-OK';
+    $probePhase='F2.3 HTTP POST after reopen';
     $reopenedPost=$request('POST','/api/v1/accounting/journal-entries',$companyA,$allowed);
     $check($reopenedPost->getStatusCode()===201,
         'F2.3 no admite POST tras reapertura');
 
+    $probePhase='F2.3 HTTP reclose after reopen';
     $closed=$request('POST',$periodUri.'/close',$companyA,$reason);
     $check($closed->getStatusCode()===200,'F2.3 segundo cierre fallido');
+    $probePhase='F2.3 HTTP lock CLOSED->LOCKED';
     $lock=$request('POST',$periodUri.'/lock',$companyA,[
         'reason'=>'Bloqueo definitivo para impedir reapertura ordinaria']);
     $lockBody=json_decode((string)$lock->getContent(),true,512,JSON_THROW_ON_ERROR);
     $check($lock->getStatusCode()===200
         &&($lockBody['data']['status']??'')==='LOCKED',
         'F2.3 CLOSED->LOCKED debe ser 200');
+    $probePhase='F2.3 HTTP reject reopen LOCKED';
     $reopenDenied=$request('POST',$periodUri.'/reopen',$companyA,[
         'reason'=>'Intento de reabrir un periodo bloqueado']);
     $check($reopenDenied->getStatusCode()===409,
         'F2.3 LOCKED no debe reabrir sin autorización extraordinaria');
     $lockedPost=$post;$lockedPost['entry_number']='F23-LOCKED-BLOCKED';
+    $probePhase='F2.3 HTTP reject POST LOCKED';
     $r=$request('POST','/api/v1/accounting/journal-entries',$companyA,$lockedPost);
     $check($r->getStatusCode()===422,'F2.3 POST en LOCKED debe ser 422');
 
     $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$companyA]);
+    $probePhase='F2.3 verify 4 audit events';
     $periodEvents=$db->selectOne(<<<'SQL'
       SELECT COUNT(*) FILTER (WHERE event_type='FISCAL_PERIOD_CLOSED') AS c,
         COUNT(*) FILTER (WHERE event_type='FISCAL_PERIOD_REOPENED') AS r,
@@ -391,6 +403,7 @@ try{
     $check((int)$periodEvents->c===2&&(int)$periodEvents->r===1
         &&(int)$periodEvents->l===1,'F2.3 auditoria atomica de cambios incompleta');
     $db->selectOne("SELECT set_config('app.current_company_id','',true)");
+    $probePhase='F2.3 verify deferred balance triggers';
     $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
     echo "[PASS] F2.3 Neon HTTP: CLOSE, REOPEN, LOCK, 403 RBAC, 409 transiciones, 422 POST/extorno bloqueados y 4 auditorias.\n";
     $successful=true;
@@ -400,6 +413,16 @@ try{
     $detail=$e instanceof \Illuminate\Database\QueryException
         ?'SQLSTATE='.($e->errorInfo[0]??$e->getCode())
         :substr((string)$e->getMessage(),0,240);
+    // Report only known public, fixed PostgreSQL exception/constraint labels.
+    // Do not print SQL text, database values or raw PDO error messages.
+    if($e instanceof \Illuminate\Database\QueryException){
+        $dbError=(string)($e->errorInfo[2]??'');
+        if(preg_match('/\\b(?:IMMUTABLE_JOURNAL_ENTRY|CLOSED_FISCAL_PERIOD|'
+          .'INSUFFICIENT_JOURNAL_LINES|UNBALANCED_JOURNAL_ENTRY|ZERO_JOURNAL_ENTRY|'
+          .'NON_OPERATIONAL_ACCOUNT|chk_fiscal_periods_status)\\b/', $dbError,$safe)){
+            $detail.=' constraint='.$safe[0];
+        }
+    }
     fwrite(STDERR,"[FAIL] F2.3d fase=".$probePhase.": ".$detail."\n");
 }finally{
     if($inTransaction){
