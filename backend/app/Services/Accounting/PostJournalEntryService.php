@@ -11,6 +11,7 @@ use App\Support\Math\Decimal;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Servicio de dominio para el registro de Asientos Contables Bimoneda y Asientos de Extorno.
@@ -338,10 +339,14 @@ final readonly class PostJournalEntryService
 
             // Copy analytic lineage without regenerating allocations or querying
             // a now-retired rule. Reversed Debit/credit legs SWAP roles.
-            $originalAllocations = DB::table('journal_analytic_allocations')
-                ->where('company_id', (int)$original->company_id)
-                ->where('journal_entry_id', (int)$original->id)
-                ->get();
+            // Compatibilidad de despliegue F2.3a -> F2.3b: antes de la
+            // migracion no existen asignaciones generadas ni tabla de links.
+            $originalAllocations = Schema::hasTable('journal_analytic_allocations')
+                ? DB::table('journal_analytic_allocations')
+                    ->where('company_id', (int)$original->company_id)
+                    ->where('journal_entry_id', (int)$original->id)
+                    ->get()
+                : collect();
             foreach ($originalAllocations as $link) {
                 $newSource=$reversedLineIds[(int)$link->source_line_id] ?? null;
                 $newDebit=$reversedLineIds[(int)$link->credit_line_id] ?? null;
