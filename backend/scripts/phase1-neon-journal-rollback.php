@@ -203,6 +203,10 @@ try {
     if ($entryId <= 0) { throw new \RuntimeException('Respuesta sin ID de asiento.'); }
     echo "[PASS] HTTP 201 asiento balanceado publicado.\n";
     $checks++;
+    // El middleware REST restaura el GUC tenant al salir del request.
+    // Leer partidas y forzar triggers requiere el contexto A explícito
+    // dentro de esta transacción de prueba, nunca en sesión global.
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true) AS value", [(string)$companyId]);
     $totals = $db->selectOne(<<<'SQL'
         SELECT count(*)::integer AS n,
           COALESCE(sum(debit_local),0)::numeric(14,4) AS debit_local,
@@ -225,6 +229,7 @@ try {
     $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
     echo "[PASS] PostgreSQL ejecuto y aprobo los triggers diferidos.\n";
     $checks++;
+    $db->selectOne("SELECT set_config('app.current_company_id','',true) AS value");
     $bad = $payload;
     $bad['entry_number'] = 'F111-INVALID';
     $bad['lines'][1]['credit_local'] = '119.0000';
@@ -234,6 +239,8 @@ try {
     }
     echo "[PASS] HTTP 422: partida descuadrada rechazada sin nuevo asiento.\n";
     $checks++;
+    // Restaurar el tenant A para UPDATE de prueba y lectura de auditoria.
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true) AS value", [(string)$companyId]);
     // SAVEPOINT para capturar el trigger de inmutabilidad (23514).
     $db->statement('SAVEPOINT f111_immutable');
     $blocked = false;
