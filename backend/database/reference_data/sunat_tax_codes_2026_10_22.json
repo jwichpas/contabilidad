@@ -1,0 +1,198 @@
+{
+  "dataset": "sunat_codigos_tributos",
+  "version": "2026-10-22-v1",
+  "source": "SUNAT Tabla Anexa 10 - Codificación de tributos (archivo suministrado)",
+  "source_kind": "user_supplied_reference_transcription",
+  "rows": [
+    {
+      "code": "1011",
+      "short_name": "IGVICP",
+      "name": "IGV - OPER. INT. - CTA. PROPIA"
+    },
+    {
+      "code": "1012",
+      "short_name": "IGVIRT",
+      "name": "IGV - LIQUI COMPRA-RETENCIONES"
+    },
+    {
+      "code": "1016",
+      "short_name": "IVAP",
+      "name": "IMPTO IGV ARROZ PILADO L.28211"
+    },
+    {
+      "code": "1041",
+      "short_name": "IGVNDO",
+      "name": "IGV-SERV.PREST.NO DOMICILIADOS"
+    },
+    {
+      "code": "2011",
+      "short_name": "ISCCOM",
+      "name": "ISC - APENDICE III - COMBUSTIB"
+    },
+    {
+      "code": "2021",
+      "short_name": "ISCA10",
+      "name": "ISC - APEND IV - LIT A - 10%"
+    },
+    {
+      "code": "2031",
+      "short_name": "ISCA17",
+      "name": "ISC - APEND IV - LIT A - 17%"
+    },
+    {
+      "code": "2034",
+      "short_name": "ISCA20",
+      "name": "ISC - APEND IV - LIT A - 20%"
+    },
+    {
+      "code": "2041",
+      "short_name": "ISCPVP",
+      "name": "ISC - APEND IV-LIT C-P.V.PUBL."
+    },
+    {
+      "code": "2054",
+      "short_name": "ISCA30",
+      "name": "ISC - APEND IV - LIT A - 30%"
+    },
+    {
+      "code": "2055",
+      "short_name": "ISC4OT",
+      "name": "ISC - APENDICE IV-OTRAS TASAS"
+    },
+    {
+      "code": "2056",
+      "short_name": "ISCPIS",
+      "name": "ISC - APENDICE IV-LIT B PISCO"
+    },
+    {
+      "code": "2072",
+      "short_name": "ISCLOT",
+      "name": "ISC - LOTERIAS, BINGOS, RIFAS"
+    },
+    {
+      "code": "2074",
+      "short_name": "ISCHIP",
+      "name": "EVENTOS HIPICOS"
+    },
+    {
+      "code": "3011",
+      "short_name": "RTA1CP",
+      "name": "RENTA-1RA. CATEGOR.-CTA.PROPIA"
+    },
+    {
+      "code": "3021",
+      "short_name": "RTA2CP",
+      "name": "RENTA-2DA. CATEGOR.-CTA.PROPIA"
+    },
+    {
+      "code": "3022",
+      "short_name": "RTA2RT",
+      "name": "RENTA-2DA. CATEG.-RETENCIONES"
+    },
+    {
+      "code": "3031",
+      "short_name": "RTA3CP",
+      "name": "RENTA-3RA. CATEGOR.-CTA.PROPIA"
+    },
+    {
+      "code": "3038",
+      "short_name": "ITAN",
+      "name": "IMP.TEMPORAL A LOS ACTIV.NETOS"
+    },
+    {
+      "code": "3039",
+      "short_name": "RERTLC",
+      "name": "RETENC. RTA. LIQUIDAC. COMPRAS"
+    },
+    {
+      "code": "3041",
+      "short_name": "RTA4CP",
+      "name": "RENTA-4TA. CATEGOR.-CTA.PROPIA"
+    },
+    {
+      "code": "3042",
+      "short_name": "RTA4RT",
+      "name": "RENTA-4TA. CATEG.-RETENCIONES"
+    },
+    {
+      "code": "3052",
+      "short_name": "RTA5RT",
+      "name": "RENTA-5TA. CATEG.-RETENCIONES"
+    },
+    {
+      "code": "3061",
+      "short_name": "RTA9CP",
+      "name": "RETEN - NO DOMIC-CTA. PROPIA"
+    },
+    {
+      "code": "3062",
+      "short_name": "RTA9RT",
+      "name": "RENTA - NO DOMIC.-RETENCIONES"
+    },
+    {
+      "code": "3111",
+      "short_name": "RTAESP",
+      "name": "RENTA - REGIMEN ESPECIAL"
+    },
+    {
+      "code": "3311",
+      "short_name": "AMAZON",
+      "name": "RENTA - AMAZONIA - CTA. PROPIA"
+    },
+    {
+      "code": "3411",
+      "short_name": "AGRGRA",
+      "name": "RENTA - AGRARIOS 885-C. PROPIA"
+    },
+    {
+      "code": "3611",
+      "short_name": "RTAFRO",
+      "name": "RENTA-REGIMEN DE FRONTERA"
+    },
+    {
+      "code": "4100",
+      "short_name": "NRUS",
+      "name": "NUEVO REGIMEN UNICO SIMPLIFICAD"
+    },
+    {
+      "code": "5210",
+      "short_name": "SALUD",
+      "name": "ESSALUD-LEY 26790-AFIL.REGULAR"
+    },
+    {
+      "code": "5310",
+      "short_name": "PENREG",
+      "name": "ONP -LEY 19990"
+    },
+    {
+      "code": "7011",
+      "short_name": "RODAJE",
+      "name": "IMPUESTO AL RODAJE"
+    },
+    {
+      "code": "7021",
+      "short_name": "PROMUN",
+      "name": "IMPUESTO DE PROMOC. MUNICIPAL"
+    },
+    {
+      "code": "7031",
+      "short_name": "SENCIC",
+      "name": "SENCICO"
+    },
+    {
+      "code": "7111",
+      "short_name": "CASINO",
+      "name": "IMPUESTO A LOS CASINOS"
+    },
+    {
+      "code": "7121",
+      "short_name": "MQTRGM",
+      "name": "IMP.A LAS MAQUINAS TRAGAMONED."
+    },
+    {
+      "code": "7151",
+      "short_name": "IER",
+      "name": "IMPTO.A LAS EMBARCA.DE RECREO"
+    }
+  ]
+}
