@@ -399,7 +399,8 @@ try {
     // No imprimir payload SQL, credenciales o mensajes completos.
     $state=(string)($error->errorInfo[0] ?? $error->getCode());
     $state=preg_match('/^[A-Z0-9]{5}$/',$state) ? $state : 'N/A';
-    fwrite(STDERR,'[FAIL] F1.14 Docker concurrente no completada, SQLSTATE='.$state.PHP_EOL);
+    $stage=isset($periodPhase) ? preg_replace('/[^A-Za-z0-9 _-]/','',(string)$periodPhase) : 'F1.14 baseline';
+    fwrite(STDERR,'[FAIL] Concurrencia Docker fase='.$stage.', SQLSTATE='.$state.PHP_EOL);
 } finally {
     $databaseManager->setDefaultConnection($previousDefault);
     foreach ([$dbB,$dbA] as $db) {
