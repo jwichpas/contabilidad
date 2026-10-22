@@ -108,9 +108,14 @@ export class AccountingApiClient {
     // Captura el Bearer realmente enviado; evita invalidar sesiones nuevas
     // por respuestas 401 de solicitudes anteriores.
     const requestToken = this.authContext.getAccessToken();
+    const headers = this.buildHeaders(requireTenantHeader, requestToken);
+    // The caller can attach an Idempotency-Key. Never allow RequestInit to
+    // override the authenticated Bearer or active-company tenant header.
+    const idempotencyKey = new Headers(init.headers).get('Idempotency-Key');
+    if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey);
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
-      headers: this.buildHeaders(requireTenantHeader, requestToken),
+      headers,
     });
 
     if (response.status === 401 && requestToken?.trim()) {
@@ -343,11 +348,13 @@ export class AccountingApiClient {
    */
   public async createJournalEntry(
     payload: CreateJournalEntryPayload,
+    idempotencyKey: string = crypto.randomUUID(),
   ): Promise<JournalEntryResponse> {
     const rawPayload = await this.request<{ data: JournalEntryResponse }>(
       '/api/v1/accounting/journal-entries',
       {
         method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify(payload),
       },
       true,
