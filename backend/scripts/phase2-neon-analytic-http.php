@@ -370,6 +370,12 @@ try{
         &&(int)($listBody['data'][1]['month']??0)===11
         &&(int)($listBody['data'][1]['entry_count']??-1)===0,
         'The new OPEN month must appear without vouchers');
+    $probePhase='F2.3 list periods company B';
+    $otherPeriods=$request('GET','/api/v1/accounting/fiscal-periods?year=2026',$companyB);
+    $otherBody=json_decode((string)$otherPeriods->getContent(),true,512,JSON_THROW_ON_ERROR);
+    $check($otherPeriods->getStatusCode()===200
+        &&count($otherBody['data']??[])===0,
+        'An unrelated company must not see other accounting periods');
     $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
     $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
 
