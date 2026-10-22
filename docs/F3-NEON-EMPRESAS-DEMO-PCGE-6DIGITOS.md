@@ -61,3 +61,23 @@ LEFT JOIN public.accounting_accounts a ON a.company_id=c.id
 GROUP BY c.id,c.business_name
 ORDER BY c.id;
 ```
+
+## Validación local informada por usuario (22/10/2026)
+
+Tras corregir la creación de fixtures Eloquent para la suite unitaria, el usuario ejecutó
+`php artisan test --filter=SixDigitChartExpanderTest`: **2 tests PASS, 13 assertions**.
+Esto valida únicamente el expander en memoria, **no** la clonación integral sobre PostgreSQL,
+el asistente de empresa ni POST.
+
+En la revisión del mismo turno se detectó y corrigió un error de captura de variables
+en `InitializeCompanyChartOfAccountsService`: la transacción interna capturaba
+`$templates` en lugar de `$expandedTemplates`. El fix ya está en `main`;
+su prueba de integración sobre una empresa nueva sigue pendiente. Las empresas existentes
+de F3 fueron inicializadas por parche SQL reproducible, no por este servicio.
+
+Una consulta de solo lectura en Neon dev para DEMO A confirmó que existen cuentas de la
+familia `79` (incluidas 2 imputables a 6 dígitos) pero **no hay cuentas `94` ni `95`**.
+Los centros de costo siguen vacíos a propósito: no se deben enlazar a destinos que no existen.
+La etapa F4 debe construir la contabilidad analítica por empresa, hacer configurables los
+destinos de seis dígitos y probar la generación/posteo sin modificar la matriz PCGE global.
+
