@@ -64,6 +64,14 @@ php scripts/phase2-neon-analytic-promotion-preflight.php --verify
 
 **No ejecutar las pruebas anteriores automáticamente ni en un entorno de producción.** Cada script impone sus guardas sobre host, rol y base. La activación permanente no forma parte de ninguna rutina manual vigente.
 
+## Prueba nueva pendiente — F2.2 idempotencia (22/10/2026)
+
+El backend y frontend ya incluyen deduplicación optativa de POST mediante `Idempotency-Key` y una migración aditiva para recibos protegidos por RLS. **El nuevo flujo todavía no tiene evidencia de ejecución, por lo que F2.2 sigue `[ ]`.**
+
+El mismo wrapper Windows `phase2-active-rls-docker.ps1` instala ahora **20 migraciones** solo en PostgreSQL 18 Docker descartable y prueba HTTP **201 creación / 200 reintento / 409 conflicto**, separación tenant y recibos inmutables, además del antiguo motor 94/95/79. Tras ejecutarlo, correr manualmente `pnpm typecheck`, `pnpm test:unit` y `pnpm build` en `frontend`. [Diseño y puerta de calidad](F2-2-IDEMPOTENCIA-POST.md).
+
+**No ejecutar migraciones nuevas sobre Neon hasta superar los ensayos del contenedor.** En este punto Neon continúa con **21 migraciones**, 3 matrices DRAFT y ningún asiento.
+
 ## Registro de evidencias verificadas
 
 | Fecha | Referencia | Evidencia recibida/verificada | Estado |
