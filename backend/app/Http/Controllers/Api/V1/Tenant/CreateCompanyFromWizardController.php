@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Tenant;
 
+use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\CompanyCurrency;
 use App\Models\CompanyEconomicActivity;
@@ -12,7 +13,6 @@ use App\Models\Currency;
 use App\Models\User;
 use App\Services\Accounting\InitializeCompanyChartOfAccountsService;
 use App\Services\Company\CompanyOperationalDefaultsService;
-use App\Services\Security\AuditLoggerService;
 use App\Support\Company\CompanyEconomicProfile;
 use App\Support\Company\CompanyOnboardingGuard;
 use App\Support\Tenant\TenantContext;
@@ -39,7 +39,6 @@ final readonly class CreateCompanyFromWizardController
         private TenantContext $tenantContext,
         private InitializeCompanyChartOfAccountsService $chartInitializer,
         private CompanyOperationalDefaultsService $operationalDefaults,
-        private AuditLoggerService $auditLogger,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
@@ -193,20 +192,25 @@ final readonly class CreateCompanyFromWizardController
                     // bancos ni centros de costo con cuentas ficticias 94/95.
                     $this->operationalDefaults->installForCompany($companyId);
 
-                    $this->auditLogger->log(
-                        eventType: 'COMPANY_ONBOARDED',
-                        companyId: $companyId,
-                        userId: (int) $user->id,
-                        auditableType: Company::class,
-                        auditableId: (string) $companyId,
-                        oldValues: null,
-                        newValues: [
+                    // La auditoria de alta es obligatoria y atomica.
+                    // AuditLoggerService captura excepciones para eventos
+                    // accesorios; NO usarlo para crear empresas.
+                    AuditLog::query()->create([
+                        'company_id' => $companyId,
+                        'user_id' => (int) $user->id,
+                        'event_type' => 'COMPANY_ONBOARDED',
+                        'auditable_type' => Company::class,
+                        'auditable_id' => (string) $companyId,
+                        'old_values' => null,
+                        'new_values' => [
                             'tax_id' => $taxId,
                             'pcge_version' => $validated['pcge_version'],
                             'sector_count' => count($validated['economic_activities']),
                         ],
-                        request: $request,
-                    );
+                        'ip_address' => substr((string) ($request->ip() ?? '127.0.0.1'), 0, 45),
+                        'user_agent' => substr((string) ($request->userAgent() ?? 'system'), 0, 500),
+                        'severity' => 'INFO',
+                    ]);
                     return $plan;
                 });
 
