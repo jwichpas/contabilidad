@@ -113,25 +113,26 @@ try {
                              'fk_analytic_alloc_credit_same_voucher',
                              'fk_analytic_alloc_version_tenant',
                              'fk_analytic_alloc_center_tenant'))::integer AS fks,
-        (SELECT relrowsecurity AND relforcerowsecurity
+        CASE WHEN (SELECT relrowsecurity AND relforcerowsecurity
             FROM pg_catalog.pg_class
-            WHERE oid='public.journal_analytic_allocations'::regclass) AS force_rls,
+            WHERE oid='public.journal_analytic_allocations'::regclass)
+            THEN 1 ELSE 0 END AS force_rls,
         (SELECT count(*) FROM pg_catalog.pg_indexes
             WHERE schemaname='public'
               AND indexname='uq_dest_versions_one_active_per_company')::integer AS active_index,
-        has_table_privilege('app_backend',
-            'public.journal_analytic_allocations','SELECT') AS can_read,
-        has_table_privilege('app_backend',
-            'public.journal_analytic_allocations','INSERT') AS can_insert,
-        has_table_privilege('app_backend',
-            'public.journal_analytic_allocations','UPDATE') AS can_update,
-        has_table_privilege('app_backend',
-            'public.journal_analytic_allocations','DELETE') AS can_delete
+        CASE WHEN has_table_privilege('app_backend',
+            'public.journal_analytic_allocations','SELECT') THEN 1 ELSE 0 END AS can_read,
+        CASE WHEN has_table_privilege('app_backend',
+            'public.journal_analytic_allocations','INSERT') THEN 1 ELSE 0 END AS can_insert,
+        CASE WHEN has_table_privilege('app_backend',
+            'public.journal_analytic_allocations','UPDATE') THEN 1 ELSE 0 END AS can_update,
+        CASE WHEN has_table_privilege('app_backend',
+            'public.journal_analytic_allocations','DELETE') THEN 1 ELSE 0 END AS can_delete
       SQL,[$migration]);
     if (!$check||(int)$check->migrations!==21||(int)$check->migration_record!==1
-        ||(int)$check->fks!==5||!$check->force_rls
-        ||(int)$check->active_index!==1||!$check->can_read||!$check->can_insert
-        ||$check->can_update||$check->can_delete) {
+        ||(int)$check->fks!==5||(int)$check->force_rls!==1
+        ||(int)$check->active_index!==1||(int)$check->can_read!==1||(int)$check->can_insert!==1
+        ||(int)$check->can_update!==0||(int)$check->can_delete!==0) {
         throw new RuntimeException('Contrato PostgreSQL RLS/FK F2.3b incompleto.');
     }
     echo "[PASS] F2.3b: 21 migraciones, lineage same-voucher, UNIQUE y RLS sin UPDATE/DELETE.\n";
