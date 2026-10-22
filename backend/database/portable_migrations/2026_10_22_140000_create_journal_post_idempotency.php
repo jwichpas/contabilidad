@@ -52,7 +52,7 @@ return new class extends Migration
                 ON public.journal_post_idempotency FOR INSERT TO app_backend
                 WITH CHECK (company_id = public.app_current_company_id());
 
-            REVOKE ALL ON TABLE public.journal_post_idempotency FROM PUBLIC, anon, authenticated, app_backend;
+            REVOKE ALL ON TABLE public.journal_post_idempotency FROM PUBLIC, app_backend;
             GRANT SELECT, INSERT ON TABLE public.journal_post_idempotency TO app_backend;
             GRANT USAGE, SELECT ON SEQUENCE public.journal_post_idempotency_id_seq TO app_backend;
         SQL);
