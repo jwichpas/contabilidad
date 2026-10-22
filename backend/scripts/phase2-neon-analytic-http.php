@@ -382,6 +382,17 @@ try{
     $check($deniedOpen->getStatusCode()===403,
         'Opening must be restricted to an authorized company role');
     \Laravel\Sanctum\Sanctum::actingAs($adminUser,['*'],'sanctum');
+    $probePhase='F2.3 opening audit';
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$companyA]);
+    $openedAudit=$db->selectOne(
+        "SELECT count(*) AS n FROM public.audit_logs "
+        ."WHERE company_id=? AND event_type='FISCAL_PERIOD_OPENED'",[$companyA]
+    );
+    $check((int)($openedAudit->n??0)===1,
+        'Opening must insert precisely one audit record');
+    $db->selectOne("SELECT set_config('app.current_company_id','',true)");
+    echo "[PASS] F2.3 OPEN: HTTP 201, reason 422, duplicate 409, role 403, tenant A/B GET, audit.
+";
     $periodUri='/api/v1/accounting/fiscal-periods/'.$periodId;
     $reason=['reason'=>'Cierre contable manual de prueba reversible F2.3'];
 
