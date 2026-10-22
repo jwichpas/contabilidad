@@ -96,6 +96,27 @@ php scripts/phase2-neon-tenant-integrity.php --verify
 
 **Pendiente antes de activar:** prueba HTTP con matriz ACTIVE reversible (además del probe F2.3b a nivel de servicio), promoción formal versionada y auditada, y reparación/verificación del CI de GitHub Actions sin jobs.
 
+## F2.3d HTTP certificada y F2.3e HTTP ACTIVE transitoria (22/10/2026)
+
+**F2.3d — aprobada por ejecución del usuario con app_backend y Sanctum:** HTTP 201 POST USD/PEN con CC-ADM, auditoría y tipo de cambio; HTTP 422 para centro ausente o cruzado y descuadre; GET diario segmentado (A ve el suyo, B no ve A); HTTP 403 para auditor sin acceso; extorno HTTP 201, extorno repetido HTTP 422, triggers exactos bimoneda, y ROLLBACK con 0 asientos/partidas/links/periodos/TC/auditoria, 3 versiones DRAFT. El usuario volvió a verificar con 21 migraciones y 1362 rutas, sin ACTIVE.
+
+**F2.3e — publicada pero NO ejecutada:** `backend/scripts/phase2-neon-analytic-http-active.php` ensaya el Kernel HTTP real, autenticación/roles y motor de distribución con **una matriz ACTIVE solo dentro de una transacción admin sin COMMIT**. Exige rol administrativo `neondb_owner`, host/DB de desarrollo, 21 migraciones, tres compañías/versions y baseline de cero asientos, periodos, TC y auditoría. En transacción: cambia versión de empresa A a ACTIVE, hace HTTP POST CC-ADM (941100/791000) y CC-VTA (951100/791000), ajuste Haber 6 (Debe 791000/Haber 951100), comprueba importes bimoneda y vínculos fuente/débito/crédito/regla, impide cuentas destino manuales con automático (HTTP 422), ejecuta extorno y valida link invertido, verificando triggers y eventos auditables. Finalmente ejecuta ROLLBACK y confirma que nunca quedó ACTIVE ni movimiento alguno.
+
+**Límite de la certificación F2.3e:** usa sesión OWNER para que HTTP pueda leer dentro de la misma transacción la versión temporal ACTIVE. Ese rol elude RLS. La cobertura con rol real `app_backend` está certificada por las pruebas F2.3c y F2.3d sobre matrices DRAFT, **pero la combinación HTTP + ACTIVE + RLS no estará probada hasta una prueba adicional separada**. No corresponde habilitar producción basándose únicamente en este probe.
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-analytic-http-active.php
+php scripts/phase2-neon-analytic-http-active.php --plan
+php scripts/phase2-neon-analytic-http-active.php --probe=contabilidad-dev
+php scripts/phase2-neon-analytic-allocations.php --verify
+php scripts/phase2-neon-tenant-integrity.php --verify
+```
+
+Antes de permitir activar realmente, implementar promoción transaccional controlada con actor autorizado y auditoría inmutable, bloqueo concurrente por empresa, validaciones de cobertura y rechazo de rutas incompletas, mecanismo de retiro seguro y prueba integrada `app_backend` sobre ACTIVE sin exposición de datos a otros tenants. GitHub Actions requiere corrección independiente; no dar por verde ese CI.
+
 ## Estado y barrera de activación
 
 **Todo el código de generación está detrás de la condición `status=ACTIVE`.**
