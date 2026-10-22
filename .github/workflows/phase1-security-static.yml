@@ -6,6 +6,8 @@ on:
     paths:
       - 'backend/scripts/phase1-*.php'
       - 'backend/scripts/phase2-*.php'
+      - 'frontend/src/modules/accounting/views/JournalEntryView.vue'
+      - 'frontend/src/modules/accounting/types/journalEntry.types.ts'
       - 'backend/database/reference_data/**'
       - 'backend/database/portable_migrations/**'
       - 'backend/database/seeders/**'
@@ -86,6 +88,21 @@ jobs:
           php -l backend/tests/Feature/Security/TenantContextNestedTest.php
           php -l backend/database/migrations/2026_10_21_010000_harden_postgres_function_search_path.php
           php -l backend/database/migrations/2026_10_21_020000_close_global_audit_log_read_leak.php
+      - name: Preparar pnpm para comprobar el editor de voucher
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Validar TypeScript / Vue del editor de asientos
+        run: |
+          pnpm --dir frontend install --frozen-lockfile
+          pnpm --dir frontend typecheck
       - name: Verificar manifiesto Git de catálogos globales sin BD
         run: |
           php backend/scripts/phase2-neon-global-reference.php --plan
