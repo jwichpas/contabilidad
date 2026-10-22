@@ -370,6 +370,16 @@ try{
                 'Extorno no preservó bimoneda exacta.');
         }
     }
+    // A retry after an extorno cannot create a second POST; the original
+    // voucher remains the identity, now in its REVERSED state.
+    [$afterReverseStatus,$afterReverseBody]=$http(
+        'POST','/api/v1/accounting/journal-entries',$A,$samePayload,$idempotencyKey
+    );
+    $assert($afterReverseStatus===200
+        &&(int)($afterReverseBody['data']['id']??0)===(int)$original['id']
+        &&($afterReverseBody['data']['status']??'')==='REVERSED',
+        'Replay posterior al extorno no preservo identificador y estado del original.');
+
     $db->selectOne("SELECT set_config('app.current_company_id',?,true)",[(string)$A]);
     $links=$db->selectOne("SELECT count(*)::integer AS n FROM public.journal_analytic_allocations WHERE company_id=?",[$A]);
     $audits=$db->selectOne(<<<'SQL'
