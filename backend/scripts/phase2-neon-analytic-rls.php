@@ -76,7 +76,7 @@ try {
            AND NOT rolbypassrls AND NOT rolsuper AND NOT rolcreatedb AND NOT rolcreaterole)::integer AS restricted_role
       SQL);
     if (!$guard||$guard->db_name!=='neondb'||intdiv((int)$guard->pg_ver,10000)!==18
-        ||(int)!in_array((int)$guard->migrations,[21,22],true)||(int)$guard->companies!==3||(int)$guard->members!==8
+        ||!in_array((int)$guard->migrations,[21,22],true)||(int)$guard->companies!==3||(int)$guard->members!==8
         ||(int)$guard->draft_versions!==3||(int)$guard->active_versions!==0
         ||(int)$guard->routes!==1362||(int)$guard->entries!==0||(int)$guard->allocations!==0
         ||(int)$guard->restricted_role!==1) {
