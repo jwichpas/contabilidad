@@ -301,6 +301,19 @@ echo "[PASS] Conexion app_backend sujeta a RLS en Docker efimero\n";
     }
 
     Write-Host '[PASS] Pest JUnit: 12 pruebas, 0 fallos/errores verificados.'
+
+    # F1.14: DOS sesiones PostgreSQL reales contra este mismo Docker,
+    # con periodo FOR UPDATE, NOWAIT 55P03 y dos asientos 10-00001/00002.
+    # Se corre AL FINAL porque deja fixtures COMMIT unicamente en el
+    # contenedor descartable, eliminado por el bloque finally.
+    Write-Host '[CONCURRENCIA] Validando 2 conexiones contra PostgreSQL Docker.'
+    Invoke-NativeChecked 'php' @('-l','scripts/phase1-journal-concurrency-docker.php')
+    Invoke-NativeChecked 'php' @(
+        'scripts/phase1-journal-concurrency-docker.php',
+        '--probe=ephemeral-docker'
+    )
+    Write-Host '[PASS] F1.14 contencion FOR UPDATE 55P03 y correlativos distintos.'
+
     $passed = $true
     Write-Host '[PASS] F1.4: migraciones, funciones, RLS de auditoria y pruebas HTTP en PostgreSQL aislado.'
 }
