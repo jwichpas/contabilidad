@@ -64,9 +64,11 @@ php scripts/phase2-neon-analytic-promotion-preflight.php --verify
 
 **No ejecutar las pruebas anteriores automáticamente ni en un entorno de producción.** Cada script impone sus guardas sobre host, rol y base. La activación permanente no forma parte de ninguna rutina manual vigente.
 
-## F2.3 — motor de cierre de período listo para prueba manual (22/10/2026)
+## F2.3 — HTTP cerrado/reabierto/bloqueado PASS; concurrencia Docker pendiente (22/10/2026)
 
-**Estado:** código publicado pero SIN ejecución de los casos nuevos. `FiscalPeriodStatusService` + `ChangeFiscalPeriodStatusController` + endpoint `POST /api/v1/accounting/fiscal-periods/{periodId}/{action}` con acciones `close`, `reopen`, `lock` y control `ADMIN/CHIEF_ACCOUNTANT`. El mismo script HTTP reversible de Neon ahora comprueba 200/403/409/422, POST tras reapertura, auditoría de cuatro eventos y ROLLBACK. Documentado en [F2.3 Cierre de períodos](F2-3-CIERRE-PERIODOS.md). `F2.3` **permanece [ ]**; no se ha activado ninguna matriz ni creado migración nueva.
+**Estado:** el usuario ejecutó el modo corto F2.3 en Neon DEV y confirmó **PASS** de CLOSE, REOPEN, LOCK, 403 RBAC, 409, 422, cuatro auditorías y ROLLBACK con cero datos persistidos. **Todavía pendiente:** prueba concurrente Docker de dos sesiones y la UX de administración de períodos. `FiscalPeriodStatusService` + `ChangeFiscalPeriodStatusController` + endpoint `POST /api/v1/accounting/fiscal-periods/{periodId}/{action}` con acciones `close`, `reopen`, `lock` y control `ADMIN/CHIEF_ACCOUNTANT`. El mismo script HTTP reversible de Neon **comprobó** 200/403/409/422, POST tras reapertura, auditoría de cuatro eventos y ROLLBACK. Documentado en [F2.3 Cierre de períodos](F2-3-CIERRE-PERIODOS.md). `F2.3` **permanece [ ]**; no se ha activado ninguna matriz ni creado migración nueva.
+
+**Prueba aislada de concurrencia preparada:** Windows ` .\\scripts\\phase2-active-rls-docker.ps1 -PeriodConcurrency` o Bash `bash scripts/phase1-journal-concurrency-docker.sh --f23`. Verifica dos sesiones app_backend, bloqueo real `FOR UPDATE NOWAIT` (`55P03`), cierre primero versus asiento primero, relectura de estado, POST rechazado tras cierre y auditoría. Solo Docker efímero; **sin ejecución confirmada aún**.
 
 **Pruebas manuales siguientes:**
 
