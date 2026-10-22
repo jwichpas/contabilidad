@@ -8,6 +8,7 @@ use App\Models\CompanyCurrency;
 use App\Models\ExchangeRate;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
+use App\Services\Accounting\JournalPostIdempotencyService;
 use App\Services\Accounting\PostJournalEntryService;
 use App\Services\Security\AuditLoggerService;
 use App\Support\Math\Decimal;
@@ -28,6 +29,7 @@ final readonly class CreateJournalEntryController
 {
     public function __construct(
         private PostJournalEntryService $postJournalEntryService,
+        private JournalPostIdempotencyService $idempotency,
         private AuditLoggerService $auditLogger,
         private TenantContext $tenantContext,
     ) {}
@@ -59,6 +61,23 @@ final readonly class CreateJournalEntryController
 
         $companyId = $this->tenantContext->requireCompanyId(JournalEntry::class);
         $user = $request->user();
+
+        // F2.2: serialize retries BEFORE opening a period, storing an FX rate,
+        // posting lines or generating a second audit event.
+        try {
+            $key = JournalPostIdempotencyService::validateHeader($request);
+        } catch (DomainException $e) {
+            return response()->json(['message'=>$e->getMessage()], 400);
+        }
+        $receipt = $key === null ? null : $this->idempotency->lockAndLookup(
+            $companyId, (int)$user->id, $key, $validated
+        );
+        if ($receipt !== null && $receipt['replayed'] !== null) {
+            return response()->json([
+                'message'=>'Solicitud idempotente: asiento existente recuperado sin crear movimientos.',
+                'data'=>$receipt['replayed'],
+            ], 200)->header('Idempotency-Replayed', 'true');
+        }
 
         $entryDate = CarbonImmutable::parse($validated['entry_date']);
         $year = $entryDate->year;
@@ -251,6 +270,15 @@ final readonly class CreateJournalEntryController
             request: $request,
             severity: 'INFO',
         );
+
+        // Same outer TenantContext transaction as journal, FX and audit.
+        // Failed attempts never create receipts. The advisory lock remains
+        // held until middleware commits or rolls back the entire request.
+        if ($receipt !== null) {
+            $this->idempotency->record(
+                $companyId, (int)$user->id, $receipt['key'], $receipt['digest'], $journalEntry
+            );
+        }
 
         $journalEntry->load(['lines.account', 'lines.costCenter', 'fiscalPeriod']);
 
