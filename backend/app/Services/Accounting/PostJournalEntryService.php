@@ -27,6 +27,7 @@ final readonly class PostJournalEntryService
 {
     public function __construct(
         private JournalEntryNumberService $entryNumbers,
+        private AnalyticRoutingService $analyticRouting,
     ) {}
 
     /**
@@ -53,6 +54,9 @@ final readonly class PostJournalEntryService
      */
     public function post(array $payload): JournalEntry
     {
+        if (count($payload['lines']) > 10000) {
+            throw new DomainException('Maximo 10000 partidas originales para reservar numeros analiticos.');
+        }
         if (count($payload['lines']) < 2) {
             throw new DomainException('Todo asiento contable debe contener al menos 2 líneas.');
         }
@@ -133,12 +137,14 @@ final readonly class PostJournalEntryService
                 'created_by_user_id' => $payload['created_by_user_id'],
             ]);
 
+            $versionId = $this->analyticRouting->activeVersionId((int)$period->company_id);
+            $analyticSources = [];
             foreach ($payload['lines'] as $index => $line) {
                 $centerId = $line['cost_center_id'] ?? null;
                 $account = DB::table('accounting_accounts')
                     ->where('company_id', (int) $period->company_id)
                     ->where('id', (int) $line['accounting_account_id'])
-                    ->first(['requires_cost_center']);
+                    ->first(['requires_cost_center','has_automatic_destination','account_type','code','is_operational','is_active']);
                 if ($account === null) {
                     throw new DomainException(sprintf('Cuenta de partida #%d no pertenece a la empresa activa.', $index + 1));
                 }
@@ -157,7 +163,7 @@ final readonly class PostJournalEntryService
                         throw new DomainException(sprintf('Centro de costos no activo o ajeno a la empresa en partida #%d.', $index + 1));
                     }
                 }
-                JournalEntryLine::query()->create([
+                $sourceLine = JournalEntryLine::query()->create([
                     'journal_entry_id' => $entry->id,
                     'line_number' => $index + 1,
                     'accounting_account_id' => $line['accounting_account_id'],
@@ -168,6 +174,65 @@ final readonly class PostJournalEntryService
                     'debit_foreign' => Decimal::ofMonetary($line['debit_foreign'])->toString(),
                     'credit_foreign' => Decimal::ofMonetary($line['credit_foreign'])->toString(),
                     'exchange_rate' => $exchangeRate->toString(),
+                ]);
+                if ($versionId !== null && (bool)$account->has_automatic_destination) {
+                    if (! (bool)$account->is_operational || ! (bool)$account->is_active
+                        || (string)$account->account_type !== 'EXPENSE'
+                        || ! str_starts_with((string)$account->code, '6')
+                        || strlen((string)$account->code) !== 6
+                        || ! in_array(($payload['entry_type'] ?? 'STANDARD'), ['STANDARD','ADJUSTMENT'], true)) {
+                        throw new DomainException('Cuenta o tipo de asiento incompatible con imputacion analitica activa.');
+                    }
+                    if ($centerId === null) {
+                        throw new DomainException('La regla automatica requiere centro de costos.');
+                    }
+                    $analyticSources[] = [$sourceLine, $line, (int)$centerId];
+                }
+            }
+
+            // SOLO cuando existe una matriz ACTIVE. Mientras sea DRAFT,
+            // registrar asientos manuales conserva el comportamiento F2.3a.
+            $nextLineNumber = count($payload['lines']);
+            foreach ($analyticSources as [$sourceLine, $line, $centerId]) {
+                $destination = $this->analyticRouting->resolve(
+                    (int)$period->company_id, $versionId,
+                    (int)$sourceLine->accounting_account_id, $centerId
+                );
+                $mirrored = AnalyticRoutingService::mirrorAmounts($line);
+                $sourceIsDebit = Decimal::ofMonetary($line['debit_local'])->isPositive();
+                // Gasto Debe 6 -> Debe 94/95, Haber 79.
+                // Nota de ajuste Haber 6 -> Debe 79, Haber 94/95.
+                $debitTarget = $sourceIsDebit
+                    ? $destination['debit_account_id'] : $destination['credit_account_id'];
+                $creditTarget = $sourceIsDebit
+                    ? $destination['credit_account_id'] : $destination['debit_account_id'];
+
+                $debitLine = JournalEntryLine::query()->create([
+                    'journal_entry_id'=>$entry->id,
+                    'line_number'=>++$nextLineNumber,
+                    'accounting_account_id'=>$debitTarget,
+                    'cost_center_id'=>$centerId,
+                    'description'=>'Analitica Debe de partida #'.$sourceLine->line_number,
+                    ...$mirrored['debit'],
+                    'exchange_rate'=>$exchangeRate->toString(),
+                ]);
+                $creditLine = JournalEntryLine::query()->create([
+                    'journal_entry_id'=>$entry->id,
+                    'line_number'=>++$nextLineNumber,
+                    'accounting_account_id'=>$creditTarget,
+                    'cost_center_id'=>$centerId,
+                    'description'=>'Analitica Haber de partida #'.$sourceLine->line_number,
+                    ...$mirrored['credit'],
+                    'exchange_rate'=>$exchangeRate->toString(),
+                ]);
+                DB::table('journal_analytic_allocations')->insert([
+                    'company_id'=>(int)$period->company_id,
+                    'journal_entry_id'=>(int)$entry->id,
+                    'source_line_id'=>(int)$sourceLine->id,
+                    'debit_line_id'=>(int)$debitLine->id,
+                    'credit_line_id'=>(int)$creditLine->id,
+                    'rule_version_id'=>$versionId,
+                    'cost_center_id'=>$centerId,
                 ]);
             }
 
@@ -245,8 +310,9 @@ final readonly class PostJournalEntryService
                 'created_by_user_id' => $userId,
             ]);
 
+            $reversedLineIds = [];
             foreach ($original->lines as $index => $line) {
-                JournalEntryLine::query()->create([
+                $newLine = JournalEntryLine::query()->create([
                     'journal_entry_id' => $reversal->id,
                     'line_number' => $index + 1,
                     'accounting_account_id' => $line->accounting_account_id,
@@ -258,6 +324,31 @@ final readonly class PostJournalEntryService
                     'debit_foreign' => (string) $line->credit_foreign,
                     'credit_foreign' => (string) $line->debit_foreign,
                     'exchange_rate' => (string) $line->exchange_rate,
+                ]);
+                $reversedLineIds[(int)$line->id] = (int)$newLine->id;
+            }
+
+            // Copy analytic lineage without regenerating allocations or querying
+            // a now-retired rule. Reversed Debit/credit legs SWAP roles.
+            $originalAllocations = DB::table('journal_analytic_allocations')
+                ->where('company_id', (int)$original->company_id)
+                ->where('journal_entry_id', (int)$original->id)
+                ->get();
+            foreach ($originalAllocations as $link) {
+                $newSource=$reversedLineIds[(int)$link->source_line_id] ?? null;
+                $newDebit=$reversedLineIds[(int)$link->credit_line_id] ?? null;
+                $newCredit=$reversedLineIds[(int)$link->debit_line_id] ?? null;
+                if ($newSource===null || $newDebit===null || $newCredit===null) {
+                    throw new DomainException('Extorno sin trazabilidad analitica completa.');
+                }
+                DB::table('journal_analytic_allocations')->insert([
+                    'company_id'=>(int)$original->company_id,
+                    'journal_entry_id'=>(int)$reversal->id,
+                    'source_line_id'=>$newSource,
+                    'debit_line_id'=>$newDebit,
+                    'credit_line_id'=>$newCredit,
+                    'rule_version_id'=>(int)$link->rule_version_id,
+                    'cost_center_id'=>(int)$link->cost_center_id,
                 ]);
             }
 
