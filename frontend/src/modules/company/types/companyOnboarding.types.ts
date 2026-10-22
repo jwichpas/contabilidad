@@ -104,7 +104,7 @@ export function onboardingStepErrors(step: number, draft: CompanyOnboardingDraft
       errors.legal_address = 'Ingrese el domicilio fiscal (entre 5 y 300 caracteres).';
     }
     if (!draft.legal_form) errors.legal_form = 'Seleccione la forma jurídica.';
-    if (!/^\\d{2}$/.test(draft.sunat_contributor_type_code)) errors.sunat_contributor_type_code = 'Seleccione el tipo de contribuyente del Anexo 2 SUNAT.';
+    if (!/^\d{2}$/.test(draft.sunat_contributor_type_code)) errors.sunat_contributor_type_code = 'Seleccione el tipo de contribuyente del Anexo 2 SUNAT.';
   }
 
   if (step === 1) {
