@@ -117,6 +117,25 @@ php scripts/phase2-neon-tenant-integrity.php --verify
 
 Antes de permitir activar realmente, implementar promoción transaccional controlada con actor autorizado y auditoría inmutable, bloqueo concurrente por empresa, validaciones de cobertura y rechazo de rutas incompletas, mecanismo de retiro seguro y prueba integrada `app_backend` sobre ACTIVE sin exposición de datos a otros tenants. GitHub Actions requiere corrección independiente; no dar por verde ese CI.
 
+## F2.3e aprobada / F2.3f preflight seguro de promoción (22/10/2026)
+
+**Evidencia ejecutada por el usuario:** F2.3e PASS de principio a fin: cambio ACTIVE únicamente dentro de la transacción ADMIN no confirmada, HTTP 201 con ruta CC-ADM Debe 941100/Haber 791000, HTTP 201 ruta CC-VTA Debe 951100/Haber 791000, ajuste al Haber de 6xx con Debe 791000/Haber 951100, rechazo HTTP 422 de mezcla manual y automática, extorno exacto de 4 líneas, 4 links, 4 vouchers balanceados y auditoría, seguido de ROLLBACK a 3 DRAFT/0 ACTIVE, sin asientos, líneas, vínculos, períodos, tasas ni auditoría. Verificaciones posteriores F2.3b/tenant PASS, 21 migraciones y 1362 rutas.
+
+**F2.3f — preflight publicado y pendiente de ejecución:** `backend/scripts/phase2-neon-analytic-promotion-preflight.php` acepta solo `--plan`, `--verify`, `--preflight=20999990011` (o empresa demo 12/13). Controles: host, rol y base Neon DEV PG18, 21 migraciones, exactamente 3 versiones DRAFT y 1362 rutas, integridad fuente 6xx y centro de costo activo, destinos exactos CC-ADM→941100/791000 y CC-VTA→951100/791000, 454 rutas para 227 fuentes sin huecos, SHA-256 canónico calculado desde cuentas ordenadas comparado contra la huella almacenada. Es **solo SELECT**, no promueve, retira ni audita cambios. Antes de permitir activar persiste la necesidad de promoción atómica y auditada autorizada, verificación ACTIVE+RLS combinada y recuperación de CI.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-analytic-promotion-preflight.php
+php scripts/phase2-neon-analytic-promotion-preflight.php --plan
+php scripts/phase2-neon-analytic-promotion-preflight.php --verify
+php scripts/phase2-neon-analytic-promotion-preflight.php --preflight=20999990011
+php scripts/phase2-neon-analytic-allocations.php --verify
+```
+
+**GitHub Actions:** el workflow YAML tenía un `:` no escapado en un nombre de step y era inválido; al entrecomillarlo GitHub reconoció el workflow y creó tres jobs reales. Sin embargo los runs posteriores muestran `failure` y algunos jobs terminan sin pasos ni logs disponibles desde el conector, otros quedaron en cola. **No considerar el CI aprobado**: requiere revisar el diagnóstico del runner/facturación/autorización de Actions sin asumir una causa.
+
 ## Estado y barrera de activación
 
 **Todo el código de generación está detrás de la condición `status=ACTIVE`.**
