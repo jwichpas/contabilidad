@@ -59,3 +59,32 @@ Este procedimiento escribe 3 monedas, 163 entradas SUNAT del conjunto congelado,
 2. Clonar PCGE para las tres empresas DEMO; validar jerarquía y permisos multiempresa antes de permitir asientos.
 3. Configurar cuentas analíticas clase 9 y sus amarres al 79 para habilitar centros de costos; no fabricar cuentas/reglas inexistentes.
 4. Certificar calendarios tributarios SUNAT, catálogos PLE/SIRE históricos por fuente oficial y CLP como versiones posteriores; no mezclar con los catálogos electrónicos ya congelados.
+
+## Corrección de rendimiento F2 (22/10/2026)
+
+**Motivo de interrupciones:** el instalador anterior invocaba `updateOrCreate` repetidamente para las 3 monedas, 163 entradas SUNAT y 91 normas/rubros, con llamadas SQL individuales a Neon. El usuario interrumpió con Ctrl+C después de crear el ledger; `--verify` confirmó 18 migraciones, todos los catálogos vacíos y ningún registro de instalación. No hubo carga parcial confirmada.
+
+**Corrección aplicada en `main`:** los seeders conservan su función `run()` original, pero exponen `runForGlobalInstall()` solo para la fase F2. El helper `GlobalReferenceBatchWriter` realiza INSERT por lotes, agrupados por columnas para respetar los defaults de PostgreSQL, en una única transacción controlada. La matriz PCGE ya utiliza INSERT por lotes y permanece sin cambios. Los hashes Git del manifiesto fueron actualizados para reflejar el código optimizado, sin cambiar sus 13 cantidades ni las 2 fuentes históricas no verificadas.
+
+El instalador imprime fases `[CARGANDO]` / `[ETAPA OK] ... Sin COMMIT`, incluyendo monedas, 9 catálogos SUNAT, NIC/NIIF/rubros y PCGE; registra los hashes y solo al final confirma `[COMMIT]`. Aplica `lock_timeout=10s` y `statement_timeout=60s` por sentencia durante la transacción, de modo que una consulta bloqueada falle y revierta todo.
+
+**Validaciones remotas efectuadas:** las seis fuentes versionadas coinciden con los SHA Git del manifiesto; las 12 tablas de carga rápida tienen `created_at` y `updated_at` y `is_active DEFAULT true`. La base Neon dev sigue con 18 migraciones, 3 empresas, 3 usuarios, 0 monedas y 0 PCGE; el ledger existe, pero tiene 0 instalaciones. **Aún no se ha ejecutado el instalador optimizado ni se ha validado PHP/Pest/E2E.**
+
+En el shell Linux/Termux del usuario:
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-global-reference.php
+php -l app/Support/Reference/GlobalReferenceBatchWriter.php
+php -l database/seeders/CurrenciesSeeder.php
+php -l database/seeders/SunatCatalogSeeder.php
+php -l database/seeders/AccountingStandardsAndRubricsSeeder.php
+php scripts/phase2-neon-global-reference.php --plan
+php scripts/phase2-neon-global-reference.php --apply=contabilidad-dev
+php scripts/phase2-neon-global-reference.php --verify
+```
+
+No repetir el script anterior sin `git pull`; ni ejecutar `db:seed`, `migrate:fresh` ni scripts en `production`. Si un paso falla, la última etiqueta `[CARGANDO]` permite localizar la etapa; ejecutar `--verify` antes de cualquier nuevo intento.
+
