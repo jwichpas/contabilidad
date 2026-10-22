@@ -5,6 +5,10 @@
   Run from backend: .\scripts\phase2-active-rls-docker.ps1
   This script NEVER connects to Neon and ALWAYS deletes its container.
 #>
+param(
+    # Opt-in targeted F2.3 row-lock race test instead of full F2.3h HTTP.
+    [switch]$PeriodConcurrency
+)
 $ErrorActionPreference='Stop'
 $backend=Split-Path -Parent $PSScriptRoot
 $oldLocation=Get-Location
@@ -125,9 +129,32 @@ try{
     }
     Invoke-F23h -Program 'docker' -Arguments @('exec',$containerName,'psql','-U','postgres','-d','contabilidad_ci',
         '-X','-v','ON_ERROR_STOP=1','-c','GRANT SELECT ON public.f23h_guard TO app_backend')
-    Invoke-F23h -Program 'php' -Arguments @('-l','scripts/phase2-active-rls-docker.php')
-    Invoke-F23h -Program 'php' -Arguments @('scripts/phase2-active-rls-docker.php','--probe=ephemeral-docker')
-    Write-Host '[PASS] F2.3h: HTTP ACTIVE con rol app_backend y FORCE RLS verificados en Docker.'
+    if($PeriodConcurrency){
+        # A committed fixture is safe here because this whole database is a
+        # newly-created ephemeral Docker container removed in finally.
+        # Two connections cannot lock the same uncommitted period fixture.
+        $f1GuardSql="CREATE TABLE public.f1_ci_runtime_guard(token text NOT NULL); "+
+            "INSERT INTO public.f1_ci_runtime_guard(token) VALUES ('$guardToken'); "+
+            'GRANT SELECT ON TABLE public.f1_ci_runtime_guard TO app_backend;'
+        Invoke-F23h -Program 'docker' -Arguments @('exec',$containerName,
+            'psql','-U','postgres','-d','contabilidad_ci','-X',
+            '-v','ON_ERROR_STOP=1','-c',$f1GuardSql)
+        Set-F23hEnv @{
+            F1_GUARD_TOKEN=$guardToken
+            F23_PERIOD_CONCURRENCY='1'
+            DB_USERNAME='app_backend'
+            DB_PASSWORD=$appPassword
+        }
+        Invoke-F23h -Program 'php' -Arguments @('-l','scripts/phase1-journal-concurrency-docker.php')
+        Invoke-F23h -Program 'php' -Arguments @('scripts/phase1-journal-concurrency-docker.php',
+            '--probe=ephemeral-docker')
+        Write-Host '[PASS] F2.3: dos conexiones app_backend; carreras CLOSE/POST aisladas en Docker PG18.'
+    }else{
+        Invoke-F23h -Program 'php' -Arguments @('-l','scripts/phase2-active-rls-docker.php')
+        Invoke-F23h -Program 'php' -Arguments @('scripts/phase2-active-rls-docker.php',
+            '--probe=ephemeral-docker')
+        Write-Host '[PASS] F2.3h: HTTP ACTIVE con rol app_backend y FORCE RLS verificados en Docker.'
+    }
     $success=$true
 }catch{
     Write-Host ('[FAIL] F2.3h: '+$_.Exception.Message)
