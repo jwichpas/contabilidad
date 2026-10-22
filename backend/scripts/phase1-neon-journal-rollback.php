@@ -233,14 +233,16 @@ try {
     $bad = $payload;
     $bad['entry_number'] = 'F111-INVALID';
     $bad['lines'][1]['credit_local'] = '119.0000';
-    if ($post($bad)->getStatusCode() !== 422
-        || (int)$db->table('journal_entries')->where('company_id',$companyId)->count() !== 1) {
-        throw new \RuntimeException('Servicio acepto partida descuadrada.');
+    if ($post($bad)->getStatusCode() !== 422) {
+        throw new \RuntimeException('El controlador no rechazo el asiento descuadrado.');
+    }
+    // SetTenantContext ya restauro el GUC a blanco; no contar bajo RLS vacio.
+    $db->selectOne("SELECT set_config('app.current_company_id',?,true) AS value", [(string)$companyId]);
+    if ((int)$db->table('journal_entries')->where('company_id',$companyId)->count() !== 1) {
+        throw new \RuntimeException('El motor creo un asiento invalido.');
     }
     echo "[PASS] HTTP 422: partida descuadrada rechazada sin nuevo asiento.\n";
     $checks++;
-    // Restaurar el tenant A para UPDATE de prueba y lectura de auditoria.
-    $db->selectOne("SELECT set_config('app.current_company_id',?,true) AS value", [(string)$companyId]);
     // SAVEPOINT para capturar el trigger de inmutabilidad (23514).
     $db->statement('SAVEPOINT f111_immutable');
     $blocked = false;
