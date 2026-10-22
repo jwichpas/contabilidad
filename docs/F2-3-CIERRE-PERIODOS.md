@@ -189,12 +189,24 @@ Si esas variables están presentes en el proceso, pueden prevalecer sobre `backe
 
 ---
 
+## Certificación posterior a corrección local — 22/10/2026
+
+**Evidencia manual recibida:** la sesión Windows quedó sin overrides heredados y `phase2-neon-connection-diagnostic.php --check` finalizó **sin FAIL**; `php scripts/phase2-neon-analytic-http.php --period-only=contabilidad-dev` volvió a finalizar con **PASS** en CLOSE, REOPEN, LOCK, 403/409/422 y 4 auditorías, seguido de `[ROLLBACK]` y `[PASS] HTTP POST-ROLLBACK`. El `--verify` de F2.2 confirmó 22 migraciones, FORCE RLS, 3 DRAFT y 0 recibos persistidos.
+
+**Qué valida el código del modo corto actual:** antes del cierre invoca **GET `/api/v1/accounting/fiscal-periods?year=2026` para la empresa A** y exige HTTP 200, un período `OPEN` y al menos dos asientos temporales contados. El PASS posterior del modo corto prueba que esas aserciones también se superaron. **No contiene todavía una aserción separada de GET para la empresa B**; no asumir que GET entre tenants ya fue validado solo por el ensayo de POST/GET del libro diario.
+
+**Verificación independiente de solo lectura en Neon DEV:** 22 migraciones; 3 matrices DRAFT, 0 ACTIVE; 0 asientos, 0 partidas, 0 períodos, 0 auditorías y 0 recibos de idempotencia. No queda residuo del ensayo.
+
+**Próximo control antes de F2.3 [x]:** navegación visual `#periodos` para usuario administrador y rol auditor; comprobar estados, cambio de empresa, 12 meses `Sin registrar` y diálogos de confirmación con motivo. La vista está compilada (`pnpm typecheck`, 16/16 pruebas unitarias, `pnpm build` PASS), pero no se ha acreditado una revisión visual en navegador. También falta caso de lectura GET con tenant B. **No repetir por rutina Docker ni las pruebas largas ya aprobadas.**
+
+---
+
 ## Puertas todavía abiertas
 
 1. El flujo HTTP nuevo **superó** la ejecución manual del usuario; F2.3 seguirá `[ ]` hasta verificar las carreras de concurrencia y completar los criterios de aceptación restantes.
 2. **Aprobado:** las dos carreras CLOSE-first y POST-first superaron la prueba Docker con 55P03, correlativos únicos y auditoría.
-3. **Frontend typecheck/tests/build PASS:** falta únicamente desbloquear preflight de Windows, verificar GET RLS real en Neon y aceptar visualmente los diálogos y controles. Las conciliaciones previas y la reapertura extraordinaria de LOCKED quedan como diseño/procedimiento separado.
-4. Corregir `CACHE_STORE=file`, `SESSION_DRIVER=file` y `QUEUE_CONNECTION=sync` en el `.env` privado local si el diagnóstico de Laravel sigue marcando `FAIL`. El *harness* HTTP usa drivers `array/sync` temporales solo para pruebas.
+3. **Frontend y preflight recuperados:** typecheck/16 tests/build y GET real tenant A PASS. Pendiente GET explícito de tenant B y revisión visual de diálogos, cambios de empresa y roles. Las conciliaciones previas y la reapertura extraordinaria de LOCKED quedan como diseño/procedimiento separado.
+4. **Configuración local resuelta:** `CACHE_STORE`, `SESSION_DRIVER` y `QUEUE_CONNECTION` recibieron PASS tras actualizar el `.env` privado. No reabrir este punto sin nuevo fallo.
 
 **No habilitar matrices analíticas ACTIVE de forma persistente ni ejecutar `migrate:fresh`.**
 
