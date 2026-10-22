@@ -51,6 +51,7 @@ class CompanySetting extends Model
         'secondary_currency_id',
         'tax_regime',
         'legal_form',
+        'sunat_contributor_type_code',
         'initial_fiscal_year',
         'income_reference_year',
         'annual_income',
