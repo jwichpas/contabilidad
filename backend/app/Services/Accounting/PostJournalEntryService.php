@@ -135,6 +135,16 @@ final readonly class PostJournalEntryService
 
             foreach ($payload['lines'] as $index => $line) {
                 $centerId = $line['cost_center_id'] ?? null;
+                $account = DB::table('accounting_accounts')
+                    ->where('company_id', (int) $period->company_id)
+                    ->where('id', (int) $line['accounting_account_id'])
+                    ->first(['requires_cost_center']);
+                if ($account === null) {
+                    throw new DomainException(sprintf('Cuenta de partida #%d no pertenece a la empresa activa.', $index + 1));
+                }
+                if ((bool) $account->requires_cost_center && $centerId === null) {
+                    throw new DomainException(sprintf('La partida #%d requiere un centro de costos activo.', $index + 1));
+                }
                 if ($centerId !== null) {
                     // RLS + same-tenant composite FK: never accept a center of
                     // a different company, or one explicitly deactivated.
