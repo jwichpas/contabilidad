@@ -64,6 +64,27 @@ php scripts/phase2-neon-analytic-promotion-preflight.php --verify
 
 **No ejecutar las pruebas anteriores automáticamente ni en un entorno de producción.** Cada script impone sus guardas sobre host, rol y base. La activación permanente no forma parte de ninguna rutina manual vigente.
 
+## F2.3 — motor de cierre de período listo para prueba manual (22/10/2026)
+
+**Estado:** código publicado pero SIN ejecución de los casos nuevos. `FiscalPeriodStatusService` + `ChangeFiscalPeriodStatusController` + endpoint `POST /api/v1/accounting/fiscal-periods/{periodId}/{action}` con acciones `close`, `reopen`, `lock` y control `ADMIN/CHIEF_ACCOUNTANT`. El mismo script HTTP reversible de Neon ahora comprueba 200/403/409/422, POST tras reapertura, auditoría de cuatro eventos y ROLLBACK. Documentado en [F2.3 Cierre de períodos](F2-3-CIERRE-PERIODOS.md). `F2.3` **permanece [ ]**; no se ha activado ninguna matriz ni creado migración nueva.
+
+**Pruebas manuales siguientes:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l app/Services/Accounting/FiscalPeriodStatusService.php
+php -l app/Http/Controllers/Api/V1/Accounting/ChangeFiscalPeriodStatusController.php
+php -l scripts/phase2-neon-analytic-http.php
+php scripts/phase2-neon-analytic-http.php --probe=contabilidad-dev
+php scripts/phase2-neon-journal-idempotency.php --verify
+```
+
+**Configuración local independiente:** revisar `CACHE_STORE=file`, `SESSION_DRIVER=file`, `QUEUE_CONNECTION=sync` en `.env` privado; no cambiar contraseñas y **no regenerar APP_KEY**. Repetir `php scripts/phase2-neon-connection-diagnostic.php --check` para validar ejecución normal de Laravel. El *harness* es intencionadamente autoaislado (array/sync), así que tres `FAIL` del diagnóstico no invalidan el test reversible, pero sí el arranque normal.
+
+---
+
 ## Certificación F2.2 HTTP Neon y rollback — 22/10/2026
 
 **PASS por salida de PowerShell del usuario:** `phase2-neon-analytic-http.php --probe=contabilidad-dev` verificó HTTP 201/200/409 sin duplicar asiento, recibo ni auditoría; errores 422/403, GET RLS A/B, extorno correcto, prohibición de doble extorno y ROLLBACK. `phase2-neon-journal-idempotency.php --verify` confirmó **22 migraciones**, FORCE RLS de recibos, **3 DRAFT**, cero asientos/recibos persistidos. Con pruebas Docker y frontend previas, **F2.2 ahora [x] — 6/32 actividades (19%)**. Próximo: F2.3 cierre de períodos.
