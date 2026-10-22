@@ -79,10 +79,53 @@ php scripts/phase2-neon-journal-idempotency.php --verify
 
 **Esperado F2.3:** `[PASS] F2.3 Neon HTTP: CLOSE, REOPEN, LOCK...`, seguido de `[ROLLBACK]` y `[PASS] HTTP POST-ROLLBACK`.
 
+## Resultado HTTP Neon PASS y ensayo de concurrencia preparado — 22/10/2026
+
+**Ejecución confirmada por el usuario:** `php scripts/phase2-neon-analytic-http.php --period-only=contabilidad-dev` terminó con:
+
+```text
+[PASS] F2.3 Neon HTTP: CLOSE, REOPEN, LOCK, 403 RBAC, 409 transiciones, 422 POST/extorno bloqueados y 4 auditorias.
+[ROLLBACK] HTTP vouchers, auditoria, periodos y tipos de cambio revertidos.
+[PASS] HTTP POST-ROLLBACK: 0 asientos/lineas/links/periodos/TC/auditoria, 3 DRAFT.
+```
+
+Esto **aprueba las transiciones HTTP y su auditoría**, no todavía la prueba de concurrencia de F2.3 ni la interfaz para administración de períodos.
+
+**Nuevo ensayo opcional y aislado:** reutiliza los ejecutores ya existentes de PostgreSQL 18 Docker descartable. El modo especial crea una fixture **confirmada solo dentro del contenedor**, para que dos conexiones físicas independientes puedan bloquear la **misma fila** de `fiscal_periods` (no es visible al segundo proceso si nunca se confirmó). No escribe en Neon ni activa matrices remotas.
+
+- **Carrera cierre primero:** A ejecuta `FiscalPeriodStatusService::change(close)` bajo `app_backend` y mantiene `FOR UPDATE`; B prueba `FOR UPDATE NOWAIT` y debe recibir SQLSTATE `55P03`; A confirma; B ve `CLOSED` y `PostJournalEntryService::post` rechaza el intento; luego B reabre con auditoría.
+- **Carrera asiento primero:** A retiene `FOR UPDATE`, B recibe `55P03`; A registra un tercer asiento balanceado y confirma; B cierra el período y comprueba los tres asientos, seis líneas y eventos de auditoría correspondientes.
+- **Seguridad:** en Docker se crean roles de prueba, los permisos `app_backend` y las conexiones a PostgreSQL 18; finalmente el contenedor se destruye incluso ante fallo. Las fixture Docker pueden hacerse `COMMIT` *exclusivamente porque el servidor es desechable*. No trasladar ese modo a Neon.
+
+**Windows PowerShell + Docker Desktop:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-journal-concurrency-docker.php
+.\scripts\phase2-active-rls-docker.ps1 -PeriodConcurrency
+```
+
+**Linux/WSL + Docker:**
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase1-journal-concurrency-docker.php
+bash -n scripts/phase1-journal-concurrency-docker.sh
+bash scripts/phase1-journal-concurrency-docker.sh --f23
+```
+
+**Estado:** los dos ejecutores de concurrencia están publicados en `main`, pero **aún no se recibió PASS de ejecución**. F2.3 continúa `[ ]` y el plan general sigue en 6/32 (19%). No repetir la prueba HTTP larga ni aplicar migraciones Neon para validar esta carrera.
+
+---
+
 ## Puertas todavía abiertas
 
-1. El flujo HTTP nuevo debe superar la ejecución manual del usuario; no marcar `F2.3 [x]` solo porque el código exista.
-2. Validar escenarios concurrentes de cierre versus POST/extorno, con dos conexiones y periodo bloqueado, conservando el comportamiento `NOWAIT` si se usa.
+1. El flujo HTTP nuevo **superó** la ejecución manual del usuario; F2.3 seguirá `[ ]` hasta verificar las carreras de concurrencia y completar los criterios de aceptación restantes.
+2. Ejecutar el nuevo ensayo de concurrencia Docker con dos conexiones `app_backend`: cierre primero y asiento primero, NOWAIT/55P03, posterior observación del estado y auditorías.
 3. Completar exposición UX/UI del estado del período y revisión de procedimientos de cierre (conciliaciones previas y permisos de reapertura extraordinaria), si forman parte de la aprobación operativa.
 4. Corregir `CACHE_STORE=file`, `SESSION_DRIVER=file` y `QUEUE_CONNECTION=sync` en el `.env` privado local si el diagnóstico de Laravel sigue marcando `FAIL`. El *harness* HTTP usa drivers `array/sync` temporales solo para pruebas.
 
