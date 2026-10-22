@@ -375,6 +375,22 @@ export class AccountingApiClient {
     return response.data;
   }
 
+  /** Creates exactly one OPEN month within the selected company. */
+  public async openFiscalPeriod(
+    year: number,
+    month: number,
+    reason: string,
+  ): Promise<FiscalPeriodTransitionResult> {
+    return await this.request<FiscalPeriodTransitionResult>(
+      '/api/v1/accounting/fiscal-periods',
+      {
+        method: 'POST',
+        body: JSON.stringify({ year, month, reason }),
+      },
+      true,
+    );
+  }
+
   public async changeFiscalPeriodStatus(
     periodId: number,
     action: FiscalPeriodAction,
