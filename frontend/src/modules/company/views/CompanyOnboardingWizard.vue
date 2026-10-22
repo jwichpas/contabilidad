@@ -78,7 +78,7 @@ const draftHasErrors = computed(() => !onboardingIsComplete(draft));
 // No simular monedas ni plantillas: se utilizan solo catálogos reales de Laravel.
 const baseCurrencyOptions = computed(() => currencies.value);
 const pcgeOptions = computed(() => templates.value);
-const uiField = 'w-full rounded-lg border border-line bg-surf px-3 py-2.5 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/10';
+const uiField = 'w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none focus:border-brand focus:ring-2 focus:ring-brand/10';
 const api = new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
   getActiveCompanyId: () => props.activeCompanyId,
@@ -233,8 +233,8 @@ onMounted(() => {
         <p class="mt-1 text-sm text-muted">Registre la entidad, sus actividades y los parámetros iniciales en cinco pasos.</p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <button type="button" class="rounded-lg border border-line bg-surf px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-soft" @click="confirmResetDraft">Reiniciar</button>
-        <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surf px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-soft" @click="emit('cancel')">
+        <button type="button" class="rounded-lg border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-soft" @click="confirmResetDraft">Reiniciar</button>
+        <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-foreground hover:bg-soft" @click="emit('cancel')">
           <X class="h-4 w-4" /> Volver
         </button>
       </div>
@@ -248,7 +248,7 @@ onMounted(() => {
     </div>
 
     <template v-else>
-      <div class="rounded-xl border border-line bg-surf p-4 shadow-xs sm:p-5">
+      <div class="rounded-xl border border-border bg-surface p-4 shadow-xs sm:p-5">
         <div class="mb-4 flex items-center justify-between text-xs text-muted">
           <span>Progreso de configuración</span><span class="font-semibold">{{ step + 1 }} de {{ steps.length }}</span>
         </div>
@@ -269,14 +269,14 @@ onMounted(() => {
         </ol>
       </div>
 
-      <div v-if="loadError" class="flex gap-2 rounded-lg border border-line bg-soft px-4 py-3 text-xs text-muted">
+      <div v-if="loadError" class="flex gap-2 rounded-lg border border-border bg-soft px-4 py-3 text-xs text-muted">
         <CircleHelp class="h-4 w-4 shrink-0" /><p>{{ loadError }}</p>
       </div>
       <div v-if="error" role="alert" class="flex gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
         <AlertCircle class="h-4 w-4 shrink-0" />{{ error }}
       </div>
 
-      <form class="rounded-xl border border-line bg-surf p-5 shadow-xs sm:p-7" novalidate @submit.prevent="step === 4 ? createCompany() : next()">
+      <form class="rounded-xl border border-border bg-surface p-5 shadow-xs sm:p-7" novalidate @submit.prevent="step === 4 ? createCompany() : next()">
         <div class="mb-6">
           <p class="text-xs font-semibold uppercase tracking-wide text-muted">Paso {{ step + 1 }}</p>
           <h2 class="mt-1 text-lg font-semibold text-foreground">{{ steps[step]?.title }}</h2>
@@ -312,7 +312,7 @@ onMounted(() => {
 
         <section v-else-if="step === 1" class="space-y-4">
           <p class="text-sm text-muted">Identifique una actividad principal y hasta nueve secundarias. El código debe corresponder al CIIU oficial, que se validará posteriormente contra su catálogo.</p>
-          <div v-for="(activity, index) in draft.activities" :key="index" class="rounded-lg border border-line bg-soft/40 p-4">
+          <div v-for="(activity, index) in draft.activities" :key="index" class="rounded-lg border border-border bg-soft/40 p-4">
             <div class="mb-4 flex items-center justify-between">
               <label class="flex items-center gap-2 text-sm font-medium text-foreground">
                 <input type="radio" name="main-activity" :checked="activity.is_primary" @change="setPrimary(index)" />
@@ -339,7 +339,7 @@ onMounted(() => {
             </div>
           </div>
           <small v-if="showError('activities')" class="block text-red-600">{{ showError('activities') }}</small>
-          <button type="button" :disabled="draft.activities.length >= 10" class="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm text-foreground hover:bg-soft disabled:opacity-40" @click="addActivity">
+          <button type="button" :disabled="draft.activities.length >= 10" class="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-soft disabled:opacity-40" @click="addActivity">
             <Plus class="h-4 w-4" /> Agregar actividad secundaria
           </button>
         </section>
@@ -365,7 +365,7 @@ onMounted(() => {
               <small v-if="showError('annual_income')" class="block text-red-600">{{ showError('annual_income') }}</small>
             </label>
           </div>
-          <div class="flex items-start gap-2 rounded-lg border border-line bg-soft p-3 text-xs text-muted">
+          <div class="flex items-start gap-2 rounded-lg border border-border bg-soft p-3 text-xs text-muted">
             <CircleHelp class="mt-0.5 h-4 w-4 shrink-0" />
             <span>La selección del régimen es declarativa, no una validación automática de elegibilidad. La determinación de libros SUNAT, SIRE/PLE y tramos UIT se incorporará con reglas normativas versionadas.</span>
           </div>
@@ -388,12 +388,12 @@ onMounted(() => {
               <small v-if="showError('secondary_currency_codes')" class="block text-red-600">{{ showError('secondary_currency_codes') }}</small>
             </div>
           </div>
-          <div class="border-t border-line pt-5">
+          <div class="border-t border-border pt-5">
             <p class="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground"><FolderTree class="h-4 w-4" /> Plan de cuentas inicial</p>
             <div class="grid gap-3 sm:grid-cols-2">
               <label v-for="version in pcgeOptions" :key="version.plan_version" :class="[
                 'flex cursor-pointer items-start gap-3 rounded-lg border p-4',
-                draft.pcge_version === version.plan_version ? 'border-brand bg-soft' : 'border-line'
+                draft.pcge_version === version.plan_version ? 'border-brand bg-soft' : 'border-border'
               ]">
                 <input v-model="draft.pcge_version" type="radio" name="pcge-version" :value="version.plan_version" />
                 <span><strong class="block text-sm text-foreground">{{ version.plan_version.replace('_', ' ') }}</strong>
@@ -411,31 +411,31 @@ onMounted(() => {
 
         <section v-else-if="step === 4" class="space-y-5">
           <div class="grid gap-4 md:grid-cols-2">
-            <div class="rounded-lg border border-line p-4">
+            <div class="rounded-lg border border-border p-4">
               <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted"><Building2 class="h-4 w-4" /> Empresa</p>
               <p class="text-sm font-semibold text-foreground">{{ draft.business_name }}</p>
               <p class="text-xs text-muted">RUC {{ draft.tax_id }} · {{ legalForms.find(x => x.value === draft.legal_form)?.label }}</p>
               <p class="mt-2 text-xs text-muted">{{ draft.legal_address }}</p>
             </div>
-            <div class="rounded-lg border border-line p-4">
+            <div class="rounded-lg border border-border p-4">
               <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted"><FileText class="h-4 w-4" /> Tributación</p>
               <p class="text-sm font-semibold text-foreground">{{ taxRegimes.find(x => x.value === draft.tax_regime)?.label }}</p>
               <p class="text-xs text-muted">Ejercicio {{ draft.fiscal_year }} · Ingresos {{ draft.income_reference_year }}: S/ {{ draft.annual_income }}</p>
             </div>
-            <div class="rounded-lg border border-line p-4">
+            <div class="rounded-lg border border-border p-4">
               <p class="mb-2 text-xs font-semibold uppercase text-muted">Actividad económica</p>
               <p v-for="activity in draft.activities" :key="activity.ciiu_code" class="text-xs text-foreground">
                 {{ activity.is_primary ? 'Principal' : 'Secundaria' }} · {{ activity.sector_code }} · CIIU {{ activity.ciiu_code }}
               </p>
             </div>
-            <div class="rounded-lg border border-line p-4">
+            <div class="rounded-lg border border-border p-4">
               <p class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted"><FolderTree class="h-4 w-4" /> Configuración contable</p>
               <p class="text-sm font-semibold text-foreground">{{ draft.pcge_version.replace('_', ' ') }}</p>
               <p class="text-xs text-muted">Moneda funcional: {{ draft.base_currency_code }}</p>
               <p class="text-xs text-muted">Secundarias: {{ draft.secondary_currency_codes.join(', ') || 'Ninguna' }}</p>
             </div>
           </div>
-          <label class="flex items-start gap-2 rounded-lg border border-line bg-soft px-4 py-3 text-sm text-foreground">
+          <label class="flex items-start gap-2 rounded-lg border border-border bg-soft px-4 py-3 text-sm text-foreground">
             <input v-model="draft.confirm_legal_data" type="checkbox" class="mt-1" />
             Confirmo que revisé los datos declarados. La creación puede generar una copia privada del plan de cuentas y no debe repetirse por error.
           </label>
@@ -446,13 +446,13 @@ onMounted(() => {
           </div>
         </section>
 
-        <div class="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
-          <button v-if="step > 0" type="button" class="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2.5 text-sm text-foreground hover:bg-soft" @click="previous">
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+          <button v-if="step > 0" type="button" class="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-foreground hover:bg-soft" @click="previous">
             <ArrowLeft class="h-4 w-4" /> Anterior
           </button>
           <span v-else class="text-xs text-muted">* Datos obligatorios</span>
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2.5 text-sm text-foreground hover:bg-soft" @click="saveDraft">
+            <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-foreground hover:bg-soft" @click="saveDraft">
               <Save class="h-4 w-4" /> Guardar borrador
             </button>
             <button v-if="step < 4" type="submit" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
