@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue';
 import AccountingCatalogView from './modules/accounting/views/AccountingCatalogView.vue';
 import JournalEntryView from './modules/accounting/views/JournalEntryView.vue';
 import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue';
+import FiscalPeriodsView from './modules/accounting/views/FiscalPeriodsView.vue';
 import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
 import CompanyOnboardingWizard from './modules/company/views/CompanyOnboardingWizard.vue';
 import type { CompanyOnboardingResult } from './modules/company/types/companyOnboarding.types';
@@ -51,6 +52,11 @@ const activeCompany = computed<ActiveCompanyInfo>(() => {
   };
 });
 
+const canManagePeriods = computed(() => {
+  const company = userCompanies.value.find((c) => c.id === activeCompanyId.value);
+  return company?.role === 'ADMIN' || company?.role === 'CHIEF_ACCOUNTANT';
+});
+
 // Demostración en vivo de System.Decimal (NUMERIC(14,6)) para Tipo de Cambio SUNAT
 const sunatBuyRate = SystemDecimal.fromExchangeRate('3.742000');
 const sunatSellRate = SystemDecimal.fromExchangeRate('3.758000');
@@ -60,6 +66,7 @@ function resolveModuleFromHash(): NavigationModule {
   if (typeof window === 'undefined') return 'journal';
   const hash = window.location.hash.toLowerCase();
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
+  if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
   if (hash.includes('diario') || hash.includes('asiento') || hash.includes('voucher')) {
     return 'journal';
   } else if (hash.includes('plan') || hash.includes('cuentas') || hash.includes('catalogo')) {
@@ -85,6 +92,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#diario';
   } else if (mod === 'catalog') {
     window.location.hash = '#plan-cuentas';
+  } else if (mod === 'fiscal-periods') {
+    window.location.hash = '#periodos';
   } else if (mod === 'exchange-rates') {
     window.location.hash = '#tipo-cambio';
   } else if (mod === 'company') {
@@ -201,6 +210,13 @@ watch(
           :key="`journal-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+        />
+        <FiscalPeriodsView
+          v-else-if="currentModule === 'fiscal-periods'"
+          :key="`periods-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-manage-periods="canManagePeriods"
         />
         <ExchangeRatesView
           v-else-if="currentModule === 'exchange-rates'"
