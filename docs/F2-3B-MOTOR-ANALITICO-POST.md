@@ -46,6 +46,33 @@ php scripts/phase2-neon-analytic-allocations.php --verify
 
 Si falla el probe, conservar DRAFT y revisar la causa sin hacer SQL de activación ni modificaciones al código en producción.
 
+## F2.3c — RLS operativo app_backend (22/10/2026)
+
+**Comprobación real de lectura YA APROBADA directamente en Neon:** conexión `app_backend` con contexto explícito alternado para las tres empresas demo: exactamente 454 rutas `accounting_destination_routes` y 1 versión visible por tenant; en los tres casos, cero rutas de otra empresa. Sin `app.current_company_id`, cero rutas y cero links visibles. La consulta administrativa de permisos confirma `SELECT/INSERT=true` y `UPDATE/DELETE=false` para `journal_analytic_allocations`. **Esta es evidencia read-only; no certifica INSERT negativo ni integridad FK.**
+
+**Nuevo probe F2.3c en GitHub, pendiente de ejecución:**
+
+`backend/scripts/phase2-neon-analytic-rls.php`
+
+- Exige ambiente Neon `contabilidad-dev`/PG18 directo, 21 migraciones, tres matrices DRAFT, 1362 rutas, empresas ficticias verificadas, y cero asientos/links previos.
+- Usa **conexión runtime `app_backend`** con RLS, no el owner para las pruebas. Un SELECT inicial del owner únicamente verifica precondiciones; ningún `ACTIVE` transitorio.
+- En una transacción global, crea dos vouchers totalmente ficticios (A y B), con reglas `DRAFT`; comprueba que el POST manual siga creando dos líneas. Añade dos líneas analíticas *de prueba* equilibradas y un vínculo por empresa **sólo para probar políticas y FK**. Esos vínculos directos de test **no equivalen a activar POST automático**.
+- Exige denegación SQLSTATE `42501` al intentar insertar datos de B bajo A y al intentar UPDATE/DELETE; `23503` para vínculo al origen de empresa distinta y `23505` para fuente duplicada.
+- Exige visibilidad A/B aislada y cero datos visibles desde C o sin tenant.
+- Valida triggers diferidos bajo el GUC de su tenant antes de cambiar de empresa. Finalmente ROLLBACK global y verificación independiente, vía owner, de **cero asientos, líneas, vínculos y períodos**, 3 DRAFT, 0 ACTIVE.
+- No certifica todavía todo el flujo HTTP ni el mecanismo auditado de activación. GitHub Actions continúa sin jobs ejecutados, requiere investigación separada.
+
+```bash
+cd ~/contabilidad && git pull --ff-only origin main && cd backend
+php -l scripts/phase2-neon-analytic-rls.php
+php scripts/phase2-neon-analytic-rls.php --plan
+php scripts/phase2-neon-analytic-rls.php --probe=contabilidad-dev
+php scripts/phase2-neon-analytic-allocations.php --verify
+php scripts/phase2-neon-tenant-integrity.php --verify
+```
+
+**Importante:** la verificación puede fallar con `[FAIL]` y revertir igualmente la transacción. No activar reglas ni modificar manualmente datos en ese caso; analizar SQLSTATE y middleware/contexto.
+
 ## Estado y barrera de activación
 
 **Todo el código de generación está detrás de la condición `status=ACTIVE`.**
