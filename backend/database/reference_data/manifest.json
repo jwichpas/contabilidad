@@ -6,15 +6,15 @@
   "sources": [
     {
       "path": "backend/database/seeders/CurrenciesSeeder.php",
-      "git_blob_sha1": "742ef3859a43b1547126028e3b2dcdc78784f4f4"
+      "git_blob_sha1": "d9c5c08e315e093684c084aaed518eb32c3f4325"
     },
     {
       "path": "backend/database/seeders/SunatCatalogSeeder.php",
-      "git_blob_sha1": "4859b0ca3f519c4b1bcea508b453da21fbe8925d"
+      "git_blob_sha1": "12d96c0ab4a4d42e2e5c7f5f4ef8d95adfb36a7a"
     },
     {
       "path": "backend/database/seeders/AccountingStandardsAndRubricsSeeder.php",
-      "git_blob_sha1": "cd62a90dc64e84306edb13440275fe49c60081e7"
+      "git_blob_sha1": "47ef8159a721a66116e3b4243a631c465e652033"
     },
     {
       "path": "backend/database/seeders/MasterChartOfAccountsSeeder.php",
