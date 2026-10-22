@@ -412,6 +412,13 @@ try{
         &&(int)$periodEvents->l===1,'F2.3 auditoria atomica de cambios incompleta');
     // Verify the deferred balance trigger while company A remains visible
     // through FORCE RLS. Clearing the GUC first yields false missing lines.
+    $probePhase='F2.3 verify tenant visibility';
+    $scope=$db->selectOne(
+        "SELECT current_user AS actor, current_setting('app.current_company_id', true) AS tenant_id"
+    );
+    $check($scope!==null && $scope->actor==='app_backend'
+        && (string)$scope->tenant_id===(string)$companyA,
+        'F2.3: se perdió el contexto RLS antes de forzar triggers de partida doble');
     $probePhase='F2.3 verify deferred balance triggers';
     $db->statement('SET CONSTRAINTS ALL IMMEDIATE');
     $db->selectOne("SELECT set_config('app.current_company_id','',true)");
