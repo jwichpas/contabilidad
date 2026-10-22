@@ -86,8 +86,35 @@ final readonly class InitializeCompanyChartOfAccountsService
             );
         }
 
+        // Regla contable de Nexus: solo cuentas de 6 dígitos reciben movimientos.
+        // La plantilla PCGE permanece intacta. Para cada hoja original de 3-5
+        // dígitos sintetizamos una subcuenta exclusiva de la empresa con sufijo
+        // cero; la hoja original pasa a ser un nodo no imputable.
+        $sixDigitAccounts = [];
+        foreach ($templates as $tpl) {
+            if (! $tpl->is_operational || strlen((string) $tpl->code) >= 6) {
+                continue;
+            }
+
+            $code = str_pad((string) $tpl->code, 6, '0', STR_PAD_RIGHT);
+            if ($templates->contains('code', $code) || isset($sixDigitAccounts[$code])) {
+                throw new DomainException('Colisión al preparar la subcuenta de movimiento: '.$code);
+            }
+
+            $child = clone $tpl;
+            $child->code = $code;
+            $child->name = mb_substr((string) $tpl->name.' - Movimiento', 0, 180);
+            $child->level = ((int) $tpl->level) + 1;
+            $child->parent_code = (string) $tpl->code;
+            $child->is_operational = true;
+            $sixDigitAccounts[$code] = $child;
+        }
+
+        // No mutar la colección original de referencias PCGE ni sus modelos.
+        $expandedTemplates = $templates->concat(array_values($sixDigitAccounts));
+
         // 4. Ejecutar la clonación aislada bajo el contexto del Tenant en una transacción
-        $totalInserted = $this->tenantContext->run($companyId, function () use ($companyId, $planVersion, $templates, $existingAccountsCount): int {
+        $totalInserted = $this->tenantContext->run($companyId, function () use ($companyId, $planVersion, $expandedTemplates, $existingAccountsCount): int {
             return DB::transaction(function () use ($companyId, $templates, $existingAccountsCount): int {
                 // Si existían cuentas previas y estamos en modo forzado (sin movimientos contables),
                 // desvincular parámetros de configuración y centros de costo antes de eliminar en cascada ascendente
@@ -115,7 +142,7 @@ final readonly class InitializeCompanyChartOfAccountsService
                     }
                 }
 
-                $groupedByLevel = $templates->groupBy('level');
+                $groupedByLevel = $expandedTemplates->groupBy('level');
                 $codeToIdMap = [];
                 $codeToPathMap = [];
                 $insertedCount = 0;
@@ -165,7 +192,7 @@ final readonly class InitializeCompanyChartOfAccountsService
                             'requires_cash_flow_area' => $tpl->requires_cash_flow_area,
                             'cash_flow_category' => $tpl->cash_flow_category->value,
                             'financial_statement_rubric' => $tpl->financial_statement_rubric->value,
-                            'is_operational' => $tpl->is_operational,
+                            'is_operational' => $tpl->is_operational && strlen((string) $tpl->code) === 6,
                             'is_active' => $tpl->is_active,
                             'created_at' => $now,
                             'updated_at' => $now,
@@ -246,11 +273,12 @@ final readonly class InitializeCompanyChartOfAccountsService
                 }
 
                 // Re-vincular cuentas operativas por defecto en company_settings
-                $vatAccount = $codeToIdMap['40111'] ?? $codeToIdMap['4011'] ?? null;
-                $fxGain = $codeToIdMap['776'] ?? $codeToIdMap['7761'] ?? null;
-                $fxLoss = $codeToIdMap['676'] ?? $codeToIdMap['6761'] ?? null;
-                $costAbs = $codeToIdMap['7911'] ?? $codeToIdMap['791'] ?? null;
-                $retEarn = $codeToIdMap['5911'] ?? $codeToIdMap['591'] ?? null;
+                // Solo referencias operativas de seis dígitos para automatismos.
+                $vatAccount = $codeToIdMap['401110'] ?? null;
+                $fxGain = $codeToIdMap['776000'] ?? null;
+                $fxLoss = $codeToIdMap['676000'] ?? null;
+                $costAbs = $codeToIdMap['791000'] ?? null;
+                $retEarn = $codeToIdMap['591100'] ?? null;
 
                 DB::table('company_settings')
                     ->where('company_id', $companyId)
