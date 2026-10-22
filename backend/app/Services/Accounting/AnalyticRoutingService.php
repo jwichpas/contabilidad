@@ -18,6 +18,14 @@ final readonly class AnalyticRoutingService
 {
     public function activeVersionId(int $companyId): ?int
     {
+        // Serializes POST against the owner-only DRAFT -> ACTIVE / ACTIVE ->
+        // RETIRED transaction. A shared advisory lock is required because
+        // app_backend has SELECT but intentionally no UPDATE privileges on
+        // version rows (SELECT FOR SHARE would be denied by PostgreSQL).
+        // Caller is inside PostJournalEntryService::post DB transaction.
+        DB::selectOne('SELECT pg_advisory_xact_lock_shared(hashtextextended(?,0))', [
+            'nexus:analytic-routing:'.$companyId,
+        ]);
         $versions = DB::table('accounting_destination_rule_versions')
             ->where('company_id', $companyId)
             ->where('status', 'ACTIVE')
