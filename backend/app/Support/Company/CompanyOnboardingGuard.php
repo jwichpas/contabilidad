@@ -15,7 +15,10 @@ use Illuminate\Support\Facades\Schema;
  */
 final readonly class CompanyOnboardingGuard
 {
-    public function __construct(private TenantContext $tenantContext) {}
+    public function __construct(
+        private TenantContext $tenantContext,
+        private GlobalReferenceReadiness $globalReferences,
+    ) {}
 
     /** @return array{can_create:bool,reason:?string} */
     public function status(User $user): array
@@ -49,6 +52,12 @@ final readonly class CompanyOnboardingGuard
                 'can_create' => false,
                 'reason' => 'La creación estará disponible después de aplicar las migraciones Laravel pendientes.',
             ];
+        }
+
+        // No habilitar el wizard con migraciones presentes pero SUNAT/PCGE vacíos.
+        // El ledger de versiones pertenece al rol migrador, no al rol API.
+        if (($issue = $this->globalReferences->issue()) !== null) {
+            return ['can_create' => false, 'reason' => $issue];
         }
 
         return ['can_create' => true, 'reason' => null];
