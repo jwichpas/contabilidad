@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\V1\Accounting\CreateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\ChangeFiscalPeriodStatusController;
 use App\Http\Controllers\Api\V1\Accounting\ListFiscalPeriodsController;
+use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
 use App\Http\Controllers\Api\V1\Accounting\CreateJournalEntryController;
 use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\GetNextJournalEntryNumberController;
@@ -108,6 +109,11 @@ Route::prefix('v1')->group(function (): void {
             // Estado real de períodos (sin generar meses ficticios).
             Route::get('/accounting/fiscal-periods', ListFiscalPeriodsController::class)
                 ->name('api.v1.accounting.fiscal-periods.index');
+
+            // Explicit opening is never performed by GET or a bulk seeder.
+            Route::post('/accounting/fiscal-periods', OpenFiscalPeriodController::class)
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                ->name('api.v1.accounting.fiscal-periods.open');
 
             // Cierre / bloqueo / reapertura de períodos contables F2.3.
             // Solo ADMIN o CHIEF_ACCOUNTANT de la empresa activa. RLS applies.
