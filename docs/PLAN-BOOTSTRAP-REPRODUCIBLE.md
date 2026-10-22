@@ -111,3 +111,57 @@ No ejecutar F1.14 `--probe` contra Neon con fixturas que exijan `companies=0`: y
 - Los archivos de inicialización de DEV (empresas/usuarios) NO se ejecutarán jamás como seeder global de producción.
 - Las 17 migraciones existentes representan el estado actual y NO se vuelven a ejecutar ni se modifican retroactivamente.
 
+
+
+## 7. Primer componente implementado: referencia global inmutable (21/10/2026)
+
+**Estado: código publicado en `main`, aún SIN APLICAR a Neon.** Este primer componente no reemplaza todavía al instalador portátil integral `nexus:install`. Es una carga de referencia estrictamente restringida a la rama Neon de desarrollo, para verificar fuentes antes de extenderla a nuevas bases de datos.
+
+### Archivos añadidos y corregidos
+
+- `backend/database/reference_data/manifest.json`: versión `nexus-global-reference-2026-10-21-v1`. Define seis fuentes Git exactas con su **Git blob SHA-1** (checksum de contenido del objeto Git), recuentos contrastados con Supabase `contabilidad-database`, 13 tablas objetivo y versiones de PCGE 2019/2026. Cada archivo se verifica contra el hash Git y además se calcula un SHA-256 para la auditoría de instalación. Cambiar una fuente sin publicar una nueva versión provoca **FAIL antes de conectar**.
+- `backend/database/portable_migrations/2026_10_21_040000_create_reference_data_versions.php`: migración portable PostgreSQL que crea un **ledger de versión** con SHA-256 del manifiesto, hashes SHA-256 de las seis fuentes y **huella de contenido SHA-256 por cada tabla**. Deniega permisos sobre el ledger a `app_backend` y `PUBLIC`.
+- `backend/database/seeders/MasterChartOfAccountsSeeder.php` corregido: sin `TRUNCATE`, sin regla `COUNT >= 3400`; ya no modifica automáticamente el plan de la primera empresa. Para matriz vacía carga los 3.401 registros; para existente exige coincidencia de **cada código y de todos sus campos** (excepto timestamps) antes de aceptar la versión. Nunca sobrescribe diferencias silenciosamente.
+- `backend/scripts/phase2-neon-global-reference.php`: instalador protegido para `contabilidad-dev`, con `--plan` SIN conectar Laravel/SQL, `--verify` solo lectura, y `--apply=contabilidad-dev` explícito. Aplica únicamente la migración de ledger si aún faltaba (**17→18 migraciones**), luego dentro de una transacción global ejecuta `CurrenciesSeeder`, `SunatCatalogSeeder`, `AccountingStandardsAndRubricsSeeder` y `MasterChartOfAccountsSeeder::seedTemplates()`. Exige **3 empresas, 3 usuarios y 8 membresías** como control contra destinos inesperados. Al verificar, compara 13 recuentos y SHA-256 de contenido, no solo cantidades; nunca altera tablas multiempresa. Si la migración del ledger se aplicó pero la transacción de datos se revirtió, se permite recuperar únicamente desde un estado **18 migraciones, ledger sin versión y 13 catálogos completamente vacíos**. No ejecutar `db:seed` general.
+- CI `.github/workflows/phase1-security-static.yml`: PHP lint del instalador y la migración, además de ejecución de `--plan` en GitHub Actions para validar hashes Git sin bases de datos.
+
+### Cantidades obligatorias de Fase Global 1
+
+| Área | Recuento esperado |
+|---|---:|
+| Monedas del seeder existente (PEN/USD/EUR) | 3 |
+| Normas NIC/NIIF | 43 |
+| Rubros financieros | 48 |
+| SUNAT Tabla 01 medios de pago | 20 |
+| SUNAT Tabla 02 identidades | 5 |
+| SUNAT Tabla 03 bancos | 33 |
+| SUNAT Tabla 05 existencias | 6 |
+| SUNAT Tabla 06 unidades | 16 |
+| SUNAT Tabla 08 libros | 20 |
+| SUNAT Tabla 10 documentos | 24 |
+| SUNAT Tabla 11 aduanas | 22 |
+| SUNAT Tabla 12 operaciones | 17 |
+| PCGE matriz 2019 + 2026 | 3.401 |
+
+Las 9 tablas SUNAT suman **163 códigos**, y PCGE se desglosa en **1.764 PCGE 2019 + 1.637 PCGE 2026**.
+
+### Comandos secuenciales (NO aplicados todavía)
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-global-reference.php
+php -l database/portable_migrations/2026_10_21_040000_create_reference_data_versions.php
+php -l database/seeders/MasterChartOfAccountsSeeder.php
+php scripts/phase2-neon-global-reference.php --plan
+php scripts/phase2-neon-global-reference.php --verify
+# Solo cuando todo lo anterior es correcto y se desea materializar los catálogos:
+php scripts/phase2-neon-global-reference.php --apply=contabilidad-dev
+php scripts/phase2-neon-global-reference.php --verify
+```
+
+**ADVERTENCIA DE COBERTURA:** esta primera fase NO incluye los 247 registros `sunat_ple_reference_rows`, 23 `sunat_book_catalog_codes` ni 3.522 `accounting_plan_reference_accounts` del otro proyecto `Nexus Contable Dev`; esas tablas tienen otro modelo y requieren transformaciones explícitas. Tampoco incluye el calendario SUNAT 2026 sin validación normativa independiente, la moneda CLP aún no presente en el seeder de 3 monedas, ni la configuración por empresa o sus cuentas a seis dígitos. Son las siguientes etapas, y hasta terminarlas `GLOBAL_REFERENCE_OK` **no significa que la instalación total del ERP sea completa**.
+
+El manifestado permite reconstruir en nuevas bases PostgreSQL, pero el instalador inicial permanece explícitamente limitado a Neon `contabilidad-dev` mientras se verifican las rutas portables y se implementa el orquestador definitivo. **No mutar Neon production ni Supabase**.
+
