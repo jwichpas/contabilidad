@@ -502,3 +502,34 @@ php scripts/phase1-neon-token-rollback.php --probe=contabilidad-dev
 **Estado:** scripts publicados en main; no se ha hecho `--apply` ni se ha reejecutado F1.10 todavía. Si cualquier acción falla, NO usar `migrate:fresh`, `migrate` general o eliminar manualmente políticas; reportar nombre de etapa y códigos no sensibles.
 
 Neon `production` y Supabase se mantienen fuera de alcance.
+
+
+## F1.10 + F1.11 aprobadas; F1.12 + F1.13 desarrolladas (21/10/2026)
+
+**Resultados certificados por el usuario:**
+- F1.10: se aplicó la migración Neon dev de miembros autenticados. `--verify` confirmó **17 migraciones, una política nueva SELECT y la política original intacta**. El script `phase1-neon-token-rollback.php --probe=contabilidad-dev` aprobó login con password real, Bearer Sanctum con caducidad 12 h, listado de empresas, denegación auditor, cambio de empresa, logout, revocación del token y ROLLBACK sin filas persistentes.
+- F1.11: siete controles PASS del POST contable, triggers de partida doble diferidos (caso válido e inválido), inmutabilidad SQL, auditoría y ROLLBACK verificado con tenant.
+- Consulta SELECT Neon independiente posterior (proyecto soft-bonus-52215969, rama br-odd-lake-b6wshqv3): PostgreSQL 18.6, **17 migraciones**, ambas políticas company_user presentes, **0 empresas, 0 usuarios, 0 tokens, 0 asientos, 0 líneas y 0 auditorías**.
+
+**Riesgo de concurrencia corregido en código, pendiente de pruebas reales:** el controlador antes construía un correlativo automático mediante `COUNT(*) + 1` **antes de bloquear el periodo**; las peticiones paralelas podían calcular el mismo número. Se agregó `App\Services\Accounting\JournalEntryNumberService`, que lee el `MAX` del sufijo de números del mes (formato `10-00001`) dentro del tenant. `PostJournalEntryService::post()` ahora adquiere `FOR UPDATE` sobre `fiscal_periods` ANTES de obtener el siguiente correlativo cuando no hay `entry_number` manual; la restricción única PostgreSQL protege ante emisores ajenos. La ruta GET `/journal-entries/next-number` es solo informativa (devuelve `is_reserved=false`) y valida fecha sin reservar números. Los números manuales siguen permitidos.
+
+**Extorno mejorado:** `PostJournalEntryService::reverse()` ahora bloquea el período destino, exige `OPEN`, verifica que la fecha pertenece exactamente al mes/año destino y que original/período son de la misma empresa, e implementa correlativo automático protegido para extornos. Nuevo controlador `ReverseJournalEntryController`: `POST /api/v1/accounting/journal-entries/{entryId}/reverse`, protegido por `auth:sanctum`, `SetTenantContext`, `RequireCompanyRole:ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT`. Valida período, fecha, motivo y correlativo opcional; crea asiento `REVERSAL` con movimientos invertidos, marca original `REVERSED` sin tocar partidas, y registra `JOURNAL_ENTRY_REVERSED` en auditoría.
+
+**Prueba opt-in F1.12/13 nueva:** `backend/scripts/phase1-neon-journal-number-rollback.php`, creada como copia independiente de la fixture aprobada F1.11, ejecuta exclusivamente en Neon `contabilidad-dev` bajo `app_backend`. Tras el POST manual original, comprueba vista previa `10-00001` no reservada, dos POST automáticos `10-00001` y `10-00002`; fuerza `SET CONSTRAINTS ALL IMMEDIATE` para confirmar partida doble, prueba SQL descuadrado rechazado, POST reverse automático `10-00003`, verifica líneas Debe/Haber intercambiadas, estado del original, auditoría y bloqueo HTTP 422 del segundo intento. Finalmente realiza ROLLBACK de datos ficticios y verifica limpieza con RLS de tenant explícito en transacción READ ONLY. **La existencia del script y CI lint no significa que esta prueba haya pasado en el equipo del usuario; F1.12 y F1.13 están PENDIENTES.** El script de verificación es secuencial, no demuestra aún simultaneidad real de dos conexiones competidoras. Las secuencias PostgreSQL pueden avanzar pese a ROLLBACK.
+
+Pasos seguros:
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l app/Services/Accounting/JournalEntryNumberService.php
+php -l app/Services/Accounting/PostJournalEntryService.php
+php -l app/Http/Controllers/Api/V1/Accounting/ReverseJournalEntryController.php
+php -l scripts/phase1-neon-journal-number-rollback.php
+php scripts/phase1-neon-journal-number-rollback.php --plan
+# Solo si PHP lint y --plan son correctos, ejecutar sobre desarrollo:
+php scripts/phase1-neon-journal-number-rollback.php --probe=contabilidad-dev
+```
+
+**No ejecutar migraciones adicionales ni tests generales sobre Neon.** El esquema conserva 17 migraciones. Para demostrar serialización concurrente se necesita una prueba posterior con DOS conexiones PostgreSQL bajo el mismo tenant (y rollback/limpieza explícitos), no concluirlo de dos POST secuenciales. Neon `production` y Supabase continúan sin cambios.
