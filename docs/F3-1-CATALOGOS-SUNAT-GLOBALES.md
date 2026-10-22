@@ -59,7 +59,7 @@ No ejecutar `migrate:fresh`, seeders globales sin versión, `migrate` sin `--pat
 ## Aceptación y no duplicación
 
 ```powershell
-php artisan test --filter=SunatRucReferenceDataTest
+php artisan test tests/Unit/SunatRucReferenceDataTest.php
 php scripts/phase3-neon-company-onboarding-http.php --probe=contabilidad-dev
 
 cd ..\frontend
