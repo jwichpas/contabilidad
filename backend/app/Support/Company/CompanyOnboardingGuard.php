@@ -54,6 +54,22 @@ final readonly class CompanyOnboardingGuard
             ];
         }
 
+        // Alta guiada únicamente por los tres catálogos RUC oficiales versionados.
+        // No asumir que las tablas PLE con números coincidentes son equivalentes.
+        if (! Schema::hasColumn('company_settings', 'sunat_contributor_type_code')
+            || ! Schema::hasTable('sunat_ruc_contributor_types')
+            || ! Schema::hasTable('sunat_ciiu_rev4_classes')
+            || ! Schema::hasTable('sunat_ruc_tax_codes')
+            || ! Schema::hasTable('company_tax_codes')
+            || (int) DB::table('sunat_ruc_contributor_types')->count() !== 51
+            || (int) DB::table('sunat_ciiu_rev4_classes')->count() !== 417
+            || (int) DB::table('sunat_ruc_tax_codes')->count() !== 38) {
+            return [
+                'can_create' => false,
+                'reason' => 'Instale los 3 catálogos SUNAT de RUC, CIIU Rev. 4 y tributos (migración global 24).',
+            ];
+        }
+
         // No habilitar el wizard con migraciones presentes pero SUNAT/PCGE vacíos.
         // El ledger de versiones pertenece al rol migrador, no al rol API.
         if (($issue = $this->globalReferences->issue()) !== null) {
