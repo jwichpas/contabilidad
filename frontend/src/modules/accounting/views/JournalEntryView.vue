@@ -29,6 +29,7 @@ import {
 import { AccountingApiClient } from '../api/httpClient';
 import { SystemDecimal } from '../../../shared/types/numeric.types';
 import type { CompanyId } from '../types/accountingAccount.types';
+import type { CostCenterItem } from '../types/catalogs.types';
 import type {
   CurrencyCode,
   EntryType,
@@ -59,6 +60,7 @@ const successMessage = shallowRef<string | null>(null);
 
 // Catálogo de Cuentas Operativas (Nivel 4+)
 const operationalAccounts = shallowRef<readonly OperationalAccount[]>([]);
+const costCenters = shallowRef<readonly CostCenterItem[]>([]);
 
 // Campos de Cabecera del Voucher
 const todayStr = new Date().toISOString().slice(0, 10);
@@ -202,6 +204,7 @@ async function loadExchangeRatesForDate(dateStr: string): Promise<void> {
 interface EditingLine {
   id: number;
   accountId: number | null;
+  costCenterId: number | null;
   description: string;
   debitLocal: string;
   creditLocal: string;
@@ -214,6 +217,7 @@ const lines = ref<EditingLine[]>([
   {
     id: nextLineKey++,
     accountId: null,
+    costCenterId: null,
     description: '',
     debitLocal: '',
     creditLocal: '',
@@ -223,6 +227,7 @@ const lines = ref<EditingLine[]>([
   {
     id: nextLineKey++,
     accountId: null,
+    costCenterId: null,
     description: '',
     debitLocal: '',
     creditLocal: '',
@@ -298,6 +303,7 @@ function addLine(): void {
   lines.value.push({
     id: nextLineKey++,
     accountId: null,
+    costCenterId: null,
     description: headerDescription.value,
     debitLocal: '',
     creditLocal: '',
@@ -365,6 +371,7 @@ function clearForm(): void {
     {
       id: nextLineKey++,
       accountId: null,
+      costCenterId: null,
       description: '',
       debitLocal: '',
       creditLocal: '',
@@ -374,6 +381,7 @@ function clearForm(): void {
     {
       id: nextLineKey++,
       accountId: null,
+      costCenterId: null,
       description: '',
       debitLocal: '',
       creditLocal: '',
@@ -404,15 +412,17 @@ async function loadCatalogsAndHistory(): Promise<void> {
       operationalAccounts.value = cachedAccounts;
     }
 
-    const [accounts, entries, nextNum, ratesRes] = await Promise.all([
+    const [accounts, entries, nextNum, ratesRes, centers] = await Promise.all([
       cachedAccounts ? Promise.resolve(cachedAccounts) : apiClient.value.fetchOperationalAccounts(),
       apiClient.value.fetchJournalEntries({ limit: 50 }),
       apiClient.value.fetchNextJournalEntryNumber(entryDate.value),
       apiClient.value.fetchCompanyExchangeRates(entryDate.value).catch(() => null),
+      apiClient.value.fetchCostCenters(),
     ]);
 
     operationalAccounts.value = accounts;
     operationalAccountsCache.set(props.activeCompanyId, accounts);
+    costCenters.value = centers;
     journalEntries.value = entries;
     entryNumber.value = nextNum.next_number;
 
@@ -495,6 +505,7 @@ async function handleSubmit(): Promise<void> {
       description: headerDescription.value.trim(),
       lines: lines.value.map((l) => ({
         accounting_account_id: l.accountId!,
+        cost_center_id: l.costCenterId,
         description: l.description.trim() || headerDescription.value.trim(),
         debit_local: l.debitLocal.trim() || '0',
         credit_local: l.creditLocal.trim() || '0',
@@ -922,11 +933,12 @@ onMounted(() => {
         </div>
 
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[900px]">
+          <table class="w-full text-left border-collapse min-w-[1080px]">
             <thead>
               <tr class="bg-surface-muted border-b border-border text-[11px] font-bold text-muted uppercase">
                 <th class="py-2.5 px-3 w-10 text-center">#</th>
                 <th class="py-2.5 px-3 w-[340px]">Cuenta Contable Operativa</th>
+                <th class="py-2.5 px-3 w-44">Centro de costo</th>
                 <th class="py-2.5 px-3">Glosa Específica</th>
                 <th class="py-2.5 px-3 w-36 text-right">Debe ({{ baseCurrencyInfo.code }})</th>
                 <th class="py-2.5 px-3 w-36 text-right">Haber ({{ baseCurrencyInfo.code }})</th>
@@ -960,6 +972,20 @@ onMounted(() => {
                       :value="acc.id"
                     >
                       {{ acc.code }} · {{ acc.name }}
+                    </option>
+                  </select>
+                </td>
+
+                <!-- Centro de costo opcional; no activa transferencia automática 94/95-79. -->
+                <td class="py-2 px-3">
+                  <select
+                    v-model="line.costCenterId"
+                    class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                    title="Dimensión de costo, sin distribución automática por ahora"
+                  >
+                    <option :value="null">Sin centro</option>
+                    <option v-for="cc in costCenters" :key="cc.id" :value="cc.id">
+                      {{ cc.code }} · {{ cc.name }}
                     </option>
                   </select>
                 </td>
@@ -1028,7 +1054,7 @@ onMounted(() => {
             <!-- Fila de Totales y Diferencias -->
             <tfoot>
               <tr class="bg-soft border-t-2 border-line text-xs">
-                <td colspan="3" class="py-2.5 px-4 font-semibold text-foreground text-right uppercase tracking-wider">
+                <td colspan="4" class="py-2.5 px-4 font-semibold text-foreground text-right uppercase tracking-wider">
                   Totales Asiento:
                 </td>
                 <td class="py-2.5 px-3 text-right font-semibold num text-foreground">
@@ -1048,7 +1074,7 @@ onMounted(() => {
 
               <!-- Fila de Diferencia (Cuadre) -->
               <tr class="bg-surf text-xs">
-                <td colspan="3" class="py-2 px-4 text-right font-semibold text-muted">
+                <td colspan="4" class="py-2 px-4 text-right font-semibold text-muted">
                   Diferencia Partida Doble:
                 </td>
                 <td
@@ -1244,6 +1270,7 @@ onMounted(() => {
                           <tr class="border-b border-line text-[10px] text-muted uppercase font-mono">
                             <th class="py-1.5 px-3 w-10 text-center">#</th>
                             <th class="py-1.5 px-3 w-40">Cuenta</th>
+                            <th class="py-1.5 px-3 w-40">Centro de costo</th>
                             <th class="py-1.5 px-3">Glosa de Línea</th>
                             <th class="py-1.5 px-3 w-32 text-right">Debe (PEN)</th>
                             <th class="py-1.5 px-3 w-32 text-right">Haber (PEN)</th>
@@ -1257,6 +1284,7 @@ onMounted(() => {
                             <td class="py-1.5 px-3 font-semibold text-foreground">
                               {{ l.account ? `${l.account.code} · ${l.account.name}` : `ID ${l.accounting_account_id}` }}
                             </td>
+                            <td class="py-1.5 px-3 text-muted text-[11px]">{{ costCenters.find((cc) => cc.id === l.cost_center_id)?.code || '—' }}</td>
                             <td class="py-1.5 px-3 text-muted text-xs">{{ l.description || entry.description }}</td>
                             <td class="py-1.5 px-3 text-right font-medium num">
                               {{ formatPostedAmount(l.debit_local) }}
