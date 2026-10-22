@@ -11,7 +11,7 @@
 >
 > **Decisión: NO utilizar GitHub Actions.** Los dos workflows fueron retirados de `main`; las pruebas se ejecutan **manualmente** en Windows/PowerShell/PHP/Neon DEV y PostgreSQL Docker desechable. Procedimiento y resultados en [Validación manual y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md). **No hay habilitación automática de matrices ni uso de datos reales.**
 >
-> **Estado de Neon verificado 22/10/2026:** 22 migraciones, 3 empresas, 1.362 rutas, **3 matrices DRAFT / 0 ACTIVE**. Tras la prueba funcional en navegador: 1 período (DEMO A, enero 2026, OPEN), 0 asientos, 1 auditoría de apertura. Los eventos AUTH_LOGIN/TENANT_SWITCH adicionales son normales y no constituyen movimientos contables. **Hitos H1–H4 y las pruebas de aceptación final siguen abiertos.**
+> **Estado de Neon verificado 22/10/2026:** 23 migraciones (F3.1 económica ya instalada), 3 empresas, **3 matrices DRAFT / 0 ACTIVE**. Tras la prueba funcional en navegador: 1 período (DEMO A, enero 2026, OPEN), 0 asientos, 1 auditoría de apertura. Los eventos AUTH_LOGIN/TENANT_SWITCH adicionales son normales y no constituyen movimientos contables. **Hitos H1–H4 y las pruebas de aceptación final siguen abiertos.**
 >
 > El registro de notas históricas que antes se acumulaba en el encabezado y debajo del checklist fue preservado en [Historial del plan](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md). Los estados antiguos del archivo no reemplazan el estado vigente.
 
@@ -386,7 +386,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 **Se prioriza trabajo funcional y validación manual.** El motor contable cuenta con pruebas manuales PASS de HTTP 201/422/403, monedas PEN/USD, contabilización analítica 94/95/79, extornos, trazabilidad, RLS y aislamiento por empresa. F2.3b–h **no equivalen al cierre total de F2.3** porque está pendiente la operación de cierre de periodo.
 
-1. **F3.1:** validar preflight local y aplicar únicamente la migración económica **23** con Artisan en Neon DEV. Luego prueba HTTP reversible E2E del wizard (sin crear cuarta empresa permanente), compilación Vue y aceptación visual. Solo después, evaluar alta real de empresa DEMO. **F2.3 APROBADA.** [Guía F3.1](docs/F3-1-ALTA-EMPRESAS-NEON.md).
+1. **F3.1:** migración 23 aplicada y verificada; HTTP E2E reversible **PASS** con PCGE, monedas, CIIU y auditoría. **Incidencia nueva:** el POST real desde Vue devolvió HTTP 500 tras 30,18 s (límite PHP 30 s). Neon confirma que no quedó empresa parcial (3 empresas). Se publicó copia PCGE vectorizada y límite de alta acotado; **pendiente revalidar rendimiento con el ensayo EIRL/RMT medido y probar en navegador**. **F2.3 APROBADA.** [Guía F3.1](docs/F3-1-ALTA-EMPRESAS-NEON.md).
 2. Terminar el flujo real **F3.1**: asistente de empresas, parámetros fiscales, PCGE, alta desde UI y primer asiento, utilizando exclusivamente empresas ficticias.
 3. Completar F4 y F5: editor único, historial con partidas automáticas, Diario/Mayor/Balance, CxC/CxP y cierre.
 4. Continuar F6 (SUNAT) y F7 (NIIF/NPIF/activos/préstamos) por módulos verificables.
@@ -416,7 +416,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - [x] **F2.3** Validar POST, extornos, cierre y controles de partida doble. **APROBADO:** POST/extorno idempotente y RLS por empresa; HTTP real Neon OPEN→CLOSED→OPEN→CLOSED→LOCKED (403 roles, 409 transiciones, 422 POST/extorno bloqueados y auditorías) con rollback; carreras CLOSE-first y POST-first con dos conexiones PostgreSQL 18 en Docker, NOWAIT 55P03 y asientos balanceados; Vue compila y muestra estado y acciones. **E2E real:** apertura de enero 2026 para DEMO A desde la interfaz, verificada por lectura directa en Neon (OPEN, 0 asientos, 1 auditoría). **RLS app_backend:** DEMO B ve 0, DEMO A ve 1. [Evidencias](docs/F2-3-CIERRE-PERIODOS.md).
 
 ### Fase 3 — Empresas y maestros
-- [ ] **F3.1** Implementar asistente de empresas y parámetros fiscales. **Avance 22/10/2026:** wizard Vue de 5 pasos y controlador Laravel existentes; se detectó que el perfil económico dependía de una migración antigua exclusiva de Supabase, ausente en Neon. Nueva migración **Neon DEV #23 aditiva** publicada (cinco columnas, CIIU FORCE RLS) y preflight de solo lectura preparado. Alta ahora exige auditoría obligatoria en la misma transacción; estilos del wizard corregidos. Nuevo ensayo HTTP E2E con empresa temporal, 2 monedas, actividad, PCGE, 6 áreas, 9 flujos, auditoría y ROLLBACK preparado. **Pendiente:** aplicar solo migración 23 vía Artisan, verificarla, ejecutar prueba E2E y comprobar alta visual real; aún NO aprobado. [Plan F3.1](docs/F3-1-ALTA-EMPRESAS-NEON.md).*
+- [ ] **F3.1** Implementar asistente de empresas y parámetros fiscales. **Avance 22/10/2026:** wizard Vue de 5 pasos y controlador Laravel existentes; se detectó que el perfil económico dependía de una migración antigua exclusiva de Supabase, ausente en Neon. Nueva migración **Neon DEV #23 aditiva** publicada (cinco columnas, CIIU FORCE RLS) y preflight de solo lectura preparado. Alta ahora exige auditoría obligatoria en la misma transacción; estilos del wizard corregidos. Nuevo ensayo HTTP E2E con empresa temporal, 2 monedas, actividad, PCGE, 6 áreas, 9 flujos, auditoría y ROLLBACK preparado. **Migración 23, preflight y ensayo de alta HTTP reversible APROBADOS.** Alta real en navegador falló por límite de 30 s; no creó empresa. Optimización del clonado PCGE con una inserción JSONB por nivel publicada y prueba medida EIRL/RMT preparada. **Falta PASS de rendimiento y confirmación real de alta desde UI; F3.1 sigue [ ].** [Plan F3.1](docs/F3-1-ALTA-EMPRESAS-NEON.md).*
 - [x] **F3.2** Consolidar plantillas PCGE y cuentas operativas parametrizadas. *Neon DEV: 3.401 plantillas (PCGE 2019/2026), 2.966 cuentas y 1.214 operativas de seis dígitos por empresa; [verificaciones](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md).*
 - [ ] **F3.3** Completar maestros, dimensiones y empresas ficticias. *Existen 3 empresas y dimensiones DEMO; otros maestros/catálogos integrados y pruebas completas pendientes.*
 
@@ -464,9 +464,9 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | Fase de empresas F3 | **1/3 completa** | F3.1 alta E2E y F3.3 maestros restantes |
 | Fases formalmente aprobadas | **0/9** | Hitos y aceptación explícita de sección 8 |
 | Hitos aprobados | **0/4** | H1–H4 requieren puertas completas |
-| Base de desarrollo | **Neon PG18**; 22 migraciones; 3 DRAFT; 0 ACTIVE; 0 asientos/recibos | SQL de solo lectura 22/10/2026 |
+| Base de desarrollo | **Neon PG18**; 23 migraciones; 3 empresas; 3 DRAFT; 0 ACTIVE; enero DEMO A OPEN; 0 asientos | SQL de solo lectura 22/10/2026 |
 | Modalidad de pruebas | **Manual exclusivamente** | [Guía y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
-| Próximo trabajo funcional | **F3.1 alta de empresas DEMO desde UI → F4.2 editor de asientos** | F2.3 terminado; preservar período enero 2026 de DEMO A. Refactor futuro: ensayos reversibles deben admitir baseline DEV con períodos/auditoría existentes |
+| Próximo trabajo funcional | **F3.1 rendimiento POST desde UI → F4.2 editor de asientos** | Alta CLI reversible PASS; solicitud web agotó 30 s. Publicada ruta rápida PCGE, falta prueba de duración y E2E persistente |
 
 ### Evidencias que justifican las cinco actividades aprobadas
 
