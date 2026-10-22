@@ -83,6 +83,32 @@ try{
             ||(int)$counts->taxes!==38||(int)$counts->versions!==3||(int)$counts->assignments!==0){
             throw new \RuntimeException('Catálogos SUNAT RUC incompletos');
         }
+        $security=$admin->selectOne(<<<'SQL'
+          SELECT
+            (SELECT relrowsecurity AND relforcerowsecurity
+             FROM pg_class WHERE oid='public.company_tax_codes'::regclass) AS tenant_force_rls,
+            (SELECT count(*)::int FROM pg_constraint WHERE conname IN
+             ('fk_company_sunat_contributor_type','fk_company_economic_official_ciiu',
+              'fk_company_tax_official_code')) AS valid_foreign_keys,
+            (SELECT count(*)::int FROM information_schema.columns
+             WHERE table_schema='public' AND table_name='company_settings'
+               AND column_name='sunat_contributor_type_code') AS company_field,
+            has_table_privilege('app_backend','public.sunat_ruc_contributor_types','SELECT') AS types_select,
+            has_table_privilege('app_backend','public.sunat_ciiu_rev4_classes','SELECT') AS ciiu_select,
+            has_table_privilege('app_backend','public.sunat_ruc_tax_codes','SELECT') AS taxes_select,
+            has_table_privilege('app_backend','public.sunat_ruc_contributor_types','INSERT') AS types_insert,
+            has_table_privilege('app_backend','public.sunat_ciiu_rev4_classes','INSERT') AS ciiu_insert,
+            has_table_privilege('app_backend','public.sunat_ruc_tax_codes','INSERT') AS taxes_insert,
+            has_table_privilege('app_backend','public.company_tax_codes','INSERT') AS assignment_insert
+          SQL);
+        if(!$security||!$security->tenant_force_rls
+            ||(int)$security->valid_foreign_keys!==3
+            ||(int)$security->company_field!==1
+            ||!$security->types_select||!$security->ciiu_select||!$security->taxes_select
+            ||$security->types_insert||$security->ciiu_insert||$security->taxes_insert
+            ||!$security->assignment_insert){
+            throw new \RuntimeException('Catálogos globales o permisos RLS incorrectos');
+        }
         $ledger=$admin->select('SELECT dataset,source_file,sha256,row_count,version FROM public.sunat_ruc_reference_versions ORDER BY dataset');
         $verified=0;
         foreach($ledger as $entry){
