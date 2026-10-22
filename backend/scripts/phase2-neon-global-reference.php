@@ -94,6 +94,68 @@ try {
     if (count($sourceHashes) !== 6) {
         throw new RuntimeException('Fuentes duplicadas en manifiesto.');
     }
+    // Conservar ambas fuentes historicas SIN tratarlas como codigos SUNAT
+    // vigentes: el 100 % de las filas sigue pendiente de validacion oficial.
+    $historical = $manifest['historical_sources'] ?? null;
+    $expectedArchives = [
+        'backend/database/reference_data/historical/ple_234_tablas_2026-10-21.json'
+            => [247, 'HISTORICAL_NOT_VERIFIED'],
+        'backend/database/reference_data/historical/sunat_book_catalog_codes_draft_2026-10-21.json'
+            => [23, 'DRAFT_NOT_VALIDATED'],
+    ];
+    if (! is_array($historical) || count($historical) !== 2) {
+        throw new RuntimeException('Manifiesto historico PLE incompleto.');
+    }
+    $visitedArchives = [];
+    foreach ($historical as $archive) {
+        $relative = $archive['path'] ?? '';
+        if (! isset($expectedArchives[$relative]) || isset($visitedArchives[$relative])) {
+            throw new RuntimeException('Archivo historico duplicado o no autorizado.');
+        }
+        $visitedArchives[$relative] = true;
+        [$count, $status] = $expectedArchives[$relative];
+        $blob = $archive['git_blob_sha1'] ?? '';
+        if (! is_string($blob) || ! preg_match('/^[0-9a-f]{40}$/D', $blob)
+            || ($archive['rows'] ?? null) !== $count
+            || ($archive['status'] ?? '') !== $status
+            || ($archive['loaded_operationally'] ?? null) !== false) {
+            throw new RuntimeException('Metadatos PLE historicos alterados.');
+        }
+        $file = $repoRoot.'/'.$relative;
+        if (! is_file($file)) {
+            throw new RuntimeException('Archivo historico no encontrado.');
+        }
+        $bytes = str_replace("\r\n","\n",(string) file_get_contents($file));
+        if (! hash_equals($blob, sha1('blob '.strlen($bytes)."\0".$bytes))) {
+            throw new RuntimeException('Hash historico PLE alterado sin version.');
+        }
+        $data = json_decode($bytes,true,512,JSON_THROW_ON_ERROR);
+        if (($data['classification'] ?? '') !== $status
+            || ($data['row_count'] ?? null) !== $count
+            || ! is_array($data['rows'] ?? null)
+            || count($data['rows']) !== $count) {
+            throw new RuntimeException('Contenido del archivo PLE historico no coincide.');
+        }
+        $keys = [];
+        foreach ($data['rows'] as $row) {
+            if ($status === 'HISTORICAL_NOT_VERIFIED') {
+                $key = ($row['table_number'] ?? '').':'.($row['source_row_number'] ?? '');
+                if (($row['validity_review_status'] ?? '') === 'VERIFIED'
+                    || ($row['code_review_status'] ?? '') === 'APPROVED') {
+                    throw new RuntimeException('Fuente PLE historica contiene aprobacion inesperada.');
+                }
+            } else {
+                $key = ($row['catalog_version_id'] ?? '').':'.($row['code'] ?? '');
+                if (($row['review_status'] ?? '') !== 'DRAFT') {
+                    throw new RuntimeException('Codigo historico fuera de estado DRAFT.');
+                }
+            }
+            if (isset($keys[$key])) {
+                throw new RuntimeException('Codigo historico duplicado.');
+            }
+            $keys[$key] = true;
+        }
+    }
     $manifestSha = hash('sha256', (string) $raw);
 } catch (Throwable $error) {
     fwrite(STDERR, '[FAIL] Integridad de fuentes Git/manifiesto global no aprobada: '.$error->getMessage().PHP_EOL);
@@ -102,6 +164,7 @@ try {
 
 if ($mode === '--plan') {
     echo '[PLAN] Fuentes Git verificadas por SHA Git blob; SHA256 maestro calculado.'.PHP_EOL;
+    echo '[PLAN] Historial PLE aislado: 247 filas sin validar y 23 codigos DRAFT; solo archivados.'.PHP_EOL;
     echo '[PLAN] DATASET '.$manifest['dataset'].' con '.count($expectedTables).' tablas globales.'.PHP_EOL;
     echo '[PLAN] 3 monedas; 163 entradas SUNAT; 43 NIC/NIIF; 48 rubros; 3401 plantillas PCGE.'.PHP_EOL;
     echo '[PLAN] Crea ledger portable de versiones como migracion 18 (si falta).'.PHP_EOL;
