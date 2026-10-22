@@ -18,6 +18,26 @@
 - Las mutaciones y los eventos de auditoría son **atómicos** dentro de la misma transacción; si falla el INSERT de auditoría, se revierte también el estado. `closed_at` se establece al cerrar y se limpia al reabrir; en `LOCKED` se conserva.
 - `LOCKED` **no tiene operación de reapertura ordinaria**; una corrección extraordinaria necesitaría proceso autorizado y auditado separado, no incluido en esta etapa.
 
+## Diagnóstico de la comprobación diferida (22/10/2026)
+
+**Resultado manual del modo corto:** `--period-only=contabilidad-dev` alcanzó la última fase `F2.3 verify deferred balance triggers`, donde PostgreSQL devolvió `23514 / INSUFFICIENT_JOURNAL_LINES`. Después hubo `ROLLBACK`; la prueba **no está aprobada**.
+
+**Causa confirmada:** el script limpiaba `app.current_company_id` inmediatamente ANTES de ejecutar `SET CONSTRAINTS ALL IMMEDIATE`. Una consulta de solo lectura en Neon confirmó que `trg_fn_enforce_double_entry_balance` es `SECURITY INVOKER`, y `journal_entry_lines` tiene RLS habilitado y forzado. Sin el tenant visible, ese trigger no encuentra las líneas del asiento aunque existan.
+
+**Corrección publicada en `main`:** conservar `app.current_company_id` de la empresa DEMO hasta después de `SET CONSTRAINTS ALL IMMEDIATE`, verificar antes `current_user=app_backend` y el tenant correcto, y solo entonces limpiar el contexto. Ninguna migración, trigger ni permiso remoto fue modificado. Esto corrige la comprobación del *harness*; **falta repetir el modo corto**.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase2-neon-analytic-http.php
+php scripts/phase2-neon-analytic-http.php --period-only=contabilidad-dev
+```
+
+La prueba concluyente debe informar `[PASS] F2.3 Neon HTTP`, `[ROLLBACK]` y `[PASS] HTTP POST-ROLLBACK`. No repetir `--apply`: Neon ya tiene 22 migraciones.
+
+---
+
 ## Incidencia de prueba y modo corto — 22/10/2026
 
 En la primera ejecución manual del usuario, todas las condiciones de conexión fueron **PASS** y los casos históricos F2.2/F2.3d también pasaron, pero la sección nueva terminó con `[FAIL] F2.3d fase=F2.3 HTTP CLOSE/REOPEN/LOCK: SQLSTATE=23514`. El script hizo **ROLLBACK** y el verificador posterior confirmó las **22 migraciones**, 3 DRAFT, cero asientos ni recibos persistidos. Esta evidencia **no aprueba F2.3**.
