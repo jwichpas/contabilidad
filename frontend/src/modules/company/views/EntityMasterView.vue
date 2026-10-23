@@ -107,7 +107,7 @@ async function loadDocumentTypes(): Promise<void> {
 
 const docChoices = computed(() => documentTypes.value.length > 0
   ? documentTypes.value
-  : [{ code: '6', name: 'RUC' }, { code: '1', name: 'DNI' }]);
+  : [{ code: '6', description: 'RUC' }, { code: '1', description: 'DNI' }]);
 
 function applyFilters(): void {
   page.value = 1;
@@ -355,7 +355,7 @@ onMounted(() => {
         <label class="space-y-1 text-xs">
           <span class="font-medium">Tipo de documento SUNAT *</span>
           <select v-model="form.identity_document_type_code" required class="w-full rounded-md border border-line bg-background px-3 py-2 text-sm">
-            <option v-for="doc in docChoices" :key="doc.code" :value="doc.code">{{ doc.code }} — {{ doc.name }}</option>
+            <option v-for="doc in docChoices" :key="doc.code" :value="doc.code">{{ doc.code }} — {{ doc.description }}</option>
           </select>
         </label>
         <label class="space-y-1 text-xs">
