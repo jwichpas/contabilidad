@@ -69,7 +69,7 @@ final readonly class CompanyOnboardingGuard
                 SQL);
             if ($installed === null
                 || (int) $installed->required_columns !== 6
-                || ! $installed->tenant_tables
+                || ! in_array($installed->tenant_tables, [true, 1, '1', 't'], true)
                 || (int) $installed->contributor_types !== 51
                 || (int) $installed->ciiu_classes !== 417
                 || (int) $installed->tax_codes !== 38) {
