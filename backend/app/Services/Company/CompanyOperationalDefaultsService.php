@@ -7,6 +7,7 @@ namespace App\Services\Company;
 use App\Models\CashFlowArea;
 use App\Models\CompanyArea;
 use App\Support\Tenant\TenantContext;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Parámetros operativos iniciales, EXCLUSIVAMENTE de la nueva empresa.
@@ -49,9 +50,43 @@ final readonly class CompanyOperationalDefaultsService
         ];
     }
 
-    public function installForCompany(int $companyId): void
+    public function installForCompany(int $companyId, bool $bulk = false): void
     {
-        $this->tenantContext->run($companyId, static function (): void {
+        $this->tenantContext->run($companyId, static function () use ($companyId, $bulk): void {
+            if ($bulk) {
+                // Insert-only idempotence: preserve existing user edits under UNIQUE
+                // (company_id,code). In new company onboarding this replaces 30+
+                // Eloquent SELECT + INSERT round trips with two SQL statements.
+                $now = now();
+                $organization = array_map(
+                    static fn (array $area): array => [
+                        'company_id' => $companyId,
+                        'code' => $area['code'],
+                        'name' => $area['name'],
+                        'description' => $area['description'],
+                        'is_active' => true,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ],
+                    self::organizationAreas(),
+                );
+                $cashFlows = array_map(
+                    static fn (array $area): array => [
+                        'company_id' => $companyId,
+                        'code' => $area['code'],
+                        'name' => $area['name'],
+                        'activity_category' => $area['activity_category'],
+                        'flow_direction' => $area['flow_direction'],
+                        'is_active' => true,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ],
+                    self::cashFlowAreas(),
+                );
+                DB::table('company_areas')->insertOrIgnore($organization);
+                DB::table('cash_flow_areas')->insertOrIgnore($cashFlows);
+                return;
+            }
             foreach (self::organizationAreas() as $area) {
                 CompanyArea::query()->firstOrCreate(
                     ['code' => $area['code']],
