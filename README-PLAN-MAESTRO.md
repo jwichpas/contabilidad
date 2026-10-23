@@ -23,7 +23,7 @@
 - **F3.2 aislamiento tenant:** validación manual en Neon DEV por el usuario, `php artisan test --testsuite=Feature --filter=Tenant`: **19/19 PASS, 78 aserciones**. También `CompanySetupAndCatalogsTest` 6/6 (44 aserciones), `TenantIsolationTest` 5/5 (15) y `TenantContextNestedTest` 3/3 (20).
 - **F3.3 empresa persistente:** el onboarding HTTP ya creó la empresa ficticia ID 4, documentada en la línea base. En lugar de duplicarla, se agregó el ensayo **solo lectura** `backend/scripts/phase3-neon-persistent-company-verify.php`. Comprobará la configuración persistida, PCGE operativo a seis dígitos, membresía ADMIN, RLS y conservación de los datos preexistentes.
 - **F3.3 validada manualmente el 23/10/2026:** `php -l` sin errores; `--plan` correcto; `--verify=contabilidad-dev` PASS: empresa ID 4 con ADMIN, settings, monedas, CIIU, tributos, áreas, flujos, auditoría, **2.966 cuentas (1.214 operativas de seis dígitos)**, RLS bloquea lectura de empresa ajena, **0 asientos**, baseline preservado. Esta verificación es de solo lectura.
-- **No cerrar F3 global:** el criterio de salida sigue incluyendo crear empresa y registrar su primer asiento por el flujo autorizado, sin SQL manual. Sigue pendiente rendimiento de onboarding y coherencia de macrosector/actividad, además del alcance de maestros y SUNAT.
+- **No cerrar F3 global aún:** el primer asiento ya está persistido mediante el flujo HTTP autorizado (F3.5). Pendientes: corregir el macrosector/CIIU de forma auditable, completar maestros y comprobar los escenarios integrales; la experiencia visual Vue del asiento sigue pendiente de aceptación.
 - Mantener el conteo del checklist como fuente única: este ensayo añade cobertura, **no aprueba automáticamente una actividad general**.
 
 ---
@@ -33,17 +33,17 @@
 - **PASS manual Neon DEV:** `php -l scripts/phase3-neon-first-journal-http.php`, `--plan` y `--probe=contabilidad-dev`.
 - Empresa persistente ID 4: apertura HTTP 201 del período; POST HTTP 201 de primer asiento bimoneda, idempotencia 200/409; una auditoría y un recibo, constraints comprobadas.
 - **ROLLBACK confirmado:** sin persistir períodos, asientos, tipos de cambio, recibos ni auditorías nuevos. Baseline preservado.
-- **Alcance:** validación transaccional reversible del primer asiento. No implica que el primer asiento esté persistido ni que F3 global esté cerrada. Pendientes: prueba persistente autorizada desde interfaz/flujo normal, revisión de coherencia sector/CIIU, completar maestros y optimizar alta PCGE.
+- **Alcance histórico de F3.4:** fue una prueba reversible que por sí sola no dejó asientos. **Posteriormente F3.5 sí persistió el asiento ID 52 por HTTP.** Siguen pendientes validación del recorrido visual Vue, coherencia sector/CIIU y maestros F3.3. El onboarding reversible ya alcanzó 17,43 s en el ensayo posterior.
 - Este hito no modifica automáticamente el contador oficial de 32 actividades del checklist.
 
 ---
 
-## F3.5 — Primer asiento ficticio persistente (preparado, no ejecutado)
+## F3.5 — Primer asiento ficticio persistente (COMMIT validado el 23/10/2026)
 
 - Publicado `backend/scripts/phase3-neon-first-journal-persist.php` para reutilizar el contrato HTTP validado F3.4 con comando explícito `--apply=contabilidad-dev`.
 - `--plan` no conecta a la base ni escribe datos. `--apply=contabilidad-dev` **confirma (COMMIT)** una apertura de período octubre 2026, un asiento PEN/USD en empresa 4, tipo de cambio, recibo idempotente y auditoría, tras comprobar las restricciones y respuesta HTTP. Nunca ejecutar en producción.
 - Antes de iniciar, exige empresa 4 activa con ADMIN, cero asientos y sin período octubre 2026. Tras escribir, verifica diferencias contra el baseline. En errores previos al COMMIT ejecuta rollback. Si falla la comprobación después del COMMIT, **no reintentar** sin inspeccionar los datos.
-- **No está probado aún en el entorno local Neon.** La persistencia requiere `php -l` y ensayo manual. La prueba anterior F3.4 continúa siendo reversible.
+- **Validación manual confirmada:** lint PHP PASS, modo plan PASS y `--apply=contabilidad-dev` PASS con `[COMMIT]` del **asiento ID 52**. La comprobación POST-COMMIT confirmó 1 período, 1 asiento con partidas, 1 FX, 1 recibo y 2 auditorías. **No volver a ejecutar este comando:** está diseñado para una sola alta. F3.4 fue un ensayo reversible realizado antes de este COMMIT.
 - La prueba no certifica la interfaz Vue ni todos los maestros; la puerta F3 global permanece abierta.
 
 ---
@@ -414,12 +414,12 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ---
 
-## 9. Orden de ejecución vigente (actualizado 22/10/2026)
+## 9. Orden de ejecución vigente (actualizado 23/10/2026)
 
-**Se prioriza trabajo funcional y validación manual.** El motor contable cuenta con pruebas manuales PASS de HTTP 201/422/403, monedas PEN/USD, contabilización analítica 94/95/79, extornos, trazabilidad, RLS y aislamiento por empresa. F2.3b–h **no equivalen al cierre total de F2.3** porque está pendiente la operación de cierre de periodo.
+**Se prioriza trabajo funcional y validación manual.** El motor contable cuenta con pruebas manuales PASS de HTTP 201/422/403, monedas PEN/USD, contabilización analítica 94/95/79, extornos, trazabilidad, RLS y aislamiento por empresa. F2.3b–h y el HTTP de cierre/apertura/reapertura/bloqueo sustentan la aprobación de la actividad F2.3 en DEV; el cierre global del proyecto sigue sujeto a F8.
 
-1. **F3.1:** migraciones SUNAT 23/24 y alta real de empresa 4 (PCGE 2.966 cuentas, 1 auditoría, 2 tributos) verificadas en Neon. **Frontend PASS:** 18/18 unitarias, typecheck y build. Falta resolver rendimiento (último POST reversible 75,27 s, meta <25 s) y clasificar con actualización auditada su CIIU 4923 actualmente etiquetado COMERCIAL. Se publicó optimización de llamadas anidadas al mismo tenant con SAVEPOINT/RLS preservados y perfil SQL detallado; **pendiente revalidar, sin repetir alta real**. [Evidencia](docs/F3-1-ACEPTACION-ALTA-REAL-NEON.md).
-2. Completar la revisión de **F3.1** (tiempo de alta y clasificación interna), continuar **F3.3** y **F4.2** con el editor único de asientos. Conservar íntegros los datos de la empresa ID 4 y los datos DEMO.
+1. **F3.1:** alta HTTP real de empresa 4 y configuración fiscal/PCGE aprobadas funcionalmente; Vue 18/18 unitarias, typecheck y build PASS. **Último POST reversible: 17,43 s / 52 SQL, objetivo de rendimiento alcanzado en ese ensayo.** Corregir de forma auditable el sector almacenado COMERCIAL para el CIIU 4923 TRANSPORTE_LOGISTICA y revalidar su ficha; no repetir alta real. [Evidencia](docs/F3-1-ACEPTACION-ALTA-REAL-NEON.md).
+2. **F3.4/F3.5** ya han pasado sus pruebas; el asiento ID 52 quedó persistido en empresa 4. Continuar la corrección del CIIU, **F3.3 maestros** y **F4.2** con el editor único de asientos. Conservar los datos de la empresa ID 4 y los datos DEMO, sin reejecutar F3.4/F3.5.
 3. Completar F4 y F5: editor único, historial con partidas automáticas, Diario/Mayor/Balance, CxC/CxP y cierre.
 4. Continuar F6 (SUNAT) y F7 (NIIF/NPIF/activos/préstamos) por módulos verificables.
 5. Aplicar **pruebas manuales de regresión** con [el procedimiento aprobado](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) antes de aceptación F8; **sin GitHub Actions**.
