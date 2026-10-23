@@ -13,10 +13,38 @@
 
 **F3.1 resuelta:** empresa 4 CIIU 4923 clasificado como `TRANSPORTE_LOGISTICA`, corrección auditada ID 83 y verificación independiente de su transición anterior/nueva. El primer asiento ficticio ID 52 se mantiene.
 
+## Primer incremento implementado en GitHub · 23/10/2026
+
+**Estado: CÓDIGO PUBLICADO, PENDIENTE REGRESIÓN MANUAL.** Sin DDL ni datos persistidos.
+
+- `GET /api/v1/company/entities`: listado tenant-local, búsqueda limitada, proyección segura que no entrega cuentas bancarias, CCI ni número de detracción.
+- `GET /api/v1/company/entities/{entityId}`: ficha del anexo bajo TenantScope; devuelve 404 ante IDs de otras empresas.
+- `POST /api/v1/company/entities`: ADMIN/CHIEF_ACCOUNTANT/ACCOUNTANT, validación de códigos de identidad contra tabla SUNAT 02, DNI de 8 dígitos y RUC de 11 (validación de **formato**, no cotejo en línea con SUNAT), UNIQUE por tenant/tipo/número, clasificación múltiple (p. ej. cliente y proveedor en **un solo registro**).
+- `PUT /api/v1/company/entities/{entityId}`: mismos roles, cambios parciales y auditoría.
+- `PATCH /api/v1/company/entities/{entityId}/deactivate`: ADMIN/CHIEF_ACCOUNTANT; desactivación lógica idempotente, nunca eliminación física.
+- **Auditoría obligatoria y atómica** en `audit_logs`: ENTITY_CREATED / ENTITY_UPDATED / ENTITY_DEACTIVATED. Las trazas no incluyen identificaciones completas ni números bancarios; si falla el INSERT de auditoría, la transacción de negocio se revierte.
+- `company_id`, UUID, estado y datos bancarios quedan **prohibidos en entradas externas** de este incremento; la futura gestión bancaria será un flujo especializado y autorizado.
+- `backend/tests/Feature/CompanyEntityMasterCrudTest.php`: escenarios de alta, doble rol, duplicados, formato, campos prohibidos, auditoría, edición, desactivación, lectura cruzada 404 y autorización 403. El harness Pest usa `DatabaseTransactions` y no debe confirmar fixtures en Neon DEV.
+
+**Validación manual pendiente desde `backend/`:**
+
+```powershell
+php -l app/Http/Controllers/Api/V1/Company/EntityMasterController.php
+php -l app/Http/Controllers/Api/V1/Company/ListEntitiesController.php
+php -l tests/Feature/CompanyEntityMasterCrudTest.php
+php artisan test --filter=CompanyEntityMasterCrudTest
+php artisan test --filter=CompanySetupAndCatalogsTest
+php artisan test --testsuite=Feature --filter=Tenant
+```
+
+No declarar F3.3 cerrada antes de las pruebas de aislamiento, esquema extendido por ejercicio, UI de anexos y demás maestros.
+
+---
+
 ## Infraestructura existente que debe reutilizarse
 
 - `entities`: un directorio maestro multiempresa con documento, identificación, razón social, dirección, país, cliente/proveedor/trabajador/banco/accionista/tributos como banderas, datos bancarios y condiciones tributarias. Ya cuenta con FK al documento de identidad SUNAT y a institución financiera SUNAT, UNIQUE `(company_id, identity_document_type_code, tax_id)` y tenant scope Eloquent.
-- `GET /api/v1/company/entities`: controlador Laravel existente para lectura con filtros `is_client`, `is_supplier`, `is_employee`, `is_financial_institution`, `is_tax_authority` y búsqueda. Actualmente no se identificó un endpoint POST de entidades en `routes/api.php`.
+- `GET /api/v1/company/entities`: controlador Laravel para lectura filtrada con protección de campos bancarios. **Desde este incremento** también existen rutas POST/PUT/PATCH y GET detalle de anexos, pendientes de regresión Neon DEV.
 - `company_areas`, `cost_centers`, `cash_flow_areas`: tablas persistidas y configuradas para las cuatro empresas; evitar instalar duplicados.
 - `company_settings`: conserva régimen, forma legal, año inicial, año de ingresos de referencia y cifra de ingresos inicial, pero **no** un historial separado por fecha de vigencia y ejercicio.
 - No existen actualmente tablas públicas con nombres `bank_accounts`, `workers`, `employees`, `subjournals` o equivalente claramente específico: antes de crear nuevas tablas, revisar si los requerimientos se cubren mediante `entities`, `company_settings` y metadatos del Libro Diario. No asumir que la ausencia de una tabla implica por sí sola carencia funcional de todo el dominio.
@@ -34,4 +62,4 @@
 
 La actividad del Plan Maestro **permanece sin marcar** hasta comprobar desde API/UI: entidades + dimensiones relevantes, permisos y aislamiento, historial fiscal por ejercicio, casos de los sectores requeridos y al menos un asiento conectado al maestro bajo validaciones de cuenta. El asiento 52 ya prueba el motor POST, no el ciclo de terceros y maestros.
 
-**Siguiente paso de implementación:** CRUD seguro de `entities` sobre esquema actual (sin DDL nuevo), con pruebas negativas de aislamiento y duplicidad en la única rama Neon DEV; luego su interfaz Vue y pruebas de aceptación.
+**Siguiente control:** ejecución manual del CRUD y pruebas negativas contra Neon DEV mediante `DatabaseTransactions` (rollback), corrección de incidencias y posterior implementación/aceptación de la interfaz Vue.
