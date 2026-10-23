@@ -49,3 +49,35 @@ it('restores outer tenant on failure inside nested savepoint', function (): void
     expect($context->getCompanyId())->toBeNull();
     expect(DB::selectOne('SELECT public.app_current_company_id() AS id')->id)->toBeNull();
 });
+
+it('reuses a verified same-tenant RLS context but retains nested rollback isolation', function (): void {
+    $context = app(TenantContext::class);
+
+    $context->run(401, function () use ($context): void {
+        DB::select("SELECT set_config('app.f31_savepoint_marker', 'outer', true)");
+
+        try {
+            $context->run(401, function () use ($context): void {
+                expect($context->getCompanyId())->toBe(401);
+                expect((string) DB::selectOne('SELECT public.app_current_company_id() AS id')->id)
+                    ->toBe('401');
+
+                DB::select("SELECT set_config('app.f31_savepoint_marker', 'inner', true)");
+                throw new RuntimeException('Inner same-company transaction must roll back');
+            });
+        } catch (RuntimeException $exception) {
+            expect($exception->getMessage())->toBe(
+                'Inner same-company transaction must roll back'
+            );
+        }
+
+        expect((string) DB::selectOne(
+            "SELECT current_setting('app.f31_savepoint_marker', true) AS marker"
+        )->marker)->toBe('outer');
+        expect((string) DB::selectOne('SELECT public.app_current_company_id() AS id')->id)
+            ->toBe('401');
+    });
+
+    expect($context->getCompanyId())->toBeNull();
+    expect(DB::selectOne('SELECT public.app_current_company_id() AS id')->id)->toBeNull();
+});
