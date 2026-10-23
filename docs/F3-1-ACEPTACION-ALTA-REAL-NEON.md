@@ -49,6 +49,18 @@ La primera ejecución manual de `php artisan test tests/Unit/SunatRucReferenceDa
 
 Se configuró `uses(\\Tests\\TestCase::class);` de manera **local a los dos archivos** `SunatRucReferenceDataTest.php` y `CompanyOnboardingRulesTest.php`. No se utilizó `DatabaseTransactions`, no se ejecuta SQL y no se alteró el `tests/Pest.php` global. **Reejecución confirmada por el usuario:** ambas suites **PASS** (3/525 y 3/12). El problema de inicialización de Laravel queda resuelto; no hubo escrituras en Neon.
 
+### Incidencia de ejecución 23/10/2026 y segunda optimización (no verificada)
+
+La nueva ejecución del usuario confirmó:
+
+- `pnpm typecheck`: **FAIL TS6133** en `CompanyOnboardingWizard.vue` porque `activity` era una variable sin usar en `for (const [index, activity] of draft.activities.entries())`. Se publicó la corrección a `for (const index of draft.activities.keys())`. **Typecheck/build aún pendientes**.
+- `pnpm test:unit`: **18/18 PASS**, incluidas validaciones SUNAT y el mapeo CIIU→sector.
+- `phase3-company-onboarding-preflight.php --check`: **PASS**: 24 migraciones, 51/417/38, hashes, FK y FORCE RLS; cuatro empresas, nueve membresías y dos códigos tributarios asignados.
+- `phase3-neon-company-onboarding-http.php --probe=contabilidad-dev`: **PASS funcional** (capability, catálogos, 3 errores 422 por código falso, alta EIRL/RMT con PCGE, auditoría, rollback y baseline). **Duración POST: 116,11 segundos, fuera de presupuesto**.
+- Perfil observado: **146 operaciones con 107,51 s de tiempo de consultas/ida-vuelta**; 31 que incluyen cuentas PCGE = 26,79 s, 5 plantillas PCGE = 7,28 s, otras 110 = 73,43 s; tiempo restante 8,60 s. Esas duraciones de `QueryExecuted` **incluyen latencia de red/driver**, no son evidencia exclusiva de tiempo CPU en PostgreSQL.
+- **Corrección publicada**: seis áreas y nueve flujos ahora se insertan en dos sentencias dentro de la transacción para nuevas empresas, evitando `firstOrCreate` por fila; la clase 9 y sus dos centros de costo usan seis INSERT por nivel más un INSERT de centros, sin deshabilitar integridad ni FORCE RLS. El camino anterior continúa para empresas preexistentes. El perfilador separa ahora `operational_defaults`, `cost_centers` y `tenant_context`.
+- **Pendiente:** aprobar PHP lint, Vue typecheck/build y **repetir una sola vez el ensayo reversible medido**. No se puede afirmar mejoría hasta que el usuario proporcione la nueva medición. No efectuar un alta real ni borrar los datos existentes.
+
 ## Pruebas de regresión (sin nuevas migraciones)
 
 ```powershell
