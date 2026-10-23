@@ -26,7 +26,7 @@
 - `company_id`, UUID, estado y datos bancarios quedan **prohibidos en entradas externas** de este incremento; la futura gestión bancaria será un flujo especializado y autorizado.
 - `backend/tests/Feature/CompanyEntityMasterCrudTest.php`: escenarios de alta, doble rol, duplicados, formato, campos prohibidos, auditoría, edición, desactivación, lectura cruzada 404 y autorización 403. El harness Pest usa `DatabaseTransactions` y no debe confirmar fixtures en Neon DEV.
 
-**Validación manual pendiente desde `backend/`:**
+**Comandos históricos de regresión backend (ejecutados y aprobados el 23/10/2026):**
 
 ```powershell
 php -l app/Http/Controllers/Api/V1/Company/EntityMasterController.php
@@ -50,14 +50,14 @@ No declarar F3.3 cerrada antes de las pruebas de aislamiento, esquema extendido 
 - `php artisan test --testsuite=Feature --filter=Tenant`: **20/20 PASS, 92 aserciones**; una prueba del CRUD se repite dentro de esa suite y no se suma como ejecución independiente.
 - `verify-plan-master-checklist.php --check`: PASS 8/32, 24 pendientes; este verificador solo certifica consistencia documental.
 
-**Integración Vue publicada, pendiente aceptación local:**
+**Integración Vue publicada, typecheck/unit/build aprobados; aceptación visual con sesión real pendiente:**
 
 - `frontend/src/modules/company/views/EntityMasterView.vue`: directorio responsivo, búsqueda/paginación, creación/edición en un único formulario y confirmación de desactivación lógica.
 - `frontend/src/modules/company/types/entityMaster.types.ts` y métodos del cliente HTTP existente: tipado y encabezado `X-Company-Id` / Sanctum heredados del contexto global.
 - `App.vue`, `AppSidebar.vue`, `AppHeader.vue` y `navigation.types.ts`: nueva navegación `#anexos`, sin repetir selector de empresa. Los roles ADMIN/CHIEF_ACCOUNTANT/ACCOUNTANT pueden escribir; ADMIN/CHIEF_ACCOUNTANT pueden desactivar; el servidor también exige esos roles.
 - `frontend/scripts/entity-master.test.mjs`: pruebas estáticas de navegación, selección global de empresa, rutas API, exclusión de datos bancarios y manejo de 422; incorporadas a `npm run test:unit`.
 
-**Pendiente de ejecución local** desde `frontend/`:
+**Validación local ejecutada y aprobada** desde `frontend/` (21/21 tests; Vite 6.4.4, build 17,50 s):
 
 ```powershell
 npm run typecheck
@@ -65,7 +65,7 @@ npm run test:unit
 npm run build
 ```
 
-La prueba visual funcional con sesión real, permisos y cambios de tenant continúa pendiente. No marcar F3.3 como completa: también falta historial tributario por ejercicio, dimensiones y escenarios sectoriales.
+Las pruebas estáticas/unitarias y compilación están aprobadas. La prueba visual funcional con sesión real, permisos y cambios de tenant continúa pendiente. No marcar F3.3 como completa: también falta historial tributario por ejercicio, dimensiones y escenarios sectoriales.
 
 ---
 
