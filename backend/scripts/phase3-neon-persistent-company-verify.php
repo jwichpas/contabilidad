@@ -11,7 +11,7 @@ if ($argc !== 2 || ! in_array($mode, ['--plan', '--verify=contabilidad-dev'], tr
 }
 if ($mode === '--plan') {
     echo "[PLAN] F3.3 audita la empresa persistente ID=4 sin escribir datos.\n";
-    echo "[PLAN] Comprueba onboarding, PCGE de seis dígitos, RLS y ausencia de movimientos.\n";
+    echo "[PLAN] Comprueba onboarding, PCGE de seis dígitos, RLS y reporta asientos existentes sin exigir cero.\n";
     exit(0);
 }
 
