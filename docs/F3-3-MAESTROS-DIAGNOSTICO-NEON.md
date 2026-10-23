@@ -69,6 +69,38 @@ La prueba visual funcional con sesión real, permisos y cambios de tenant contin
 
 ---
 
+## Historial fiscal por ejercicio — primer incremento de código (no migrado)
+
+**Estado: IMPLEMENTACIÓN PUBLICADA EN `main`, PENDIENTE DE MIGRACIÓN Y PRUEBAS MANUALES.** No se ejecutó DDL ni se modificó `company_settings` en Neon. Solo se inspeccionaron catálogos y esquema mediante consultas SELECT.
+
+- Nueva migración Laravel `2026_10_23_140000_create_company_fiscal_profiles.php`: tabla `company_fiscal_profiles` con **(empresa, ejercicio, revisión, fecha efectiva)**, régimen, forma jurídica, ingresos de referencia, ingresos anuales NUMERIC(20,2), IGV exacto, SIRE/PLE, indicadores tributarios, motivo y usuario autor.
+- `FORCE ROW LEVEL SECURITY`, política tenant fail-closed, INSERT/SELECT a `app_backend`, sin privilegios UPDATE/DELETE y trigger SQL que impide mutaciones históricas. Índices UNIQUE por empresa/ejercicio/revisión y empresa/ejercicio/fecha efectiva.
+- `GET /api/v1/company/fiscal-profiles?year=2026`: consulta tenant-local; permite al rol AUDITOR consultar solo las empresas donde mantiene membresía activa.
+- `POST /api/v1/company/fiscal-profiles`: requiere ADMIN/CHIEF_ACCOUNTANT, valida vigencia y régimen, crea revisiones **solo en orden cronológico**, audita obligatoriamente en la misma transacción y rechaza cambios retrospectivos que afecten períodos CLOSED o LOCKED.
+- El modelo Eloquent `CompanyFiscalProfile` hereda `BelongsToTenant`; **no** se infieren ni crean ejercicios históricos durante la migración. La API no modifica el régimen actual de `company_settings`.
+- `CompanyFiscalProfileTest.php`: casos de primera versión y revisión, historial filtrado, permisos entre empresas, duplicidad temporal, inmutabilidad y cierre contable. Las pruebas usan `DatabaseTransactions` y no deben dejar registros.
+
+**Secuencia de validación en la rama actual `contabilidad-dev`** desde `backend/`. Ejecutar migración **una sola vez**, después de preflight:
+
+```bash
+php scripts/phase2-neon-connection-diagnostic.php --check
+php -l database/migrations/2026_10_23_140000_create_company_fiscal_profiles.php
+php -l app/Models/CompanyFiscalProfile.php
+php -l app/Http/Controllers/Api/V1/Company/CompanyFiscalProfileController.php
+php -l tests/Feature/CompanyFiscalProfileTest.php
+php artisan migrate:status --database=pgsql_migrations
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_23_140000_create_company_fiscal_profiles.php --force
+php artisan test --filter=CompanyFiscalProfileTest
+php artisan test --testsuite=Feature --filter=Tenant
+php scripts/verify-plan-master-checklist.php --check
+```
+
+**No ejecutar en `production` ni otra rama Neon; no crear ramas adicionales.** La política de ejecución manual está vigente: si aparece un error tras el DDL, documentar el fallo y corregir en GitHub antes de reintentar. No inventar entradas fiscales de la empresa 4; el historial se inicia mediante un acto declarativo autorizado, no un seed automático.
+
+**Alcance pendiente:** incorporar vista de historial fiscal en Vue, vigencia SUNAT por régimen/ejercicio y validación de escenarios sectoriales. No marcar F3.3 completa con la migración únicamente.
+
+---
+
 ## Infraestructura existente que debe reutilizarse
 
 - `entities`: un directorio maestro multiempresa con documento, identificación, razón social, dirección, país, cliente/proveedor/trabajador/banco/accionista/tributos como banderas, datos bancarios y condiciones tributarias. Ya cuenta con FK al documento de identidad SUNAT y a institución financiera SUNAT, UNIQUE `(company_id, identity_document_type_code, tax_id)` y tenant scope Eloquent.
