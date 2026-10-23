@@ -222,7 +222,7 @@ async function loadCatalogs(): Promise<void> {
     contributorTypes.value = types;
     ciiuClasses.value = classes;
     sunatTaxCodes.value = taxes;
-    for (const [index, activity] of draft.activities.entries()) chooseCiiu(index);
+    for (const index of draft.activities.keys()) chooseCiiu(index);
     currencies.value = currencyList.filter(c => c.is_active);
     templates.value = pcgeList;
     canCreateOnServer.value = capability.can_create &&
