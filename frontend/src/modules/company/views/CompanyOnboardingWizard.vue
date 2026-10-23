@@ -8,7 +8,7 @@ import type { CurrencyItem } from '@/modules/accounting/types/catalogs.types';
 import type { EconomicSector, LegalForm } from '../types/companySettings.types';
 import {
   COMPANY_ONBOARDING_DRAFT_KEY, companyOnboardingPayload, isValidPeruvianRuc,
-  newCompanyOnboardingDraft, onboardingIsComplete, onboardingStepErrors,
+  newCompanyOnboardingDraft, onboardingIsComplete, onboardingStepErrors, suggestedSectorForCiiu,
   type CompanyOnboardingDraft, type CompanyOnboardingResult, type PcgeTemplateSummary,
   type TaxRegime, type SunatContributorType, type SunatCiiuClass, type SunatTaxCode,
 } from '../types/companyOnboarding.types';
@@ -112,7 +112,11 @@ function matchingCiiu(index: number, selected: string): readonly SunatCiiuClass[
 function chooseCiiu(index: number): void {
   const activity = draft.activities[index];
   const official = ciiuClasses.value.find(x => x.code === activity?.ciiu_code);
-  if (activity) activity.description = official?.name ?? '';
+  if (activity) {
+    activity.description = official?.name ?? '';
+    const suggested = suggestedSectorForCiiu(activity.ciiu_code);
+    if (suggested) activity.sector_code = suggested;
+  }
 }
 function toggleTaxCode(code: string, event: Event): void {
   const checked = (event.target as HTMLInputElement).checked;
@@ -389,9 +393,16 @@ onMounted(() => {
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
               <label class="block text-xs font-medium text-foreground">Sector económico
-                <select v-model="activity.sector_code" :class="uiField" class="mt-1">
+                <select v-model="activity.sector_code" :class="uiField" class="mt-1"
+                  :disabled="suggestedSectorForCiiu(activity.ciiu_code) !== null">
                   <option v-for="sector in sectors" :key="sector.value" :value="sector.value">{{ sector.label }}</option>
                 </select>
+                <small v-if="suggestedSectorForCiiu(activity.ciiu_code)" class="mt-1 block text-muted">
+                  Sector interno asignado automáticamente según el CIIU seleccionado.
+                </small>
+                <small v-if="showError(`sector_${index}`)" class="mt-1 block text-red-600">
+                  {{ showError(`sector_${index}`) }}
+                </small>
               </label>
               <label class="block text-xs font-medium text-foreground">CIIU Rev. 4 (cuatro dígitos)
                 <input v-model="ciiuQueries[index]" type="search" :class="uiField" class="mt-1 mb-1" placeholder="Buscar actividad por código o nombre…" />
