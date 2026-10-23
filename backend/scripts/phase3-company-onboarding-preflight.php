@@ -55,8 +55,10 @@ try{
          CASE WHEN to_regclass('public.company_tax_codes') IS NULL THEN 0 ELSE 1 END AS company_tax_table
        SQL);
     if(!$s||$s->db!=='neondb'||$s->actor!=='neondb_owner'
-        ||intdiv((int)$s->pg,10000)!==18||(int)$s->companies!==3
-        ||(int)$s->users!==3||(int)$s->memberships!==8
+        ||intdiv((int)$s->pg,10000)!==18
+        ||(int)$s->users!==3
+        ||(int)$s->companies < ((int)$s->migrations===24 ? 4 : 3)
+        ||(int)$s->memberships < ((int)$s->migrations===24 ? 9 : 8)
         ||(int)$s->templates!==3401||(int)$s->periods!==1
         ||(int)$s->jan_open!==1||(int)$s->journals!==0){
         throw new \RuntimeException('Baseline F3.1 no coincide.');
@@ -80,7 +82,7 @@ try{
                   (SELECT count(*) FROM public.company_tax_codes)::integer AS assignments
            SQL);
         if(!$counts || (int)$counts->types!==51 || (int)$counts->ciiu!==417
-            ||(int)$counts->taxes!==38||(int)$counts->versions!==3||(int)$counts->assignments!==0){
+            ||(int)$counts->taxes!==38||(int)$counts->versions!==3||(int)$counts->assignments<2){
             throw new \RuntimeException('Catálogos SUNAT RUC incompletos');
         }
         $security=$admin->selectOne(<<<'SQL'
@@ -120,7 +122,22 @@ try{
             $verified++;
         }
         if($verified!==3)throw new \RuntimeException('Faltan hashes de catálogo global');
-        echo "[PASS] F3.1: 24 migraciones, 3 catálogos SUNAT (51/417/38), empresa DEV intacta.\n";
+        $company=$admin->selectOne(<<<'SQL'
+            SELECT
+              (SELECT count(*) FROM public.companies WHERE id=4 AND tax_id='20610141588')::integer AS company_exists,
+              (SELECT count(*) FROM public.company_user WHERE company_id=4 AND role='ADMIN')::integer AS admins,
+              (SELECT count(*) FROM public.accounting_accounts WHERE company_id=4)::integer AS accounts,
+              (SELECT count(*) FROM public.company_currencies WHERE company_id=4)::integer AS currencies,
+              (SELECT count(*) FROM public.company_tax_codes WHERE company_id=4)::integer AS taxes,
+              (SELECT count(*) FROM public.audit_logs WHERE company_id=4 AND event_type='COMPANY_ONBOARDED')::integer AS created_audit
+            SQL);
+        if(!$company||(int)$company->company_exists!==1||(int)$company->admins!==1
+            ||(int)$company->accounts!==2966||(int)$company->currencies!==2
+            ||(int)$company->taxes!==2||(int)$company->created_audit!==1){
+            throw new \RuntimeException('Alta real de empresa 4 o PCGE no está íntegra');
+        }
+        echo "[PASS] F3.1: 24 migraciones y 3 catálogos SUNAT (51/417/38).\n";
+        echo "[PASS] Alta web persistente: empresa 4, 2966 cuentas, ADMIN, monedas, tributos y auditoria.\n";
         $ok=true;
     }else{
         throw new \RuntimeException('Migracion parcial/desconocida: bloquear.');
