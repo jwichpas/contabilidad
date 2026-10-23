@@ -69,9 +69,9 @@ Las pruebas estáticas/unitarias y compilación están aprobadas. La prueba visu
 
 ---
 
-## Historial fiscal por ejercicio — primer incremento de código (no migrado)
+## Historial fiscal por ejercicio — implementación y validación
 
-**Estado: IMPLEMENTACIÓN PUBLICADA EN `main`, PENDIENTE DE MIGRACIÓN Y PRUEBAS MANUALES.** No se ejecutó DDL ni se modificó `company_settings` en Neon. Solo se inspeccionaron catálogos y esquema mediante consultas SELECT.
+**Estado vigente: migración aplicada y pruebas Feature/frontend aprobadas según evidencia manual del usuario.** La aceptación funcional con sesión Vue sigue pendiente. Ver evidencia al final. La API conserva `company_settings`.
 
 - Nueva migración Laravel `2026_10_23_140000_create_company_fiscal_profiles.php`: tabla `company_fiscal_profiles` con **(empresa, ejercicio, revisión, fecha efectiva)**, régimen, forma jurídica, ingresos de referencia, ingresos anuales NUMERIC(20,2), IGV exacto, SIRE/PLE, indicadores tributarios, motivo y usuario autor.
 - `FORCE ROW LEVEL SECURITY`, política tenant fail-closed, INSERT/SELECT a `app_backend`, sin privilegios UPDATE/DELETE y trigger SQL que impide mutaciones históricas. Índices UNIQUE por empresa/ejercicio/revisión y empresa/ejercicio/fecha efectiva.
@@ -80,7 +80,7 @@ Las pruebas estáticas/unitarias y compilación están aprobadas. La prueba visu
 - El modelo Eloquent `CompanyFiscalProfile` hereda `BelongsToTenant`; **no** se infieren ni crean ejercicios históricos durante la migración. La API no modifica el régimen actual de `company_settings`.
 - `CompanyFiscalProfileTest.php`: casos de primera versión y revisión, historial filtrado, permisos entre empresas, duplicidad temporal, inmutabilidad y cierre contable. Las pruebas usan `DatabaseTransactions` y no deben dejar registros.
 
-**Secuencia de validación en la rama actual `contabilidad-dev`** desde `backend/`. Ejecutar migración **una sola vez**, después de preflight:
+**Secuencia histórica de instalación y validación (ya realizada; no repetir la migración)** en `contabilidad-dev`, desde `backend/`:
 
 ```bash
 php scripts/phase2-neon-connection-diagnostic.php --check
@@ -97,7 +97,7 @@ php scripts/verify-plan-master-checklist.php --check
 
 **No ejecutar en `production` ni otra rama Neon; no crear ramas adicionales.** La política de ejecución manual está vigente: si aparece un error tras el DDL, documentar el fallo y corregir en GitHub antes de reintentar. No inventar entradas fiscales de la empresa 4; el historial se inicia mediante un acto declarativo autorizado, no un seed automático.
 
-**Alcance pendiente:** incorporar vista de historial fiscal en Vue, vigencia SUNAT por régimen/ejercicio y validación de escenarios sectoriales. No marcar F3.3 completa con la migración únicamente.
+**Alcance pendiente:** aceptación funcional de la vista Vue ya publicada, vigencia SUNAT por régimen/ejercicio y validación de escenarios sectoriales. No marcar F3.3 completa con la migración únicamente.
 
 ---
 
@@ -123,3 +123,31 @@ php scripts/verify-plan-master-checklist.php --check
 La actividad del Plan Maestro **permanece sin marcar** hasta comprobar desde API/UI: entidades + dimensiones relevantes, permisos y aislamiento, historial fiscal por ejercicio, casos de los sectores requeridos y al menos un asiento conectado al maestro bajo validaciones de cuenta. El asiento 52 ya prueba el motor POST, no el ciclo de terceros y maestros.
 
 **Siguiente control actualizado:** ejecutar typecheck/test:unit/build del nuevo módulo Vue, verificar lectura/escritura con distintos roles y cambio de empresa; después avanzar con dimensiones e historial fiscal.
+
+
+## Historial fiscal — evidencia manual recibida el 23/10/2026
+
+La migración fiscal **ya está aplicada en Neon DEV** según la validación comunicada por el usuario. **No repetir la migración.** El módulo Vue fue publicado en el commit `6c74f5ff9ef15f4ea894b689fd3d1892ab61723c`, ruta `#historial-fiscal`.
+
+- Backend: `CompanyFiscalProfileTest` **4/4 PASS, 36 aserciones**, según salida manual aportada; historial, fechas/revisiones, aislamiento, roles, períodos cerrados e inmutabilidad.
+- Frontend: `pnpm test:unit` **24/24 PASS**; las tres pruebas nuevas son estáticas de integración y no ejecutan interacción del navegador.
+- `pnpm build`: **PASS**, incluye `vue-tsc -b`; Vite 6.4.4, 1.621 módulos, 6,80 s. No se reportó una ejecución separada de `pnpm typecheck` en esta última salida.
+- `php scripts/verify-plan-master-checklist.php --check`: **PASS**, 8/32 aprobadas y 24 pendientes. Solo verifica coherencia documental.
+
+### Aceptación funcional pendiente en Vue
+
+Usar datos ficticios y una sesión autorizada en la rama de desarrollo existente. Una revisión fiscal guardada es inmutable: elegir antes una empresa DEMO y valores de prueba revisados; no inventar el historial de empresa 4.
+
+| Paso | Acción | Resultado esperado |
+|---|---|---|
+| 1 | Abrir `#historial-fiscal` con ADMIN y empresa DEMO seleccionada globalmente | Consulta del ejercicio; sin selector local duplicado |
+| 2 | Cambiar ejercicio y después empresa desde el selector global | Solo historial de la empresa/ejercicio activos; sin filas de la selección anterior |
+| 3 | Preparar una revisión válida y cancelar la confirmación | Ninguna revisión creada |
+| 4 | Revisar empresa, ejercicio, fecha y motivo; confirmar una única revisión ficticia | Alta correcta y listado actualizado; recargar conserva la revisión |
+| 5 | Consultar con un rol de lectura autorizado que tenga membresía en esa empresa | Lectura permitida; sin creación, edición ni eliminación |
+| 6 | Consultar con CHIEF_ACCOUNTANT | Creación disponible con confirmación obligatoria |
+| 7 | Volver al directorio `#anexos` y cambiar empresa | El selector global sigue gobernando ambos módulos |
+
+Registrar rol, empresa, ejercicio, resultado y errores sin publicar tokens ni credenciales. No declarar estos pasos PASS hasta ejecutarlos. Las negativas HTTP de fechas, tenant y períodos cerrados ya están cubiertas por la prueba Feature reportada; la compilación no reemplaza esta aceptación visual.
+
+**Próximo trabajo:** aceptación funcional de anexos/historial y revisión de dimensiones por cuenta, centros de costo y escenarios multisectoriales. **F3.3 permanece pendiente y el total oficial sigue en 8/32 (25%).**
