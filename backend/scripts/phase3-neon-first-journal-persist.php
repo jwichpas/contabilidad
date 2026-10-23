@@ -11,8 +11,8 @@ if ($argc !== 2 || ! in_array($mode, ['--plan', '--apply=contabilidad-dev'], tru
     fwrite(STDERR, "[USO] --plan | --apply=contabilidad-dev\n"); exit(2);
 }
 if ($mode === '--plan') {
-    echo "[PLAN] F3.5: empresa persistente 4, apertura HTTP de periodo y asiento PEN/USD balanceado.\n";
-    echo "[PLAN] Verifica 201, idempotencia 200/409, auditoria, RLS y rollback total.\n";
+    echo "[PLAN] F3.5: empresa persistente 4, apertura y asiento PEN/USD que se guardaran permanentemente en DEV.\n";
+    echo "[PLAN] Verifica HTTP 201, idempotencia 200/409, auditoria y constraints antes de COMMIT.\n";
     echo "[PLAN] La opción apply persiste periodo, asiento, FX, auditoria y recibo de prueba.\n"; exit(0);
 }
 $root = dirname(__DIR__);
