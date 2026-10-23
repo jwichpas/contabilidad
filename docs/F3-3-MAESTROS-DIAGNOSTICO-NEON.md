@@ -15,7 +15,7 @@
 
 ## Primer incremento implementado en GitHub · 23/10/2026
 
-**Estado: CÓDIGO PUBLICADO, PENDIENTE REGRESIÓN MANUAL.** Sin DDL ni datos persistidos.
+**Estado de esta sección:** fecha de publicación inicial; la regresión manual del backend fue aprobada posteriormente (ver bloque de validación más abajo). Sin DDL ni datos persistidos.
 
 - `GET /api/v1/company/entities`: listado tenant-local, búsqueda limitada, proyección segura que no entrega cuentas bancarias, CCI ni número de detracción.
 - `GET /api/v1/company/entities/{entityId}`: ficha del anexo bajo TenantScope; devuelve 404 ante IDs de otras empresas.
@@ -41,6 +41,34 @@ No declarar F3.3 cerrada antes de las pruebas de aislamiento, esquema extendido 
 
 ---
 
+## Validación del CRUD y vista de anexos — 23/10/2026
+
+**Backend APROBADO por ejecución manual aportada por el usuario:**
+
+- `CompanyEntityMasterCrudTest`: **4/4 tests PASS, 51 aserciones** (crear, duplicidad, editar/desactivar, auditoría, seguridad RLS y permisos).
+- `CompanySetupAndCatalogsTest`: **6/6 PASS, 44 aserciones**.
+- `php artisan test --testsuite=Feature --filter=Tenant`: **20/20 PASS, 92 aserciones**; una prueba del CRUD se repite dentro de esa suite y no se suma como ejecución independiente.
+- `verify-plan-master-checklist.php --check`: PASS 8/32, 24 pendientes; este verificador solo certifica consistencia documental.
+
+**Integración Vue publicada, pendiente aceptación local:**
+
+- `frontend/src/modules/company/views/EntityMasterView.vue`: directorio responsivo, búsqueda/paginación, creación/edición en un único formulario y confirmación de desactivación lógica.
+- `frontend/src/modules/company/types/entityMaster.types.ts` y métodos del cliente HTTP existente: tipado y encabezado `X-Company-Id` / Sanctum heredados del contexto global.
+- `App.vue`, `AppSidebar.vue`, `AppHeader.vue` y `navigation.types.ts`: nueva navegación `#anexos`, sin repetir selector de empresa. Los roles ADMIN/CHIEF_ACCOUNTANT/ACCOUNTANT pueden escribir; ADMIN/CHIEF_ACCOUNTANT pueden desactivar; el servidor también exige esos roles.
+- `frontend/scripts/entity-master.test.mjs`: pruebas estáticas de navegación, selección global de empresa, rutas API, exclusión de datos bancarios y manejo de 422; incorporadas a `npm run test:unit`.
+
+**Pendiente de ejecución local** desde `frontend/`:
+
+```powershell
+npm run typecheck
+npm run test:unit
+npm run build
+```
+
+La prueba visual funcional con sesión real, permisos y cambios de tenant continúa pendiente. No marcar F3.3 como completa: también falta historial tributario por ejercicio, dimensiones y escenarios sectoriales.
+
+---
+
 ## Infraestructura existente que debe reutilizarse
 
 - `entities`: un directorio maestro multiempresa con documento, identificación, razón social, dirección, país, cliente/proveedor/trabajador/banco/accionista/tributos como banderas, datos bancarios y condiciones tributarias. Ya cuenta con FK al documento de identidad SUNAT y a institución financiera SUNAT, UNIQUE `(company_id, identity_document_type_code, tax_id)` y tenant scope Eloquent.
@@ -62,4 +90,4 @@ No declarar F3.3 cerrada antes de las pruebas de aislamiento, esquema extendido 
 
 La actividad del Plan Maestro **permanece sin marcar** hasta comprobar desde API/UI: entidades + dimensiones relevantes, permisos y aislamiento, historial fiscal por ejercicio, casos de los sectores requeridos y al menos un asiento conectado al maestro bajo validaciones de cuenta. El asiento 52 ya prueba el motor POST, no el ciclo de terceros y maestros.
 
-**Siguiente control:** ejecución manual del CRUD y pruebas negativas contra Neon DEV mediante `DatabaseTransactions` (rollback), corrección de incidencias y posterior implementación/aceptación de la interfaz Vue.
+**Siguiente control actualizado:** ejecutar typecheck/test:unit/build del nuevo módulo Vue, verificar lectura/escritura con distintos roles y cambio de empresa; después avanzar con dimensiones e historial fiscal.
