@@ -52,7 +52,6 @@ final readonly class GetCompanySettingsController
             $usd = Currency::query()->where('code', 'USD')->first();
 
             $settings = CompanySetting::query()->create([
-                'company_id' => $companyId,
                 'base_currency_id' => $pen?->id,
                 'secondary_currency_id' => $usd?->id,
                 'tax_regime' => 'GENERAL',
