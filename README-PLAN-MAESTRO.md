@@ -1,6 +1,6 @@
 # Plan maestro, hoja de ruta e hitos — Sistema Contable
 
-> **Documento rector vigente · Actualizado 22/10/2026 · Versión 2.0**  
+> **Documento rector vigente · Actualizado 23/10/2026 · Versión 2.1**  
 > Repositorio: `jwichpas/contabilidad` · Rama única: `main` · Base de desarrollo: **Neon PostgreSQL 18 / contabilidad-dev**.
 >
 > **Avance verificable: 7/32 actividades completas (22%).** El checklist de la [sección 10](#10-checklist-de-seguimiento) es la **fuente única** del conteo. Se distinguió expresamente entre una prueba/subetapa aprobada y una actividad amplia todavía pendiente.
@@ -11,7 +11,9 @@
 >
 > **Decisión: NO utilizar GitHub Actions.** Los dos workflows fueron retirados de `main`; las pruebas se ejecutan **manualmente** en Windows/PowerShell/PHP/Neon DEV y PostgreSQL Docker desechable. Procedimiento y resultados en [Validación manual y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md). **No hay habilitación automática de matrices ni uso de datos reales.**
 >
-> **Estado de Neon verificado 22/10/2026:** **24 migraciones**, **4 empresas** (tres DEMO y TRANSPORTES URVISUR EIRL, ID 4, alta HTTP 201 confirmada), **9 membresías**, **3 matrices DRAFT / 0 ACTIVE**. La nueva empresa tiene 2.966 cuentas PCGE (1.214 operativas de seis dígitos), 2 monedas, 6 áreas, 9 flujos NIC 7, dos códigos tributarios y una auditoría de alta. El período DEMO A enero 2026 sigue OPEN; cero asientos registrados. **Rendimiento POST de 45,97 s y un macrosector incoherente en la actividad de empresa 4 permanecen como incidencias documentadas.**
+> **Línea base histórica del 22/10/2026:** **24 migraciones**, **4 empresas** (tres DEMO y TRANSPORTES URVISUR EIRL, ID 4, alta HTTP 201 confirmada), **9 membresías**, **3 matrices DRAFT / 0 ACTIVE**. La nueva empresa tiene 2.966 cuentas PCGE (1.214 operativas de seis dígitos), 2 monedas, 6 áreas, 9 flujos NIC 7, dos códigos tributarios y una auditoría de alta. El período DEMO A enero 2026 sigue OPEN; cero asientos registrados. **Rendimiento POST de 45,97 s y un macrosector incoherente en la actividad de empresa 4 permanecen como incidencias documentadas.**
+>
+> **Última evidencia 23/10/2026 (Neon DEV):** F3.5 con COMMIT del primer asiento ficticio **ID 52**, empresa 4: octubre 2026 OPEN, una tasa FX, un recibo idempotente y dos auditorías nuevas. Comprobación post-COMMIT PASS. F3.4 fue reversible con ROLLBACK. F3.3 comprobó 2.966 cuentas, 1.214 operativas. El onboarding reversible F3.1 más reciente midió **17,43 s / 52 SQL** (cumplió objetivo orientativo menor de 25 s). Pendiente: corregir de modo auditable sector COMERCIAL vs TRANSPORTE_LOGISTICA para CIIU 4923 de empresa 4; también completar maestros F3.3 del checklist.
 >
 > El registro de notas históricas que antes se acumulaba en el encabezado y debajo del checklist fue preservado en [Historial del plan](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md). Los estados antiguos del archivo no reemplazan el estado vigente.
 
@@ -428,7 +430,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ## 10. Checklist de seguimiento
 
-> **Estado reconciliado a 22/10/2026: 7/32 actividades aprobadas (22%).** El total incluye todas las casillas F0.1–F8.3, incluidas F6.4 y F7.0–F7.6. El antiguo indicador **0/27** era incorrecto: existían **32 casillas**, no 27. Cada `[x]` cuenta únicamente con evidencias del alcance completo; `[ ]` puede tener subpruebas PASS sin representar una aprobación global.
+> **Estado reconciliado al 23/10/2026: 7/32 actividades aprobadas (22%).** El total incluye todas las casillas F0.1–F8.3, incluidas F6.4 y F7.0–F7.6. El antiguo indicador **0/27** era incorrecto: existían **32 casillas**, no 27. Cada `[x]` cuenta únicamente con evidencias del alcance completo; `[ ]` puede tener subpruebas PASS sin representar una aprobación global.
 
 ### Fase 0 — Diagnóstico y línea base
 - [ ] **F0.1** Inventariar Supabase, grants/RLS y respaldo con restauración verificada. *Pendiente certificar restauración recuperable y custodia del backup.*
@@ -446,9 +448,23 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - [x] **F2.3** Validar POST, extornos, cierre y controles de partida doble. **APROBADO:** POST/extorno idempotente y RLS por empresa; HTTP real Neon OPEN→CLOSED→OPEN→CLOSED→LOCKED (403 roles, 409 transiciones, 422 POST/extorno bloqueados y auditorías) con rollback; carreras CLOSE-first y POST-first con dos conexiones PostgreSQL 18 en Docker, NOWAIT 55P03 y asientos balanceados; Vue compila y muestra estado y acciones. **E2E real:** apertura de enero 2026 para DEMO A desde la interfaz, verificada por lectura directa en Neon (OPEN, 0 asientos, 1 auditoría). **RLS app_backend:** DEMO B ve 0, DEMO A ve 1. [Evidencias](docs/F2-3-CIERRE-PERIODOS.md).
 
 ### Fase 3 — Empresas y maestros
-- [ ] **F3.1** Asistente de creación y configuración fiscal de empresas. **ALTA REAL APROBADA FUNCIONALMENTE:** migraciones 23/24, JSON SUNAT 51/417/38, ruta Vue de 5 pasos → Laravel HTTP 201, empresa ID 4, PCGE de 2.966 cuentas, ADMIN, PEN/USD, CIIU 4923, tributos 1011/3031, áreas, flujos NIC 7 y auditoría obligatoria. Integridad y RLS comprobados directamente en Neon; 3 DEMO preservadas. **Regresión PHP aprobada:** SUNAT RUC 3/3 pruebas (525 aserciones), reglas de alta 3/3 (12), total **537 aserciones**; **18/18 tests Vue PASS**. **TypeScript y Vite revalidados por el usuario: `pnpm typecheck` PASS, 18/18 tests Vue PASS y `pnpm build` PASS.** **Rendimiento de la segunda optimización verificado:** ensayo reversible HTTP 201+ROLLBACK bajó de **116,11 s (146 sentencias)** a **75,27 s (102 sentencias)**, una reducción de **35,2%**. Se identificaron 61 consultas genéricas (39,54 s) y 15 de contexto (10,39 s). Se publicó después agrupación en una consulta de referencias globales y otra de esquema/catálogos SUNAT, **sin validación manual aún**; objetivo <25 s sigue pendiente. Sector existente COMERCIAL vs TRANSPORTE_LOGISTICA pendiente corrección auditable. [Evidencia F3.1](docs/F3-1-ACEPTACION-ALTA-REAL-NEON.md).
+- [ ] **F3.1** Asistente de creación y configuración fiscal de empresas. **Alta real HTTP 201 y wizard Vue: PASS funcional.** Empresa 4, ADMIN, PEN/USD, CIIU 4923, tributos 1011/3031, PCGE 2.966 cuentas (1.214 operativas), seis áreas, nueve flujos NIC 7 y auditoría. SUNAT RUC y reglas de alta: 6 pruebas / 537 aserciones; Vue 18/18, typecheck y build PASS. Último ensayo HTTP reversible: **17,43 s / 52 sentencias SQL** (objetivo orientativo de 25 s alcanzado en esta medición). **Para marcar la casilla:** corregir y auditar el sector almacenado COMERCIAL, incompatible con el CIIU 4923 de transporte; corroborar la configuración fiscal resultante. [Historial y evidencia de F3.1](docs/F3-1-ACEPTACION-ALTA-REAL-NEON.md).
 - [x] **F3.2** Consolidar plantillas PCGE y cuentas operativas parametrizadas. *Neon DEV: 3.401 plantillas (PCGE 2019/2026), 2.966 cuentas y 1.214 operativas de seis dígitos por empresa; [verificaciones](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md).*
-- [ ] **F3.3** Completar maestros, dimensiones y empresas ficticias. *Existen 3 empresas y dimensiones DEMO; otros maestros/catálogos integrados y pruebas completas pendientes.*
+- [ ] **F3.3** Completar maestros, dimensiones y empresas ficticias. *Existen 4 empresas persistentes (3 DEMO + ID 4); PCGE, áreas y monedas iniciales listos. Maestros sectoriales, dimensiones completas, historia tributaria por ejercicio y aceptación integral de escenarios pendientes.*
+
+### Subhitos técnicos de Fase 3 (no agregan casillas al total 32)
+
+> Las casillas F3.1–F3.3 son **actividades del Plan Maestro**. Los nombres F3.4 y F3.5 son **hitos de pruebas técnicas** que antes solo aparecían fuera de este checklist. Igualmente, la prueba de seguridad llamada F3.2 no sustituye a la actividad F3.2 de PCGE, ni el ensayo F3.3 sustituye al cierre de maestros.
+
+| Hito técnico | Validación al 23/10/2026 | Evidencia y alcance |
+|---|---|---|
+| F3.1 · Onboarding HTTP | **PASS funcional** | HTTP 201 con alta real ID 4; último probe reversible **17,43 s / 52 SQL**; falta corrección auditable de sector de la empresa existente |
+| F3.2 · Aislamiento TenantContext | **PASS** | PHPUnit Feature filtro Tenant: **19/19 tests, 78 aserciones**, RLS, roles, FK compuesta, savepoints |
+| F3.3 · Verificación empresa persistente | **PASS** | phase3-neon-persistent-company-verify.php: **2.966 cuentas / 1.214 operativas**, auditoría y aislamiento; se ejecutó antes de persistir el asiento |
+| **F3.4 · Primer asiento HTTP reversible** | **PASS** | phase3-neon-first-journal-http.php: período 201, POST 201, idempotencia 200/409, constraints, auditoría y **ROLLBACK sin escrituras persistidas**. No repetir sobre empresa 4 tras F3.5 |
+| **F3.5 · Primer asiento HTTP persistente** | **PASS / COMMIT** | phase3-neon-first-journal-persist.php: **asiento ID 52, empresa 4**, un período octubre 2026, un FX, un recibo, dos auditorías; HTTP 201/200/409, POST-COMMIT PASS. No reejecutar |
+
+**Puerta F3 global aún abierta:** el primer asiento está persistido y comprobado; faltan reconciliación fiscal sector/CIIU, maestros y escenarios sectoriales integrales. Estos PASS no elevan por sí solos la cuenta de actividades completas.
 
 ### Fase 4 — Interfaz
 - [ ] **F4.1** Separar layouts, navegación y selector global de empresa. *Implementación avanzada; revisar UX y flujos de navegación integrados.*
@@ -485,20 +501,20 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ### Resumen vigente de seguimiento
 
-| Indicador | Estado real (22/10/2026) | Evidencia / siguiente control |
+| Indicador | Estado real (23/10/2026) | Evidencia / siguiente control |
 |---|---|---|
 | Actividades aprobadas | **7/32 (22%)** | Contar únicamente `[x]` de esta sección |
 | Actividades pendientes | **25/32 (78%)** | Incluyen subtareas parcialmente desarrolladas |
 | Fase de seguridad F1 | **3/3 con validación técnica en DEV** | Pendiente aprobación formal del hito H1 |
 | Fase del motor F2 | **3/3 completas**; **F2.3 aprobado** | HTTP, concurrencia Docker, RLS y apertura real con auditoría verificados |
-| Fase de empresas F3 | **1/3 completa** | F3.1 alta E2E y F3.3 maestros restantes |
+| Fase de empresas F3 | **1/3 completa** | F3.2 PCGE aprobada; alta funcional y F3.4/F3.5 pruebas PASS; F3.1 aún espera corregir sector/CIIU y F3.3 maestros pendientes |
 | Fases formalmente aprobadas | **0/9** | Hitos y aceptación explícita de sección 8 |
 | Hitos aprobados | **0/4** | H1–H4 requieren puertas completas |
-| Base de desarrollo | **Neon PG18**; 24 migraciones; 4 empresas; 9 membresías; 3 DRAFT; 0 ACTIVE; enero DEMO A OPEN; 0 asientos | SQL de solo lectura 22/10/2026 |
+| Base de desarrollo | **Neon PG18**; 24 migraciones; 4 empresas; 9 membresías; 3 DRAFT; 0 ACTIVE; enero DEMO A OPEN, octubre empresa 4 OPEN, **asiento 52 persistido** | Evidencia F3.5 POST-COMMIT del 23/10/2026 |
 | Modalidad de pruebas | **Manual exclusivamente** | [Guía y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
-| Próximo trabajo funcional | **F3.1 rendimiento (y clasificación auditable) → F3.3 / F4.2** | Migración 24 y alta funcional PASS, Vue typecheck/18 pruebas/build PASS. Último tiempo reversible 75,27 s (objetivo <25 s). Nueva optimización del contexto SQL y perfilador por tabla requieren ensayo reversible y prueba PG18 de SAVEPOINT; no crear más empresas. |
+| Próximo trabajo funcional | **Corregir macrosector/CIIU con auditoría → maestros F3.3 → UX/UI** | F3.5 persistente PASS; optimización F3.1 17,43 s. No repetir ensayos de primer asiento en empresa 4 |
 
-### Evidencias que justifican las cinco actividades aprobadas
+### Evidencias que justifican las siete actividades aprobadas
 
 | Actividad | Validación |
 |---|---|
@@ -506,9 +522,11 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | F1.2 | Aislamiento transaccional tenant, conexión de roles y FORCE RLS: [F2.3c/d/h](docs/F2-3B-MOTOR-ANALITICO-POST.md) |
 | F1.3 | HTTP 403 y consultas multiempresa protegidas: [F2.3d/h](docs/F2-3B-MOTOR-ANALITICO-POST.md) |
 | F2.1 | Matemática exacta bimoneda mediante Decimal/BigInt y triggers: [F2.3b/h](docs/F2-3B-MOTOR-ANALITICO-POST.md) |
+| F2.2 | Numeración segura, idempotencia HTTP 201/200/409: [F2.2](docs/F2-2-IDEMPOTENCIA-POST.md) |
+| F2.3 | POST, extornos, períodos y bloqueos con pruebas de concurrencia: [F2.3](docs/F2-3-CIERRE-PERIODOS.md) |
 | F3.2 | PCGE global 3.401; por compañía 2.966, de ellas 1.214 operativas; 3 matrices de 454 rutas: [preflight F2.3f](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
 
-**Política documental:** actualizar la casilla, evidencia, conteos y estado en **una sola edición**. Los avances cronológicos antiguos están en [el archivo histórico](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md) y no indican el estado actual.
+**Política documental:** actualizar la casilla, evidencia, conteos y estado en **una sola edición**. Los ensayos F3.4/F3.5 figuran en una tabla de subhitos pero no se suman a las 32 casillas. Los avances cronológicos antiguos están en [el archivo histórico](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md) y no indican el estado actual.
 
 ---
 
@@ -522,6 +540,6 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Comando de diagnóstico F0:** `php artisan contabilidad:auditar-fase0` (solo lectura; sin mutaciones).
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`.
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** **v2.0 — 2026-10-22 — checklist reconciliado 5/32, F2.3h certificado, prueba manual sin GitHub Actions, archivo histórico**; v1.7 — 2026-10-19 — Control estricto de decimales y credenciales de migración; v1.6 — 2026-10-19 — Cambios funcionales de seguridad y precisión en Laravel/Vue; v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** **v2.1 — 2026-10-23 — reconciliación checklist 7/32, pruebas F3.4/F3.5 y asiento ID 52 persistido, evidencia de rendimiento 17,43 s**; **v2.0 — 2026-10-22 — checklist reconciliado 5/32, F2.3h certificado, prueba manual sin GitHub Actions, archivo histórico**; v1.7 — 2026-10-19 — Control estricto de decimales y credenciales de migración; v1.6 — 2026-10-19 — Cambios funcionales de seguridad y precisión en Laravel/Vue; v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
-**Estado vigente 2026-10-22:** ver [sección 10](#10-checklist-de-seguimiento): **7/32 (22%)**, modalidad de pruebas manual y 0/4 hitos formalmente aprobados. [Historial del estado al 19/10](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md).
+**Estado vigente 2026-10-23:** ver [sección 10](#10-checklist-de-seguimiento): **7/32 (22%)**, asiento de prueba ID 52 persistido en Neon DEV; F3.4/F3.5 PASS, modalidad de pruebas manual y 0/4 hitos formalmente aprobados. [Historial del estado al 19/10](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md).
