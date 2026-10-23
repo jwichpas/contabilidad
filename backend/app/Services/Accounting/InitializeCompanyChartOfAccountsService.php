@@ -254,7 +254,7 @@ final readonly class InitializeCompanyChartOfAccountsService
                 // del tenant y solo usa movimientos en seis digitos.
                 // El propio servicio valida la cuenta 791000.
                 app(InitializeCompanyAnalyticAccountsService::class)
-                    ->installForCompany($companyId);
+                    ->installForCompany($companyId, $fastCopy);
 
                 // Re-vincular cuentas operativas por defecto en company_settings
                 // Solo referencias operativas de seis dígitos para automatismos.
