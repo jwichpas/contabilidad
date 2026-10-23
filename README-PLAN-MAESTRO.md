@@ -36,6 +36,16 @@
 
 ---
 
+## F3.5 — Primer asiento ficticio persistente (preparado, no ejecutado)
+
+- Publicado `backend/scripts/phase3-neon-first-journal-persist.php` para reutilizar el contrato HTTP validado F3.4 con comando explícito `--apply=contabilidad-dev`.
+- `--plan` no conecta a la base ni escribe datos. `--apply=contabilidad-dev` **confirma (COMMIT)** una apertura de período octubre 2026, un asiento PEN/USD en empresa 4, tipo de cambio, recibo idempotente y auditoría, tras comprobar las restricciones y respuesta HTTP. Nunca ejecutar en producción.
+- Antes de iniciar, exige empresa 4 activa con ADMIN, cero asientos y sin período octubre 2026. Tras escribir, verifica diferencias contra el baseline. En errores previos al COMMIT ejecuta rollback. Si falla la comprobación después del COMMIT, **no reintentar** sin inspeccionar los datos.
+- **No está probado aún en el entorno local Neon.** La persistencia requiere `php -l` y ensayo manual. La prueba anterior F3.4 continúa siendo reversible.
+- La prueba no certifica la interfaz Vue ni todos los maestros; la puerta F3 global permanece abierta.
+
+---
+
 ## 1. Propósito, alcance y principios
 
 **Objetivo:** evolucionar el sistema actual hacia un ERP contable peruano multiempresa, seguro, bimonetario, confiable para la operación diaria, conforme a los requerimientos aplicables de SUNAT/PCGE/NIIF y con un frontend profesional.
