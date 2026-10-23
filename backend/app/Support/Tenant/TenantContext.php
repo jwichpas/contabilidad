@@ -16,6 +16,13 @@ final class TenantContext
     private ?int $companyId = null;
 
     /**
+     * Tracks active run() callbacks that have already installed SET LOCAL
+     * on this transaction. Same-tenant nesting still gets its SAVEPOINT,
+     * but avoids redundant remote GUC read/set/restore queries.
+     */
+    private int $activeSqlContextDepth = 0;
+
+    /**
      * Indica si el bypass explícito está habilitado para procesos administrativos de consola/seeders.
      */
     private bool $bypassed = false;
@@ -71,6 +78,18 @@ final class TenantContext
      */
     public function run(int $companyId, callable $callback): mixed
     {
+        // Only reuse when THIS service already installed and still owns the
+        // identical tenant's SET LOCAL on an active transaction. A PHP tenant
+        // attribute alone is not sufficient proof of a PostgreSQL RLS context.
+        // Preserve DB::transaction to retain nested SAVEPOINT rollback if the
+        // caller catches an exception from the inner callback.
+        if ($this->activeSqlContextDepth > 0
+            && $this->companyId === $companyId
+            && ! $this->bypassed
+            && DB::transactionLevel() > 0) {
+            return DB::transaction($callback);
+        }
+
         $previousCompanyId = $this->companyId;
         $previousBypass = $this->bypassed;
 
@@ -89,7 +108,12 @@ final class TenantContext
             return DB::transaction(function () use ($companyId, $callback, $nested, $previousDatabaseCompanyId): mixed {
                 DB::select("SELECT set_config('app.current_company_id', ?, true)", [(string) $companyId]);
 
-                $result = $callback();
+                ++$this->activeSqlContextDepth;
+                try {
+                    $result = $callback();
+                } finally {
+                    --$this->activeSqlContextDepth;
+                }
 
                 // On a thrown exception Laravel rolls back the transaction or
                 // savepoint, restoring the old SET LOCAL automatically. Avoid
