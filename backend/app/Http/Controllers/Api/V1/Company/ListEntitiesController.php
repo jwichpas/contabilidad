@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Company;
 
 use App\Models\Entity;
+use App\Http\Controllers\Api\V1\Company\EntityMasterController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,7 +16,10 @@ final readonly class ListEntitiesController
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $query = Entity::query()->whereRaw('entities.is_active IS TRUE');
+        // Never leak banking or detraction numbers through the directory API.
+        $query = Entity::query()
+            ->select(EntityMasterController::PUBLIC_FIELDS)
+            ->whereRaw('entities.is_active IS TRUE');
 
         if ($request->boolean('is_client')) {
             $query->whereRaw('entities.is_client IS TRUE');
@@ -37,8 +41,11 @@ final readonly class ListEntitiesController
             $query->whereRaw('entities.is_tax_authority IS TRUE');
         }
 
+        $request->validate(['search' => ['sometimes', 'string', 'max:100'],
+            'per_page' => ['sometimes', 'integer', 'between:1,100']]);
+
         if ($search = $request->query('search')) {
-            $term = trim((string) $search);
+            $term = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], trim((string) $search));
             $query->where(function ($q) use ($term): void {
                 $q->where('tax_id', 'ilike', "%{$term}%")
                   ->orWhere('legal_name', 'ilike', "%{$term}%")
