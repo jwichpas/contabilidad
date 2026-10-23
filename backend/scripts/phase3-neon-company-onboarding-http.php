@@ -144,10 +144,47 @@ try{
     echo "[PASS] F3.1 SUNAT: CIIU, tipo y tributo desconocidos rechazados 422.\n";
 
     $phase='POST company wizard';
+    // Query event measurements are aggregates only. NEVER log SQL text,
+    // bindings, URLs, company details or passwords.
+    $sqlStats=[
+        'total'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+        'pcge_accounts'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+        'pcge_templates'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+        'other'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+    ];
+    $captureSql=false;
+    \Illuminate\Support\Facades\DB::listen(
+        static function(\Illuminate\Database\Events\QueryExecuted $event)
+            use (&$sqlStats,&$captureSql):void {
+            if(!$captureSql||$event->connectionName!=='pgsql')return;
+            $group=str_contains($event->sql,'accounting_accounts')
+                ?'pcge_accounts'
+                :(str_contains($event->sql,'accounting_account_templates')
+                    ?'pcge_templates':'other');
+            foreach(['total',$group] as $key){
+                ++$sqlStats[$key]['count'];
+                $sqlStats[$key]['ms']+=(float)$event->time;
+                $sqlStats[$key]['max_ms']=max($sqlStats[$key]['max_ms'],(float)$event->time);
+            }
+        }
+    );
     $startPost=microtime(true);
-    $response=$http('POST','/api/v1/tenant/companies',$payload);
+    $captureSql=true;
+    try{
+        $response=$http('POST','/api/v1/tenant/companies',$payload);
+    }finally{
+        $captureSql=false;
+    }
     $postDuration=round(microtime(true)-$startPost,2);
     echo "[METRICA] F3.1 POST HTTP clonado PCGE: ".number_format($postDuration,2,'.','')." segundos.\n";
+    foreach($sqlStats as $group=>$metrics){
+        echo "[PERFIL] F3.1 ".$group.": ".$metrics['count']." sentencias, ".
+            number_format($metrics['ms']/1000,2,'.','')." s SQL acumulados, max ".
+            number_format($metrics['max_ms'],1,'.','')." ms.\n";
+    }
+    echo "[PERFIL] F3.1 tiempo PHP/red/otros: ".
+        number_format(max(0,$postDuration-$sqlStats['total']['ms']/1000),2,'.','').
+        " s aproximados (sin texto SQL).\n";
     if($postDuration>25){
         echo "[AVISO] F3.1 alta >25 s. Evitar reintento web antes de revisar rendimiento.\n";
     }
