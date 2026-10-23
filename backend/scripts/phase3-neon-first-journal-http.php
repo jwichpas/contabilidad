@@ -96,7 +96,6 @@ try {
           AND length(code)=6 AND requires_auxiliary IS FALSE
           AND requires_cost_center IS FALSE AND has_automatic_destination IS FALSE
           AND requires_currency IS FALSE
-          AND code IN ('101000','501000','591100','671000','771000','791000','104100')
         ORDER BY code
         SQL, [$companyId]);
     // Choose two unrestricted tenant-local accounts; no cost center/third party requirements.
@@ -139,10 +138,10 @@ try {
         'exchange_rates'=>[['currency'=>'USD','buy_rate'=>'3.720000','sell_rate'=>'3.750000','rate'=>'3.750000']],
         'description'=>'F3.4 asiento inicial de ensayo reversible',
         'lines'=>[
-            ['accounting_account_id'=>$account1,'debit_local'=>'100.0000','credit_local'=>'0.0000',
-             'debit_foreign'=>'26.6667','credit_foreign'=>'0.0000'],
-            ['accounting_account_id'=>$account2,'debit_local'=>'0.0000','credit_local'=>'100.0000',
-             'debit_foreign'=>'0.0000','credit_foreign'=>'26.6667'],
+            ['accounting_account_id'=>$account1,'debit_local'=>'150.0000','credit_local'=>'0.0000',
+             'debit_foreign'=>'40.0000','credit_foreign'=>'0.0000'],
+            ['accounting_account_id'=>$account2,'debit_local'=>'0.0000','credit_local'=>'150.0000',
+             'debit_foreign'=>'0.0000','credit_foreign'=>'40.0000'],
         ],
     ];
     $key='f34-empresa-cuatro-primer-post-20261023';
