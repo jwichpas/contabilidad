@@ -51,8 +51,15 @@ final readonly class InitializeCompanyAnalyticAccountsService
         ];
     }
 
-    public function installForCompany(int $companyId): void
+    public function installForCompany(int $companyId, bool $bulk = false): void
     {
+        if ($bulk) {
+            // An entirely new tenant only. Fail closed if analytical accounts
+            // or cost centers are present; never overwrite configured tenants.
+            $this->installForNewCompany($companyId);
+            return;
+        }
+
         $this->tenantContext->run($companyId, static function (): void {
             DB::transaction(static function (): void {
                 $bridge = AccountingAccount::query()->where('code', '791000')->first();
@@ -130,4 +137,97 @@ final readonly class InitializeCompanyAnalyticAccountsService
             });
         });
     }
+    /**
+     * Bulk initialization ONLY for a brand-new company in the enclosing
+     * onboarding transaction. Six hierarchical INSERTs + one center INSERT
+     * replace ~26 remote Eloquent SELECT/INSERT round trips. Hierarchy
+     * triggers and FORCE RLS remain enabled; no BYPASSRLS or SET ROLE.
+     */
+    private function installForNewCompany(int $companyId): void
+    {
+        $this->tenantContext->run($companyId, static function () use ($companyId): void {
+            DB::transaction(static function () use ($companyId): void {
+                $bridge = AccountingAccount::query()->where('code', '791000')->first();
+                if ($bridge === null || !$bridge->is_operational || !$bridge->is_active
+                    || strlen((string) $bridge->code) !== 6) {
+                    throw new DomainException('Se requiere la cuenta 791000 operativa del mismo tenant.');
+                }
+
+                $codes = array_column(self::accountDefinitions(), 'code');
+                if (DB::table('accounting_accounts')
+                    ->where('company_id', $companyId)
+                    ->whereIn('code', $codes)->exists()
+                    || DB::table('cost_centers')->where('company_id', $companyId)->exists()) {
+                    throw new DomainException(
+                        'Las cuentas analíticas o centros de costo ya existen. No usar inicialización rápida.'
+                    );
+                }
+
+                $levels = [];
+                foreach (self::accountDefinitions() as $item) {
+                    $levels[$item['level']][] = $item;
+                }
+
+                for ($level = 1; $level <= 6; $level++) {
+                    $specs = $levels[$level] ?? [];
+                    if ($specs === []) continue;
+                    $json = json_encode($specs, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+                    $inserted = DB::select(<<<'SQL'
+                        INSERT INTO public.accounting_accounts (
+                            company_id,parent_id,code,name,level,path,
+                            account_type,balance_type,currency_mode,
+                            requires_currency,requires_auxiliary,entity_requirement_type,
+                            requires_cost_center,has_automatic_destination,
+                            requires_cash_flow_area,cash_flow_category,
+                            financial_statement_rubric,is_operational,is_active,
+                            created_at,updated_at
+                        )
+                        SELECT ?,parent.id,src.code,src.name,src.level,
+                            CASE WHEN src.level=1 THEN src.code ELSE parent.path||'.'||src.code END,
+                            'COST','DEBIT','PEN',FALSE,FALSE,'NONE',
+                            FALSE,FALSE,FALSE,'NONE',src.rubric,src.operational,TRUE,
+                            now(),now()
+                        FROM jsonb_to_recordset(?::jsonb) AS src (
+                            code text,parent text,name text,level integer,
+                            operational boolean,rubric text
+                        )
+                        LEFT JOIN public.accounting_accounts parent
+                            ON parent.company_id=? AND parent.code=src.parent
+                        WHERE (src.parent IS NULL AND src.level=1) OR parent.id IS NOT NULL
+                        RETURNING id,code,path
+                        SQL,[$companyId,$json,$companyId]);
+                    if (count($inserted)!==count($specs)) {
+                        throw new DomainException(
+                            'No se crearon todas las cuentas analíticas del nivel '.$level
+                        );
+                    }
+                }
+
+                $destinations = DB::table('accounting_accounts')
+                    ->where('company_id',$companyId)
+                    ->whereIn('code',['941100','951100'])->get(['id','code','is_operational'])
+                    ->keyBy('code');
+                $now = now();
+                $rows = [];
+                foreach (self::centerDefinitions() as $spec) {
+                    $debit = $destinations->get($spec['debit_code']);
+                    if ($debit === null || !$debit->is_operational) {
+                        throw new DomainException('No existe destino analítico '.$spec['debit_code']);
+                    }
+                    $rows[] = [
+                        'company_id' => $companyId,
+                        'code' => $spec['code'],
+                        'name' => $spec['name'],
+                        'destination_debit_account_id' => $debit->id,
+                        'destination_credit_account_id' => $bridge->id,
+                        'is_active' => true,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+                DB::table('cost_centers')->insert($rows);
+            });
+        });
+    }
+
 }
