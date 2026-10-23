@@ -43,6 +43,12 @@ El ensayo de aislamiento se ejecutó con `SET LOCAL app.current_company_id` en t
 
 **4. Regresión local tras nueva validación sectorial.** Se adaptaron los scripts a 4 empresas y las pruebas PHP/TS del macrosector; **pendiente salida de test/typecheck/build desde Windows**.
 
+### Corrección del arranque de pruebas Pest sin acceso a BD
+
+La primera ejecución manual de `php artisan test tests/Unit/SunatRucReferenceDataTest.php` falló en **3 casos** por usar `database_path()` y `ValidationException::withMessages()` sin que Pest hubiese iniciado la aplicación Laravel (solo `tests/Feature` utilizaba `Tests\\TestCase`). **No es un fallo de Neon, los 3 catálogos ni de la migración 24.**
+
+Se configuró `uses(\\Tests\\TestCase::class);` de manera **local a los dos archivos** `SunatRucReferenceDataTest.php` y `CompanyOnboardingRulesTest.php`. No se utilizó `DatabaseTransactions`, no se ejecuta SQL y no se alteró el `tests/Pest.php` global. **Resultado pendiente de repetición manual**, no marcar PASS por el cambio de código.
+
 ## Pruebas de regresión (sin nuevas migraciones)
 
 ```powershell
