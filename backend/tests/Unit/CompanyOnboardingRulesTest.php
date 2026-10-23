@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+// These rules build Laravel ValidationException objects; boot Laravel only,
+// WITHOUT DatabaseTransactions or SQL/Neon connections.
+uses(\Tests\TestCase::class);
+
 use App\Http\Controllers\Api\V1\Tenant\CreateCompanyFromWizardController;
 use App\Support\Company\CompanyEconomicProfile;
 use Illuminate\Validation\ValidationException;
