@@ -220,7 +220,7 @@ final readonly class CreateCompanyFromWizardController
                     // En la misma transaccion: 6 áreas organizacionales y 9
                     // áreas NIC 7 aisladas por tenant. No importar personas,
                     // bancos ni centros de costo con cuentas ficticias 94/95.
-                    $this->operationalDefaults->installForCompany($companyId);
+                    $this->operationalDefaults->installForCompany($companyId, true);
 
                     // La auditoria de alta es obligatoria y atomica.
                     // AuditLoggerService captura excepciones para eventos
