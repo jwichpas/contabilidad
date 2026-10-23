@@ -20,6 +20,30 @@ final class CompanyEconomicProfile
     ];
 
     /**
+     * Internal sector suggestion by unambiguous CIIU divisions.
+     * This is an ERP classification, NOT an additional SUNAT classification.
+     * Ambiguous/mixed divisions remain user-editable.
+     */
+    public static function suggestedSectorForCiiu(string $code): ?string
+    {
+        if (preg_match('/^[0-9]{4}$/D', $code) !== 1) {
+            return null;
+        }
+
+        $division = (int) substr($code, 0, 2);
+
+        return match (true) {
+            $division >= 45 && $division <= 47 => 'COMERCIAL',
+            $division >= 49 && $division <= 53 => 'TRANSPORTE_LOGISTICA',
+            $division >= 41 && $division <= 43 => 'CONSTRUCCION',
+            $division >= 5 && $division <= 9 => 'EXTRACTIVA',
+            $division === 3 => 'PESCA',
+            $division >= 10 && $division <= 33 => 'INDUSTRIAL',
+            default => null,
+        };
+    }
+
+    /**
      * Invariantes del perfil que se pueden probar sin conexión PostgreSQL.
      * La existencia oficial de CIIU/sector se verificará con el catálogo SUNAT/INEI.
      *
@@ -41,7 +65,16 @@ final class CompanyEconomicProfile
             ]);
         }
 
-        foreach ($activities as $activity) {
+        foreach ($activities as $index => $activity) {
+            $suggested = self::suggestedSectorForCiiu((string) ($activity['ciiu_code'] ?? ''));
+            if ($suggested !== null && ($activity['sector_code'] ?? '') !== $suggested) {
+                throw ValidationException::withMessages([
+                    'economic_activities.'.$index.'.sector_code' => [
+                        'El sector interno debe ser '.$suggested.' para este CIIU. Seleccione la actividad nuevamente.',
+                    ],
+                ]);
+            }
+
             if (! in_array($activity['sector_code'] ?? '', self::SECTORS, true)
                 || preg_match('/^[0-9]{4}$/', $activity['ciiu_code'] ?? '') !== 1
                 || trim($activity['description'] ?? '') === ''
