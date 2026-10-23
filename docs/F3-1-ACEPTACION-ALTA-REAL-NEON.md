@@ -2,6 +2,20 @@
 
 **Observación:** 22/10/2026 (hora de Perú). **Entorno:** Neon PostgreSQL 18, rama de desarrollo `contabilidad-dev`. **Pruebas SQL:** solo lectura. **Alcance:** creación real persistida por `POST /api/v1/tenant/companies` desde Vue local, no prueba de consulta en vivo al padrón SUNAT.
 
+## Cierre técnico F3.1 · 23/10/2026
+
+**Estado actual: APROBADA (actividad F3.1 del checklist 10).** La información de incidentes y mediciones que aparece más abajo se mantiene como historial previo; **no significa que la corrección de sector siga pendiente**.
+
+- El usuario ejecutó `php -l scripts/phase3-neon-correct-company-sector.php` (PASS), `--plan`, `--probe=contabilidad-dev` (HTTP 200 + auditoría y ROLLBACK), y `--apply=contabilidad-dev` (HTTP 200 + **COMMIT**, auditoría **ID 83**).
+- La ejecución confirmó preservación de empresa, PCGE, membresías, períodos y asientos, incluido el primer asiento ficticio persistente **ID 52**.
+- Validación SELECT independiente mediante conexión Neon a **rama `contabilidad-dev`**: empresa 4 con CIIU **4923**, sector **TRANSPORTE_LOGISTICA**, una actividad principal; auditoría 83 `COMPANY_SETTINGS_UPDATED` contiene **old COMERCIAL / new TRANSPORTE_LOGISTICA**; asiento 52 existe y pertenece a empresa 4; **2.966 cuentas PCGE, 1.214 operativas de 6 dígitos**.
+- Se comprobó de forma independiente un conjunto adicional de datos: empresa activa, ADMIN activo, configuración **EIRL / MYPE_TRIBUTARIO / tipo SUNAT 07 / PCGE_2019**, 2 monedas activas, tributos 1011/3031, 6 áreas, 9 flujos NIC 7 y auditoría de onboarding.
+- Última medición de alta reversible F3.1: **17,43 s / 52 sentencias**; se cumple el objetivo orientativo menor de 25 segundos **en esa medición**. No extrapolar automáticamente este rendimiento a todas las conexiones o cargas.
+- **No volver a ejecutar** el modo `--apply=contabilidad-dev` de corrección ni el script que creó el asiento 52. El `--verify=contabilidad-dev` es de solo lectura y puede utilizarse para comprobaciones posteriores.
+- **Fase 3 global sigue abierta:** F3.3 maestros, historial fiscal y escenarios sectoriales integrales pendientes; F4.2 aceptación UX/UI independiente.
+
+---
+
 ## Evidencia del usuario
 
 - Migración global F3.1 n.º **24** instalada mediante `php artisan migrate --database=pgsql_migrations --path=database/portable_migrations/2026_10_22_160000_install_sunat_ruc_reference_catalogs.php`, 9 s, `DONE`.
