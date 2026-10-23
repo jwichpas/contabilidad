@@ -84,12 +84,28 @@ La ejecución manual del usuario terminó con HTTP 201, tres catálogos globales
 
 **Pendiente de validar:** `php -l` de ambos archivos, prueba reversible HTTP con sus PASS/ROLLBACK y nuevos tiempos, `pnpm typecheck` y `pnpm build`. No repetir migraciones ni crear empresas para medir rendimiento. **No marcar <25 s antes de medirlo.**
 
+### Verificación del 23/10/2026: 24 migraciones, 4 empresas y Vue aprobado
+
+Resultados aportados por el usuario: preflight local **PASS** con 24 migraciones, integridad SHA-256 de los catálogos 51/417/38, FK y RLS; Neon DEV registra **4 empresas, 9 membresías y 2 códigos tributarios asignados**. `php artisan migrate --path=... --force` informó `Nothing to migrate`, confirmando que **no se requieren más DDL**. El frontend terminó **18/18 pruebas unitarias PASS, `pnpm typecheck` PASS y `pnpm build` PASS**.
+
+SELECT independiente a Neon confirma que empresa ID 4 conserva **2.966 cuentas, 1 membresía, 1 actividad y 2 tributos**, con una auditoría `COMPANY_ONBOARDED`. Cuenta con seis áreas, nueve flujos NIC 7, dos centros de costo y `PCGE_2019`. **No se han modificado registros**. Sigue pendiente corregir de modo auditable el macrosector `COMERCIAL` de su actividad CIIU `4923` (transporte) y corroborar si ingresos de referencia `100.00` son definitivos; no adivinar datos del contribuyente.
+
+**Optimización nueva publicada en `main` y aún no medida:** `TenantContext::run()` conserva SAVEPOINT y rollback de llamadas anidadas del mismo tenant, pero reutiliza el `SET LOCAL` seguro ya instalado por el contexto padre. No se aplica cuando cambia la empresa, el contexto fue bypassed ni cuando no existe transacción SQL. Nueva prueba de integración comprueba rollback de SAVEPOINT en mismo tenant y restauración de RLS; pendiente ejecutarla en PostgreSQL descartable, no en Neon vivo.
+
+El ensayo reversible `phase3-neon-company-onboarding-http.php` ahora discrimina perfiles de SQL por empresa, configuración, membresías, monedas, actividades, tributos y auditoría; solo emite agregados de tiempos/cantidades, nunca consultas, parámetros ni secretos. **Se requiere una nueva medición del ensayo reversible sin altas reales**; hasta ella el mejor tiempo confirmado sigue siendo **75,27 s** y F3.1 no cumple la meta interna de 25 s.
+
+---
+
 ## Pruebas de regresión (sin nuevas migraciones)
 
 ```powershell
 cd C:\Proyectos\contabilidad
 git pull --ff-only origin main
 cd backend
+php -l app/Support/Tenant/TenantContext.php
+php -l tests/Feature/Security/TenantContextNestedTest.php
+php -l app/Support/Company/CompanyOnboardingGuard.php
+php -l app/Support/Company/GlobalReferenceReadiness.php
 php -l app/Support/Company/CompanyEconomicProfile.php
 php -l app/Http/Controllers/Api/V1/Tenant/CreateCompanyFromWizardController.php
 php -l scripts/phase3-company-onboarding-preflight.php
