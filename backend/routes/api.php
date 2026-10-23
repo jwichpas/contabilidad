@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\ListEntitiesController;
 use App\Http\Controllers\Api\V1\Company\EntityMasterController;
+use App\Http\Controllers\Api\V1\Company\CompanyFiscalProfileController;
 use App\Http\Controllers\Api\V1\Company\SaveCompanyExchangeRatesController;
 use App\Http\Controllers\Api\V1\Company\UpdateCompanySettingsController;
 use App\Http\Controllers\Api\V1\Tenant\CompanyOnboardingCapabilityController;
@@ -172,6 +173,14 @@ Route::prefix('v1')->group(function (): void {
 
                 Route::get('/cash-flow-areas', ListCashFlowAreasController::class)
                     ->name('api.v1.company.cash-flow-areas.index');
+
+                // Historial tributario por ejercicio: sólo revisiones inmutables.
+                Route::get('/fiscal-profiles', [CompanyFiscalProfileController::class, 'index'])
+                    ->name('api.v1.company.fiscal-profiles.index');
+
+                Route::post('/fiscal-profiles', [CompanyFiscalProfileController::class, 'store'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->name('api.v1.company.fiscal-profiles.store');
 
                 Route::get('/entities', ListEntitiesController::class)
                     ->name('api.v1.company.entities.index');
