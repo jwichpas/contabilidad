@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\ListEntitiesController;
+use App\Http\Controllers\Api\V1\Company\EntityMasterController;
 use App\Http\Controllers\Api\V1\Company\SaveCompanyExchangeRatesController;
 use App\Http\Controllers\Api\V1\Company\UpdateCompanySettingsController;
 use App\Http\Controllers\Api\V1\Tenant\CompanyOnboardingCapabilityController;
@@ -174,6 +175,23 @@ Route::prefix('v1')->group(function (): void {
 
                 Route::get('/entities', ListEntitiesController::class)
                     ->name('api.v1.company.entities.index');
+                Route::get('/entities/{entityId}', [EntityMasterController::class, 'show'])
+                    ->whereNumber('entityId')
+                    ->name('api.v1.company.entities.show');
+
+                Route::post('/entities', [EntityMasterController::class, 'store'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                    ->name('api.v1.company.entities.store');
+
+                Route::put('/entities/{entityId}', [EntityMasterController::class, 'update'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                    ->whereNumber('entityId')
+                    ->name('api.v1.company.entities.update');
+
+                Route::patch('/entities/{entityId}/deactivate', [EntityMasterController::class, 'deactivate'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->whereNumber('entityId')
+                    ->name('api.v1.company.entities.deactivate');
 
                 Route::post('/chart-of-accounts/initialize', InitializeCompanyChartOfAccountsController::class)
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
