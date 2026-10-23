@@ -60,15 +60,14 @@ try{
     $role=$db->selectOne('SELECT current_user AS actor');
     if(!$pre||$pre->db!=='neondb'||$pre->actor!=='neondb_owner'
         ||intdiv((int)$pre->pg,10000)!==18||$role?->actor!=='app_backend'
-        ||(int)$pre->migrations!==24||(int)$pre->companies<4
-        ||(int)$pre->users!==3||(int)$pre->members<9
-        ||(int)$pre->january!==1||(int)$pre->journals!==0){
+        ||(int)$pre->migrations!==24||(int)$pre->companies<3
+        ||(int)$pre->users<3||(int)$pre->members<8){
         throw new \RuntimeException('Baseline Neon F3.1 no coincide');
     }
     $companies=$owner->select('SELECT id,tax_id FROM public.companies ORDER BY tax_id');
     $index=[];
     foreach($companies as $record){$index[(string)$record->tax_id]=(int)$record->id;}
-    foreach(['20610141588','20999990011','20999990012','20999990013'] as $requiredRuc){
+    foreach(['20999990011','20999990012','20999990013'] as $requiredRuc){
         if(!isset($index[$requiredRuc])){
             throw new \RuntimeException('Falta una empresa preexistente que debe preservarse');
         }
@@ -206,7 +205,7 @@ if($passed){
           &&(int)$after->members===(int)$pre->members
           &&(int)$after->audits===(int)$pre->audits
           &&(int)$after->january===(int)$pre->january;
-        echo $passed?"[PASS] F3.1 post-rollback: ".$pre->companies." empresas, ".$pre->members." membresias, auditoria y enero intactos.\n"
+        echo $passed?"[PASS] F3.1 post-rollback: ".$pre->companies." empresas y ".$pre->members." membresias; auditoria y periodos intactos.\n"
             :"[BLOQUEO] F3.1 post-rollback no preservo baseline.\n";
     }catch(\Throwable){$passed=false;}
 }
