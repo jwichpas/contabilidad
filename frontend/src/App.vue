@@ -5,6 +5,7 @@ import JournalEntryView from './modules/accounting/views/JournalEntryView.vue';
 import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue';
 import FiscalPeriodsView from './modules/accounting/views/FiscalPeriodsView.vue';
 import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
+import EntityMasterView from './modules/company/views/EntityMasterView.vue';
 import CompanyOnboardingWizard from './modules/company/views/CompanyOnboardingWizard.vue';
 import type { CompanyOnboardingResult } from './modules/company/types/companyOnboarding.types';
 import LoginView from './shared/auth/LoginView.vue';
@@ -52,6 +53,15 @@ const activeCompany = computed<ActiveCompanyInfo>(() => {
   };
 });
 
+const canManageEntities = computed(() => {
+  const role = userCompanies.value.find((c) => c.id === activeCompanyId.value)?.role;
+  return role === 'ADMIN' || role === 'CHIEF_ACCOUNTANT' || role === 'ACCOUNTANT';
+});
+const canDeactivateEntities = computed(() => {
+  const role = userCompanies.value.find((c) => c.id === activeCompanyId.value)?.role;
+  return role === 'ADMIN' || role === 'CHIEF_ACCOUNTANT';
+});
+
 const canManagePeriods = computed(() => {
   const company = userCompanies.value.find((c) => c.id === activeCompanyId.value);
   return company?.role === 'ADMIN' || company?.role === 'CHIEF_ACCOUNTANT';
@@ -67,6 +77,7 @@ function resolveModuleFromHash(): NavigationModule {
   const hash = window.location.hash.toLowerCase();
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
+  if (hash.includes('anexos') || hash.includes('terceros') || hash.includes('entities')) return 'entities';
   if (hash.includes('diario') || hash.includes('asiento') || hash.includes('voucher')) {
     return 'journal';
   } else if (hash.includes('plan') || hash.includes('cuentas') || hash.includes('catalogo')) {
@@ -96,6 +107,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#periodos';
   } else if (mod === 'exchange-rates') {
     window.location.hash = '#tipo-cambio';
+  } else if (mod === 'entities') {
+    window.location.hash = '#anexos';
   } else if (mod === 'company') {
     window.location.hash = '#empresa';
   } else if (mod === 'company-create') {
@@ -223,6 +236,14 @@ watch(
           :key="`rates-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+        />
+        <EntityMasterView
+          v-else-if="currentModule === 'entities'"
+          :key="`entities-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-write="canManageEntities"
+          :can-deactivate="canDeactivateEntities"
         />
         <CompanyOnboardingWizard
           v-else-if="currentModule === 'company-create'"
