@@ -1,6 +1,6 @@
 # F3.1 · Catálogos globales SUNAT RUC y CIIU Rev. 4 (24.ª migración)
 
-**22/10/2026 — Código publicado en `main`, migración 24 PENDIENTE DE INSTALACIÓN Y PRUEBA MANUAL.**
+**22/10/2026 — Migración 24 INSTALADA y verificada en Neon DEV.** Los catálogos 51/417/38 están disponibles. Se confirmó una alta real HTTP 201 con validación de los tres anexos y su persistencia; el rendimiento y el macrosector interno requieren seguimiento. [Evidencia](F3-1-ACEPTACION-ALTA-REAL-NEON.md).
 
 ## Fuentes incorporadas
 
@@ -25,9 +25,11 @@ Estas referencias representan la **versión de los archivos suministrados**, no 
 - API autenticada: `GET /api/v1/catalogs/sunat-ruc/contributor-types`, `/ciiu`, `/tax-codes`; puede añadirse `?q=texto`. Estos endpoints globales no requieren cambio de empresa.
 - El asistente `#nueva-empresa` ahora incluye tipo de contribuyente filtrado por forma jurídica cuando existe correspondencia directa, búsqueda por texto/código CIIU y multiselección de tributos. La descripción CIIU es de solo lectura, y la validación real también la realiza Laravel (`422` para códigos ausentes).
 
+> **Aviso histórico (después de la instalación):** el procedimiento de migración de este apartado **ya se ejecutó** en Neon DEV. No repitas el comando `php artisan migrate`. Solo usa ahora `php scripts/phase3-company-onboarding-preflight.php --check` y las pruebas sin escrituras persistentes.
+
 ## Aplicación controlada de migración 24
 
-Neon PG18 DEV ya contiene **23 migraciones y las 3 empresas DEMO**, con enero 2026 de DEMO A `OPEN`. La migración 24 sigue pendiente; ejecutar **solo** tras comprobar PHP/diagnóstico local:
+**Histórico previo a la instalación:** Neon PG18 DEV contenía 23 migraciones y tres DEMO. **Ahora contiene 24 migraciones y cuatro empresas.** Los comandos siguientes se conservan únicamente como referencia para restauraciones en entornos aislados y no deben repetirse en esta rama:
 
 ```powershell
 cd C:\Proyectos\contabilidad
@@ -70,6 +72,6 @@ pnpm build
 
 El ensayo HTTP reversible valida GET 51/417/38, rechazos HTTP 422 (tipo, CIIU y tributo inexistentes), creación EIRL/RMT temporal con tipo 07, tributos 1011/3031, CIIU 4923, PCGE, auditoría y `ROLLBACK`. Registra el tiempo total de clonado.
 
-**Rendimiento PENDIENTE:** el último ensayo anterior al cambio de catálogos tardó **45,97 s** y aún está por encima del objetivo de 25 s; no repetir la creación real desde el navegador hasta investigar y resolver esta latencia. La actualización de catálogos no se presenta como solución al rendimiento.
+**Rendimiento PENDIENTE:** el ensayo CLI tardó **45,97 s** (meta 25 s), pero el POST real desde navegador devolvió HTTP **201**, creó la empresa ID 4 y pasó una verificación independiente en Neon. No repetir el alta de esa empresa; mejorar la latencia y realizar una revisión auditada del macrosector incorrecto COMERCIAL asociado al CIIU 4923. Las regresiones posteriores del código están pendientes. La actualización de catálogos no se presenta como solución al rendimiento.
 
 [F3.1](F3-1-ALTA-EMPRESAS-NEON.md) · [Plan maestro](../README-PLAN-MAESTRO.md)
