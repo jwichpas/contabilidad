@@ -30,6 +30,7 @@ import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
   SunatContributorType, SunatCiiuClass, SunatTaxCode,
 } from '@/modules/company/types/companyOnboarding.types';
+import type { EntityMaster, EntityMasterInput, EntityMasterPage } from '@/modules/company/types/entityMaster.types';
 import type {
   CompanyExchangeRatesResponse,
   CompanySettingsData,
@@ -457,6 +458,45 @@ export class AccountingApiClient {
       '/api/v1/tenant/companies', {
         method: 'POST', body: JSON.stringify(payload),
       }, false,
+    );
+    return response.data;
+  }
+
+  /** Master entities: always scoped by Bearer and active company, never by a client-supplied tenant. */
+  public async fetchEntities(params: {
+    readonly search?: string;
+    readonly role?: 'all' | 'is_client' | 'is_supplier' | 'is_employee';
+    readonly page?: number;
+  } = {}): Promise<EntityMasterPage> {
+    const query = new URLSearchParams();
+    if (params.search?.trim()) query.set('search', params.search.trim());
+    if (params.role && params.role !== 'all') query.set(params.role, '1');
+    query.set('per_page', '20');
+    if (params.page && params.page > 1) query.set('page', String(params.page));
+    return await this.request<EntityMasterPage>(
+      '/api/v1/company/entities?' + query.toString(), { method: 'GET' }, true,
+    );
+  }
+
+  public async createEntity(payload: EntityMasterInput): Promise<EntityMaster> {
+    const response = await this.request<{ data: EntityMaster }>(
+      '/api/v1/company/entities', { method: 'POST', body: JSON.stringify(payload) }, true,
+    );
+    return response.data;
+  }
+
+  public async updateEntity(id: number, payload: EntityMasterInput): Promise<EntityMaster> {
+    const response = await this.request<{ data: EntityMaster }>(
+      '/api/v1/company/entities/' + encodeURIComponent(String(id)),
+      { method: 'PUT', body: JSON.stringify(payload) }, true,
+    );
+    return response.data;
+  }
+
+  public async deactivateEntity(id: number): Promise<EntityMaster> {
+    const response = await this.request<{ data: EntityMaster }>(
+      '/api/v1/company/entities/' + encodeURIComponent(String(id)) + '/deactivate',
+      { method: 'PATCH' }, true,
     );
     return response.data;
   }
