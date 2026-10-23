@@ -1,4 +1,4 @@
-> **Estado vigente — 22/10/2026.** Desarrollo en **Neon PostgreSQL 18, rama `contabilidad-dev`**, 22 migraciones, 3 empresas ficticias, 3 matrices `DRAFT`, 0 `ACTIVE` y 1.362 rutas de destino. El motor analítico fue validado manualmente (F2.3b–h) con POST bimoneda, 94/95/79, extornos, Sanctum y RLS real en PostgreSQL 18 Docker temporal. **No se activaron matrices permanentemente.** [Plan maestro y checklist 5/32 (16%)](README-PLAN-MAESTRO.md#10-checklist-de-seguimiento).
+> **Estado vigente — 23/10/2026.** Desarrollo en **Neon PostgreSQL 18, rama `contabilidad-dev`**. Avance oficial **8/32 actividades (25%)**; F3.3 continúa pendiente de aceptación funcional de maestros y escenarios. Historial fiscal Vue `#historial-fiscal`: **24/24 pruebas y build PASS**, según ejecución manual aportada por el usuario. [Plan maestro vigente](README-PLAN-MAESTRO.md#10-checklist-de-seguimiento).
 
 > **F2.2 — 22/10/2026:** idempotencia de asientos implementada. **PASS de Docker PG18 (20 migraciones), concurrencia, RLS, TypeScript, 16/16 pruebas Vue y build.** La migración aditiva **ya está instalada y verificada en Neon DEV (22 migraciones, 3 DRAFT, 0 ACTIVE, 0 asientos/recibos)**. **APROBADO F2.2:** HTTP 201/200/409 con Sanctum/app_backend real Neon, extorno y ROLLBACK; cero registros de movimientos persistidos. Checklist **6/32 (19%)**. **Pendiente distinto:** ajustar drivers CACHE_STORE/SESSION_DRIVER/QUEUE_CONNECTION en el `.env` local para operar API sin el harness. [Estado y prueba manual](docs/F2-2-IDEMPOTENCIA-POST.md).
 
@@ -306,3 +306,16 @@ El sistema ha sido diseñado e implementado incorporando controles normativos de
 
 ## 7. Licencia y Metodología
 Desarrollado bajo principios de arquitectura **Clean Room**, con especificaciones abiertas, no propietarias y fundamentadas estrictamente en la normativa contable estándar y la legislación tributaria peruana vigente al ejercicio 2026.
+
+
+## Historial fiscal — evidencia manual recibida el 23/10/2026
+
+La migración fiscal **ya está aplicada en Neon DEV** según la validación comunicada por el usuario. **No repetir la migración.** El módulo Vue fue publicado en el commit `6c74f5ff9ef15f4ea894b689fd3d1892ab61723c`, ruta `#historial-fiscal`.
+
+- Backend: `CompanyFiscalProfileTest` **4/4 PASS, 36 aserciones**, según salida manual aportada; historial, fechas/revisiones, aislamiento, roles, períodos cerrados e inmutabilidad.
+- Frontend: `pnpm test:unit` **24/24 PASS**; las tres pruebas nuevas son estáticas de integración y no ejecutan interacción del navegador.
+- `pnpm build`: **PASS**, incluye `vue-tsc -b`; Vite 6.4.4, 1.621 módulos, 6,80 s. No se reportó una ejecución separada de `pnpm typecheck` en esta última salida.
+- `php scripts/verify-plan-master-checklist.php --check`: **PASS**, 8/32 aprobadas y 24 pendientes. Solo verifica coherencia documental.
+
+
+La aceptación funcional y sus pasos están en [F3.3 maestros](docs/F3-3-MAESTROS-DIAGNOSTICO-NEON.md). F3.3 sigue pendiente.
