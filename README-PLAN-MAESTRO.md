@@ -460,7 +460,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 ### Fase 3 — Empresas y maestros
 - [x] **F3.1** Asistente de creación y configuración fiscal de empresas. **APROBADO en Neon DEV:** wizard Vue → HTTP 201 empresa ID 4, ADMIN, PEN/USD, EIRL/RMT, tipo SUNAT 07, CIIU 4923, tributos 1011/3031, PCGE 2.966 cuentas (1.214 operativas), 6 áreas, 9 flujos NIC 7 y auditoría. SUNAT RUC/reglas de alta: 6 pruebas / 537 aserciones; Vue 18/18, typecheck y build PASS. Ensayo HTTP reversible: **17,43 s / 52 SQL**. **Sector COMERCIAL → TRANSPORTE_LOGISTICA corregido con PUT HTTP 200 y COMMIT, auditoría ID 83**; verificación SELECT independiente en Neon confirmó sector, transición auditada, fiscalidad, PCGE y asiento ID 52 preservado. No volver a ejecutar `--apply=contabilidad-dev`. [Evidencia F3.1](docs/F3-1-ACEPTACION-ALTA-REAL-NEON.md).
 - [x] **F3.2** Consolidar plantillas PCGE y cuentas operativas parametrizadas. *Neon DEV: 3.401 plantillas (PCGE 2019/2026), 2.966 cuentas y 1.214 operativas de seis dígitos por empresa; [verificaciones](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md).*
-- [ ] **F3.3** Completar maestros, dimensiones y empresas ficticias. *Existen 4 empresas persistentes (3 DEMO + ID 4); PCGE, áreas y monedas iniciales listos. Maestros sectoriales, dimensiones completas, historia tributaria por ejercicio y aceptación integral de escenarios pendientes.*
+- [ ] **F3.3** Completar maestros, dimensiones y empresas ficticias. **Diagnóstico SELECT Neon DEV (23/10/2026):** 4 empresas, **0 entidades/anexos en todas**, 2 centros de costo + 6 áreas + 9 flujos por empresa; empresa 4 tiene 1 CIIU y 1 asiento (ID 52). Reutilizar `entities` (modelo y GET existentes); **faltan CRUD integrado y aceptación multirol/multisector**, historial fiscal versionado y validaciones sectoriales completas. [Brechas y orden de implementación F3.3](docs/F3-3-MAESTROS-DIAGNOSTICO-NEON.md).
 
 ### Subhitos técnicos de Fase 3 (no agregan casillas al total 32)
 
@@ -522,7 +522,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | Hitos aprobados | **0/4** | H1–H4 requieren puertas completas |
 | Base de desarrollo | **Neon PG18**; 24 migraciones; 4 empresas; 9 membresías; 3 DRAFT; 0 ACTIVE; enero DEMO A OPEN, octubre empresa 4 OPEN, **asiento 52 persistido** | Evidencia F3.5 POST-COMMIT del 23/10/2026 |
 | Modalidad de pruebas | **Manual exclusivamente** | [Guía y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
-| Próximo trabajo funcional | **F3.3 maestros, dimensiones e historial fiscal → F4.2 UX/UI** | F3.1 y F3.2 aprobadas; no repetir F3.5 ni corrección de sector de empresa 4 |
+| Próximo trabajo funcional | **F3.3 CRUD multiempresa de entidades → dimensiones e historial fiscal → F4.2 UX/UI** | [Diagnóstico de brechas](docs/F3-3-MAESTROS-DIAGNOSTICO-NEON.md); F3.1/F3.2 aprobadas; no repetir F3.5 ni corrección de sector |
 
 ### Evidencias que justifican las ocho actividades aprobadas
 
