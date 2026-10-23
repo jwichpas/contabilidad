@@ -11,6 +11,22 @@ export interface SunatCiiuClass {
 export interface SunatTaxCode { code: string; short_name: string; name: string; is_active: boolean }
 
 
+/**
+ * Internal ERP macrosector suggestion for unambiguous CIIU Rev.4 divisions.
+ * Does not replace the official CIIU code or constitute SUNAT advice.
+ */
+export function suggestedSectorForCiiu(ciiu: string): EconomicSector | null {
+  if (!/^\d{4}$/.test(ciiu)) return null;
+  const division = Number(ciiu.slice(0, 2));
+  if (division >= 45 && division <= 47) return 'COMERCIAL';
+  if (division >= 49 && division <= 53) return 'TRANSPORTE_LOGISTICA';
+  if (division >= 41 && division <= 43) return 'CONSTRUCCION';
+  if (division >= 5 && division <= 9) return 'EXTRACTIVA';
+  if (division === 3) return 'PESCA';
+  if (division >= 10 && division <= 33) return 'INDUSTRIAL';
+  return null;
+}
+
 export interface OnboardingActivity {
   sector_code: EconomicSector;
   ciiu_code: string;
@@ -125,6 +141,11 @@ export function onboardingStepErrors(step: number, draft: CompanyOnboardingDraft
     const uniqueCodes = new Set<string>();
     for (const [index, activity] of draft.activities.entries()) {
       if (!/^\d{4}$/.test(activity.ciiu_code)) errors[`ciiu_${index}`] = 'CIIU de cuatro dígitos.';
+      const derivedSector = suggestedSectorForCiiu(activity.ciiu_code);
+      if (derivedSector && activity.sector_code !== derivedSector) {
+        errors[`sector_${index}`] =
+          `El sector sugerido para este CIIU es ${derivedSector}. Vuelva a seleccionar la actividad.`;
+      }
       if (!activity.description.trim() || activity.description.length > 200) {
         errors[`description_${index}`] = 'Indique la actividad (máximo 200 caracteres).';
       }
