@@ -20,7 +20,7 @@
 
 - **F3.2 aislamiento tenant:** validación manual en Neon DEV por el usuario, `php artisan test --testsuite=Feature --filter=Tenant`: **19/19 PASS, 78 aserciones**. También `CompanySetupAndCatalogsTest` 6/6 (44 aserciones), `TenantIsolationTest` 5/5 (15) y `TenantContextNestedTest` 3/3 (20).
 - **F3.3 empresa persistente:** el onboarding HTTP ya creó la empresa ficticia ID 4, documentada en la línea base. En lugar de duplicarla, se agregó el ensayo **solo lectura** `backend/scripts/phase3-neon-persistent-company-verify.php`. Comprobará la configuración persistida, PCGE operativo a seis dígitos, membresía ADMIN, RLS y conservación de los datos preexistentes.
-- **Ejecución local pendiente:** `php scripts/phase3-neon-persistent-company-verify.php --plan` y posteriormente `php scripts/phase3-neon-persistent-company-verify.php --verify=contabilidad-dev`. Hasta disponer del resultado PASS, **F3.3 no está aprobada**.
+- **F3.3 validada manualmente el 23/10/2026:** `php -l` sin errores; `--plan` correcto; `--verify=contabilidad-dev` PASS: empresa ID 4 con ADMIN, settings, monedas, CIIU, tributos, áreas, flujos, auditoría, **2.966 cuentas (1.214 operativas de seis dígitos)**, RLS bloquea lectura de empresa ajena, **0 asientos**, baseline preservado. Esta verificación es de solo lectura.
 - **No cerrar F3 global:** el criterio de salida sigue incluyendo crear empresa y registrar su primer asiento por el flujo autorizado, sin SQL manual. Sigue pendiente rendimiento de onboarding y coherencia de macrosector/actividad, además del alcance de maestros y SUNAT.
 - Mantener el conteo del checklist como fuente única: este ensayo añade cobertura, **no aprueba automáticamente una actividad general**.
 
