@@ -150,6 +150,8 @@ try{
         'total'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
         'pcge_accounts'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
         'pcge_templates'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+        'global_references'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+        'schema_sunat'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
         'operational_defaults'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
         'cost_centers'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
         'tenant_context'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
@@ -162,6 +164,8 @@ try{
             if(!$captureSql||$event->connectionName!=='pgsql')return;
             $statement=strtolower($event->sql);
             $group=match(true){
+                str_contains($statement,'f31_global_refs') => 'global_references',
+                str_contains($statement,'f31_schema_sunat') => 'schema_sunat',
                 str_contains($statement,'company_areas') ||
                     str_contains($statement,'cash_flow_areas') => 'operational_defaults',
                 str_contains($statement,'cost_centers') => 'cost_centers',
