@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   isValidPeruvianRuc, newCompanyOnboardingDraft, onboardingStepErrors,
-  onboardingIsComplete, companyOnboardingPayload,
+  onboardingIsComplete, companyOnboardingPayload, suggestedSectorForCiiu,
 } from '../src/modules/company/types/companyOnboarding.types.ts';
 
 function exampleDraft() {
@@ -89,4 +89,15 @@ test('requires a selected SUNAT Annex 2 contributor code', () => {
   assert.ok(onboardingStepErrors(0, d).sunat_contributor_type_code);
   d.sunat_contributor_type_code = '39';
   assert.deepEqual(onboardingStepErrors(0, d), {});
+});
+
+test('CIIU sector mapping catches commercial misclassification for transport', () => {
+  assert.equal(suggestedSectorForCiiu('4923'), 'TRANSPORTE_LOGISTICA');
+  assert.equal(suggestedSectorForCiiu('4752'), 'COMERCIAL');
+  assert.equal(suggestedSectorForCiiu('0111'), null);
+  const draft = exampleDraft();
+  draft.activities[1].sector_code = 'COMERCIAL';
+  assert.ok(onboardingStepErrors(1, draft).sector_1);
+  draft.activities[1].sector_code = 'TRANSPORTE_LOGISTICA';
+  assert.deepEqual(onboardingStepErrors(1, draft), {});
 });
