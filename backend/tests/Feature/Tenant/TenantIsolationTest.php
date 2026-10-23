@@ -271,7 +271,11 @@ it('bloquea a nivel de motor de BD referenciar un parent_id de otra empresa (FK 
         ]);
 
         // Intentar marcar como operativa una cuenta de nivel < 4 o con hijas dispara el CHECK / Trigger en PostgreSQL
-        expect(fn () => $lvl1->update(['is_operational' => true]))
-            ->toThrow(QueryException::class);
+        // PostgreSQL aborts a transaction after a constraint error. Isolate
+        // this expected failure in a SAVEPOINT so TenantContext can restore
+        // its SET LOCAL state without querying an aborted transaction.
+        expect(fn () => DB::transaction(
+            fn () => $lvl1->update(['is_operational' => true])
+        ))->toThrow(QueryException::class);
     });
 });
