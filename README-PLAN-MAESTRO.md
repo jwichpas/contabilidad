@@ -26,6 +26,16 @@
 
 ---
 
+## Validación F3.4 — 23/10/2026
+
+- **PASS manual Neon DEV:** `php -l scripts/phase3-neon-first-journal-http.php`, `--plan` y `--probe=contabilidad-dev`.
+- Empresa persistente ID 4: apertura HTTP 201 del período; POST HTTP 201 de primer asiento bimoneda, idempotencia 200/409; una auditoría y un recibo, constraints comprobadas.
+- **ROLLBACK confirmado:** sin persistir períodos, asientos, tipos de cambio, recibos ni auditorías nuevos. Baseline preservado.
+- **Alcance:** validación transaccional reversible del primer asiento. No implica que el primer asiento esté persistido ni que F3 global esté cerrada. Pendientes: prueba persistente autorizada desde interfaz/flujo normal, revisión de coherencia sector/CIIU, completar maestros y optimizar alta PCGE.
+- Este hito no modifica automáticamente el contador oficial de 32 actividades del checklist.
+
+---
+
 ## 1. Propósito, alcance y principios
 
 **Objetivo:** evolucionar el sistema actual hacia un ERP contable peruano multiempresa, seguro, bimonetario, confiable para la operación diaria, conforme a los requerimientos aplicables de SUNAT/PCGE/NIIF y con un frontend profesional.
