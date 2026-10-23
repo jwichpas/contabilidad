@@ -111,8 +111,9 @@ final readonly class UpdateCompanySettingsController
         $company = Company::query()->findOrFail($companyId);
 
         /** @var CompanySetting $settings */
+        // TenantScope limits the lookup; BelongsToTenant injects company_id on creation.
         $settings = CompanySetting::query()->firstOrCreate(
-            ['company_id' => $companyId],
+            [],
             [
                 'base_currency_id' => $validated['base_currency_id'] ?? Currency::query()->where('code', 'PEN')->value('id') ?? 1,
                 'tax_regime' => 'GENERAL',
