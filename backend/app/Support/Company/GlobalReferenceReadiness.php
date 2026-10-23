@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support\Company;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 /**
@@ -64,15 +63,45 @@ final class GlobalReferenceReadiness
         }
 
         try {
+            // The manifest is a committed, validated allowlist (13 exact tables).
+            // One DB round-trip instead of 13 Schema::hasTable, 13 COUNT, and
+            // three PCGE/currency COUNT queries over high-latency Neon links.
+            // If ANY table is missing or a privilege was revoked, SQL fails
+            // closed and this method returns the same blocking reason.
+            $expressions = [];
+            $index = 0;
             foreach ($expected as $table => $count) {
-                if (! Schema::hasTable($table) || (int) DB::table($table)->count() !== $count) {
+                $expressions[] = sprintf(
+                    '(SELECT COUNT(*)::integer FROM public.%s) AS ref_%d',
+                    $table,
+                    $index++
+                );
+            }
+            $expressions[] = <<<'SQL'
+                (SELECT COUNT(*)::integer FROM public.accounting_account_templates
+                 WHERE plan_version = 'PCGE_2019') AS pcge_2019
+                SQL;
+            $expressions[] = <<<'SQL'
+                (SELECT COUNT(*)::integer FROM public.accounting_account_templates
+                 WHERE plan_version = 'PCGE_2026') AS pcge_2026
+                SQL;
+            $expressions[] = <<<'SQL'
+                (SELECT COUNT(*)::integer FROM public.currencies
+                 WHERE code = 'PEN') AS currency_pen
+                SQL;
+
+            $actual = DB::selectOne('SELECT '.implode(', ', $expressions));
+            if ($actual === null) return $missing;
+            $index = 0;
+            foreach ($expected as $count) {
+                if ((int) ($actual->{'ref_'.$index} ?? -1) !== $count) {
                     return $missing;
                 }
+                ++$index;
             }
-
-            if ((int) DB::table('accounting_account_templates')->where('plan_version', 'PCGE_2019')->count() !== 1764
-                || (int) DB::table('accounting_account_templates')->where('plan_version', 'PCGE_2026')->count() !== 1637
-                || (int) DB::table('currencies')->where('code', 'PEN')->count() !== 1) {
+            if ((int) ($actual->pcge_2019 ?? 0) !== 1764
+                || (int) ($actual->pcge_2026 ?? 0) !== 1637
+                || (int) ($actual->currency_pen ?? 0) !== 1) {
                 return $missing;
             }
         } catch (Throwable) {
