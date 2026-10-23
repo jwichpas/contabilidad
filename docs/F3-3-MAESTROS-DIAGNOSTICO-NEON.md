@@ -1,5 +1,7 @@
 # F3.3 · Maestros, dimensiones y escenarios multiempresa — diagnóstico inicial
 
+> **Incremento centros de costo · 23/10/2026:** API auditada y pantalla `#centros-costo` implementadas; 27/27 pruebas frontend y build aprobados. Feature PostgreSQL y aceptación Vue real pendientes. [Contrato, límites y validación](F3-3-CENTROS-COSTO.md). Sin nuevas migraciones; F3.3 sigue abierta.
+
 **Observación:** 23/10/2026 · **Origen:** consultas `SELECT` independientes a Neon PostgreSQL 18, rama existente `contabilidad-dev` (no rama temporal). **Solo lectura:** sin DDL, transacciones de escritura ni nuevos registros.
 
 ## Estado comprobado
@@ -151,3 +153,4 @@ Usar datos ficticios y una sesión autorizada en la rama de desarrollo existente
 Registrar rol, empresa, ejercicio, resultado y errores sin publicar tokens ni credenciales. No declarar estos pasos PASS hasta ejecutarlos. Las negativas HTTP de fechas, tenant y períodos cerrados ya están cubiertas por la prueba Feature reportada; la compilación no reemplaza esta aceptación visual.
 
 **Próximo trabajo:** aceptación funcional de anexos/historial y revisión de dimensiones por cuenta, centros de costo y escenarios multisectoriales. **F3.3 permanece pendiente y el total oficial sigue en 8/32 (25%).**
+

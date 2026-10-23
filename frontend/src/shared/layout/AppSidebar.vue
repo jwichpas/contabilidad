@@ -195,6 +195,15 @@ const activeCompanyIdString = computed<string>({
             </button>
 
             <!-- Opción 1: Plan de Cuentas (PCGE) -->
+            <button type="button"
+              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all', currentModule === 'cost-centers' ? 'bg-white/15 text-white font-semibold' : 'text-white/80 hover:bg-white/10 hover:text-white']"
+              title="Centros de costo y destinos contables"
+              @click="emit('navigate', 'cost-centers')"
+            >
+              <FolderTree class="h-4 w-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Centros de costo</span>
+            </button>
+
             <button
               type="button"
               :class="[
@@ -440,3 +449,4 @@ const activeCompanyIdString = computed<string>({
     </aside>
   </div>
 </template>
+

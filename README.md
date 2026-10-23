@@ -10,6 +10,8 @@
 
 # Sistema de Gestión Contable y Financiero Bimonetario (ERP Clean Room)
 
+> **F3.3 · Centros de costo (23/10/2026):** nueva pantalla `#centros-costo` y gestión Laravel auditada. Frontend **27/27 tests y build PASS**; Feature PostgreSQL y aceptación funcional pendientes. [Contrato y validación](docs/F3-3-CENTROS-COSTO.md). No requiere migraciones; avance oficial 8/32 (25%).
+
 #**Acceso DEMO Neon DEV:** ya existen tres cuentas de prueba, pero sus contraseñas no se publican. Para generar una contraseña personal del administrador de desarrollo sin crear usuarios, consulta [Acceso inicial DEMO — ContaPerú](docs/ACCESO-DEMO-NEON-DEV.md).
 
 ## Transaccionalidad de Alta Precisión · Normativa Oficial SUNAT, PCGE 2026 y NIIF 18 / NIIF 19
@@ -319,3 +321,4 @@ La migración fiscal **ya está aplicada en Neon DEV** según la validación com
 
 
 La aceptación funcional y sus pasos están en [F3.3 maestros](docs/F3-3-MAESTROS-DIAGNOSTICO-NEON.md). F3.3 sigue pendiente.
+

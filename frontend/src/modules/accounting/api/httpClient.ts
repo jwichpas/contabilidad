@@ -32,6 +32,7 @@ import type {
 } from '@/modules/company/types/companyOnboarding.types';
 import type { EntityMaster, EntityMasterInput, EntityMasterPage } from '@/modules/company/types/entityMaster.types';
 import type { CompanyFiscalProfile, CreateCompanyFiscalProfilePayload } from '@/modules/company/types/companyFiscalProfile.types';
+import type { CostCenterInput, CostCenterMaster, CostCenterPage, CostCenterStatus } from '@/modules/company/types/costCenterMaster.types';
 import type {
   CompanyExchangeRatesResponse,
   CompanySettingsData,
@@ -265,6 +266,26 @@ export class AccountingApiClient {
       true,
     );
     return rawPayload.data;
+  }
+
+  public async fetchCostCenterMaster(params: { search: string; status: CostCenterStatus; page: number }): Promise<CostCenterPage> {
+    const query = new URLSearchParams({ search: params.search, status: params.status, page: String(params.page), per_page: '25' });
+    return this.request<CostCenterPage>(`/api/v1/company/cost-centers/manage?${query}`, { method: 'GET' }, true);
+  }
+
+  public async createCostCenter(payload: CostCenterInput): Promise<CostCenterMaster> {
+    const result = await this.request<{ data: CostCenterMaster }>('/api/v1/company/cost-centers', { method: 'POST', body: JSON.stringify(payload) }, true);
+    return result.data;
+  }
+
+  public async updateCostCenter(id: number, payload: CostCenterInput): Promise<CostCenterMaster> {
+    const result = await this.request<{ data: CostCenterMaster }>(`/api/v1/company/cost-centers/${id}`, { method: 'PUT', body: JSON.stringify(payload) }, true);
+    return result.data;
+  }
+
+  public async deactivateCostCenter(id: number): Promise<CostCenterMaster> {
+    const result = await this.request<{ data: CostCenterMaster }>(`/api/v1/company/cost-centers/${id}/deactivate`, { method: 'PATCH' }, true);
+    return result.data;
   }
 
   /**
@@ -578,3 +599,4 @@ export class AccountingApiClient {
     );
   }
 }
+

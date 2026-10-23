@@ -7,6 +7,7 @@ import FiscalPeriodsView from './modules/accounting/views/FiscalPeriodsView.vue'
 import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
 import EntityMasterView from './modules/company/views/EntityMasterView.vue';
 import CompanyFiscalHistoryView from './modules/company/views/CompanyFiscalHistoryView.vue';
+import CostCenterMasterView from './modules/company/views/CostCenterMasterView.vue';
 import CompanyOnboardingWizard from './modules/company/views/CompanyOnboardingWizard.vue';
 import type { CompanyOnboardingResult } from './modules/company/types/companyOnboarding.types';
 import LoginView from './shared/auth/LoginView.vue';
@@ -76,6 +77,7 @@ const sunatSpread = sunatSellRate.subtract(sunatBuyRate);
 function resolveModuleFromHash(): NavigationModule {
   if (typeof window === 'undefined') return 'journal';
   const hash = window.location.hash.toLowerCase();
+  if (hash.includes('centros-costo') || hash.includes('cost-centers')) return 'cost-centers';
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
   if (hash.includes('historial-fiscal') || hash.includes('fiscal-history')) return 'fiscal-history';
@@ -111,6 +113,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#tipo-cambio';
   } else if (mod === 'fiscal-history') {
     window.location.hash = '#historial-fiscal';
+  } else if (mod === 'cost-centers') {
+    window.location.hash = '#centros-costo';
   } else if (mod === 'entities') {
     window.location.hash = '#anexos';
   } else if (mod === 'company') {
@@ -241,6 +245,13 @@ watch(
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
         />
+        <CostCenterMasterView
+          v-else-if="currentModule === 'cost-centers'"
+          :key="'cost-centers-' + activeCompanyId"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-write="canDeactivateEntities"
+        />
         <CompanyFiscalHistoryView
           v-else-if="currentModule === 'fiscal-history'"
           :key="'fiscal-history-' + activeCompanyId"
@@ -274,3 +285,4 @@ watch(
     </div>
   </div>
 </template>
+

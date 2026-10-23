@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\Company\InitializeCompanyChartOfAccountsControll
 use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
+use App\Http\Controllers\Api\V1\Company\CostCenterMasterController;
 use App\Http\Controllers\Api\V1\Company\ListEntitiesController;
 use App\Http\Controllers\Api\V1\Company\EntityMasterController;
 use App\Http\Controllers\Api\V1\Company\CompanyFiscalProfileController;
@@ -171,6 +172,23 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/cost-centers', ListCostCentersController::class)
                     ->name('api.v1.company.cost-centers.index');
 
+                Route::get('/cost-centers/manage', [CostCenterMasterController::class, 'index'])
+                    ->name('api.v1.company.cost-centers.manage');
+                Route::get('/cost-centers/{costCenterId}', [CostCenterMasterController::class, 'show'])
+                    ->whereNumber('costCenterId')
+                    ->name('api.v1.company.cost-centers.show');
+                Route::post('/cost-centers', [CostCenterMasterController::class, 'store'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->name('api.v1.company.cost-centers.store');
+                Route::put('/cost-centers/{costCenterId}', [CostCenterMasterController::class, 'update'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->whereNumber('costCenterId')
+                    ->name('api.v1.company.cost-centers.update');
+                Route::patch('/cost-centers/{costCenterId}/deactivate', [CostCenterMasterController::class, 'deactivate'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->whereNumber('costCenterId')
+                    ->name('api.v1.company.cost-centers.deactivate');
+
                 Route::get('/cash-flow-areas', ListCashFlowAreasController::class)
                     ->name('api.v1.company.cash-flow-areas.index');
 
@@ -209,3 +227,4 @@ Route::prefix('v1')->group(function (): void {
         });
     });
 });
+
