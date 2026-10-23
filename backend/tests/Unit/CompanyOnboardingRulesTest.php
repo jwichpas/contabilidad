@@ -21,3 +21,24 @@ it('rejects a legal entity that attempts to use Nuevo RUS', function (): void {
     CompanyEconomicProfile::assertTaxRegimeEligibility('GENERAL', 'SAC');
     expect(true)->toBeTrue();
 });
+
+
+it('ties CIIU 4923 to transport instead of an arbitrary commercial sector', function (): void {
+    expect(CompanyEconomicProfile::suggestedSectorForCiiu('4923'))->toBe('TRANSPORTE_LOGISTICA')
+        ->and(CompanyEconomicProfile::suggestedSectorForCiiu('4752'))->toBe('COMERCIAL')
+        ->and(CompanyEconomicProfile::suggestedSectorForCiiu('4100'))->toBe('CONSTRUCCION')
+        ->and(CompanyEconomicProfile::suggestedSectorForCiiu('0111'))->toBeNull();
+
+    $bad = [[
+        'sector_code' => 'COMERCIAL',
+        'ciiu_code' => '4923',
+        'description' => 'TRANSPORTE DE CARGA POR CARRETERA',
+        'is_primary' => true,
+    ]];
+    expect(fn () => CompanyEconomicProfile::assertValidActivities($bad))
+        ->toThrow(ValidationException::class);
+
+    $bad[0]['sector_code'] = 'TRANSPORTE_LOGISTICA';
+    CompanyEconomicProfile::assertValidActivities($bad);
+    expect(true)->toBeTrue();
+});
