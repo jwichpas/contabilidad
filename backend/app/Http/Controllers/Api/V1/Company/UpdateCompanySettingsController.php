@@ -204,7 +204,7 @@ final readonly class UpdateCompanySettingsController
             if (array_key_exists('economic_activities', $validated)) {
                 CompanyEconomicActivity::query()
                     ->where('company_id', $companyId)
-                    ->update(['is_primary' => false]);
+                    ->update(['is_primary' => DB::raw('FALSE')]);
 
                 $validCodes = [];
                 foreach ($validated['economic_activities'] as $activity) {
