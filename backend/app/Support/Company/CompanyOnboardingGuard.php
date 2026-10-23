@@ -48,7 +48,7 @@ final readonly class CompanyOnboardingGuard
         // Schema::hasColumn/hasTable and COUNT needed a separate network RTT.
         try {
             $installed = DB::selectOne(<<<'SQL'
-                SELECT
+                SELECT /* f31_schema_sunat */
                     (SELECT COUNT(*)::integer FROM information_schema.columns
                      WHERE table_schema = 'public'
                        AND table_name = 'company_settings'
