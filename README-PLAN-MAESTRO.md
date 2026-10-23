@@ -526,6 +526,8 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | F2.3 | POST, extornos, períodos y bloqueos con pruebas de concurrencia: [F2.3](docs/F2-3-CIERRE-PERIODOS.md) |
 | F3.2 | PCGE global 3.401; por compañía 2.966, de ellas 1.214 operativas; 3 matrices de 454 rutas: [preflight F2.3f](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
 
+**Control local del checklist (sin conexión a BD):** ejecutar `php scripts/verify-plan-master-checklist.php --check` desde `backend/` después de modificar el Plan Maestro. Revisa 32 casillas únicas, totales, resumen F3, evidencias y referencias a F3.4/F3.5. **No modifica casillas ni decide aprobaciones automáticamente.**
+
 **Política documental:** actualizar la casilla, evidencia, conteos y estado en **una sola edición**. Los ensayos F3.4/F3.5 figuran en una tabla de subhitos pero no se suman a las 32 casillas. Los avances cronológicos antiguos están en [el archivo histórico](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md) y no indican el estado actual.
 
 ---
