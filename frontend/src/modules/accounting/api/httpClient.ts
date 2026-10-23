@@ -31,6 +31,7 @@ import type {
   SunatContributorType, SunatCiiuClass, SunatTaxCode,
 } from '@/modules/company/types/companyOnboarding.types';
 import type { EntityMaster, EntityMasterInput, EntityMasterPage } from '@/modules/company/types/entityMaster.types';
+import type { CompanyFiscalProfile, CreateCompanyFiscalProfilePayload } from '@/modules/company/types/companyFiscalProfile.types';
 import type {
   CompanyExchangeRatesResponse,
   CompanySettingsData,
@@ -497,6 +498,26 @@ export class AccountingApiClient {
     const response = await this.request<{ data: EntityMaster }>(
       '/api/v1/company/entities/' + encodeURIComponent(String(id)) + '/deactivate',
       { method: 'PATCH' }, true,
+    );
+    return response.data;
+  }
+
+  /** Read-only fiscal timeline for the active tenant. */
+  public async fetchCompanyFiscalProfiles(year: number): Promise<readonly CompanyFiscalProfile[]> {
+    const response = await this.request<{ data: CompanyFiscalProfile[] }>(
+      '/api/v1/company/fiscal-profiles?year=' + encodeURIComponent(String(year)),
+      { method: 'GET' }, true,
+    );
+    return response.data;
+  }
+
+  /** Append a new fiscal revision; the API owns tenant, sequence and author. */
+  public async createCompanyFiscalProfile(
+    payload: CreateCompanyFiscalProfilePayload,
+  ): Promise<CompanyFiscalProfile> {
+    const response = await this.request<{ data: CompanyFiscalProfile }>(
+      '/api/v1/company/fiscal-profiles',
+      { method: 'POST', body: JSON.stringify(payload) }, true,
     );
     return response.data;
   }
