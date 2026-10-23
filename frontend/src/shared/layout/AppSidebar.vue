@@ -10,6 +10,7 @@ import {
   FileBarChart2,
   FolderTree,
   Users,
+  FileClock,
   LogOut,
   Moon,
   ShieldCheck,
@@ -177,6 +178,20 @@ const activeCompanyIdString = computed<string>({
             >
               <Users class="h-4 w-4 shrink-0" />
               <span v-if="!isCollapsed || isOpenMobile" class="truncate">Terceros y Anexos</span>
+            </button>
+
+            <button type="button"
+              :class="[
+                'w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
+                currentModule === 'fiscal-history'
+                  ? 'bg-white/15 text-white font-semibold shadow-[inset_3px_0_0_var(--accent)]'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white',
+              ]"
+              title="Historial de regímenes y parámetros fiscales por ejercicio"
+              @click="emit('navigate', 'fiscal-history')"
+            >
+              <FileClock class="h-4 w-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Historial fiscal</span>
             </button>
 
             <!-- Opción 1: Plan de Cuentas (PCGE) -->
