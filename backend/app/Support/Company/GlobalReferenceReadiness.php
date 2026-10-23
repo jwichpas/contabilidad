@@ -90,7 +90,7 @@ final class GlobalReferenceReadiness
                  WHERE code = 'PEN') AS currency_pen
                 SQL;
 
-            $actual = DB::selectOne('SELECT '.implode(', ', $expressions));
+            $actual = DB::selectOne('SELECT /* f31_global_refs */ '.implode(', ', $expressions));
             if ($actual === null) return $missing;
             $index = 0;
             foreach ($expected as $count) {
