@@ -61,6 +61,29 @@ La nueva ejecución del usuario confirmó:
 - **Corrección publicada**: seis áreas y nueve flujos ahora se insertan en dos sentencias dentro de la transacción para nuevas empresas, evitando `firstOrCreate` por fila; la clase 9 y sus dos centros de costo usan seis INSERT por nivel más un INSERT de centros, sin deshabilitar integridad ni FORCE RLS. El camino anterior continúa para empresas preexistentes. El perfilador separa ahora `operational_defaults`, `cost_centers` y `tenant_context`.
 - **Pendiente:** aprobar PHP lint, Vue typecheck/build y **repetir una sola vez el ensayo reversible medido**. No se puede afirmar mejoría hasta que el usuario proporcione la nueva medición. No efectuar un alta real ni borrar los datos existentes.
 
+### Medición tercera: optimización de áreas, flujos y analíticas aprobada funcionalmente — 23/10/2026
+
+La ejecución manual del usuario terminó con HTTP 201, tres catálogos globales y los tres rechazos SUNAT 422 correctos, 6 áreas/9 flujos, PCGE, auditoría y `ROLLBACK`. Neon volvió a **4 empresas y 9 membresías**, sin modificar los períodos previos.
+
+| Métrica | Medición anterior | Medición nueva | Variación |
+|---|---:|---:|---:|
+| Tiempo total del POST | 116,11 s | **75,27 s** | **−40,84 s (−35,2%)** |
+| Consultas SQL | 146 | **102** | **−44** |
+| Tiempo de consultas/red | 107,51 s | **71,18 s** | −36,33 s |
+| Sentencias con cuentas PCGE | 31 / 26,79 s | **17 / 11,32 s** | −14 sentencias |
+| Referencias PCGE | — | 5 / 7,16 s | |
+| Áreas/flujos | — | 2 / 1,59 s | |
+| Centros de costo | — | 2 / 1,18 s | |
+| Contexto multiempresa | — | **15 / 10,39 s** | |
+| Otras consultas | — | **61 / 39,54 s** | |
+| PHP/red fuera del driver SQL | 8,60 s | **4,09 s** | |
+
+**Interpretación:** la segunda optimización de áreas, NIC 7 y clase 9 conservó funcionalidad y redujo 35,2% la duración. No cumple aún el objetivo de 25 segundos; ni los 71,18 s de `QueryExecuted` significan necesariamente CPU en PostgreSQL: son duración de acceso a consulta e incluyen red/driver.
+
+**Tercera optimización publicada en `main`, todavía no medida por el usuario:** `GlobalReferenceReadiness` valida los 13 catálogos globales, versiones PCGE 2019/2026 y PEN mediante un solo SELECT en lugar de docenas de viajes por separado; `CompanyOnboardingGuard` comprueba columnas requeridas, dos tablas de empresa y conteos SUNAT 51/417/38 en una consulta consolidada. Ambas conservan **fail-closed** ante errores, tablas faltantes o permisos incompletos. La comprobación ADMIN continúa bajo el contexto de empresa. No se cambió el comportamiento de FORCE RLS.
+
+**Pendiente de validar:** `php -l` de ambos archivos, prueba reversible HTTP con sus PASS/ROLLBACK y nuevos tiempos, `pnpm typecheck` y `pnpm build`. No repetir migraciones ni crear empresas para medir rendimiento. **No marcar <25 s antes de medirlo.**
+
 ## Pruebas de regresión (sin nuevas migraciones)
 
 ```powershell
