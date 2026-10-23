@@ -7,7 +7,7 @@ namespace App\Support\Company;
 use App\Models\User;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 /**
  * No habilitar altas multiempresa sin el esquema Laravel esperado ni permiso ADMIN.
@@ -43,30 +43,47 @@ final readonly class CompanyOnboardingGuard
             return ['can_create' => false, 'reason' => 'Solo un administrador activo puede crear empresas.'];
         }
 
-        if (! CompanyEconomicProfile::isReady()
-            || ! Schema::hasColumn('company_settings', 'initial_fiscal_year')
-            || ! Schema::hasColumn('company_settings', 'income_reference_year')
-            || ! Schema::hasColumn('company_settings', 'annual_income')
-            || ! Schema::hasColumn('company_settings', 'initial_pcge_version')) {
+        // Fail closed with a single SQL snapshot of the installed F3.1
+        // schema and exact SUNAT snapshot row counts. Previously each
+        // Schema::hasColumn/hasTable and COUNT needed a separate network RTT.
+        try {
+            $installed = DB::selectOne(<<<'SQL'
+                SELECT
+                    (SELECT COUNT(*)::integer FROM information_schema.columns
+                     WHERE table_schema = 'public'
+                       AND table_name = 'company_settings'
+                       AND column_name IN (
+                         'legal_form','initial_fiscal_year',
+                         'income_reference_year','annual_income',
+                         'initial_pcge_version','sunat_contributor_type_code'
+                       )) AS required_columns,
+                    (to_regclass('public.company_economic_activities') IS NOT NULL
+                     AND to_regclass('public.company_tax_codes') IS NOT NULL
+                    ) AS tenant_tables,
+                    (SELECT COUNT(*)::integer FROM public.sunat_ruc_contributor_types)
+                        AS contributor_types,
+                    (SELECT COUNT(*)::integer FROM public.sunat_ciiu_rev4_classes)
+                        AS ciiu_classes,
+                    (SELECT COUNT(*)::integer FROM public.sunat_ruc_tax_codes)
+                        AS tax_codes
+                SQL);
+            if ($installed === null
+                || (int) $installed->required_columns !== 6
+                || ! $installed->tenant_tables
+                || (int) $installed->contributor_types !== 51
+                || (int) $installed->ciiu_classes !== 417
+                || (int) $installed->tax_codes !== 38) {
+                return [
+                    'can_create' => false,
+                    'reason' => 'El perfil fiscal o los tres catálogos SUNAT RUC no están completos. Verifique las migraciones 23 y 24.',
+                ];
+            }
+        } catch (Throwable) {
+            // Missing tables, wrong privileges or inaccessible catalogs.
+            // Never treat a failed query as evidence that the schema is ready.
             return [
                 'can_create' => false,
-                'reason' => 'La creación estará disponible después de aplicar las migraciones Laravel pendientes.',
-            ];
-        }
-
-        // Alta guiada únicamente por los tres catálogos RUC oficiales versionados.
-        // No asumir que las tablas PLE con números coincidentes son equivalentes.
-        if (! Schema::hasColumn('company_settings', 'sunat_contributor_type_code')
-            || ! Schema::hasTable('sunat_ruc_contributor_types')
-            || ! Schema::hasTable('sunat_ciiu_rev4_classes')
-            || ! Schema::hasTable('sunat_ruc_tax_codes')
-            || ! Schema::hasTable('company_tax_codes')
-            || (int) DB::table('sunat_ruc_contributor_types')->count() !== 51
-            || (int) DB::table('sunat_ciiu_rev4_classes')->count() !== 417
-            || (int) DB::table('sunat_ruc_tax_codes')->count() !== 38) {
-            return [
-                'can_create' => false,
-                'reason' => 'Instale los 3 catálogos SUNAT de RUC, CIIU Rev. 4 y tributos (migración global 24).',
+                'reason' => 'No se pudo verificar el perfil fiscal y los catálogos SUNAT de la empresa.',
             ];
         }
 
