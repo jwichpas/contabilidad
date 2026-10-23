@@ -150,6 +150,9 @@ try{
         'total'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
         'pcge_accounts'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
         'pcge_templates'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+        'operational_defaults'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+        'cost_centers'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
+        'tenant_context'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
         'other'=>['count'=>0,'ms'=>0.0,'max_ms'=>0.0],
     ];
     $captureSql=false;
@@ -157,10 +160,16 @@ try{
         static function(\Illuminate\Database\Events\QueryExecuted $event)
             use (&$sqlStats,&$captureSql):void {
             if(!$captureSql||$event->connectionName!=='pgsql')return;
-            $group=str_contains($event->sql,'accounting_accounts')
-                ?'pcge_accounts'
-                :(str_contains($event->sql,'accounting_account_templates')
-                    ?'pcge_templates':'other');
+            $statement=strtolower($event->sql);
+            $group=match(true){
+                str_contains($statement,'company_areas') ||
+                    str_contains($statement,'cash_flow_areas') => 'operational_defaults',
+                str_contains($statement,'cost_centers') => 'cost_centers',
+                str_contains($statement,'app.current_company_id') => 'tenant_context',
+                str_contains($statement,'accounting_accounts') => 'pcge_accounts',
+                str_contains($statement,'accounting_account_templates') => 'pcge_templates',
+                default => 'other',
+            };
             foreach(['total',$group] as $key){
                 ++$sqlStats[$key]['count'];
                 $sqlStats[$key]['ms']+=(float)$event->time;
