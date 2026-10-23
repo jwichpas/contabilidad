@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "typecheck": "vue-tsc --noEmit",
-    "test:unit": "node --experimental-strip-types --test scripts/decimal-smoke.test.mjs scripts/company-onboarding.test.mjs scripts/auth-session-expiry.test.mjs scripts/entity-master.test.mjs",
+    "test:unit": "node --experimental-strip-types --test scripts/decimal-smoke.test.mjs scripts/company-onboarding.test.mjs scripts/auth-session-expiry.test.mjs scripts/entity-master.test.mjs scripts/fiscal-history.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
