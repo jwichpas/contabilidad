@@ -16,6 +16,16 @@
 > El registro de notas históricas que antes se acumulaba en el encabezado y debajo del checklist fue preservado en [Historial del plan](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md). Los estados antiguos del archivo no reemplazan el estado vigente.
 
 
+## Avance F3.2–F3.3 — 23/10/2026
+
+- **F3.2 aislamiento tenant:** validación manual en Neon DEV por el usuario, `php artisan test --testsuite=Feature --filter=Tenant`: **19/19 PASS, 78 aserciones**. También `CompanySetupAndCatalogsTest` 6/6 (44 aserciones), `TenantIsolationTest` 5/5 (15) y `TenantContextNestedTest` 3/3 (20).
+- **F3.3 empresa persistente:** el onboarding HTTP ya creó la empresa ficticia ID 4, documentada en la línea base. En lugar de duplicarla, se agregó el ensayo **solo lectura** `backend/scripts/phase3-neon-persistent-company-verify.php`. Comprobará la configuración persistida, PCGE operativo a seis dígitos, membresía ADMIN, RLS y conservación de los datos preexistentes.
+- **Ejecución local pendiente:** `php scripts/phase3-neon-persistent-company-verify.php --plan` y posteriormente `php scripts/phase3-neon-persistent-company-verify.php --verify=contabilidad-dev`. Hasta disponer del resultado PASS, **F3.3 no está aprobada**.
+- **No cerrar F3 global:** el criterio de salida sigue incluyendo crear empresa y registrar su primer asiento por el flujo autorizado, sin SQL manual. Sigue pendiente rendimiento de onboarding y coherencia de macrosector/actividad, además del alcance de maestros y SUNAT.
+- Mantener el conteo del checklist como fuente única: este ensayo añade cobertura, **no aprueba automáticamente una actividad general**.
+
+---
+
 ## 1. Propósito, alcance y principios
 
 **Objetivo:** evolucionar el sistema actual hacia un ERP contable peruano multiempresa, seguro, bimonetario, confiable para la operación diaria, conforme a los requerimientos aplicables de SUNAT/PCGE/NIIF y con un frontend profesional.
