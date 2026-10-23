@@ -1,4 +1,4 @@
-export type NavigationModule = 'catalog' | 'journal' | 'company' | 'company-create' | 'exchange-rates' | 'fiscal-periods';
+export type NavigationModule = 'catalog' | 'journal' | 'company' | 'company-create' | 'entities' | 'exchange-rates' | 'fiscal-periods';
 
 export interface ActiveCompanyInfo {
   readonly id: number;
