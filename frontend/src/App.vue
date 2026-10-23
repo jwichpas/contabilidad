@@ -6,6 +6,7 @@ import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue'
 import FiscalPeriodsView from './modules/accounting/views/FiscalPeriodsView.vue';
 import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
 import EntityMasterView from './modules/company/views/EntityMasterView.vue';
+import CompanyFiscalHistoryView from './modules/company/views/CompanyFiscalHistoryView.vue';
 import CompanyOnboardingWizard from './modules/company/views/CompanyOnboardingWizard.vue';
 import type { CompanyOnboardingResult } from './modules/company/types/companyOnboarding.types';
 import LoginView from './shared/auth/LoginView.vue';
@@ -77,6 +78,7 @@ function resolveModuleFromHash(): NavigationModule {
   const hash = window.location.hash.toLowerCase();
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
+  if (hash.includes('historial-fiscal') || hash.includes('fiscal-history')) return 'fiscal-history';
   if (hash.includes('anexos') || hash.includes('terceros') || hash.includes('entities')) return 'entities';
   if (hash.includes('diario') || hash.includes('asiento') || hash.includes('voucher')) {
     return 'journal';
@@ -107,6 +109,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#periodos';
   } else if (mod === 'exchange-rates') {
     window.location.hash = '#tipo-cambio';
+  } else if (mod === 'fiscal-history') {
+    window.location.hash = '#historial-fiscal';
   } else if (mod === 'entities') {
     window.location.hash = '#anexos';
   } else if (mod === 'company') {
@@ -236,6 +240,13 @@ watch(
           :key="`rates-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+        />
+        <CompanyFiscalHistoryView
+          v-else-if="currentModule === 'fiscal-history'"
+          :key="'fiscal-history-' + activeCompanyId"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-write="canDeactivateEntities"
         />
         <EntityMasterView
           v-else-if="currentModule === 'entities'"
