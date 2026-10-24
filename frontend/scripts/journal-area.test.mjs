@@ -159,3 +159,22 @@ test('journal bootstrap projects only accounts and flags needed by the voucher f
   assert.match(picker, /items-center justify-center/);
   assert.match(picker, /max-h-\[min\(80vh,650px\)\]/);
 });
+
+test('account edit catalogs are loaded lazily only when the account form opens', () => {
+  const view = readFileSync(new URL('../src/modules/accounting/views/AccountingCatalogView.vue', import.meta.url), 'utf8');
+  assert.match(view, /async function ensureEditingCatalogs/);
+  assert.match(view, /await ensureEditingCatalogs\(\)/);
+  assert.match(view, /catalogsReadyForCompany\.value = null/);
+  assert.doesNotMatch(view, /Promise\.allSettled\(\[fetchTree\(\), loadCatalogs\(\)\]\)/);
+  assert.match(view, /Cargando las opciones necesarias para configurar la cuenta/);
+});
+
+test('bootstrap exposes request profiling stages without leaking SQL or credentials', () => {
+  const backend = readFileSync(new URL('../../backend/app/Http/Controllers/Api/V1/Accounting/GetJournalEditorBootstrapController.php', import.meta.url), 'utf8');
+  assert.match(backend, /schema_accounts;dur=/);
+  assert.match(backend, /schema_subdiaries;dur=/);
+  assert.match(backend, /subdiaries;dur=/);
+  assert.match(backend, /controller_total;dur=/);
+  assert.match(backend, /Server-Timing/);
+  assert.doesNotMatch(backend, /header\('Server-Timing'.*getQueryLog/);
+});
