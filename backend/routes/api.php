@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\CostCenterMasterController;
+use App\Http\Controllers\Api\V1\Company\CompanySubdiaryMasterController;
 use App\Http\Controllers\Api\V1\Company\ListEntitiesController;
 use App\Http\Controllers\Api\V1\Company\EntityMasterController;
 use App\Http\Controllers\Api\V1\Company\CompanyFiscalProfileController;
@@ -153,6 +154,18 @@ Route::prefix('v1')->group(function (): void {
                     ->whereNumber('entryId')
                     ->name('api.v1.accounting.journal-entries.reverse');
             });
+
+            Route::get('/company/subdiaries', [CompanySubdiaryMasterController::class, 'index'])
+                ->name('api.v1.company.subdiaries.index');
+            Route::post('/company/subdiaries', [CompanySubdiaryMasterController::class, 'store'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                ->name('api.v1.company.subdiaries.store');
+            Route::put('/company/subdiaries/{subdiaryId}', [CompanySubdiaryMasterController::class, 'update'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                ->whereNumber('subdiaryId');
+            Route::patch('/company/subdiaries/{subdiaryId}/status', [CompanySubdiaryMasterController::class, 'setStatus'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                ->whereNumber('subdiaryId');
 
             // Configuración, Áreas, Centros de Costos y Terceros de la Empresa
             Route::prefix('company')->group(function (): void {
