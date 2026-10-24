@@ -22,7 +22,7 @@ import {
 import type { OperationalAccount } from '../types/journalEntry.types';
 import type { EntityMaster } from '../../company/types/entityMaster.types';
 import JournalEntityPicker from '../components/JournalEntityPicker.vue';
-import { entityMatches } from '../utils/journalEntity';
+import { entityMatches, entityRequired } from '../utils/journalEntity';
 import { cashFlowMatches } from '../utils/journalArea';
 import { resetAccountDimensions } from '../utils/journalLine';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
@@ -209,6 +209,8 @@ interface EditingLine {
   companyAreaId: number | null;
   cashFlowAreaId: number | null;
   entity: EntityMaster | null;
+  showOptionalCostCenter?: boolean;
+  showOptionalEntity?: boolean;
   description: string;
   debitLocal: string;
   creditLocal: string;
@@ -987,33 +989,46 @@ onMounted(() => {
                   </select>
                 </td>
 
-                <!-- Los centros son opcionales salvo que la cuenta los exija.
-                     Selecciones opcionales siguen permitidas por las reglas del backend. -->
+                <!-- Mostrar de inmediato las dimensiones obligatorias; las opcionales
+                     se agregan a demanda y siguen siendo válidas para cualquier cuenta. -->
                 <td class="py-2 px-3">
-                  <label class="block text-[10px] text-muted mb-1"
-                    :class="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'font-semibold text-amber-700 dark:text-amber-300' : ''">
-                    {{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'Obligatorio' : 'Opcional' }}
-                  </label>
-                  <select
-                    v-model="line.costCenterId"
-                    :disabled="isSubmitting || !line.accountId"
-                    class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50"
-                    title="Dimensión opcional, salvo que la cuenta exija centro; no activa por sí sola transferencia 94/95-79"
-                  >
-                    <option :value="null">
-                      {{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'Seleccionar centro obligatorio' : 'Sin centro (opcional)' }}
-                    </option>
-                    <option v-for="cc in costCenters" :key="cc.id" :value="cc.id">
-                      {{ cc.code }} · {{ cc.name }}
-                    </option>
-                  </select>
+                  <span v-if="!line.accountId" class="text-[11px] text-muted">—</span>
+                  <template v-else-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center || line.showOptionalCostCenter">
+                    <label class="block text-[10px] mb-1"
+                      :class="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-muted'">
+                      {{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'Centro obligatorio' : 'Centro opcional' }}
+                    </label>
+                    <select v-model="line.costCenterId" :disabled="isSubmitting"
+                      class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                      title="Centro de costo: seleccionar solo si corresponde a la partida">
+                      <option :value="null">
+                        {{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'Seleccionar centro obligatorio' : 'Sin centro (opcional)' }}
+                      </option>
+                      <option v-for="cc in costCenters" :key="cc.id" :value="cc.id">
+                        {{ cc.code }} · {{ cc.name }}
+                      </option>
+                    </select>
+                  </template>
+                  <button v-else type="button" :disabled="isSubmitting"
+                    class="rounded-md border border-dashed border-line px-2 py-1.5 text-[11px] text-muted hover:text-foreground disabled:opacity-50"
+                    @click="line.showOptionalCostCenter = true">
+                    + Centro opcional
+                  </button>
                 </td>
 
                 <td class="py-2 px-3">
-                  <JournalEntityPicker :key="`${line.id}-${line.accountId ?? 'none'}`"
+                  <span v-if="!line.accountId" class="text-[11px] text-muted">—</span>
+                  <JournalEntityPicker
+                    v-else-if="entityRequired(operationalAccounts.find(a => a.id === line.accountId)) || line.showOptionalEntity"
+                    :key="`${line.id}-${line.accountId ?? 'none'}`"
                     v-model="line.entity" :api="apiClient"
                     :account="operationalAccounts.find((account) => account.id === line.accountId)"
-                    :disabled="isSubmitting || !line.accountId" />
+                    :disabled="isSubmitting" />
+                  <button v-else type="button" :disabled="isSubmitting"
+                    class="rounded-md border border-dashed border-line px-2 py-1.5 text-[11px] text-muted hover:text-foreground disabled:opacity-50"
+                    @click="line.showOptionalEntity = true">
+                    + Anexo opcional
+                  </button>
                 </td>
 
                 <td class="py-2 px-3 min-w-60">
