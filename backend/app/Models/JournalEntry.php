@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property string $entry_number
  * @property Carbon $entry_date
  * @property string $entry_type
+ * @property string $subdiary_code
  * @property string $status
  * @property string $currency
  * @property string $exchange_rate
@@ -45,6 +46,7 @@ final class JournalEntry extends Model
         'entry_number',
         'entry_date',
         'entry_type',
+        'subdiary_code',
         'status',
         'currency',
         'exchange_rate',
@@ -67,6 +69,7 @@ final class JournalEntry extends Model
             'entry_number' => 'string',
             'entry_date' => 'immutable_date',
             'entry_type' => 'string',
+            'subdiary_code' => 'string',
             'status' => 'string',
             'currency' => 'string',
             'exchange_rate' => 'decimal:6',
