@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
 use App\Http\Controllers\Api\V1\Accounting\CreateJournalEntryController;
 use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\GetNextJournalEntryNumberController;
+use App\Http\Controllers\Api\V1\Accounting\GetJournalEditorBootstrapController;
 use App\Http\Controllers\Api\V1\Accounting\ListAccountingAccountTreeController;
 use App\Http\Controllers\Api\V1\Accounting\ListJournalEntriesController;
 use App\Http\Controllers\Api\V1\Accounting\ReverseJournalEntryController;
@@ -134,6 +135,9 @@ Route::prefix('v1')->group(function (): void {
 
             // Asientos Contables / Libro Diario Bimoneda (Voucher)
             Route::prefix('accounting/journal-entries')->group(function (): void {
+                Route::get('/editor-bootstrap', GetJournalEditorBootstrapController::class)
+                    ->name('api.v1.accounting.journal-entries.editor-bootstrap');
+
                 Route::get('/', ListJournalEntriesController::class)
                     ->name('api.v1.accounting.journal-entries.index');
 
