@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\V1\Catalogs\ListCurrenciesController;
 use App\Http\Controllers\Api\V1\Catalogs\ListFinancialStatementRubricsController;
 use App\Http\Controllers\Api\V1\Catalogs\ListSunatCatalogController;
 use App\Http\Controllers\Api\V1\Catalogs\ListSeeCatalogController;
+use App\Http\Controllers\Api\V1\Catalogs\ListSeeCatalogsController;
 use App\Http\Controllers\Api\V1\Catalogs\ListSeeUbigeosController;
 use App\Http\Controllers\Api\V1\Catalogs\ListSunatRucReferenceController;
 use App\Http\Controllers\Api\V1\Catalogs\ListTaxCalendarDeadlinesController;
@@ -75,6 +76,9 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/sunat/{tableNumber}', ListSunatCatalogController::class)
                 ->name('api.v1.catalogs.sunat');
+
+            Route::get('/sunat-see', ListSeeCatalogsController::class)
+                ->name('api.v1.catalogs.sunat-see.index');
 
             Route::get('/sunat-see/ubigeos', ListSeeUbigeosController::class)
                 ->name('api.v1.catalogs.sunat-see.ubigeos');

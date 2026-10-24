@@ -10,6 +10,7 @@ import {
   FolderTree,
   Users,
   FileClock,
+  Globe2,
   LogOut,
   Moon,
   ShieldCheck,
@@ -343,6 +344,19 @@ const activeCompanyIdString = computed<string>({
                 NIIF
               </span>
             </div>
+          </div>
+
+          <!-- Referencias normativas globales, sin edición por empresa -->
+          <div class="space-y-1">
+            <p v-if="!isCollapsed || isOpenMobile" class="px-2 text-[10px] font-semibold uppercase tracking-wider text-white/60">Referencias globales</p>
+            <button type="button"
+              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
+                currentModule === 'see-references' ? 'bg-white/15 text-white font-semibold shadow-[inset_3px_0_0_var(--accent)]' : 'text-white/80 hover:bg-white/10 hover:text-white']"
+              title="Catálogos SEE de facturación electrónica y ubigeo INEI, solo lectura"
+              @click="emit('navigate', 'see-references')">
+              <Globe2 class="h-4 w-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Catálogos SEE y Ubigeo</span>
+            </button>
           </div>
 
           <!-- Módulo: Configuración & Régimen de Empresa -->

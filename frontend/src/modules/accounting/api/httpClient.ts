@@ -28,6 +28,7 @@ import type {
   NextCorrelativeResponse,
   OperationalAccount,
 } from '../types/journalEntry.types';
+import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo } from '../types/seeReferences.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
@@ -336,6 +337,35 @@ export class AccountingApiClient {
         ? item.description
         : typeof item.name === 'string' && item.name.trim() ? item.name : item.code,
     }));
+  }
+
+  /** Global electronic invoicing references. Independent of PLE/SIRE catalogs. */
+  public async fetchSeeCatalogs(signal?: AbortSignal): Promise<readonly SeeCatalogSummary[]> {
+    const result = await this.request<{ data: SeeCatalogSummary[] }>(
+      '/api/v1/catalogs/sunat-see', { method: 'GET', signal }, false,
+    );
+    return result.data;
+  }
+
+  public async fetchSeeCatalog(
+    number: string,
+    params: { readonly q: string; readonly page: number; readonly signal?: AbortSignal },
+  ): Promise<SeePage<SeeCatalogItem>> {
+    const query = new URLSearchParams({ q: params.q, page: String(params.page), per_page: '25' });
+    return this.request<SeePage<SeeCatalogItem>>(
+      `/api/v1/catalogs/sunat-see/${encodeURIComponent(number)}?${query}`,
+      { method: 'GET', signal: params.signal }, false,
+    );
+  }
+
+  public async fetchSeeUbigeos(
+    params: { readonly q: string; readonly page: number; readonly signal?: AbortSignal },
+  ): Promise<SeePage<SeeUbigeo>> {
+    const query = new URLSearchParams({ q: params.q, page: String(params.page), per_page: '25' });
+    return this.request<SeePage<SeeUbigeo>>(
+      `/api/v1/catalogs/sunat-see/ubigeos?${query}`,
+      { method: 'GET', signal: params.signal }, false,
+    );
   }
 
   /**

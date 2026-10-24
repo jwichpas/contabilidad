@@ -9,6 +9,10 @@ it('keeps SEE separate from PLE and preserves the source ambiguity', function ()
         ['email' => 'see-reference-test@example.test'],
         ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
     );
+    $index = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see');
+    $index->assertOk()->assertJsonCount(33, 'data')
+        ->assertJsonFragment(['number' => '02', 'item_count' => 178]);
+
     $see = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/03?q=A11');
     $see->assertOk()->assertJsonPath('meta.catalog_number', '03')
         ->assertJsonPath('meta.total', 2)
