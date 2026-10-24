@@ -146,6 +146,7 @@ const form = reactive<{
   currency_mode: AccountCurrencyMode;
   entity_requirement_type: EntityRequirementType;
   requires_cost_center: boolean;
+  requires_company_area: boolean;
   has_automatic_destination: boolean;
   destination_debit_code: string;
   destination_credit_code: string;
@@ -161,6 +162,7 @@ const form = reactive<{
   currency_mode: 'PEN',
   entity_requirement_type: 'NONE',
   requires_cost_center: false,
+  requires_company_area: false,
   has_automatic_destination: false,
   destination_debit_code: '',
   destination_credit_code: '',
@@ -186,6 +188,7 @@ const resetFormFromContext = (): void => {
     form.currency_mode = acc.currency_mode;
     form.entity_requirement_type = acc.entity_requirement_type;
     form.requires_cost_center = acc.requires_cost_center;
+    form.requires_company_area = acc.requires_company_area;
     form.has_automatic_destination = acc.has_automatic_destination;
     form.destination_debit_code = acc.destination_debit_code ?? '';
     form.destination_credit_code = acc.destination_credit_code ?? '';
@@ -209,6 +212,7 @@ const resetFormFromContext = (): void => {
   form.entity_requirement_type =
     lvl === 4 && isElem10 ? 'FINANCIAL_INSTITUTION' : parent ? parent.entity_requirement_type : 'NONE';
   form.requires_cost_center = lvl === 4 && isElem6;
+  form.requires_company_area = false;
   form.has_automatic_destination = lvl === 4 && isElem6;
   form.destination_debit_code = isElem6 ? '9411' : '';
   form.destination_credit_code = isElem6 ? '7911' : '';
@@ -277,6 +281,7 @@ const validationPayload = computed<CreateAccountingAccountFormValues>(() => ({
   requires_auxiliary: form.entity_requirement_type !== 'NONE',
   entity_requirement_type: form.entity_requirement_type,
   requires_cost_center: form.requires_cost_center,
+  requires_company_area: form.requires_company_area,
   has_automatic_destination: form.has_automatic_destination,
   destination_debit_code: form.has_automatic_destination ? form.destination_debit_code : null,
   destination_credit_code: form.has_automatic_destination ? form.destination_credit_code : null,
@@ -317,6 +322,7 @@ watch(
     form.currency_mode,
     form.entity_requirement_type,
     form.requires_cost_center,
+    form.requires_company_area,
     form.has_automatic_destination,
     form.destination_debit_code,
     form.destination_credit_code,
@@ -351,6 +357,8 @@ function handleSubmit(): void {
     requires_auxiliary: form.entity_requirement_type !== 'NONE',
     entity_requirement_type: form.entity_requirement_type,
     requires_cost_center: form.requires_cost_center,
+    requires_company_area: form.requires_company_area,
+  requires_company_area: form.requires_company_area,
     has_automatic_destination: form.has_automatic_destination,
     destination_debit_code: v.destination_debit_code ?? null,
     destination_credit_code: v.destination_credit_code ?? null,
