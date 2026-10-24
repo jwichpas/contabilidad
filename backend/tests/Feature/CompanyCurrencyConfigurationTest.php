@@ -35,6 +35,9 @@ beforeEach(function (): void {
     );
 
     $this->tenantContext->run($this->company->id, function (): void {
+        \App\Models\CompanySubdiary::query()->firstOrCreate(
+            ['code' => 'GENERAL'], ['name' => 'Diario general']
+        );
         CompanyUser::query()->firstOrCreate(
             [
                 'company_id' => $this->company->id,
