@@ -38,6 +38,7 @@ final readonly class SetTenantContext
         }
 
         $middlewareStarted = hrtime(true);
+        $membershipDurationMs = null;
         $resolvedCompanyId = $this->resolveTargetCompanyId($request, $user);
 
         // La validación de membresía también requiere el RLS de company_user.
@@ -45,8 +46,11 @@ final readonly class SetTenantContext
         // de contexto local evita fugas de tenant por el pool Supavisor.
         $response = $this->tenantContext->run(
             $resolvedCompanyId,
-            function () use ($request, $next, $user, $resolvedCompanyId): Response {
-                if (! $this->userHasActiveMembership($user->id, $resolvedCompanyId)) {
+            function () use ($request, $next, $user, $resolvedCompanyId, &$membershipDurationMs): Response {
+                $membershipStarted = hrtime(true);
+                $hasMembership = $this->userHasActiveMembership($user->id, $resolvedCompanyId);
+                $membershipDurationMs = number_format((hrtime(true) - $membershipStarted) / 1000000, 1, '.', '');
+                if (! $hasMembership) {
                     throw new AccessDeniedHttpException(
                         'No tiene acceso activo a la empresa solicitada o la empresa se encuentra inactiva.'
                     );
@@ -61,10 +65,13 @@ final readonly class SetTenantContext
         // added together. No identity, query values or credentials are exposed.
         $elapsed = number_format((hrtime(true) - $middlewareStarted) / 1000000, 1, '.', '');
         $existing = (string) $response->headers->get('Server-Timing', '');
-        $response->headers->set(
-            'Server-Timing',
-            ($existing !== '' ? $existing.', ' : '').'tenant_total;dur='.$elapsed
-        );
+        $timings = ($existing !== '' ? $existing.', ' : '').'tenant_total;dur='.$elapsed;
+        // This must remain a real DB check for every request, not a cached role.
+        // It exposes only elapsed milliseconds, never IDs or SQL parameters.
+        if ($membershipDurationMs !== null && $request->is('api/v1/accounting/journal-entries/editor-bootstrap')) {
+            $timings .= ', tenant_membership;dur='.$membershipDurationMs;
+        }
+        $response->headers->set('Server-Timing', $timings);
         return $response;
     }
 
