@@ -203,7 +203,7 @@ it('rejects an invalid subdiary before opening periods or creating journal data'
 });
 
 it('loads journal editor catalogs and subdiaries in a single read-only request', function (): void {
-    $this->getJson('/api/v1/accounting/journal-entries/editor-bootstrap?date=2026-10-24')
+    $response = $this->getJson('/api/v1/accounting/journal-entries/editor-bootstrap?date=2026-10-24')
         ->assertOk()
         ->assertJsonPath('data.accounts.0.id', $this->account->id)
         ->assertJsonMissingPath('data.accounts.0.uuid')
@@ -216,6 +216,13 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
         ->assertJsonFragment(['code' => 'GENERAL', 'name' => 'Diario general'])
         ->assertJsonPath('data.next_number.period_month', 10)
         ->assertJsonPath('data.exchange_rates.rate_date', '2026-10-24');
+    $timing = (string) $response->headers->get('Server-Timing');
+    expect($timing)
+        ->toContain('accounts;dur=')
+        ->toContain('schema_accounts;dur=')
+        ->toContain('schema_subdiaries;dur=')
+        ->toContain('subdiaries;dur=')
+        ->toContain('controller_total;dur=');
     $this->tenant->run($this->company->id, function (): void {
         expect(JournalEntry::query()->count())->toBe(0);
         expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
