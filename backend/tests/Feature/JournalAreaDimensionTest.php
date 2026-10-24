@@ -208,7 +208,7 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
         ->assertJsonPath('data.accounts.0.id', $this->account->id)
         ->assertJsonPath('data.company_areas.0.id', $this->area->id)
         ->assertJsonPath('data.cash_flow_areas.0.id', $this->flow->id)
-        ->assertJsonPath('data.subdiaries.0.code', 'GENERAL')
+        ->assertJsonFragment(['code' => 'GENERAL', 'name' => 'Diario general'])
         ->assertJsonPath('data.next_number.period_month', 10)
         ->assertJsonPath('data.exchange_rates.rate_date', '2026-10-24');
     $this->tenant->run($this->company->id, function (): void {
