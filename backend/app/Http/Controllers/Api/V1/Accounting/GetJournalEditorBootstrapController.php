@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Company\GetCompanyExchangeRatesController;
 use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
+use App\Support\Accounting\JournalSubdiaryCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -45,6 +46,7 @@ final readonly class GetJournalEditorBootstrapController
             $data[$name] = $response->getData(true)['data'] ?? null;
         }
 
+        $data['subdiaries'] = JournalSubdiaryCatalog::options();
         return response()->json(['data' => $data]);
     }
 }
