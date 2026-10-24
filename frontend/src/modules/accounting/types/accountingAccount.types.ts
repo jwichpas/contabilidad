@@ -219,6 +219,7 @@ export interface AccountingAccountResponse {
   readonly entity_requirement_type: EntityRequirementType;
   readonly entity_requirement_label: string;
   readonly requires_cost_center: boolean;
+  readonly requires_company_area: boolean;
   readonly has_automatic_destination: boolean;
   readonly destination_debit_code: string | null;
   readonly destination_credit_code: string | null;
@@ -253,6 +254,7 @@ export interface CreateAccountingAccountPayload {
   readonly requires_auxiliary: boolean;
   readonly entity_requirement_type: EntityRequirementType;
   readonly requires_cost_center: boolean;
+  readonly requires_company_area: boolean;
   readonly has_automatic_destination: boolean;
   readonly destination_debit_code: string | null;
   readonly destination_credit_code: string | null;
@@ -270,6 +272,7 @@ export interface UpdateAccountingAccountPayload {
   readonly requires_auxiliary: boolean;
   readonly entity_requirement_type: EntityRequirementType;
   readonly requires_cost_center: boolean;
+  readonly requires_company_area: boolean;
   readonly has_automatic_destination: boolean;
   readonly destination_debit_code: string | null;
   readonly destination_credit_code: string | null;
