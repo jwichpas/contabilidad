@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue';
 import AccountingCatalogView from './modules/accounting/views/AccountingCatalogView.vue';
 import SeeReferencesView from './modules/accounting/views/SeeReferencesView.vue';
+import SunatReferencesView from './modules/accounting/views/SunatReferencesView.vue';
 import JournalEntryView from './modules/accounting/views/JournalEntryView.vue';
 import CompanySubdiariesView from './modules/accounting/views/CompanySubdiariesView.vue';
 import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue';
@@ -80,6 +81,7 @@ function resolveModuleFromHash(): NavigationModule {
   if (typeof window === 'undefined') return 'journal';
   const hash = window.location.hash.toLowerCase();
   if (hash.includes('catalogos-see')) return 'see-references';
+  if (hash.includes('catalogos-sunat')) return 'sunat-references';
   if (hash.includes('subdiarios') || hash.includes('subdiaries')) return 'subdiaries';
   if (hash.includes('centros-costo') || hash.includes('cost-centers')) return 'cost-centers';
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
@@ -113,6 +115,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#plan-cuentas';
   } else if (mod === 'see-references') {
     window.location.hash = '#catalogos-see';
+  } else if (mod === 'sunat-references') {
+    window.location.hash = '#catalogos-sunat';
   } else if (mod === 'fiscal-periods') {
     window.location.hash = '#periodos';
   } else if (mod === 'exchange-rates') {
@@ -236,6 +240,10 @@ watch(
         />
         <SeeReferencesView
           v-else-if="currentModule === 'see-references'"
+          :get-access-token="() => accessToken"
+        />
+        <SunatReferencesView
+          v-else-if="currentModule === 'sunat-references'"
           :get-access-token="() => accessToken"
         />
         <JournalEntryView

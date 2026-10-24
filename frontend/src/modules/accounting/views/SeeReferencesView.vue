@@ -159,21 +159,23 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <p v-if="section === 'catalogs' && currentCatalog" class="text-sm text-muted">Catálogo {{ currentCatalog.number }} · {{ currentCatalog.name }} · {{ currentCatalog.item_count.toLocaleString('es-PE') }} registros en el archivo.</p>
       <p v-if="error" role="alert" class="rounded-md border border-neg/30 bg-neg/10 px-3 py-2 text-sm text-neg">{{ error }} <button type="button" class="ml-2 underline" @click="retry">Reintentar</button></p>
       <p v-if="isLoading" role="status" class="py-8 text-center text-sm text-muted">Cargando referencias…</p>
-      <div v-else-if="section === 'catalogs' && catalogQuery.data.value" class="overflow-x-auto">
-        <table class="w-full min-w-[600px] text-left text-sm">
+      <div v-else-if="section === 'catalogs' && catalogQuery.data.value" class="overflow-x-auto" role="region" aria-label="Tabla del catálogo SEE" tabindex="0">
+        <table class="w-[712px] table-fixed text-left text-sm lg:w-[1000px]">
+          <colgroup><col class="w-[120px] lg:w-[140px]" /><col class="w-[360px] lg:w-[540px]" /><col class="w-[232px] lg:w-[320px]" /></colgroup>
           <thead class="border-b border-border text-xs uppercase tracking-wide text-muted"><tr><th scope="col" class="py-2 pr-4">Código</th><th scope="col" class="py-2 pr-4">Descripción</th><th scope="col" class="py-2">Información adicional</th></tr></thead>
           <tbody><tr v-for="row in catalogTable.getRowModel().rows" :key="`${catalogNumber}-${row.original.source_row}`" class="border-b border-border/60 align-top">
-            <td class="py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }} <span v-if="row.original.is_ambiguous" class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">Ambiguo</span></td>
-            <td class="py-3 pr-4 text-foreground">{{ row.original.description }}</td>
-            <td class="py-3 text-xs text-muted"><span v-for="(value, key) in row.original.details" :key="key" class="mr-2 inline-block">{{ key }}: {{ value }}</span></td>
+            <td class="break-words py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }} <span v-if="row.original.is_ambiguous" class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">Ambiguo</span></td>
+            <td class="break-words py-3 pr-4 text-foreground">{{ row.original.description }}</td>
+            <td class="break-words py-3 text-xs text-muted"><span v-for="(value, key) in row.original.details" :key="key" class="mr-2 inline-block">{{ key }}: {{ value }}</span></td>
           </tr></tbody>
         </table>
         <p v-if="rowCount === 0" class="py-8 text-center text-sm text-muted">{{ currentCatalog?.item_count === 0 ? 'Este catálogo remite a una fuente externa y no contiene filas en el archivo recibido.' : 'No hay resultados para esta búsqueda.' }}</p>
       </div>
-      <div v-else-if="ubigeoQuery.data.value" class="overflow-x-auto">
-        <table class="w-full min-w-[680px] text-left text-sm">
+      <div v-else-if="ubigeoQuery.data.value" class="overflow-x-auto" role="region" aria-label="Tabla de ubigeos INEI" tabindex="0">
+        <table class="w-[732px] table-fixed text-left text-sm lg:w-[1000px]">
+          <colgroup><col class="w-[100px] lg:w-[140px]" /><col class="w-[230px] lg:w-[310px]" /><col class="w-[210px] lg:w-[280px]" /><col class="w-[192px] lg:w-[270px]" /></colgroup>
           <thead class="border-b border-border text-xs uppercase tracking-wide text-muted"><tr><th scope="col" class="py-2 pr-4">Ubigeo</th><th scope="col" class="py-2 pr-4">Distrito</th><th scope="col" class="py-2 pr-4">Provincia</th><th scope="col" class="py-2">Departamento</th></tr></thead>
-          <tbody><tr v-for="row in ubigeoTable.getRowModel().rows" :key="row.original.code" class="border-b border-border/60"><td class="py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }}</td><td class="py-3 pr-4 text-foreground">{{ row.original.district }}</td><td class="py-3 pr-4 text-muted">{{ row.original.province }}</td><td class="py-3 text-muted">{{ row.original.department }}</td></tr></tbody>
+          <tbody><tr v-for="row in ubigeoTable.getRowModel().rows" :key="row.original.code" class="border-b border-border/60"><td class="break-words py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }}</td><td class="break-words py-3 pr-4 text-foreground">{{ row.original.district }}</td><td class="break-words py-3 pr-4 text-muted">{{ row.original.province }}</td><td class="break-words py-3 text-muted">{{ row.original.department }}</td></tr></tbody>
         </table>
         <p v-if="rowCount === 0" class="py-8 text-center text-sm text-muted">No hay ubigeos para esta búsqueda.</p>
       </div>
@@ -185,6 +187,6 @@ watch(searchInput, () => { pageIndex.value = 0; });
         </div>
       </div>
     </div>
-    <p class="text-xs text-muted">La búsqueda y la paginación se realizan en este dispositivo. Los catálogos PLE y SIRE siguen independientes de esta consulta SEE.</p>
+    <p class="text-xs text-muted">La búsqueda y la paginación se realizan en este dispositivo. En móvil, deslice la tabla horizontalmente. Las tablas PLE/SIRE tienen una ruta de consulta independiente.</p>
   </section>
 </template>

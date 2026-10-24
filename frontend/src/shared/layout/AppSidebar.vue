@@ -357,6 +357,14 @@ const activeCompanyIdString = computed<string>({
               <Globe2 class="h-4 w-4 shrink-0" />
               <span v-if="!isCollapsed || isOpenMobile" class="truncate">Catálogos SEE y Ubigeo</span>
             </button>
+            <button type="button"
+              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
+                currentModule === 'sunat-references' ? 'bg-white/15 text-white font-semibold shadow-[inset_3px_0_0_var(--accent)]' : 'text-white/80 hover:bg-white/10 hover:text-white']"
+              title="Tablas SUNAT PLE/SIRE y anexos RUC, solo lectura"
+              @click="emit('navigate', 'sunat-references')">
+              <BookOpen class="h-4 w-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Tablas SUNAT PLE/SIRE y RUC</span>
+            </button>
           </div>
 
           <!-- Módulo: Configuración & Régimen de Empresa -->

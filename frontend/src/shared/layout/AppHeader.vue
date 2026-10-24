@@ -103,6 +103,8 @@ const activeCompanyIdString = computed<string>({
           {{
             currentModule === 'see-references'
               ? 'Catálogos SEE y Ubigeo · Referencias globales'
+              : currentModule === 'sunat-references'
+              ? 'Tablas SUNAT PLE/SIRE y anexos RUC · Referencias globales'
               : currentModule === 'subdiaries'
               ? 'Maestro de subdiarios'
               : currentModule === 'journal'

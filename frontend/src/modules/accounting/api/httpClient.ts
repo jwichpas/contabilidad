@@ -323,11 +323,12 @@ export class AccountingApiClient {
    */
   public async fetchSunatTable(
     tableNumber: number | string,
+    signal?: AbortSignal,
   ): Promise<readonly SunatCatalogItem[]> {
     const num = String(tableNumber).padStart(2, '0');
     const rawPayload = await this.request<{ data: SunatCatalogItem[] }>(
       `/api/v1/catalogs/sunat/${num}`,
-      { method: 'GET' },
+      { method: 'GET', signal },
       false,
     );
     // SUNAT tables expose either name or description; normalize at the API boundary.
@@ -337,6 +338,17 @@ export class AccountingApiClient {
         ? item.description
         : typeof item.name === 'string' && item.name.trim() ? item.name : item.code,
     }));
+  }
+
+  /** RUC annexes and CIIU, separate from both PLE/SIRE and SEE tables. */
+  public async fetchSunatRucReference(
+    dataset: 'contributor-types' | 'ciiu' | 'tax-codes',
+    signal?: AbortSignal,
+  ): Promise<readonly (SunatContributorType | SunatCiiuClass | SunatTaxCode)[]> {
+    const result = await this.request<{ data: (SunatContributorType | SunatCiiuClass | SunatTaxCode)[] }>(
+      `/api/v1/catalogs/sunat-ruc/${dataset}`, { method: 'GET', signal }, false,
+    );
+    return result.data;
   }
 
   /** Global electronic invoicing references. Independent of PLE/SIRE catalogs. */
