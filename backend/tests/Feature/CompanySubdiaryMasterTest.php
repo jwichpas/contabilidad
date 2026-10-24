@@ -78,5 +78,6 @@ it('prevents changing subdiary codes or deleting another company record', functi
     $this->putJson('/api/v1/company/subdiaries/'.$id, [
         'code' => 'NUEVO', 'name' => 'Nombre',
     ])->assertUnprocessable()->assertJsonValidationErrors('code');
-    $this->deleteJson('/api/v1/company/subdiaries/'.$id)->assertNotFound();
+    // No DELETE route exists: Laravel returns HTTP 405 Method Not Allowed.
+    $this->deleteJson('/api/v1/company/subdiaries/'.$id)->assertStatus(405);
 });
