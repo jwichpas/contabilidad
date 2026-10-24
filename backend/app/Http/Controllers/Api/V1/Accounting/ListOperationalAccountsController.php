@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Accounting;
 use App\Models\AccountingAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Retorna el catálogo plano de cuentas operativas (seis dígitos) activas
@@ -17,6 +18,9 @@ final readonly class ListOperationalAccountsController
 {
     public function __invoke(Request $request): JsonResponse
     {
+        if (! Schema::hasColumn('accounting_accounts', 'requires_company_area')) {
+            return response()->json(['message' => 'Falta aplicar la migración aditiva de requisitos organizativos por cuenta.'], 503);
+        }
         $accounts = AccountingAccount::query()
             ->whereRaw('accounting_accounts.is_operational IS TRUE')
             ->whereRaw('accounting_accounts.is_active IS TRUE')
