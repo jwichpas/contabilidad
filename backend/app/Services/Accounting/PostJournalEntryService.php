@@ -169,10 +169,10 @@ final readonly class PostJournalEntryService
                     throw new DomainException(sprintf('Partida #%d: %s', $index + 1, $exception->getMessage()));
                 }
                 $manualAccountCodes[] = (string)$account->code;
-                if (! (bool) $account->requires_cost_center && $centerId !== null) {
+                if (! ((bool) $account->requires_cost_center || (bool) $account->has_automatic_destination) && $centerId !== null) {
                     throw new DomainException(sprintf('La cuenta de la partida #%d no habilita centro de costos.', $index + 1));
                 }
-                if ((bool) $account->requires_cost_center && $centerId === null) {
+                if (((bool) $account->requires_cost_center || (bool) $account->has_automatic_destination) && $centerId === null) {
                     throw new DomainException(sprintf('La partida #%d requiere un centro de costos activo.', $index + 1));
                 }
                 if ($centerId !== null) {
