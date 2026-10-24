@@ -319,7 +319,13 @@ export class AccountingApiClient {
       { method: 'GET' },
       false,
     );
-    return rawPayload.data;
+    // SUNAT tables expose either name or description; normalize at the API boundary.
+    return rawPayload.data.map((item) => ({
+      ...item,
+      description: typeof item.description === 'string' && item.description.trim()
+        ? item.description
+        : typeof item.name === 'string' && item.name.trim() ? item.name : item.code,
+    }));
   }
 
   /**

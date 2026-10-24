@@ -20,7 +20,7 @@
 
 ## Avance F3.2–F3.3 — 23/10/2026
 
-- **Centros de costo F3.3:** API auditada y pantalla `#centros-costo` implementadas. Preservan destinos con movimientos/rutas y bloquean desactivación en matrices DRAFT/ACTIVE. Frontend 27/27 y build PASS; Feature PostgreSQL y aceptación Vue real pendientes. [Contrato y comandos](docs/F3-3-CENTROS-COSTO.md). Sin nuevas migraciones ni cambio del contador 8/32.
+- **Centros de costo F3.3:** API auditada y pantalla `#centros-costo` implementadas. Preservan destinos con movimientos/rutas y bloquean desactivación en matrices DRAFT/ACTIVE. Frontend 27/27 y build PASS; Feature PostgreSQL aprobada (10/10, 105 aserciones); aceptación funcional Vue completa pendiente. [Contrato y comandos](docs/F3-3-CENTROS-COSTO.md). Sin nuevas migraciones ni cambio del contador 8/32.
 
 - **F3.2 aislamiento tenant:** validación manual en Neon DEV por el usuario, `php artisan test --testsuite=Feature --filter=Tenant`: **19/19 PASS, 78 aserciones**. También `CompanySetupAndCatalogsTest` 6/6 (44 aserciones), `TenantIsolationTest` 5/5 (15) y `TenantContextNestedTest` 3/3 (20).
 - **F3.3 empresa persistente:** el onboarding HTTP ya creó la empresa ficticia ID 4, documentada en la línea base. En lugar de duplicarla, se agregó el ensayo **solo lectura** `backend/scripts/phase3-neon-persistent-company-verify.php`. Comprobará la configuración persistida, PCGE operativo a seis dígitos, membresía ADMIN, RLS y conservación de los datos preexistentes.
@@ -559,3 +559,10 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 **Estado vigente 2026-10-23:** ver [sección 10](#10-checklist-de-seguimiento): **8/32 (25%)**, asiento de prueba ID 52 persistido en Neon DEV; F3.4/F3.5 PASS, modalidad de pruebas manual y 0/4 hitos formalmente aprobados. [Historial del estado al 19/10](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md).
 
+
+
+## Seguimiento de validación · 24/10/2026
+
+**Evidencia recibida · 24/10/2026:** `CostCenterMasterCrudTest` **10/10 PASS, 105 aserciones, 364,12 s**, ejecución manual del usuario contra Neon DEV. Incluye protección de matriz, sin casos omitidos. Capturas del usuario confirman apertura de anexos, historial fiscal y centros de costo; consulta de CC-ADM/CC-VTA en empresa 4 y sidebar sin duplicado tras `e067b77`. No certifican altas/ediciones/desactivaciones en navegador, cambio de empresa ni permisos visuales. F3.3 sigue abierta, **8/32 (25%)**.
+
+La consulta del catálogo SUNAT se normaliza en el cliente HTTP para mostrar el nombre cuando la API entrega `name` en lugar de `description`; corrige la etiqueta vacía observada en el formulario de anexos. No modifica códigos ni datos persistidos.

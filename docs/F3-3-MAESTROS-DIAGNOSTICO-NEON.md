@@ -1,6 +1,6 @@
 # F3.3 · Maestros, dimensiones y escenarios multiempresa — diagnóstico inicial
 
-> **Incremento centros de costo · 23/10/2026:** API auditada y pantalla `#centros-costo` implementadas; 27/27 pruebas frontend y build aprobados. Feature PostgreSQL y aceptación Vue real pendientes. [Contrato, límites y validación](F3-3-CENTROS-COSTO.md). Sin nuevas migraciones; F3.3 sigue abierta.
+> **Incremento centros de costo · 23/10/2026:** API auditada y pantalla `#centros-costo` implementadas; 27/27 pruebas frontend y build aprobados. Feature PostgreSQL aprobada (10/10, 105 aserciones); aceptación funcional Vue completa pendiente. [Contrato, límites y validación](F3-3-CENTROS-COSTO.md). Sin nuevas migraciones; F3.3 sigue abierta.
 
 **Observación:** 23/10/2026 · **Origen:** consultas `SELECT` independientes a Neon PostgreSQL 18, rama existente `contabilidad-dev` (no rama temporal). **Solo lectura:** sin DDL, transacciones de escritura ni nuevos registros.
 
@@ -154,3 +154,10 @@ Registrar rol, empresa, ejercicio, resultado y errores sin publicar tokens ni cr
 
 **Próximo trabajo:** aceptación funcional de anexos/historial y revisión de dimensiones por cuenta, centros de costo y escenarios multisectoriales. **F3.3 permanece pendiente y el total oficial sigue en 8/32 (25%).**
 
+
+
+## Seguimiento de validación · 24/10/2026
+
+**Evidencia recibida · 24/10/2026:** `CostCenterMasterCrudTest` **10/10 PASS, 105 aserciones, 364,12 s**, ejecución manual del usuario contra Neon DEV. Incluye protección de matriz, sin casos omitidos. Capturas del usuario confirman apertura de anexos, historial fiscal y centros de costo; consulta de CC-ADM/CC-VTA en empresa 4 y sidebar sin duplicado tras `e067b77`. No certifican altas/ediciones/desactivaciones en navegador, cambio de empresa ni permisos visuales. F3.3 sigue abierta, **8/32 (25%)**.
+
+La consulta del catálogo SUNAT se normaliza en el cliente HTTP para mostrar el nombre cuando la API entrega `name` en lugar de `description`; corrige la etiqueta vacía observada en el formulario de anexos. No modifica códigos ni datos persistidos.

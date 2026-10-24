@@ -40,7 +40,7 @@ Errores: 401 sin sesión, 403 por rol/membresía, 404 por centro ajeno/inexisten
 - `pnpm test:unit`: **27/27 PASS**. Las tres nuevas ejecutan el constructor del payload (normalización, allowlist, IDs/límites), no un navegador ni el backend.
 - `pnpm build` (`vue-tsc -b && vite build`): **PASS**, Vite 6.4.4, 1.626 módulos, 7,78 s. Hubo una compilación previa con npm/Vite 6.4.5; la comprobación con lockfile del repositorio es la evidencia de referencia.
 - PHP: análisis sintáctico con `php-parser` 3.7.0; no equivale a `php -l` ni a ejecución de Laravel.
-- **Pendiente:** Feature PostgreSQL, concurrencia y aceptación con sesión Vue real. No se realizaron nuevas escrituras persistidas en Neon durante este incremento.
+- **Feature PostgreSQL aprobada:** 10/10, 105 aserciones (364,12 s), ejecución manual del usuario el 24/10/2026. **Pendiente:** concurrencia y aceptación funcional completa con sesión Vue real. No se realizaron nuevas escrituras persistidas en Neon durante este incremento.
 
 `CostCenterMasterCrudTest` incorpora **10 casos** contando el dataset de dos roles: alta/auditoría, duplicados por tenant, cuentas inválidas/ajenas, edición/desactivación, acceso cruzado con membresías válidas, permisos, rollback ante fallo de auditoría, conservación de partidas y protección de matriz DEMO existente. Usa `DatabaseTransactions`; no ejecuta migraciones ni usa la conexión propietaria. El caso de matriz consulta DEMO A y añade una membresía temporal dentro de la transacción; si no existe la matriz, se marca SKIPPED, no PASS.
 
@@ -61,3 +61,10 @@ pnpm build
 **No ejecutar migraciones para este cambio.** Ante un fallo, conservar la salida; no usar `migrate:fresh`, recargar catálogos ni activar matrices para hacer pasar la prueba.
 
 Aceptación visual: entrar a `#centros-costo`, consultar activos/inactivos, crear un centro ficticio con las cuentas disponibles, editar su nombre y desactivarlo con confirmación. Debe desaparecer del selector de nuevas partidas y seguir visible en inactivos. Cambiar empresa y comprobar aislamiento. Con ACCOUNTANT/AUDITOR debe existir consulta sin escritura. No desactivar ni reasignar los centros DEMO ligados a matrices existentes.
+
+
+## Seguimiento de validación · 24/10/2026
+
+**Evidencia recibida · 24/10/2026:** `CostCenterMasterCrudTest` **10/10 PASS, 105 aserciones, 364,12 s**, ejecución manual del usuario contra Neon DEV. Incluye protección de matriz, sin casos omitidos. Capturas del usuario confirman apertura de anexos, historial fiscal y centros de costo; consulta de CC-ADM/CC-VTA en empresa 4 y sidebar sin duplicado tras `e067b77`. No certifican altas/ediciones/desactivaciones en navegador, cambio de empresa ni permisos visuales. F3.3 sigue abierta, **8/32 (25%)**.
+
+La consulta del catálogo SUNAT se normaliza en el cliente HTTP para mostrar el nombre cuando la API entrega `name` en lugar de `description`; corrige la etiqueta vacía observada en el formulario de anexos. No modifica códigos ni datos persistidos.
