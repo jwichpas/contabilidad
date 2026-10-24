@@ -25,6 +25,7 @@ final readonly class UpdateAccountingAccountData
         public bool $requiresAuxiliary,
         public EntityRequirementType $entityRequirementType,
         public bool $requiresCostCenter,
+        public bool $requiresCompanyArea,
         public bool $hasAutomaticDestination,
         public ?string $destinationDebitCode,
         public ?string $destinationCreditCode,
@@ -59,6 +60,7 @@ final readonly class UpdateAccountingAccountData
             requiresAuxiliary: (bool) $validated['requires_auxiliary'],
             entityRequirementType: $entityRequirement,
             requiresCostCenter: (bool) ($validated['requires_cost_center'] ?? false),
+            requiresCompanyArea: (bool) ($validated['requires_company_area'] ?? false),
             hasAutomaticDestination: $hasAutoDest,
             destinationDebitCode: $hasAutoDest && isset($validated['destination_debit_code'])
                 ? strtoupper(trim((string) $validated['destination_debit_code']))
