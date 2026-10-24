@@ -115,3 +115,29 @@ php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="loads jour
 Después de recargar, comparar los módulos `#plan-cuentas` y `#diario`. En Chrome F12 → Network → seleccionar `editor-bootstrap` → Headers → **Response Headers**: copiar la cadena completa `server-timing`. También consultar en Timing **Waiting (TTFB)** y **Content Download**. Comprobar que monedas/rubros/áreas/cost centers/configuración se descarguen al abrir el modal de cuentas y no al entrar al plan.
 
 **Precaución:** no hay medición posterior a este cambio ni evidencia de 45/45 PASS. No ejecutar migraciones ni POST contables. F3.3 continúa **[ ] y 8/32 (25 %)**.
+
+## Diagnóstico preciso de Server-Timing y reducción de viajes SQL — 24/10/2026
+
+**Medición aportada por el usuario:** `editor-bootstrap` HTTP 200, **6,41 s** en Chrome, 353 kB. La cabecera `Server-Timing` anterior reportó (ms): `schema_accounts=289,9`, `accounts=662,2`, `company_areas=297,1`, `cash_flow_areas=291,8`, `next_number=298,6`, `exchange_rates=875,4`, `cost_centers=290,1`, `schema_subdiaries=288,5`, `subdiaries=292,3`, `controller_total=3586,1`. Las etapas suman ~3586 ms. La diferencia visible hasta 6,41 s (~2824 ms) queda **fuera de la medición del controlador** y puede incluir transacción de empresa, autenticación, preparación de Laravel, servidor Vite/PHP, descarga y red; aún no se puede distribuir sin un segundo cronometraje.
+
+**Causa probable:** numerosas operaciones PostgreSQL separadas cuestan ~290 ms cada una, incluso los dos `Schema::has*`; indica un componente elevado de ida/vuelta hasta Neon, aunque el detalle concreto de red, arranque y SQL aún no está medido aisladamente. `exchange_rates=875,4 ms` ejecuta varias consultas a través del controlador existente; se decidió no alterar por ahora sus reglas de compra/venta ni la selección de tasas históricas.
+
+**Optimización publicada en main, NO ejecutada ni validada todavía:** `GetJournalEditorBootstrapController.php` obtiene los **cinco catálogos** (`accounts`, `company_areas`, `cash_flow_areas`, `cost_centers`, `subdiaries`) en una única sentencia `SELECT` con cinco agregaciones `jsonb_agg` (un solo viaje SQL). Cada subconsulta restringe `company_id = ?::bigint` y se ejecuta en el mismo `SET LOCAL` con `FORCE RLS`; no existen cachés cross-tenant ni escrituras. Conserva exactamente los campos y orden por `code` del editor. Desaparecen dos llamadas independientes de esquema, cuya instalación ya fue validada en DEV. `next_number` y `exchange_rates` mantienen sus controladores existentes y comportamiento original.
+
+**Observabilidad:** sustituye tiempos separados de catálogos por `catalogs_sql;dur`, conserva `next_number`, `exchange_rates` y `controller_total`; `SetTenantContext` añade `tenant_total;dur`, que engloba autorización, SET LOCAL, transacción y el controlador. **`tenant_total` y `controller_total` se superponen: nunca deben sumarse.** No se divulga SQL, RUC, secretos o datos de usuario.
+
+**Regresión nueva:** `JournalAreaDimensionTest.php` incluye una nueva prueba de aislamiento de catálogos cross-tenant, junto a comprobación del encabezado `tenant_total`: **11 pruebas Feature previstas**, sin PASS todavía para este cambio. `journal-area.test.mjs` añade una prueba de instrumentación: **46 pruebas frontend esperadas**, sin PASS todavía. Compilación pendiente.
+
+**Pasos de verificación:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd frontend
+pnpm test:unit
+pnpm build
+cd ..\backend
+php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="journal editor catalogs|five batched"
+```
+
+Después de recargar `#diario`, capturar Chrome Network `editor-bootstrap` → **Server-Timing**, `Timing → Waiting (TTFB)` y tiempo/tamaño completos. También comparar navegación desde `#plan-cuentas`, donde los catálogos auxiliares ahora se difieren al abrir el formulario. **Sin migraciones ni POST reales.** Hasta verificarlo, no hay mejora de tiempo acreditada y F3.3 sigue abierta **8/32 (25 %)**.
