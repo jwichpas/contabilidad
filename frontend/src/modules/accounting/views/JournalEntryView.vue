@@ -506,11 +506,11 @@ async function handleSubmit(): Promise<void> {
       return;
     }
     const chosenAccount = operationalAccounts.value.find((account) => account.id === l.accountId);
-    if (chosenAccount?.requires_cost_center && !l.costCenterId) {
+    if ((chosenAccount?.requires_cost_center || chosenAccount?.has_automatic_destination) && !l.costCenterId) {
       errorMessage.value = `La cuenta ${chosenAccount.code} requiere centro de costos en la línea #${i + 1}.`;
       return;
     }
-    if (chosenAccount && !chosenAccount.requires_cost_center && l.costCenterId !== null) {
+    if (chosenAccount && !chosenAccount.requires_cost_center && !chosenAccount.has_automatic_destination && l.costCenterId !== null) {
       errorMessage.value = `La cuenta ${chosenAccount.code} no habilita centro de costos en la línea #${i + 1}.`;
       return;
     }
@@ -1001,7 +1001,7 @@ onMounted(() => {
 
                 <!-- Cada dimensión se habilita solo si la configuración de la cuenta la exige. -->
                 <td class="py-2 px-3">
-                  <template v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center">
+                  <template v-if="(operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center || operationalAccounts.find(a => a.id === line.accountId)?.has_automatic_destination)">
                     <label class="block text-[10px] font-semibold text-amber-700 dark:text-amber-300 mb-1">Centro obligatorio</label>
                     <select v-model="line.costCenterId" :disabled="isSubmitting"
                       class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand">
