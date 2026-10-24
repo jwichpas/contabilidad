@@ -59,6 +59,7 @@ export interface JournalEntryResponse {
   readonly entry_number: string;
   readonly entry_date: string;
   readonly entry_type: EntryType;
+  readonly subdiary_code: string;
   readonly status: EntryStatus;
   readonly currency: CurrencyCode;
   readonly exchange_rate: string;
@@ -92,6 +93,7 @@ export interface CreateJournalEntryPayload {
   readonly entry_date: string;
   readonly entry_number?: string;
   readonly entry_type?: EntryType;
+  readonly subdiary_code?: string;
   readonly currency: CurrencyCode;
   readonly exchange_rate: string;
   readonly exchange_rate_type?: ExchangeRateType;
