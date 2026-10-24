@@ -30,6 +30,30 @@ En una imagen de 1600 píxeles, el buscador de cuentas se desplegaba dentro de `
 2. `JournalEntityPicker.vue`: búsqueda en cuadro modal Teleport fuera de la tabla, sin expandir filas. Mantiene búsqueda paginada y validación de roles.
 3. `JournalEntryView.vue`: tabla de ancho mínimo estable de 1800px, alineación superior y scroll horizontal explícito en pantallas reducidas; Debe/Haber y áreas mantienen ancho y no se enciman. **La aceptación visual en navegador sigue pendiente**; no se declara que el diseño esté aprobado hasta recibir captura posterior.
 
+## Nueva evidencia de pantalla y corrección de composición — 24/10/2026
+
+**Capturas de aceptación parcial:** la búsqueda de anexo ya aparecía en Teleport separado, pero el modal quedaba demasiado arriba y comprimido. En el Libro Diario una tabla de ancho mínimo 1.800 px obligaba a desplazar horizontalmente los montos Debe/Haber en una ventana de aproximadamente 1.600 px. DevTools Network mostró `GET /api/v1/accounting/journal-entries/editor-bootstrap?date=2026-10-24` **HTTP 200, ~5,98 s, ~505 kB transferidos**. No se adjuntó el encabezado `Server-Timing`, por lo que no conocemos todavía qué consulta consume el tiempo.
+
+**Incremento UI publicado, pendiente de aceptación visual y nuevo build:** la tabla del voucher utiliza un diseño de **dos filas por partida** (fila principal: cuenta, glosa, Debe/Haber PEN y USD; segunda fila: únicamente dimensiones exigidas por la configuración de la cuenta). Ancho mínimo reducido a **1.040 px**, con scroll horizontal solo si es necesario en pantallas más estrechas. Se mantuvo precisión decimal, botones de añadir/eliminar y totales/diferencias; sin cambio en el POST. La ventana de anexos se centra vertical/horizontalmente, gana ancho útil y lista los resultados en una región desplazable.
+
+**Incremento de carga:** en `GetJournalEditorBootstrapController.php` la consulta `accounts` devuelve un DTO compacto (10 campos requeridos por el editor) en lugar de reserializar datos completos de `ListOperationalAccountsController` (15 campos, incluido UUID). `Server-Timing` sigue distinguiendo `accounts`, `company_areas`, `cash_flow_areas`, `next_number`, `exchange_rates` y `cost_centers`. El endpoint de catálogo completo sigue disponible para otros módulos. No se puede afirmar aún que bajó de 5,98 s ni cuantificar ahorro de bytes sin una captura nueva.
+
+**Pruebas agregadas/ajustadas:** el frontend ahora tiene **43 pruebas previstas** (41 anteriores confirmadas + 2 nuevos casos de diseño y contrato de datos). Se amplió la Feature existente de áreas sin modificar su conteo de **10 tests**, para asegurar que el bootstrap omite uuid, nivel, tipo, naturaleza y modalidad de moneda. **Ninguna de estas pruebas posteriores a la captura está validada en Windows todavía.** No requiere nueva migración.
+
+**Para validar:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd backend
+php artisan test tests/Feature/JournalAreaDimensionTest.php --debug
+cd ..\frontend
+pnpm test:unit
+pnpm build
+```
+
+Después actualizar Chrome con Ctrl+F5, abrir `Nuevo Asiento`, comprobar montos siempre visibles, segunda fila condicional, modal centrado y en **DevTools → Network → editor-bootstrap → Headers** copiar `Server-Timing`, duración y tamaño del nuevo response. Verificar `compañía DEMO`; **no realizar POST** de prueba sin autorización para escritura contable. F3.3 sigue **[ ] y 8/32 (25%)**.
+
 ## Verificación manual de despliegue (exclusivamente DEV)
 
 **Migración ya aplicada según salida del usuario: NO repetirla.** Para una auditoría independiente del estado resultante, solo ejecutar el diagnóstico de lectura `php scripts/check-company-subdiaries-schema.php --check` y comprobar `Ran`, tabla existente, FORCE RLS y FK intraempresa. Nunca ejecutar `migrate`, `migrate:fresh` ni rollback generales para volver a instalarla.
