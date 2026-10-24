@@ -305,7 +305,7 @@ final readonly class CreateJournalEntryController
                 'entry_number' => $entryNumber,
                 'entry_date' => $entryDate->toDateString(),
                 'entry_type' => $validated['entry_type'] ?? 'STANDARD',
-                'subdiary_code' => $validated['subdiary_code'] ?? JournalSubdiaryCatalog::DEFAULT,
+                'subdiary_code' => $validated['subdiary_code'] ?? JournalSubdiaryCatalog::GENERAL_CODE,
                 'currency' => $voucherCurrency,
                 'exchange_rate' => $effectiveRate,
                 'exchange_rate_type' => $validated['exchange_rate_type'] ?? 'SELL',
