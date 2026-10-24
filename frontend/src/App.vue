@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue';
 import AccountingCatalogView from './modules/accounting/views/AccountingCatalogView.vue';
 import JournalEntryView from './modules/accounting/views/JournalEntryView.vue';
+import CompanySubdiariesView from './modules/accounting/views/CompanySubdiariesView.vue';
 import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue';
 import FiscalPeriodsView from './modules/accounting/views/FiscalPeriodsView.vue';
 import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
@@ -77,6 +78,7 @@ const sunatSpread = sunatSellRate.subtract(sunatBuyRate);
 function resolveModuleFromHash(): NavigationModule {
   if (typeof window === 'undefined') return 'journal';
   const hash = window.location.hash.toLowerCase();
+  if (hash.includes('subdiarios') || hash.includes('subdiaries')) return 'subdiaries';
   if (hash.includes('centros-costo') || hash.includes('cost-centers')) return 'cost-centers';
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
@@ -113,6 +115,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#tipo-cambio';
   } else if (mod === 'fiscal-history') {
     window.location.hash = '#historial-fiscal';
+  } else if (mod === 'subdiaries') {
+    window.location.hash = '#subdiarios';
   } else if (mod === 'cost-centers') {
     window.location.hash = '#centros-costo';
   } else if (mod === 'entities') {
@@ -244,6 +248,13 @@ watch(
           :key="`rates-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+        />
+        <CompanySubdiariesView
+          v-else-if="currentModule === 'subdiaries'"
+          :key="'subdiaries-' + activeCompanyId"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-write="canDeactivateEntities"
         />
         <CostCenterMasterView
           v-else-if="currentModule === 'cost-centers'"
