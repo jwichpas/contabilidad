@@ -66,6 +66,9 @@ final readonly class CreateJournalEntryController
             'lines.*.credit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
         ]);
 
+        if (! Schema::hasColumn('accounting_accounts', 'requires_company_area')) {
+            return response()->json(['message' => 'Falta aplicar la migración de requisitos organizativos por cuenta.'], 503);
+        }
         if (! Schema::hasColumns('journal_entry_lines', ['entity_id', 'company_area_id', 'cash_flow_area_id'])) {
             return response()->json(['message' => 'Falta aplicar la migración de dimensiones (anexos y áreas) en partidas contables.'], 503);
         }
