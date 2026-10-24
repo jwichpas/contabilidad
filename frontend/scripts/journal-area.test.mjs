@@ -106,3 +106,30 @@ test('journal keeps exact money strings, fetches one bootstrap and exposes persi
   assert.match(view, /v-model="subdiaryCode"/);
   assert.match(view, /subdiary_code: subdiaryCode\.value/);
 });
+
+test('floating account and entity pickers stay outside the scrollable journal grid', () => {
+  const account = readFileSync(new URL('../src/modules/accounting/components/JournalAccountCombobox.vue', import.meta.url), 'utf8');
+  const entity = readFileSync(new URL('../src/modules/accounting/components/JournalEntityPicker.vue', import.meta.url), 'utf8');
+  const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
+  assert.match(account, /<Teleport to="body">/);
+  assert.match(account, /getBoundingClientRect\(\)/);
+  assert.match(account, /zIndex: '9999'/);
+  assert.match(entity, /<Teleport to="body">/);
+  assert.match(entity, /role="dialog"/);
+  assert.match(view, /min-w-\[1800px\]/);
+  assert.match(view, /overscroll-x-contain/);
+});
+
+test('subdiary master is a separate company-scoped route with controlled CRUD', () => {
+  const view = readFileSync(new URL('../src/modules/accounting/views/CompanySubdiariesView.vue', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8');
+  const nav = readFileSync(new URL('../src/shared/layout/AppSidebar.vue', import.meta.url), 'utf8');
+  const api = readFileSync(new URL('../src/modules/accounting/api/httpClient.ts', import.meta.url), 'utf8');
+  assert.match(view, /createCompanySubdiary/);
+  assert.match(view, /renameCompanySubdiary/);
+  assert.match(view, /setCompanySubdiaryActive/);
+  assert.match(view, /canWrite/);
+  assert.match(app, /currentModule === 'subdiaries'/);
+  assert.match(nav, /Maestro de subdiarios/);
+  assert.match(api, /\/api\/v1\/company\/subdiaries/);
+});
