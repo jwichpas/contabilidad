@@ -10,7 +10,7 @@ namespace App\Support\Accounting;
  */
 final class JournalSubdiaryCatalog
 {
-    public const DEFAULT = 'GENERAL';
+    public const GENERAL_CODE = 'GENERAL';
 
     /** @return array<string, string> */
     public static function labels(): array
