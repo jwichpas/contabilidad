@@ -23,7 +23,7 @@ test('cash equivalent accounts can classify each activity and optional NONE stil
   for (const category of ['NONE', 'CASH_EQUIVALENT']) {
     for (const activity of ['OPERATING', 'INVESTING', 'FINANCING', 'CASH_EQUIVALENT']) {
       assert.equal(cashFlowMatches({ requires_cash_flow_area: false, cash_flow_category: category },
-        { is_active: true, activity_category: activity }), true);
+        { is_active: true, activity_category: activity }), false);
     }
   }
   assert.equal(cashFlowMatches({ requires_cash_flow_area: false, cash_flow_category: 'NONE' },
@@ -34,7 +34,6 @@ test('switching journal account clears all four dimensions without changing amou
   const line = {
     accountId: 11, costCenterId: 22, entity: { id: 33 },
     companyAreaId: 44, cashFlowAreaId: 55,
-    showOptionalCostCenter: true, showOptionalEntity: true,
     description: 'Ficticio', debitLocal: '150.0000', creditLocal: '0.0000',
   };
   resetAccountDimensions(line);
@@ -42,8 +41,6 @@ test('switching journal account clears all four dimensions without changing amou
   assert.equal(line.entity, null);
   assert.equal(line.companyAreaId, null);
   assert.equal(line.cashFlowAreaId, null);
-  assert.equal(line.showOptionalCostCenter, false);
-  assert.equal(line.showOptionalEntity, false);
   assert.equal(line.accountId, 11);
   assert.equal(line.description, 'Ficticio');
   assert.equal(line.debitLocal, '150.0000');
@@ -52,13 +49,16 @@ test('switching journal account clears all four dimensions without changing amou
 test('journal view wires account reset, conditional dimensions and compact exchange rates', () => {
   const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
   assert.match(view, /@change="resetAccountDimensions\(line\)"/);
-  assert.match(view, /:disabled="isSubmitting \|\| !line\.accountId"/);
-  assert.match(view, /requires_cost_center \? 'Seleccionar centro obligatorio'/);
+  assert.match(view, /:disabled="isSubmitting"/);
+  assert.match(view, /requires_cost_center/);
   assert.match(view, /entityRequired\(operationalAccounts\.find/);
-  assert.match(view, /\+ Centro opcional/);
-  assert.match(view, /\+ Anexo opcional/);
   assert.match(view, /:key="`\$\{line\.id\}-\$\{line\.accountId/);
   assert.match(view, /T\.C\. diario ·/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'buy_rate'/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'sell_rate'/);
+});
+test('cash flow does not permit a dimension when the account flag is disabled', () => {
+  assert.equal(cashFlowMatches({ requires_cash_flow_area: false, cash_flow_category: 'OPERATING' },
+    { is_active: true, activity_category: 'OPERATING' }), false);
+  assert.equal(cashFlowMatches({ requires_cash_flow_area: false, cash_flow_category: 'NONE' }, null), true);
 });
