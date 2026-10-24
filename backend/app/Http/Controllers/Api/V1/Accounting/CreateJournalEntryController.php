@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Accounting;
 use App\Models\CompanyCurrency;
 use App\Models\AccountingAccount;
 use App\Services\Accounting\JournalEntityRequirement;
+use App\Services\Accounting\JournalAreaRequirement;
 use App\Models\ExchangeRate;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
@@ -56,6 +57,8 @@ final readonly class CreateJournalEntryController
             'lines.*.accounting_account_id' => ['required', 'integer', 'min:1'],
             'lines.*.cost_center_id' => ['nullable', 'integer', 'min:1'],
             'lines.*.entity_id' => ['nullable', 'integer', 'min:1'],
+            'lines.*.company_area_id' => ['nullable', 'integer', 'min:1'],
+            'lines.*.cash_flow_area_id' => ['nullable', 'integer', 'min:1'],
             'lines.*.description' => ['nullable', 'string', 'max:250'],
             'lines.*.debit_local' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
             'lines.*.credit_local' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
@@ -63,8 +66,8 @@ final readonly class CreateJournalEntryController
             'lines.*.credit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
         ]);
 
-        if (! Schema::hasColumn('journal_entry_lines', 'entity_id')) {
-            return response()->json(['message' => 'Falta aplicar la migración de anexos en partidas contables.'], 503);
+        if (! Schema::hasColumns('journal_entry_lines', ['entity_id', 'company_area_id', 'cash_flow_area_id'])) {
+            return response()->json(['message' => 'Falta aplicar la migración de dimensiones (anexos y áreas) en partidas contables.'], 503);
         }
 
         $companyId = $this->tenantContext->requireCompanyId(JournalEntry::class);
@@ -105,7 +108,7 @@ final readonly class CreateJournalEntryController
         // Locks remain held by the outer tenant transaction until posting completes.
         foreach ($validated['lines'] as $index => $line) {
             $account = AccountingAccount::query()->where('id', (int) $line['accounting_account_id'])
-                ->sharedLock()->first(['entity_requirement_type', 'requires_auxiliary']);
+                ->sharedLock()->first(['entity_requirement_type', 'requires_auxiliary', 'requires_cash_flow_area', 'cash_flow_category']);
             if ($account === null) {
                 return response()->json(['message' => 'Cuenta ajena o inexistente en partida #'.($index + 1).'.'], 422);
             }
@@ -115,6 +118,11 @@ final readonly class CreateJournalEntryController
                     $type instanceof \BackedEnum ? $type->value : (string) $type,
                     (bool) $account->requires_auxiliary,
                     isset($line['entity_id']) ? (int) $line['entity_id'] : null);
+                $category = $account->cash_flow_category;
+                JournalAreaRequirement::validateSelection($companyId, (bool) $account->requires_cash_flow_area,
+                    $category instanceof \BackedEnum ? $category->value : (string) $category,
+                    isset($line['company_area_id']) ? (int) $line['company_area_id'] : null,
+                    isset($line['cash_flow_area_id']) ? (int) $line['cash_flow_area_id'] : null);
             } catch (DomainException $exception) {
                 return response()->json(['message' => 'Partida #'.($index + 1).': '.$exception->getMessage()], 422);
             }
@@ -266,6 +274,8 @@ final readonly class CreateJournalEntryController
                 'accounting_account_id' => (int) $line['accounting_account_id'],
                 'cost_center_id' => isset($line['cost_center_id']) ? (int) $line['cost_center_id'] : null,
                 'entity_id' => isset($line['entity_id']) ? (int) $line['entity_id'] : null,
+                'company_area_id' => isset($line['company_area_id']) ? (int) $line['company_area_id'] : null,
+                'cash_flow_area_id' => isset($line['cash_flow_area_id']) ? (int) $line['cash_flow_area_id'] : null,
                 'description' => $line['description'] ?? $validated['description'],
                 'debit_local' => Decimal::ofMonetary((string) $line['debit_local'])->toString(),
                 'credit_local' => Decimal::ofMonetary((string) $line['credit_local'])->toString(),
@@ -322,7 +332,7 @@ final readonly class CreateJournalEntryController
             );
         }
 
-        $journalEntry->load(['lines.account', 'lines.costCenter', 'lines.entity', 'fiscalPeriod']);
+        $journalEntry->load(['lines.account', 'lines.costCenter', 'lines.entity', 'lines.companyArea', 'lines.cashFlowArea', 'fiscalPeriod']);
 
         return response()->json([
             'message' => 'Asiento contable registrado exitosamente con Partida Doble balanceada.',

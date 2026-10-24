@@ -14,6 +14,7 @@ import type {
 } from '../types/accountingAccount.types';
 import type {
   CashFlowAreaItem,
+  CompanyAreaItem,
   CostCenterItem,
   CurrencyItem,
   FinancialStatementRubricItem,
@@ -291,6 +292,13 @@ export class AccountingApiClient {
   /**
    * Áreas de flujo de efectivo por categoría de actividad (NIC 7).
    */
+  public async fetchCompanyAreas(): Promise<readonly CompanyAreaItem[]> {
+    const result = await this.request<{ data: CompanyAreaItem[] }>(
+      '/api/v1/company/areas', { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
   public async fetchCashFlowAreas(params?: {
     readonly category?: string;
   }): Promise<readonly CashFlowAreaItem[]> {

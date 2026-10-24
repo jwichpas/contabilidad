@@ -21,7 +21,7 @@ final readonly class ListJournalEntriesController
         $query = JournalEntry::query()
             ->with([
                 'lines' => static function ($q): void {
-                    $q->orderBy('line_number')->with(['account:id,code,name', 'costCenter:id,code,name', 'entity']);
+                    $q->orderBy('line_number')->with(['account:id,code,name', 'costCenter:id,code,name', 'entity', 'companyArea', 'cashFlowArea']);
                 },
                 'fiscalPeriod:id,year,month,status',
             ])

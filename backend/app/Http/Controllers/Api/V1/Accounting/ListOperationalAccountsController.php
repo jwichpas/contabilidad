@@ -33,6 +33,7 @@ final readonly class ListOperationalAccountsController
                 'requires_auxiliary',
                 'entity_requirement_type',
                 'requires_cash_flow_area',
+                'cash_flow_category',
             ])
             ->orderBy('code')
             ->get();

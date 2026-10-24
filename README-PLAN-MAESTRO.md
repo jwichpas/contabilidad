@@ -1,4 +1,6 @@
-> **F3.3 · Anexos en partidas (24/10/2026):** implementados selector por partida, validación por tipo de cuenta/empresa/estado, referencia histórica y copia en extorno. Frontend **30/30 pruebas y build PASS**; migración aditiva y pruebas Laravel pendientes de ejecución manual. [Instalación, alcance y aceptación](docs/F3-3-ANEXOS-EN-PARTIDAS.md). Avance oficial sin cambios: **8/32 (25%)**.
+> **F3.3 · Áreas en partidas (24/10/2026):** área organizativa opcional y área de flujo según requisito de cuenta, validación tenant/estado/categoría y conservación en extorno. Frontend **33/33 pruebas y build PASS**; nueva migración y pruebas Laravel pendientes. [Alcance y validación](docs/F3-3-AREAS-EN-PARTIDAS.md). Avance: **8/32 (25%)**.
+
+> **F3.3 · Anexos en partidas (24/10/2026):** implementados selector por partida, validación por tipo de cuenta/empresa/estado, referencia histórica y copia en extorno. Frontend **30/30 pruebas y build PASS**; Feature **4/4 PASS, 29 aserciones (144,19 s)** según ejecución manual del usuario. Unit PHP y aceptación visual completa pendientes. [Instalación, alcance y aceptación](docs/F3-3-ANEXOS-EN-PARTIDAS.md). Avance oficial sin cambios: **8/32 (25%)**.
 
 # Plan maestro, hoja de ruta e hitos — Sistema Contable
 

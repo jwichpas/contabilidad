@@ -17,7 +17,7 @@
 
 `backend/database/migrations/2026_10_24_080000_add_journal_line_entities.php` añade `entity_id` nullable, índice por empresa y FK compuesta `(company_id, entity_id) -> entities(company_id, id)`. Reutiliza RLS, permisos e inmutabilidad de las partidas. Los asientos anteriores permanecen NULL; no hay backfill, seeds ni nuevas empresas persistidas.
 
-Antes de aplicar la migración, el POST y el extorno HTTP responden 503 explícito; las lecturas siguen disponibles. No ejecutar escrituras del Libro Diario entre la actualización del código y la migración. La migración no ha sido ejecutada por el agente. No repetir la migración fiscal ni usar `migrate:fresh`.
+Antes de aplicar la migración, el POST y el extorno HTTP responden 503 explícito; las lecturas siguen disponibles. No ejecutar escrituras del Libro Diario entre la actualización del código y la migración. La migración no fue ejecutada por el agente; la ejecución Feature aportada por el usuario el 24/10/2026 confirmó el esquema requerido para guardar anexos. No repetir la migración fiscal ni usar `migrate:fresh`.
 
 Desde el repositorio actualizado, en el entorno local configurado para **contabilidad-dev**:
 
@@ -37,7 +37,7 @@ Solo continuar con la migración si el diagnóstico confirma la rama DEV. No apl
 
 - Frontend: **30/30 PASS**, incluye tres pruebas ejecutables de obligatoriedad, seis clasificaciones, entidad inactiva y múltiples roles. No equivalen a una prueba de navegador.
 - `pnpm build`: PASS (`vue-tsc -b` + Vite 6.4.4).
-- PHP: análisis sintáctico con php-parser 3.7.0 PASS; no hay runtime PHP en el entorno del agente. **No se ejecutaron Laravel, la migración ni el nuevo Feature test.**
+- PHP: análisis sintáctico con php-parser 3.7.0 PASS; no hay runtime PHP en el entorno del agente. **El agente no ejecutó Laravel ni la migración. El usuario aportó posteriormente 4/4 Feature PASS, 29 aserciones, 144,19 s, Exit Code 0.**
 - Dos pruebas Unit PHP preparadas para reglas puras. Cuatro Feature preparadas: guardar/consultar/replay sin campos bancarios; rechazos por ausencia/tipo/estado/empresa sin asiento/período/TC; extorno con anexo inactivo; referencia opcional y catálogo actualizado. Usan DatabaseTransactions y una sola cadena de seis cuentas por caso para limitar preparación remota. No marcar PASS hasta recibir salida real.
 - Concurrencia entre conexiones, FK directa desde SQL y aceptación visual de guardado siguen pendientes. El bloqueo compartido por sí solo no certifica concurrencia.
 - Este incremento cubre **anexo**, no cuenta bancaria, área organizativa, medio de pago ni área de flujo NIC 7. Esas dimensiones y los escenarios multisectoriales continúan pendientes.
@@ -46,3 +46,8 @@ Solo continuar con la migración si el diagnóstico confirma la rama DEV. No apl
 ## Aceptación visual pendiente
 
 En una empresa DEMO con usuario autorizado, crear un cliente ficticio en Anexos y elegir una cuenta operativa que exija CUSTOMER. Seleccionarlo desde la partida; comprobar rechazo local si se omite y rechazo HTTP si se envía uno ajeno/inactivo. Completar la contrapartida y registrar un asiento balanceado. Verificar anexo en el detalle tras recargar. Cambiar empresa: el borrador y las búsquedas anteriores no deben reaparecer. La prueba de extorno debe hacerse sobre ese asiento ficticio y en período abierto.
+
+
+## Evidencia manual recibida · 24/10/2026
+
+`JournalEntityDimensionTest`: **4/4 PASS, 29 aserciones, 144,19 s**, según salida del usuario. Verificador documental: **PASS 8/32**, coherencia únicamente. No se recibió en ese mensaje la salida Unit PHP ni prueba visual del guardado; continúan pendientes. No repetir la prueba Feature ya aprobada sin cambios o fallos que lo justifiquen.

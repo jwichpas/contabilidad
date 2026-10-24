@@ -39,12 +39,21 @@ export interface CostCenterItem {
   } | null;
 }
 
+export interface CompanyAreaItem {
+  readonly id: number;
+  readonly company_id: number;
+  readonly code: string;
+  readonly name: string;
+  readonly is_active: boolean;
+}
+
 export interface CashFlowAreaItem {
   id: number;
   company_id: number;
   code: string;
   name: string;
   activity_category: string;
+  flow_direction: string;
   is_active: boolean;
 }
 
@@ -68,3 +77,4 @@ export interface CompanySettingItem {
   cash_flow_required: boolean;
   enable_dual_currency: boolean;
 }
+

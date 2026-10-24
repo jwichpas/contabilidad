@@ -23,10 +23,11 @@ import type { OperationalAccount } from '../types/journalEntry.types';
 import type { EntityMaster } from '../../company/types/entityMaster.types';
 import JournalEntityPicker from '../components/JournalEntityPicker.vue';
 import { entityMatches } from '../utils/journalEntity';
+import { cashFlowMatches } from '../utils/journalArea';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import { SystemDecimal } from '../../../shared/types/numeric.types';
 import type { CompanyId } from '../types/accountingAccount.types';
-import type { CostCenterItem } from '../types/catalogs.types';
+import type { CostCenterItem, CompanyAreaItem, CashFlowAreaItem } from '../types/catalogs.types';
 import type {
   CurrencyCode,
   EntryType,
@@ -58,6 +59,8 @@ const successMessage = shallowRef<string | null>(null);
 // Catálogo de Cuentas Operativas (Nivel 4+)
 const operationalAccounts = shallowRef<readonly OperationalAccount[]>([]);
 const costCenters = shallowRef<readonly CostCenterItem[]>([]);
+const companyAreas = shallowRef<readonly CompanyAreaItem[]>([]);
+const cashFlowAreas = shallowRef<readonly CashFlowAreaItem[]>([]);
 
 // Campos de Cabecera del Voucher
 const todayStr = new Date().toISOString().slice(0, 10);
@@ -202,6 +205,8 @@ interface EditingLine {
   id: number;
   accountId: number | null;
   costCenterId: number | null;
+  companyAreaId: number | null;
+  cashFlowAreaId: number | null;
   entity: EntityMaster | null;
   description: string;
   debitLocal: string;
@@ -216,6 +221,8 @@ const lines = ref<EditingLine[]>([
     id: nextLineKey++,
     accountId: null,
     costCenterId: null,
+    companyAreaId: null,
+    cashFlowAreaId: null,
     entity: null,
     description: '',
     debitLocal: '',
@@ -227,6 +234,8 @@ const lines = ref<EditingLine[]>([
     id: nextLineKey++,
     accountId: null,
     costCenterId: null,
+    companyAreaId: null,
+    cashFlowAreaId: null,
     entity: null,
     description: '',
     debitLocal: '',
@@ -312,6 +321,8 @@ function addLine(): void {
     id: nextLineKey++,
     accountId: null,
     costCenterId: null,
+    companyAreaId: null,
+    cashFlowAreaId: null,
     entity: null,
     description: headerDescription.value,
     debitLocal: '',
@@ -382,6 +393,8 @@ function clearForm(): void {
       id: nextLineKey++,
       accountId: null,
       costCenterId: null,
+      companyAreaId: null,
+      cashFlowAreaId: null,
       entity: null,
       description: '',
       debitLocal: '',
@@ -393,6 +406,8 @@ function clearForm(): void {
       id: nextLineKey++,
       accountId: null,
       costCenterId: null,
+      companyAreaId: null,
+      cashFlowAreaId: null,
       entity: null,
       description: '',
       debitLocal: '',
@@ -419,16 +434,20 @@ async function loadCatalogsAndHistory(): Promise<void> {
   isLoading.value = true;
   errorMessage.value = null;
   try {
-    const [accounts, entries, nextNum, ratesRes, centers] = await Promise.all([
+    const [accounts, entries, nextNum, ratesRes, centers, areas, flows] = await Promise.all([
       apiClient.value.fetchOperationalAccounts(),
       apiClient.value.fetchJournalEntries({ limit: 50 }),
       apiClient.value.fetchNextJournalEntryNumber(entryDate.value),
       apiClient.value.fetchCompanyExchangeRates(entryDate.value).catch(() => null),
       apiClient.value.fetchCostCenters(),
+      apiClient.value.fetchCompanyAreas(),
+      apiClient.value.fetchCashFlowAreas(),
     ]);
 
     operationalAccounts.value = accounts;
     costCenters.value = centers;
+    companyAreas.value = areas;
+    cashFlowAreas.value = flows;
     journalEntries.value = entries;
     entryNumber.value = nextNum.next_number;
 
@@ -494,6 +513,15 @@ async function handleSubmit(): Promise<void> {
       errorMessage.value = `Seleccione un anexo activo del tipo exigido por la cuenta en la línea #${i + 1}.`;
       return;
     }
+    if (l.companyAreaId && !companyAreas.value.some((area) => area.id === l.companyAreaId && area.is_active)) {
+      errorMessage.value = `Seleccione un área organizativa activa en la línea #${i + 1}.`;
+      return;
+    }
+    const flow = cashFlowAreas.value.find((area) => area.id === l.cashFlowAreaId);
+    if ((l.cashFlowAreaId && !flow) || !cashFlowMatches(chosenAccount, flow ?? null)) {
+      errorMessage.value = `Seleccione un área de flujo activa compatible con la cuenta en la línea #${i + 1}.`;
+      return;
+    }
     const d = parseAmount(l.debitLocal);
     const c = parseAmount(l.creditLocal);
     if (d.isZero() && c.isZero()) {
@@ -522,6 +550,8 @@ async function handleSubmit(): Promise<void> {
         accounting_account_id: l.accountId!,
         cost_center_id: l.costCenterId,
         entity_id: l.entity?.id ?? null,
+        company_area_id: l.companyAreaId,
+        cash_flow_area_id: l.cashFlowAreaId,
         description: l.description.trim() || headerDescription.value.trim(),
         debit_local: l.debitLocal.trim() || '0',
         credit_local: l.creditLocal.trim() || '0',
@@ -975,6 +1005,7 @@ onMounted(() => {
                 <th class="py-2.5 px-3 w-[340px]">Cuenta Contable Operativa</th>
                 <th class="py-2.5 px-3 w-44" title="Obligatorio solo si la cuenta contable lo exige; no genera transferencia automática">Centro de costo</th>
                 <th class="py-2.5 px-3 w-64">Anexo / Tercero</th>
+                <th class="py-2.5 px-3 w-64">Áreas</th>
                 <th class="py-2.5 px-3">Glosa Específica</th>
                 <th class="py-2.5 px-3 w-36 text-right">Debe ({{ baseCurrencyInfo.code }})</th>
                 <th class="py-2.5 px-3 w-36 text-right">Haber ({{ baseCurrencyInfo.code }})</th>
@@ -999,6 +1030,7 @@ onMounted(() => {
                 <td class="py-2 px-3">
                   <select
                     v-model="line.accountId"
+                    @change="line.cashFlowAreaId = null"
                     class="w-full px-2.5 py-1.5 text-xs font-mono rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
                   >
                     <option :value="null">-- Seleccionar Cuenta Operativa --</option>
@@ -1030,6 +1062,25 @@ onMounted(() => {
                   <JournalEntityPicker v-model="line.entity" :api="apiClient"
                     :account="operationalAccounts.find((account) => account.id === line.accountId)"
                     :disabled="isSubmitting" />
+                </td>
+
+                <td class="py-2 px-3 min-w-60">
+                  <label class="block text-[11px] text-muted">Área organizativa (opcional)
+                    <select v-model="line.companyAreaId" :disabled="isSubmitting"
+                      class="mt-1 w-full rounded-md border border-line bg-surf px-2 py-1.5 text-xs text-foreground">
+                      <option :value="null">Sin área organizativa</option>
+                      <option v-for="area in companyAreas" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
+                    </select>
+                  </label>
+                  <label class="mt-2 block text-[11px] text-muted">Área de flujo de efectivo
+                    <span v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"> (obligatoria)</span>
+                    <select v-model="line.cashFlowAreaId" :disabled="isSubmitting || !line.accountId"
+                      class="mt-1 w-full rounded-md border border-line bg-surf px-2 py-1.5 text-xs text-foreground">
+                      <option :value="null">Sin área de flujo</option>
+                      <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(operationalAccounts.find(a => a.id === line.accountId), area))"
+                        :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
+                    </select>
+                  </label>
                 </td>
 
                 <!-- Glosa de Línea -->
@@ -1096,7 +1147,7 @@ onMounted(() => {
             <!-- Fila de Totales y Diferencias -->
             <tfoot>
               <tr class="bg-soft border-t-2 border-line text-xs">
-                <td colspan="5" class="py-2.5 px-4 font-semibold text-foreground text-right uppercase tracking-wider">
+                <td colspan="6" class="py-2.5 px-4 font-semibold text-foreground text-right uppercase tracking-wider">
                   Totales Asiento:
                 </td>
                 <td class="py-2.5 px-3 text-right font-semibold num text-foreground">
@@ -1116,7 +1167,7 @@ onMounted(() => {
 
               <!-- Fila de Diferencia (Cuadre) -->
               <tr class="bg-surf text-xs">
-                <td colspan="5" class="py-2 px-4 text-right font-semibold text-muted">
+                <td colspan="6" class="py-2 px-4 text-right font-semibold text-muted">
                   Diferencia Partida Doble:
                 </td>
                 <td
@@ -1314,6 +1365,7 @@ onMounted(() => {
                             <th class="py-1.5 px-3 w-40">Cuenta</th>
                             <th class="py-1.5 px-3 w-40">Centro de costo</th>
                             <th class="py-1.5 px-3">Anexo</th>
+                            <th class="py-1.5 px-3">Áreas</th>
                             <th class="py-1.5 px-3">Glosa de Línea</th>
                             <th class="py-1.5 px-3 w-32 text-right">Debe (PEN)</th>
                             <th class="py-1.5 px-3 w-32 text-right">Haber (PEN)</th>
@@ -1329,6 +1381,10 @@ onMounted(() => {
                             </td>
                             <td class="py-1.5 px-3 text-muted text-[11px]">{{ l.cost_center?.code || costCenters.find((cc) => cc.id === l.cost_center_id)?.code || '—' }}</td>
                             <td class="py-1.5 px-3 text-xs">{{ l.entity ? `${l.entity.tax_id} · ${l.entity.legal_name}` : l.entity_id ? `Anexo ${l.entity_id}` : '—' }}</td>
+                            <td class="py-1.5 px-3 text-xs">
+                              <div>{{ l.company_area ? `${l.company_area.code} · ${l.company_area.name}` : l.company_area_id ? `Área ${l.company_area_id}` : 'Sin área organizativa' }}</div>
+                              <div class="text-muted">{{ l.cash_flow_area ? `${l.cash_flow_area.code} · ${l.cash_flow_area.name}` : l.cash_flow_area_id ? `Flujo ${l.cash_flow_area_id}` : 'Sin área de flujo' }}</div>
+                            </td>
                             <td class="py-1.5 px-3 text-muted text-xs">{{ l.description || entry.description }}</td>
                             <td class="py-1.5 px-3 text-right font-medium num">
                               {{ formatPostedAmount(l.debit_local) }}

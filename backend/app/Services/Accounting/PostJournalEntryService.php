@@ -45,6 +45,9 @@ final readonly class PostJournalEntryService
      *     lines: non-empty-list<array{
      *         accounting_account_id: int,
      *         cost_center_id?: int|null,
+     *         entity_id?: int|null,
+     *         company_area_id?: int|null,
+     *         cash_flow_area_id?: int|null,
      *         description?: string|null,
      *         debit_local: string,
      *         credit_local: string,
@@ -146,15 +149,21 @@ final readonly class PostJournalEntryService
                 $account = DB::table('accounting_accounts')
                     ->where('company_id', (int) $period->company_id)
                     ->where('id', (int) $line['accounting_account_id'])
-                    ->sharedLock()->first(['requires_cost_center','requires_auxiliary','entity_requirement_type','has_automatic_destination','account_type','code','is_operational','is_active']);
+                    ->sharedLock()->first(['requires_cost_center','requires_auxiliary','entity_requirement_type','requires_cash_flow_area','cash_flow_category','has_automatic_destination','account_type','code','is_operational','is_active']);
                 if ($account === null) {
                     throw new DomainException(sprintf('Cuenta de partida #%d no pertenece a la empresa activa.', $index + 1));
                 }
                 $entityId = $line['entity_id'] ?? null;
+                $companyAreaId = $line['company_area_id'] ?? null;
+                $cashFlowAreaId = $line['cash_flow_area_id'] ?? null;
                 try {
                     JournalEntityRequirement::validateSelection((int) $period->company_id,
                         (string) $account->entity_requirement_type, (bool) $account->requires_auxiliary,
                         $entityId === null ? null : (int) $entityId);
+                    JournalAreaRequirement::validateSelection((int) $period->company_id,
+                        (bool) $account->requires_cash_flow_area, (string) $account->cash_flow_category,
+                        $companyAreaId === null ? null : (int) $companyAreaId,
+                        $cashFlowAreaId === null ? null : (int) $cashFlowAreaId);
                 } catch (DomainException $exception) {
                     throw new DomainException(sprintf('Partida #%d: %s', $index + 1, $exception->getMessage()));
                 }
@@ -180,6 +189,8 @@ final readonly class PostJournalEntryService
                     'accounting_account_id' => $line['accounting_account_id'],
                     'cost_center_id' => $centerId,
                     'entity_id' => $entityId,
+                    'company_area_id' => $companyAreaId,
+                    'cash_flow_area_id' => $cashFlowAreaId,
                     'description' => $line['description'] ?? null,
                     'debit_local' => Decimal::ofMonetary($line['debit_local'])->toString(),
                     'credit_local' => Decimal::ofMonetary($line['credit_local'])->toString(),
@@ -337,6 +348,8 @@ final readonly class PostJournalEntryService
                     'cost_center_id' => $line->cost_center_id,
                     // Copy the original reference, even if the entity is now inactive.
                     'entity_id' => $line->entity_id,
+                    'company_area_id' => $line->company_area_id,
+                    'cash_flow_area_id' => $line->cash_flow_area_id,
                     'description' => sprintf('Extorno línea #%d', $line->line_number),
                     // Inversión exacta Debe <-> Haber en ambas monedas
                     'debit_local' => (string) $line->credit_local,

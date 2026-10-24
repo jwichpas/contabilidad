@@ -18,6 +18,9 @@ use Illuminate\Support\Carbon;
  * @property int $journal_entry_id
  * @property int $line_number
  * @property int $accounting_account_id
+ * @property int|null $entity_id
+ * @property int|null $company_area_id
+ * @property int|null $cash_flow_area_id
  * @property int|null $cost_center_id
  * @property string|null $description
  * @property string $debit_local
@@ -41,6 +44,8 @@ final class JournalEntryLine extends Model
         'accounting_account_id',
         'cost_center_id',
         'entity_id',
+        'company_area_id',
+        'cash_flow_area_id',
         'description',
         'debit_local',
         'credit_local',
@@ -62,6 +67,8 @@ final class JournalEntryLine extends Model
             'accounting_account_id' => 'integer',
             'cost_center_id' => 'integer',
             'entity_id' => 'integer',
+            'company_area_id' => 'integer',
+            'cash_flow_area_id' => 'integer',
             'description' => 'string',
             'debit_local' => 'decimal:4',
             'credit_local' => 'decimal:4',
@@ -87,6 +94,17 @@ final class JournalEntryLine extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(AccountingAccount::class, 'accounting_account_id');
+    }
+
+    public function companyArea(): BelongsTo
+    {
+        return $this->belongsTo(CompanyArea::class, 'company_area_id')->select(['id', 'company_id', 'code', 'name']);
+    }
+
+    public function cashFlowArea(): BelongsTo
+    {
+        return $this->belongsTo(CashFlowArea::class, 'cash_flow_area_id')
+            ->select(['id', 'company_id', 'code', 'name', 'activity_category', 'flow_direction']);
     }
 
     /** Public projection prevents banking/contact details leaking through journal JSON. */

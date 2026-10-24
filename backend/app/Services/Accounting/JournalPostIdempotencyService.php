@@ -68,7 +68,7 @@ final readonly class JournalPostIdempotencyService
         }
 
         $entry = JournalEntry::query()
-            ->with(['lines.account', 'lines.costCenter', 'lines.entity', 'fiscalPeriod'])
+            ->with(['lines.account', 'lines.costCenter', 'lines.entity', 'lines.companyArea', 'lines.cashFlowArea', 'fiscalPeriod'])
             ->where('company_id', $companyId)
             ->where('id', (int)$existing->journal_entry_id)
             ->first();
