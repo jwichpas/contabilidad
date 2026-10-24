@@ -11,6 +11,7 @@ use App\Services\Accounting\JournalAreaRequirement;
 use App\Models\ExchangeRate;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
+use App\Support\Accounting\JournalSubdiaryCatalog;
 use App\Services\Accounting\JournalPostIdempotencyService;
 use App\Services\Accounting\PostJournalEntryService;
 use App\Services\Security\AuditLoggerService;
@@ -44,6 +45,7 @@ final readonly class CreateJournalEntryController
             'entry_date' => ['required', 'date_format:Y-m-d'],
             'entry_number' => ['nullable', 'string', 'max:30'],
             'entry_type' => ['sometimes', 'string', Rule::in(['STANDARD', 'OPENING', 'ADJUSTMENT', 'CLOSING'])],
+            'subdiary_code' => ['sometimes', 'string', Rule::in(array_keys(JournalSubdiaryCatalog::labels()))],
             'currency' => ['required', 'string'],
             'exchange_rate' => ['nullable', 'numeric', 'gt:0', 'regex:/^\\d+(?:\\.\\d{1,6})?$/'],
             'exchange_rate_type' => ['sometimes', 'string', Rule::in(['BUY', 'SELL', 'PARITY'])],
@@ -66,6 +68,9 @@ final readonly class CreateJournalEntryController
             'lines.*.credit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
         ]);
 
+        if (! Schema::hasColumn('journal_entries', 'subdiary_code')) {
+            return response()->json(['message' => 'Falta aplicar la migración aditiva de subdiarios en el libro diario.'], 503);
+        }
         if (! Schema::hasColumn('accounting_accounts', 'requires_company_area')) {
             return response()->json(['message' => 'Falta aplicar la migración de requisitos organizativos por cuenta.'], 503);
         }
@@ -300,6 +305,7 @@ final readonly class CreateJournalEntryController
                 'entry_number' => $entryNumber,
                 'entry_date' => $entryDate->toDateString(),
                 'entry_type' => $validated['entry_type'] ?? 'STANDARD',
+                'subdiary_code' => $validated['subdiary_code'] ?? JournalSubdiaryCatalog::DEFAULT,
                 'currency' => $voucherCurrency,
                 'exchange_rate' => $effectiveRate,
                 'exchange_rate_type' => $validated['exchange_rate_type'] ?? 'SELL',
