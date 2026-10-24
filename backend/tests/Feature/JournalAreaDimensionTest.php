@@ -199,3 +199,18 @@ it('rejects an invalid subdiary before opening periods or creating journal data'
         expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
     });
 });
+
+it('loads journal editor catalogs and subdiaries in a single read-only request', function (): void {
+    $this->getJson('/api/v1/accounting/journal-entries/editor-bootstrap?date=2026-10-24')
+        ->assertOk()
+        ->assertJsonPath('data.accounts.0.id', $this->account->id)
+        ->assertJsonPath('data.company_areas.0.id', $this->area->id)
+        ->assertJsonPath('data.cash_flow_areas.0.id', $this->flow->id)
+        ->assertJsonPath('data.subdiaries.0.code', 'GENERAL')
+        ->assertJsonPath('data.next_number.period_month', 10)
+        ->assertJsonPath('data.exchange_rates.rate_date', '2026-10-24');
+    $this->tenant->run($this->company->id, function (): void {
+        expect(JournalEntry::query()->count())->toBe(0);
+        expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
+    });
+});
