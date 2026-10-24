@@ -169,6 +169,7 @@ export const accountingAccountSchema = z
     }),
     entity_requirement_type: entityRequirementTypeSchema.default('NONE'),
     requires_cost_center: z.boolean().default(false),
+    requires_company_area: z.boolean().default(false),
     has_automatic_destination: z.boolean().default(false),
     destination_debit_code: z.string().trim().nullable().optional().default(null),
     destination_credit_code: z.string().trim().nullable().optional().default(null),
@@ -222,6 +223,11 @@ export const accountingAccountSchema = z
         path: ['entity_requirement_type'],
         message: 'Solo las cuentas operativas pueden exigir Entidad / Anexo contable.',
       });
+    }
+
+    if (!data.is_operational && data.requires_company_area) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['requires_company_area'],
+        message: 'Solo las cuentas operativas pueden exigir un área organizativa.' });
     }
 
     if (!data.is_operational && (data.requires_cost_center || data.has_automatic_destination)) {
@@ -349,6 +355,7 @@ export const accountingAccountResponseSchema: z.ZodType<
     entity_requirement_type: entityRequirementTypeSchema,
     entity_requirement_label: z.string(),
     requires_cost_center: z.boolean(),
+    requires_company_area: z.boolean(),
     has_automatic_destination: z.boolean(),
     destination_debit_code: z.string().nullable(),
     destination_credit_code: z.string().nullable(),
