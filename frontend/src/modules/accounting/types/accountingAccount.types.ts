@@ -267,6 +267,8 @@ export interface CreateAccountingAccountPayload {
 
 export interface UpdateAccountingAccountPayload {
   readonly name: string;
+  readonly account_type: AccountType;
+  readonly balance_type: BalanceType;
   readonly currency_mode: AccountCurrencyMode;
   readonly requires_currency: boolean;
   readonly requires_auxiliary: boolean;
@@ -280,5 +282,6 @@ export interface UpdateAccountingAccountPayload {
   readonly cash_flow_category: CashFlowCategory;
   readonly financial_statement_rubric: FinancialStatementRubric;
   readonly is_operational: boolean;
+  readonly is_active: boolean;
 }
 
