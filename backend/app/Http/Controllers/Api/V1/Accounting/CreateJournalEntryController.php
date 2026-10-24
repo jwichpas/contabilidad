@@ -111,7 +111,7 @@ final readonly class CreateJournalEntryController
         }
 
         $subdiaryCode = (string)($validated['subdiary_code'] ?? JournalSubdiaryCatalog::GENERAL_CODE);
-        if (! CompanySubdiary::query()->where('code', $subdiaryCode)->where('is_active', true)
+        if (CompanySubdiary::query()->where('code', $subdiaryCode)->where('is_active', true)
             ->sharedLock()->first(['id']) === null) {
             return response()->json(['message' => 'El subdiario está inactivo, no existe o no pertenece a esta empresa.'], 422);
         }
