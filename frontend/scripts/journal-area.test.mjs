@@ -34,6 +34,7 @@ test('switching journal account clears all four dimensions without changing amou
   const line = {
     accountId: 11, costCenterId: 22, entity: { id: 33 },
     companyAreaId: 44, cashFlowAreaId: 55,
+    showOptionalCostCenter: true, showOptionalEntity: true,
     description: 'Ficticio', debitLocal: '150.0000', creditLocal: '0.0000',
   };
   resetAccountDimensions(line);
@@ -41,6 +42,8 @@ test('switching journal account clears all four dimensions without changing amou
   assert.equal(line.entity, null);
   assert.equal(line.companyAreaId, null);
   assert.equal(line.cashFlowAreaId, null);
+  assert.equal(line.showOptionalCostCenter, false);
+  assert.equal(line.showOptionalEntity, false);
   assert.equal(line.accountId, 11);
   assert.equal(line.description, 'Ficticio');
   assert.equal(line.debitLocal, '150.0000');
@@ -51,7 +54,10 @@ test('journal view wires account reset, conditional dimensions and compact excha
   assert.match(view, /@change="resetAccountDimensions\(line\)"/);
   assert.match(view, /:disabled="isSubmitting \|\| !line\.accountId"/);
   assert.match(view, /requires_cost_center \? 'Seleccionar centro obligatorio'/);
-  assert.match(view, /JournalEntityPicker :key=/);
+  assert.match(view, /entityRequired\(operationalAccounts\.find/);
+  assert.match(view, /\+ Centro opcional/);
+  assert.match(view, /\+ Anexo opcional/);
+  assert.match(view, /:key="`\$\{line\.id\}-\$\{line\.accountId/);
   assert.match(view, /T\.C\. diario ·/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'buy_rate'/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'sell_rate'/);
