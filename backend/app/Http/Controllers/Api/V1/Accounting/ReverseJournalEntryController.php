@@ -33,6 +33,9 @@ final readonly class ReverseJournalEntryController
             'reason' => ['required','string','min:3','max:250'],
         ]);
 
+        if (! Schema::hasColumn('journal_entries', 'subdiary_code')) {
+            return response()->json(['message' => 'Falta aplicar la migración aditiva de subdiarios para extornar.'], 503);
+        }
         if (! Schema::hasColumns('journal_entry_lines', ['entity_id', 'company_area_id', 'cash_flow_area_id'])) {
             return response()->json(['message' => 'Falta aplicar la migración de dimensiones (anexos y áreas) en partidas contables.'], 503);
         }
