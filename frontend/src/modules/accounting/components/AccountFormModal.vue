@@ -358,7 +358,6 @@ function handleSubmit(): void {
     entity_requirement_type: form.entity_requirement_type,
     requires_cost_center: form.requires_cost_center,
     requires_company_area: form.requires_company_area,
-  requires_company_area: form.requires_company_area,
     has_automatic_destination: form.has_automatic_destination,
     destination_debit_code: v.destination_debit_code ?? null,
     destination_credit_code: v.destination_credit_code ?? null,
@@ -658,6 +657,11 @@ function handleSubmit(): void {
                   :options="cashFlowOptions"
                   :invalid="!!fieldErrors.cash_flow_category"
                 />
+                <label class="ui-toggle-row">
+                  <span class="text-xs font-medium text-foreground">Exige área organizativa al contabilizar</span>
+                  <input v-model="form.requires_company_area" type="checkbox" class="ui-switch" />
+                </label>
+                <p v-if="fieldErrors.requires_company_area" class="ui-error">{{ fieldErrors.requires_company_area }}</p>
                 <p v-if="fieldErrors.cash_flow_category" class="ui-error">
                   {{ fieldErrors.cash_flow_category }}
                 </p>
