@@ -209,8 +209,6 @@ interface EditingLine {
   companyAreaId: number | null;
   cashFlowAreaId: number | null;
   entity: EntityMaster | null;
-  showOptionalCostCenter?: boolean;
-  showOptionalEntity?: boolean;
   description: string;
   debitLocal: string;
   creditLocal: string;
@@ -512,8 +510,20 @@ async function handleSubmit(): Promise<void> {
       errorMessage.value = `La cuenta ${chosenAccount.code} requiere centro de costos en la línea #${i + 1}.`;
       return;
     }
+    if (chosenAccount && !chosenAccount.requires_cost_center && l.costCenterId !== null) {
+      errorMessage.value = `La cuenta ${chosenAccount.code} no habilita centro de costos en la línea #${i + 1}.`;
+      return;
+    }
     if (!chosenAccount || !entityMatches(chosenAccount, l.entity)) {
       errorMessage.value = `Seleccione un anexo activo del tipo exigido por la cuenta en la línea #${i + 1}.`;
+      return;
+    }
+    if (chosenAccount.requires_company_area && l.companyAreaId === null) {
+      errorMessage.value = `La cuenta ${chosenAccount.code} requiere área organizativa en la línea #${i + 1}.`;
+      return;
+    }
+    if (!chosenAccount.requires_company_area && l.companyAreaId !== null) {
+      errorMessage.value = `La cuenta ${chosenAccount.code} no habilita área organizativa en la línea #${i + 1}.`;
       return;
     }
     if (l.companyAreaId && !companyAreas.value.some((area) => area.id === l.companyAreaId && area.is_active)) {
@@ -989,65 +999,59 @@ onMounted(() => {
                   </select>
                 </td>
 
-                <!-- Mostrar de inmediato las dimensiones obligatorias; las opcionales
-                     se agregan a demanda y siguen siendo válidas para cualquier cuenta. -->
+                <!-- Cada dimensión se habilita solo si la configuración de la cuenta la exige. -->
                 <td class="py-2 px-3">
-                  <span v-if="!line.accountId" class="text-[11px] text-muted">—</span>
-                  <template v-else-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center || line.showOptionalCostCenter">
-                    <label class="block text-[10px] mb-1"
-                      :class="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-muted'">
-                      {{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'Centro obligatorio' : 'Centro opcional' }}
-                    </label>
+                  <template v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center">
+                    <label class="block text-[10px] font-semibold text-amber-700 dark:text-amber-300 mb-1">Centro obligatorio</label>
                     <select v-model="line.costCenterId" :disabled="isSubmitting"
-                      class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                      title="Centro de costo: seleccionar solo si corresponde a la partida">
-                      <option :value="null">
-                        {{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'Seleccionar centro obligatorio' : 'Sin centro (opcional)' }}
-                      </option>
-                      <option v-for="cc in costCenters" :key="cc.id" :value="cc.id">
+                      class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand">
+                      <option :value="null">Seleccionar centro obligatorio</option>
+                      <option v-for="cc in costCenters.filter(cc => cc.is_active)" :key="cc.id" :value="cc.id">
                         {{ cc.code }} · {{ cc.name }}
                       </option>
                     </select>
                   </template>
-                  <button v-else type="button" :disabled="isSubmitting"
-                    class="rounded-md border border-dashed border-line px-2 py-1.5 text-[11px] text-muted hover:text-foreground disabled:opacity-50"
-                    @click="line.showOptionalCostCenter = true">
-                    + Centro opcional
-                  </button>
+                  <span v-else class="text-[11px] text-muted">—</span>
                 </td>
 
                 <td class="py-2 px-3">
-                  <span v-if="!line.accountId" class="text-[11px] text-muted">—</span>
                   <JournalEntityPicker
-                    v-else-if="entityRequired(operationalAccounts.find(a => a.id === line.accountId)) || line.showOptionalEntity"
+                    v-if="entityRequired(operationalAccounts.find(a => a.id === line.accountId))"
                     :key="`${line.id}-${line.accountId ?? 'none'}`"
                     v-model="line.entity" :api="apiClient"
                     :account="operationalAccounts.find((account) => account.id === line.accountId)"
                     :disabled="isSubmitting" />
-                  <button v-else type="button" :disabled="isSubmitting"
-                    class="rounded-md border border-dashed border-line px-2 py-1.5 text-[11px] text-muted hover:text-foreground disabled:opacity-50"
-                    @click="line.showOptionalEntity = true">
-                    + Anexo opcional
-                  </button>
+                  <span v-else class="text-[11px] text-muted">—</span>
                 </td>
 
                 <td class="py-2 px-3 min-w-60">
-                  <label class="block text-[11px] text-muted">Área organizativa (opcional)
-                    <select v-model="line.companyAreaId" :disabled="isSubmitting || !line.accountId"
+                  <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area"
+                    class="block text-[11px] text-muted">
+                    Área organizativa (obligatoria)
+                    <select v-model="line.companyAreaId" :disabled="isSubmitting"
                       class="mt-1 w-full rounded-md border border-line bg-surf px-2 py-1.5 text-xs text-foreground">
-                      <option :value="null">Sin área organizativa</option>
-                      <option v-for="area in companyAreas" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
+                      <option :value="null">Seleccionar área organizativa</option>
+                      <option v-for="area in companyAreas.filter(area => area.is_active)" :key="area.id" :value="area.id">
+                        {{ area.code }} · {{ area.name }}
+                      </option>
                     </select>
                   </label>
-                  <label class="mt-2 block text-[11px] text-muted">Área de flujo de efectivo
-                    <span v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"> (obligatoria)</span>
-                    <select v-model="line.cashFlowAreaId" :disabled="isSubmitting || !line.accountId"
+                  <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"
+                    class="block text-[11px] text-muted"
+                    :class="operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area ? 'mt-2' : ''">
+                    Área de flujo de efectivo (obligatoria)
+                    <select v-model="line.cashFlowAreaId" :disabled="isSubmitting"
                       class="mt-1 w-full rounded-md border border-line bg-surf px-2 py-1.5 text-xs text-foreground">
-                      <option :value="null">{{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area ? "Seleccionar flujo obligatorio" : "Sin área de flujo (opcional)" }}</option>
+                      <option :value="null">Seleccionar flujo obligatorio</option>
                       <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(operationalAccounts.find(a => a.id === line.accountId), area))"
-                        :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
+                        :key="area.id" :value="area.id">
+                        {{ area.code }} · {{ area.name }}
+                      </option>
                     </select>
                   </label>
+                  <span v-if="!operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area &&
+                    !operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"
+                    class="text-[11px] text-muted">—</span>
                 </td>
 
                 <!-- Glosa de Línea -->
