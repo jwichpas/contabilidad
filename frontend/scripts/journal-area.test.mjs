@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cashFlowMatches } from '../src/modules/accounting/utils/journalArea.ts';
 import { resetAccountDimensions } from '../src/modules/accounting/utils/journalLine.ts';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 test('cash flow requirement rejects missing and inactive areas', () => {
   const rule = { requires_cash_flow_area: true, cash_flow_category: 'OPERATING' };
@@ -146,7 +146,9 @@ test('journal editor keeps bimonetary amount columns on the primary row with con
 });
 
 test('journal bootstrap projects only accounts and flags needed by the voucher form', () => {
-  const backend = readFileSync(new URL('../../../backend/app/Http/Controllers/Api/V1/Accounting/GetJournalEditorBootstrapController.php', import.meta.url), 'utf8');
+  const backendFile = new URL('../../backend/app/Http/Controllers/Api/V1/Accounting/GetJournalEditorBootstrapController.php', import.meta.url);
+  assert.equal(existsSync(backendFile), true, 'El controlador debe encontrarse en contabilidad/backend, relativo a frontend/scripts');
+  const backend = readFileSync(backendFile, 'utf8');
   const dto = readFileSync(new URL('../src/modules/accounting/types/journalEntry.types.ts', import.meta.url), 'utf8');
   const picker = readFileSync(new URL('../src/modules/accounting/components/JournalEntityPicker.vue', import.meta.url), 'utf8');
   assert.match(backend, /AccountingAccount::query\(\)/);
