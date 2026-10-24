@@ -29,6 +29,7 @@ beforeEach(function (): void {
                 'account_type' => 'ASSET', 'balance_type' => 'DEBIT', 'currency_mode' => 'PEN',
                 'is_operational' => $i === 5, 'is_active' => true,
                 'entity_requirement_type' => 'NONE', 'requires_auxiliary' => false,
+                'requires_company_area' => $i === 5,
                 'requires_cash_flow_area' => $i === 5,
                 'cash_flow_category' => $i === 5 ? 'OPERATING' : 'NONE']);
         }
@@ -134,11 +135,11 @@ it('copies inactive historical area references on reversal', function (): void {
     });
 });
 
-it('keeps optional areas nullable and exposes the current cash flow requirement', function (): void {
+it('omits areas when the account does not configure them and exposes current requirements', function (): void {
     $this->getJson('/api/v1/accounting/accounts/operational')->assertOk()
         ->assertJsonPath('data.0.cash_flow_category', 'OPERATING');
     $this->tenant->run($this->company->id, fn () => $this->account->update([
-        'requires_cash_flow_area' => false, 'cash_flow_category' => 'NONE',
+        'requires_company_area' => false, 'requires_cash_flow_area' => false, 'cash_flow_category' => 'NONE',
     ]));
     $optional = $this->payload;
     foreach ($optional['lines'] as &$line) {
@@ -148,4 +149,18 @@ it('keeps optional areas nullable and exposes the current cash flow requirement'
     $this->postJson('/api/v1/accounting/journal-entries', $optional)->assertCreated()
         ->assertJsonPath('data.lines.0.company_area_id', null)
         ->assertJsonPath('data.lines.0.cash_flow_area_id', null);
+});
+
+it('rejects dimensions when the account does not configure them', function (): void {
+    $this->tenant->run($this->company->id, fn () => $this->account->update([
+        'requires_company_area' => false, 'requires_cash_flow_area' => false, 'cash_flow_category' => 'NONE',
+    ]));
+    foreach (['company_area_id', 'cash_flow_area_id'] as $field) {
+        $invalid = $this->payload;
+        $this->postJson('/api/v1/accounting/journal-entries', $invalid)->assertUnprocessable();
+        foreach ($invalid['lines'] as &$line) { unset($line[$field]); }
+        unset($line);
+        $this->postJson('/api/v1/accounting/journal-entries', $invalid)->assertUnprocessable();
+    }
+    $this->tenant->run($this->company->id, fn () => expect(JournalEntry::query()->count())->toBe(0));
 });
