@@ -69,6 +69,8 @@ const todayStr = new Date().toISOString().slice(0, 10);
 const entryDate = ref(todayStr);
 const entryNumber = ref('');
 const entryType = ref<EntryType>('STANDARD');
+const subdiaryCode = ref('');
+const subdiaries = shallowRef<readonly { code: string; name: string }[]>([]);
 const currency = ref<CurrencyCode>('PEN');
 const exchangeRate = ref('3.750000');
 const exchangeRateType = ref<'BUY' | 'SELL'>('SELL');
@@ -392,6 +394,7 @@ function autoBalance(): void {
 
 function clearForm(): void {
   pendingJournalAttempt = null;
+  subdiaryCode.value = '';
   headerDescription.value = '';
   lines.value = [
     {
@@ -461,6 +464,7 @@ async function loadCatalogsAndHistory(): Promise<void> {
     const config = await apiClient.value.fetchJournalEditorBootstrap(entryDate.value);
     if (sequence !== loadSequence || tenant !== props.activeCompanyId) return;
     operationalAccounts.value = config.accounts;
+    subdiaries.value = config.subdiaries;
     costCenters.value = config.cost_centers;
     companyAreas.value = config.company_areas;
     cashFlowAreas.value = config.cash_flow_areas;
@@ -490,6 +494,10 @@ async function loadCatalogsAndHistory(): Promise<void> {
 async function handleSubmit(): Promise<void> {
   errorMessage.value = null;
   successMessage.value = null;
+  if (!subdiaryCode.value || !subdiaries.value.some(s => s.code === subdiaryCode.value)) {
+    errorMessage.value = 'Seleccione el subdiario contable del asiento.';
+    return;
+  }
 
   if (!headerDescription.value.trim()) {
     errorMessage.value = 'Por favor ingrese la glosa o descripción general del asiento.';
@@ -562,6 +570,7 @@ async function handleSubmit(): Promise<void> {
       entry_date: entryDate.value,
       entry_number: entryNumber.value || undefined,
       entry_type: entryType.value,
+      subdiary_code: subdiaryCode.value,
       currency: currency.value,
       exchange_rate: exchangeRate.value.trim() || '1',
       exchange_rate_type: exchangeRateType.value,
@@ -784,7 +793,7 @@ onMounted(() => {
           </span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7 gap-3.5">
           <!-- Fecha Contable -->
           <div>
             <label class="block text-[11px] font-semibold text-muted mb-1">
@@ -812,6 +821,20 @@ onMounted(() => {
               />
               <Hash class="w-3.5 h-3.5 text-muted absolute left-2 top-2" />
             </div>
+          </div>
+
+          <!-- Subdiario: clasificación independiente del tipo de asiento. -->
+          <div>
+            <label class="block text-[11px] font-semibold text-muted mb-1">
+              Subdiario
+            </label>
+            <select v-model="subdiaryCode" :disabled="isLoading || isSubmitting"
+              class="w-full px-3 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50">
+              <option value="">Seleccionar subdiario...</option>
+              <option v-for="sub in subdiaries" :key="sub.code" :value="sub.code">
+                {{ sub.name }}
+              </option>
+            </select>
           </div>
 
           <!-- Tipo de Asiento -->
@@ -1305,7 +1328,7 @@ onMounted(() => {
                     <span
                       class="tag font-mono text-[10px] text-muted border-line bg-soft"
                     >
-                      {{ entry.entry_type }}
+                      {{ entry.entry_type }} · {{ subdiaries.find(s => s.code === entry.subdiary_code)?.name ?? entry.subdiary_code ?? 'General' }}
                     </span>
                   </td>
 
