@@ -54,6 +54,7 @@ final class AccountingAccountResource extends JsonResource
             'entity_requirement_type' => $entityRequirement->value,
             'entity_requirement_label' => $entityRequirement->label(),
             'requires_cost_center' => (bool) $this->requires_cost_center,
+            'requires_company_area' => (bool) $this->requires_company_area,
             'has_automatic_destination' => (bool) $this->has_automatic_destination,
             'destination_debit_code' => $this->destination_debit_code,
             'destination_credit_code' => $this->destination_credit_code,
