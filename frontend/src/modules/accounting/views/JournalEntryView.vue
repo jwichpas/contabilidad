@@ -999,203 +999,134 @@ onMounted(() => {
           </div>
         </div>
 
-        <p class="px-4 pb-2 text-[11px] text-muted lg:hidden">
-          Deslice horizontalmente para ver todas las columnas del asiento.
-        </p>
-        <div class="w-full overflow-x-auto overscroll-x-contain pb-3">
-          <table class="w-full min-w-[1800px] table-fixed text-left border-collapse">
+        <!-- Importe visible en fila principal; dimensiones únicamente si la cuenta las exige. -->
+        <div class="w-full overflow-x-auto">
+          <table class="w-full min-w-[1040px] table-fixed border-collapse text-left text-xs">
             <thead>
-              <tr class="bg-surface-muted border-b border-border text-[11px] font-bold text-muted uppercase">
-                <th class="py-2.5 px-3 w-10 text-center">#</th>
-                <th class="py-2.5 px-3 w-[300px]">Cuenta Contable Operativa</th>
-                <th class="py-2.5 px-3 w-[170px]" title="Solo si la cuenta lo exige">Centro de costo</th>
-                <th class="py-2.5 px-3 w-[230px]">Anexo / Tercero</th>
-                <th class="py-2.5 px-3 w-[265px]">Áreas</th>
-                <th class="py-2.5 px-3 w-[185px]">Glosa Específica</th>
-                <th class="py-2.5 px-3 w-[125px] text-right">Debe ({{ baseCurrencyInfo.code }})</th>
-                <th class="py-2.5 px-3 w-[125px] text-right">Haber ({{ baseCurrencyInfo.code }})</th>
-                <th class="py-2.5 px-3 w-[100px] text-right text-muted font-mono">Debe ({{ activeForeignCurrency.code }})</th>
-                <th class="py-2.5 px-3 w-[100px] text-right text-muted font-mono">Haber ({{ activeForeignCurrency.code }})</th>
-                <th class="py-2.5 px-2 w-12 text-center"></th>
+              <tr class="border-b border-line bg-surface-muted text-[11px] font-bold uppercase text-muted">
+                <th class="w-[38px] px-2 py-3 text-center">#</th>
+                <th class="w-[312px] px-3 py-3">Cuenta contable</th>
+                <th class="w-[195px] px-3 py-3">Glosa</th>
+                <th class="w-[116px] px-2 py-3 text-right">Debe {{ baseCurrencyInfo.code }}</th>
+                <th class="w-[116px] px-2 py-3 text-right">Haber {{ baseCurrencyInfo.code }}</th>
+                <th class="w-[100px] px-2 py-3 text-right">Debe {{ activeForeignCurrency.code }}</th>
+                <th class="w-[100px] px-2 py-3 text-right">Haber {{ activeForeignCurrency.code }}</th>
+                <th class="w-[44px] px-2 py-3"></th>
               </tr>
             </thead>
-
-            <tbody class="divide-y divide-border text-xs">
-              <tr
-                v-for="(line, idx) in lines"
-                :key="line.id"
-                class="align-top hover:bg-surface-muted/50 transition-colors"
-              >
-                <!-- Número de Línea -->
-                <td class="py-2 px-3 text-center font-mono text-muted text-[11px]">
-                  {{ idx + 1 }}
-                </td>
-
-                <!-- Autocomplete por código o nombre: máximo 40 opciones visibles. -->
-                <td class="py-2 px-3">
-                  <JournalAccountCombobox
-                    v-model="line.accountId"
-                    :accounts="operationalAccounts"
-                    :disabled="isSubmitting || isLoading"
-                    @update:model-value="resetAccountDimensions(line)"
-                  />
-                </td>
-
-                <!-- Cada dimensión se habilita solo si la configuración de la cuenta la exige. -->
-                <td class="py-2 px-3">
-                  <template v-if="(operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center || operationalAccounts.find(a => a.id === line.accountId)?.has_automatic_destination)">
-                    <label class="block text-[10px] font-semibold text-amber-700 dark:text-amber-300 mb-1">Centro obligatorio</label>
-                    <select v-model="line.costCenterId" :disabled="isSubmitting"
-                      class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand">
-                      <option :value="null">Seleccionar centro obligatorio</option>
-                      <option v-for="cc in costCenters.filter(cc => cc.is_active)" :key="cc.id" :value="cc.id">
-                        {{ cc.code }} · {{ cc.name }}
-                      </option>
-                    </select>
-                  </template>
-                  <span v-else class="text-[11px] text-muted">—</span>
-                </td>
-
-                <td class="py-2 px-3">
-                  <JournalEntityPicker
-                    v-if="entityRequired(operationalAccounts.find(a => a.id === line.accountId))"
-                    :key="`${line.id}-${line.accountId ?? 'none'}`"
-                    v-model="line.entity" :api="apiClient"
-                    :account="operationalAccounts.find((account) => account.id === line.accountId)"
-                    :disabled="isSubmitting" />
-                  <span v-else class="text-[11px] text-muted">—</span>
-                </td>
-
-                <td class="py-2 px-3 min-w-60">
-                  <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area"
-                    class="block text-[11px] text-muted">
-                    Área organizativa (obligatoria)
-                    <select v-model="line.companyAreaId" :disabled="isSubmitting"
-                      class="mt-1 w-full rounded-md border border-line bg-surf px-2 py-1.5 text-xs text-foreground">
-                      <option :value="null">Seleccionar área organizativa</option>
-                      <option v-for="area in companyAreas.filter(area => area.is_active)" :key="area.id" :value="area.id">
-                        {{ area.code }} · {{ area.name }}
-                      </option>
-                    </select>
-                  </label>
-                  <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"
-                    class="block text-[11px] text-muted"
-                    :class="operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area ? 'mt-2' : ''">
-                    Área de flujo de efectivo (obligatoria)
-                    <select v-model="line.cashFlowAreaId" :disabled="isSubmitting"
-                      class="mt-1 w-full rounded-md border border-line bg-surf px-2 py-1.5 text-xs text-foreground">
-                      <option :value="null">Seleccionar flujo obligatorio</option>
-                      <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(operationalAccounts.find(a => a.id === line.accountId), area))"
-                        :key="area.id" :value="area.id">
-                        {{ area.code }} · {{ area.name }}
-                      </option>
-                    </select>
-                  </label>
-                  <span v-if="!operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area &&
-                    !operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"
-                    class="text-[11px] text-muted">—</span>
-                </td>
-
-                <!-- Glosa de Línea -->
-                <td class="py-2 px-3">
-                  <input
-                    v-model="line.description"
-                    type="text"
-                    :placeholder="headerDescription || 'Misma glosa general'"
-                    class="w-full px-2.5 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground placeholder-muted focus:outline-none focus:ring-1 focus:ring-brand"
-                  />
-                </td>
-
-                <!-- Debe PEN -->
-                <td class="py-2 px-3">
-                  <input
-                    :value="line.debitLocal"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    placeholder="0.00"
-                    class="w-full px-2.5 py-1.5 text-xs num text-right font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                    @input="onAmountChange(line, 'debit', ($event.target as HTMLInputElement).value)"
-                  />
-                </td>
-
-                <!-- Haber PEN -->
-                <td class="py-2 px-3">
-                  <input
-                    :value="line.creditLocal"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    placeholder="0.00"
-                    class="w-full px-2.5 py-1.5 text-xs num text-right font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                    @input="onAmountChange(line, 'credit', ($event.target as HTMLInputElement).value)"
-                  />
-                </td>
-
-                <!-- Debe Extranjera (Calculado) -->
-                <td class="py-2 px-3 text-right num text-muted text-[11px]">
-                  {{ line.debitForeign ? `${activeForeignCurrency.symbol} ${line.debitForeign}` : '—' }}
-                </td>
-
-                <!-- Haber Extranjera (Calculado) -->
-                <td class="py-2 px-3 text-right num text-muted text-[11px]">
-                  {{ line.creditForeign ? `${activeForeignCurrency.symbol} ${line.creditForeign}` : '—' }}
-                </td>
-
-                <!-- Eliminar Línea -->
-                <td class="py-2 px-2 text-center">
-                  <button
-                    type="button"
-                    class="p-1 rounded-md text-muted hover:text-neg hover:bg-red-500/10 transition-colors disabled:opacity-20 cursor-pointer"
-                    :disabled="lines.length <= 2"
-                    title="Eliminar línea"
-                    @click="removeLine(idx)"
-                  >
-                    <Trash2 class="w-3.5 h-3.5" />
-                  </button>
-                </td>
-              </tr>
+            <tbody class="divide-y divide-line">
+              <template v-for="(line, idx) in lines" :key="line.id">
+                <tr class="bg-surf align-middle hover:bg-soft/40">
+                  <td class="px-2 py-2 text-center font-mono text-[11px] text-muted">{{ idx + 1 }}</td>
+                  <td class="px-3 py-2">
+                    <JournalAccountCombobox v-model="line.accountId"
+                      :accounts="operationalAccounts" :disabled="isSubmitting || isLoading"
+                      @update:model-value="resetAccountDimensions(line)" />
+                  </td>
+                  <td class="px-3 py-2">
+                    <input v-model="line.description" type="text" :placeholder="headerDescription || 'Misma glosa general'"
+                      class="w-full rounded-md border border-line bg-surf px-2 py-2 text-xs text-foreground placeholder-muted focus:outline-none focus:ring-1 focus:ring-brand" />
+                  </td>
+                  <td class="px-2 py-2">
+                    <input :value="line.debitLocal" type="text" inputmode="decimal" autocomplete="off"
+                      :aria-label="'Debe ' + baseCurrencyInfo.code + ', línea ' + (idx + 1)" placeholder="0.00"
+                      class="w-full rounded-md border border-line bg-surf px-2 py-2 text-right text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                      @input="onAmountChange(line, 'debit', ($event.target as HTMLInputElement).value)" />
+                  </td>
+                  <td class="px-2 py-2">
+                    <input :value="line.creditLocal" type="text" inputmode="decimal" autocomplete="off"
+                      :aria-label="'Haber ' + baseCurrencyInfo.code + ', línea ' + (idx + 1)" placeholder="0.00"
+                      class="w-full rounded-md border border-line bg-surf px-2 py-2 text-right text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                      @input="onAmountChange(line, 'credit', ($event.target as HTMLInputElement).value)" />
+                  </td>
+                  <td class="px-2 py-2 text-right text-[11px] num text-muted">
+                    {{ line.debitForeign ? activeForeignCurrency.symbol + ' ' + line.debitForeign : '—' }}
+                  </td>
+                  <td class="px-2 py-2 text-right text-[11px] num text-muted">
+                    {{ line.creditForeign ? activeForeignCurrency.symbol + ' ' + line.creditForeign : '—' }}
+                  </td>
+                  <td class="px-2 py-2 text-center">
+                    <button type="button" :disabled="lines.length <= 2"
+                      class="rounded-md p-1 text-muted hover:bg-red-500/10 hover:text-neg disabled:opacity-20"
+                      :aria-label="'Eliminar línea ' + (idx + 1)" @click="removeLine(idx)">
+                      <Trash2 class="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="line.accountId && (
+                  operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ||
+                  operationalAccounts.find(a => a.id === line.accountId)?.has_automatic_destination ||
+                  entityRequired(operationalAccounts.find(a => a.id === line.accountId)) ||
+                  operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area ||
+                  operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area
+                )" class="bg-soft/40">
+                  <td></td>
+                  <td colspan="7" class="px-3 pb-3 pt-1">
+                    <div class="flex flex-wrap items-end gap-3">
+                      <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ||
+                        operationalAccounts.find(a => a.id === line.accountId)?.has_automatic_destination"
+                        class="min-w-[180px] flex-1 text-[11px] font-medium text-muted">
+                        Centro de costo obligatorio
+                        <select v-model="line.costCenterId" :disabled="isSubmitting"
+                          class="mt-1 block w-full rounded-md border border-line bg-surf px-2 py-2 text-xs text-foreground">
+                          <option :value="null">Seleccionar centro</option>
+                          <option v-for="cc in costCenters.filter(cc => cc.is_active)" :key="cc.id" :value="cc.id">
+                            {{ cc.code }} · {{ cc.name }}
+                          </option>
+                        </select>
+                      </label>
+                      <div v-if="entityRequired(operationalAccounts.find(a => a.id === line.accountId))" class="min-w-[210px] flex-1">
+                        <div class="mb-1 text-[11px] font-medium text-muted">Anexo / tercero obligatorio</div>
+                        <JournalEntityPicker :key="line.id + '-' + (line.accountId ?? 'none')"
+                          v-model="line.entity" :api="apiClient"
+                          :account="operationalAccounts.find(a => a.id === line.accountId)" :disabled="isSubmitting" />
+                      </div>
+                      <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area"
+                        class="min-w-[210px] flex-1 text-[11px] font-medium text-muted">
+                        Área organizativa obligatoria
+                        <select v-model="line.companyAreaId" :disabled="isSubmitting"
+                          class="mt-1 block w-full rounded-md border border-line bg-surf px-2 py-2 text-xs text-foreground">
+                          <option :value="null">Seleccionar área organizativa</option>
+                          <option v-for="area in companyAreas.filter(area => area.is_active)" :key="area.id" :value="area.id">
+                            {{ area.code }} · {{ area.name }}
+                          </option>
+                        </select>
+                      </label>
+                      <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"
+                        class="min-w-[220px] flex-1 text-[11px] font-medium text-muted">
+                        Área de flujo de efectivo obligatoria
+                        <select v-model="line.cashFlowAreaId" :disabled="isSubmitting"
+                          class="mt-1 block w-full rounded-md border border-line bg-surf px-2 py-2 text-xs text-foreground">
+                          <option :value="null">Seleccionar flujo</option>
+                          <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(operationalAccounts.find(a => a.id === line.accountId), area))"
+                            :key="area.id" :value="area.id">
+                            {{ area.code }} · {{ area.name }}
+                          </option>
+                        </select>
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
-
-            <!-- Fila de Totales y Diferencias -->
             <tfoot>
-              <tr class="bg-soft border-t-2 border-line text-xs">
-                <td colspan="6" class="py-2.5 px-4 font-semibold text-foreground text-right uppercase tracking-wider">
-                  Totales Asiento:
-                </td>
-                <td class="py-2.5 px-3 text-right font-semibold num text-foreground">
-                  {{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(2) }}
-                </td>
-                <td class="py-2.5 px-3 text-right font-semibold num text-foreground">
-                  {{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(2) }}
-                </td>
-                <td class="py-2.5 px-3 text-right text-muted font-medium num text-[11px]">
-                  {{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(2) }}
-                </td>
-                <td class="py-2.5 px-3 text-right text-muted font-medium num text-[11px]">
-                  {{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(2) }}
-                </td>
+              <tr class="border-t-2 border-line bg-soft text-xs">
+                <td colspan="3" class="px-3 py-3 text-right font-semibold uppercase text-foreground">Totales asiento:</td>
+                <td class="px-2 py-3 text-right font-semibold num">{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(2) }}</td>
+                <td class="px-2 py-3 text-right font-semibold num">{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(2) }}</td>
+                <td class="px-2 py-3 text-right text-[11px] num text-muted">{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(2) }}</td>
+                <td class="px-2 py-3 text-right text-[11px] num text-muted">{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(2) }}</td>
                 <td></td>
               </tr>
-
-              <!-- Fila de Diferencia (Cuadre) -->
               <tr class="bg-surf text-xs">
-                <td colspan="6" class="py-2 px-4 text-right font-semibold text-muted">
-                  Diferencia Partida Doble:
+                <td colspan="3" class="px-3 py-2 text-right font-semibold text-muted">Diferencia partida doble:</td>
+                <td colspan="2" class="px-2 py-2 text-center font-bold num"
+                  :class="diffLocal.isZero() ? 'text-pos' : 'text-neg'">
+                  {{ diffLocal.isZero() ? baseCurrencyInfo.symbol + ' 0.00 (Cuadrado)' : baseCurrencyInfo.symbol + ' ' + diffLocal.toDisplay(2) + ' (Descuadre)' }}
                 </td>
-                <td
-                  colspan="2"
-                  class="py-2 px-3 text-center font-bold num"
-                  :class="diffLocal.isZero() ? 'text-pos' : 'text-neg'"
-                >
-                  {{ diffLocal.isZero() ? `${baseCurrencyInfo.symbol} 0.00 (Cuadrado)` : `${baseCurrencyInfo.symbol} ${diffLocal.toDisplay(2)} (Descuadre)` }}
-                </td>
-                <td
-                  colspan="2"
-                  class="py-2 px-3 text-center font-bold num text-[11px]"
-                  :class="diffForeign.isZero() ? 'text-pos' : 'text-neg'"
-                >
-                  {{ diffForeign.isZero() ? `${activeForeignCurrency.symbol} 0.00` : `${activeForeignCurrency.symbol} ${diffForeign.toDisplay(2)}` }}
+                <td colspan="2" class="px-2 py-2 text-center font-bold num"
+                  :class="diffForeign.isZero() ? 'text-pos' : 'text-neg'">
+                  {{ diffForeign.isZero() ? activeForeignCurrency.symbol + ' 0.00' : activeForeignCurrency.symbol + ' ' + diffForeign.toDisplay(2) }}
                 </td>
                 <td></td>
               </tr>
