@@ -11,6 +11,7 @@ use App\Services\Accounting\JournalAreaRequirement;
 use App\Models\ExchangeRate;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
+use App\Models\CompanySubdiary;
 use App\Support\Accounting\JournalSubdiaryCatalog;
 use App\Services\Accounting\JournalPostIdempotencyService;
 use App\Services\Accounting\PostJournalEntryService;
@@ -45,7 +46,7 @@ final readonly class CreateJournalEntryController
             'entry_date' => ['required', 'date_format:Y-m-d'],
             'entry_number' => ['nullable', 'string', 'max:30'],
             'entry_type' => ['sometimes', 'string', Rule::in(['STANDARD', 'OPENING', 'ADJUSTMENT', 'CLOSING'])],
-            'subdiary_code' => ['sometimes', 'string', Rule::in(array_keys(JournalSubdiaryCatalog::labels()))],
+            'subdiary_code' => ['sometimes', 'string', 'regex:/^[A-Z0-9_]{2,24}$/'],
             'currency' => ['required', 'string'],
             'exchange_rate' => ['nullable', 'numeric', 'gt:0', 'regex:/^\\d+(?:\\.\\d{1,6})?$/'],
             'exchange_rate_type' => ['sometimes', 'string', Rule::in(['BUY', 'SELL', 'PARITY'])],
@@ -68,6 +69,9 @@ final readonly class CreateJournalEntryController
             'lines.*.credit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
         ]);
 
+        if (! Schema::hasTable('company_subdiaries')) {
+            return response()->json(['message' => 'Falta migrar el maestro de subdiarios antes de asentar.'], 503);
+        }
         if (! Schema::hasColumn('journal_entries', 'subdiary_code')) {
             return response()->json(['message' => 'Falta aplicar la migración aditiva de subdiarios en el libro diario.'], 503);
         }
@@ -104,6 +108,12 @@ final readonly class CreateJournalEntryController
                 'message'=>'Solicitud idempotente: asiento existente recuperado sin crear movimientos.',
                 'data'=>$receipt['replayed'],
             ], 200)->header('Idempotency-Replayed', 'true');
+        }
+
+        $subdiaryCode = (string)($validated['subdiary_code'] ?? JournalSubdiaryCatalog::GENERAL_CODE);
+        if (! CompanySubdiary::query()->where('code', $subdiaryCode)->where('is_active', true)
+            ->sharedLock()->exists()) {
+            return response()->json(['message' => 'El subdiario está inactivo, no existe o no pertenece a esta empresa.'], 422);
         }
 
         // Preserve the routing lock order used by matrix promotion and cost-center edits:
