@@ -45,6 +45,21 @@ php scripts/verify-plan-master-checklist.php --check
 - **Checklist documental (24/10/2026):** `php scripts/verify-plan-master-checklist.php --check` **PASS, 8/32 aprobadas y 24/32 pendientes**; tabla de evidencias, fase F3 y subhitos F3.4/F3.5 reconciliados. Es coherencia documental, no prueba funcional. Sigue sin adjuntarse el resultado del diagnóstico de conexión.
 - Pendientes adicionales: aceptación visual, comprobación directa de FKs y concurrencia. Área organizativa obligatoria por cuenta todavía no existe en el modelo de cuenta: este incremento la trata como opcional.
 
+## Observación visual y ajustes de editor — 24/10/2026
+
+**Evidencia visual del usuario:** captura del formulario `Libro Diario → Nuevo Asiento` con dos partidas, área organizativa y área de flujo visibles, selección de `411400 · Gratificaciones por pagar` con anexo obligatorio y tarjeta de USD compra/venta. El usuario **confirmó que cambiar de empresa limpia el borrador anterior (PASS puntual)**. Esta comprobación no valida aún un POST de prueba, el flujo requerido por cuenta, los permisos ni el extorno.
+
+**Hallazgo:** al cambiar la cuenta de una partida solo se limpiaba `cashFlowAreaId`; centro de costo, anexo y área organizativa podían quedar asociados por error a la nueva cuenta. Además, los controles opcionales de centro y anexo ocupaban espacio en todas las filas y el bloque de TC era desproporcionado.
+
+**Corrección propuesta en `main`, pendiente de validación local posterior a la captura:**
+- Cambiar de cuenta ejecuta `resetAccountDimensions`: limpia **centro de costo, anexo, área organizativa y flujo** y cierra los selectores opcionales. Conserva glosa e importes, que deben ser revisados antes de asentar.
+- Para cuentas con requisito explícito, muestra directamente el **centro obligatorio** o el **anexo obligatorio**. En las demás, aparecen acciones **«+ Centro opcional»** y **«+ Anexo opcional»**; esa elección voluntaria sigue permitida por el backend y validada contra la empresa y el estado.
+- Sin cuenta seleccionada no se ofrecen centros ni anexos; áreas organizativa y de flujo quedan deshabilitadas. La categoría de flujo se filtra según la cuenta, como antes.
+- El panel de TC es ahora una **franja horizontal compacta** con fecha, moneda, compra, venta y estado de registro; admite múltiples monedas y sigue enviando ambos tipos de cambio, con precisión de seis decimales.
+- Se añadieron **dos pruebas en `frontend/scripts/journal-area.test.mjs`** (limpieza de dimensiones y contrato visible del editor). El total esperado pasa de **33 a 35**, pero **no se declara PASS para 35/35 ni para el nuevo build** hasta disponer de la salida real de `pnpm test:unit` y `pnpm build`.
+
+**Comprobación siguiente:** `git pull --ff-only origin main`, `cd frontend`, `pnpm test:unit`, `pnpm build`; reiniciar/recargar Vite y repetir la captura con distintas cuentas, verificando requisitos opcionales/obligatorios, limpieza y franja TC. **Sin pulsar «Asentar»** en las verificaciones de interfaz iniciales. F3.3 continúa abierta, **8/32 (25%)**.
+
 ## Guía de aceptación visual en navegador — PENDIENTE
 
 **Preparación segura.** Usar exclusivamente una cuenta DEMO en Neon `contabilidad-dev`, confirmar primero `php scripts/phase2-neon-connection-diagnostic.php --check` y acceder al frontend Vite local conectado con Laravel. No publicar token, credenciales ni información de una empresa real. La compilación y los tests anteriores no sustituyen esta prueba.
