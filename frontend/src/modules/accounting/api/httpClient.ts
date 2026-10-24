@@ -337,6 +337,32 @@ export class AccountingApiClient {
   }
 
   /**
+   * Load account catalog, required dimensions, correlative and FX in a single
+   * authenticated request; journal history is deliberately loaded on demand.
+   */
+  public async fetchJournalEditorBootstrap(date: string): Promise<{
+    accounts: readonly OperationalAccount[];
+    cost_centers: readonly CostCenterItem[];
+    company_areas: readonly CompanyAreaItem[];
+    cash_flow_areas: readonly CashFlowAreaItem[];
+    next_number: NextCorrelativeResponse;
+    exchange_rates: CompanyExchangeRatesResponse;
+  }> {
+    const result = await this.request<{ data: {
+      accounts: OperationalAccount[];
+      cost_centers: CostCenterItem[];
+      company_areas: CompanyAreaItem[];
+      cash_flow_areas: CashFlowAreaItem[];
+      next_number: NextCorrelativeResponse;
+      exchange_rates: CompanyExchangeRatesResponse;
+    } }>(
+      `/api/v1/accounting/journal-entries/editor-bootstrap?date=${encodeURIComponent(date)}`,
+      { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
+  /**
    * Catálogo plano de cuentas operativas para digitación en asientos contables.
    */
   public async fetchOperationalAccounts(): Promise<readonly OperationalAccount[]> {
