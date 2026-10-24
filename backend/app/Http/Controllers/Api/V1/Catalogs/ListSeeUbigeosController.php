@@ -16,7 +16,8 @@ final readonly class ListSeeUbigeosController
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
             'department' => ['sometimes', 'string', 'max:160'],
             'province' => ['sometimes', 'string', 'max:160'],
-            'per_page' => ['sometimes', 'integer', 'between:1,100'],
+            // El conjunto de 1,874 distritos cabe en una carga de solo lectura.
+            'per_page' => ['sometimes', 'integer', 'between:1,2000'],
         ]);
         $query = DB::table('see_ubigeos');
         if (! empty($validated['department'])) {

@@ -19,7 +19,8 @@ final readonly class ListSeeCatalogController
 
         $validated = $request->validate([
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'per_page' => ['sometimes', 'integer', 'between:1,100'],
+            // La consulta global se descarga una vez y se filtra localmente en el navegador.
+            'per_page' => ['sometimes', 'integer', 'between:1,2000'],
         ]);
         $query = DB::table('see_catalog_items')->where('catalog_number', $number);
         if (isset($validated['q']) && $validated['q'] !== '') {

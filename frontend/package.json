@@ -7,10 +7,13 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "typecheck": "vue-tsc --noEmit",
-    "test:unit": "node --experimental-strip-types --test scripts/decimal-smoke.test.mjs scripts/company-onboarding.test.mjs scripts/auth-session-expiry.test.mjs scripts/entity-master.test.mjs scripts/fiscal-history.test.mjs scripts/cost-center-draft.test.mjs scripts/journal-entity.test.mjs scripts/journal-area.test.mjs",
+    "test:unit": "node --experimental-strip-types --test scripts/decimal-smoke.test.mjs scripts/company-onboarding.test.mjs scripts/auth-session-expiry.test.mjs scripts/entity-master.test.mjs scripts/fiscal-history.test.mjs scripts/cost-center-draft.test.mjs scripts/journal-entity.test.mjs scripts/journal-area.test.mjs scripts/see-references.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/vue": "^1.7.23",
+    "@tanstack/vue-query": "^5.104.5",
+    "@tanstack/vue-table": "^8.21.3",
     "lucide-vue-next": "^0.475.0",
     "vue": "^3.5.13",
     "zod": "^3.24.2"

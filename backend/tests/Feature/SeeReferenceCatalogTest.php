@@ -25,6 +25,8 @@ it('keeps SEE separate from PLE and preserves the source ambiguity', function ()
         ->assertOk()->assertJsonPath('meta.total', 178)->assertJsonCount(25, 'data');
     $this->getJson('/api/v1/catalogs/sunat-see/02?q=&page=1&per_page=25')
         ->assertOk()->assertJsonPath('meta.total', 178);
+    $this->getJson('/api/v1/catalogs/sunat-see/03?per_page=2000')
+        ->assertOk()->assertJsonPath('meta.total', 1091)->assertJsonCount(1091, 'data');
     $this->getJson('/api/v1/catalogs/sunat-see/13')
         ->assertOk()->assertJsonPath('meta.item_count', 0);
 });
@@ -41,6 +43,8 @@ it('lists global ubigeos and exposes no writes for company users', function (): 
         ->assertOk()->assertJsonPath('meta.total', 1874)->assertJsonCount(25, 'data');
     $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?q=&page=1&per_page=25')
         ->assertOk()->assertJsonPath('meta.total', 1874);
+    $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?per_page=2000')
+        ->assertOk()->assertJsonPath('meta.total', 1874)->assertJsonCount(1874, 'data');
 
     $this->postJson('/api/v1/catalogs/sunat-see/ubigeos', ['code' => '999999'])
         ->assertStatus(405);
