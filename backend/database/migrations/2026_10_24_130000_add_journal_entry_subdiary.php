@@ -27,7 +27,7 @@ return new class extends Migration
         // but protect the newly added classification against alteration on reversal.
         DB::unprepared(<<<'SQL'
             CREATE OR REPLACE FUNCTION public.trg_fn_prevent_journal_entry_mutation()
-            RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $
+            RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $journal_immutable_guard$
             BEGIN
               IF TG_OP = 'DELETE' THEN
                 RAISE EXCEPTION 'IMMUTABLE_JOURNAL_ENTRY: Los asientos contables son inmutables y no pueden eliminarse. Utilice un asiento de extorno.'
@@ -50,7 +50,7 @@ return new class extends Migration
               RAISE EXCEPTION 'IMMUTABLE_JOURNAL_ENTRY: Un asiento contable registrado es inmutable. Para corregirlo, emita un asiento de extorno.'
                 USING ERRCODE = '23514';
             END;
-            $$;
+            $journal_immutable_guard$;
             SQL);
     }
 
