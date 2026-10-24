@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cashFlowMatches } from '../src/modules/accounting/utils/journalArea.ts';
+import { resetAccountDimensions } from '../src/modules/accounting/utils/journalLine.ts';
+import { readFileSync } from 'node:fs';
 
 test('cash flow requirement rejects missing and inactive areas', () => {
   const rule = { requires_cash_flow_area: true, cash_flow_category: 'OPERATING' };
@@ -26,4 +28,31 @@ test('cash equivalent accounts can classify each activity and optional NONE stil
   }
   assert.equal(cashFlowMatches({ requires_cash_flow_area: false, cash_flow_category: 'NONE' },
     { is_active: true, activity_category: 'UNKNOWN' }), false);
+});
+
+test('switching journal account clears all four dimensions without changing amounts or description', () => {
+  const line = {
+    accountId: 11, costCenterId: 22, entity: { id: 33 },
+    companyAreaId: 44, cashFlowAreaId: 55,
+    description: 'Ficticio', debitLocal: '150.0000', creditLocal: '0.0000',
+  };
+  resetAccountDimensions(line);
+  assert.equal(line.costCenterId, null);
+  assert.equal(line.entity, null);
+  assert.equal(line.companyAreaId, null);
+  assert.equal(line.cashFlowAreaId, null);
+  assert.equal(line.accountId, 11);
+  assert.equal(line.description, 'Ficticio');
+  assert.equal(line.debitLocal, '150.0000');
+});
+
+test('journal view wires account reset, conditional dimensions and compact exchange rates', () => {
+  const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
+  assert.match(view, /@change="resetAccountDimensions\(line\)"/);
+  assert.match(view, /:disabled="isSubmitting \|\| !line\.accountId"/);
+  assert.match(view, /requires_cost_center \? 'Seleccionar centro obligatorio'/);
+  assert.match(view, /JournalEntityPicker :key=/);
+  assert.match(view, /T\.C\. diario ·/);
+  assert.match(view, /updateRateForCurrency\(rateItem\.code, 'buy_rate'/);
+  assert.match(view, /updateRateForCurrency\(rateItem\.code, 'sell_rate'/);
 });
