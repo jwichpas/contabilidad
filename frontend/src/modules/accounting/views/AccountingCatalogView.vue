@@ -70,6 +70,31 @@ const {
 });
 
 const searchInputRef = ref<HTMLInputElement | null>(null);
+const catalogsReadyForCompany = shallowRef<CompanyId | null>(null);
+const catalogsLoading = shallowRef(false);
+let pendingCatalogLoad: Promise<void> | null = null;
+
+// No descargar catálogos de edición hasta que el usuario abra el formulario.
+// Evita seis GET costosos en el montaje del Plan de Cuentas.
+async function ensureEditingCatalogs(): Promise<void> {
+  if (catalogsReadyForCompany.value === props.activeCompanyId) return;
+  if (pendingCatalogLoad) return pendingCatalogLoad;
+  const requestedCompany = props.activeCompanyId;
+  catalogsLoading.value = true;
+  pendingCatalogLoad = (async () => {
+    try {
+      await loadCatalogs();
+      if (requestedCompany === props.activeCompanyId) {
+        catalogsReadyForCompany.value = requestedCompany;
+      }
+    } finally {
+      catalogsLoading.value = false;
+      pendingCatalogLoad = null;
+    }
+  })();
+  return pendingCatalogLoad;
+}
+
 const isModalOpen = shallowRef(false);
 const modalMode = shallowRef<'create' | 'edit'>('create');
 const modalParentRow = shallowRef<FlattenedAccountRow | null>(null);
@@ -182,24 +207,25 @@ const inspectRowOnMobile = (row: FlattenedAccountRow): void => {
   isMobileInspectorOpen.value = true;
 };
 
-const openCreateRootModal = (): void => {
+const openCreateRootModal = async (): Promise<void> => {
+  await ensureEditingCatalogs();
   modalMode.value = 'create';
   modalParentRow.value = null;
   modalEditingRow.value = null;
   isModalOpen.value = true;
 };
 
-const openCreateChildModal = (parentRow: FlattenedAccountRow): void => {
-  if (parentRow.node.is_operational || parentRow.node.level >= 4) {
-    return;
-  }
+const openCreateChildModal = async (parentRow: FlattenedAccountRow): Promise<void> => {
+  if (parentRow.node.is_operational || parentRow.node.level >= 4) return;
+  await ensureEditingCatalogs();
   modalMode.value = 'create';
   modalParentRow.value = parentRow;
   modalEditingRow.value = null;
   isModalOpen.value = true;
 };
 
-const openEditModal = (row: FlattenedAccountRow): void => {
+const openEditModal = async (row: FlattenedAccountRow): Promise<void> => {
+  await ensureEditingCatalogs();
   modalMode.value = 'edit';
   modalParentRow.value = null;
   modalEditingRow.value = row;
@@ -279,7 +305,7 @@ const onGlobalKeydown = (event: KeyboardEvent): void => {
 onMounted(async () => {
   window.addEventListener('keydown', onGlobalKeydown);
   if (props.getAccessToken()) {
-    await Promise.allSettled([fetchTree(), loadCatalogs()]);
+    await fetchTree();
   }
 });
 
@@ -287,7 +313,7 @@ watch(
   () => props.getAccessToken(),
   async (token) => {
     if (token) {
-      await Promise.allSettled([fetchTree(), loadCatalogs()]);
+      await fetchTree();
     }
   },
 );
@@ -295,8 +321,9 @@ watch(
 watch(
   () => props.activeCompanyId,
   async () => {
+    catalogsReadyForCompany.value = null;
     if (props.getAccessToken()) {
-      await Promise.allSettled([fetchTree(), loadCatalogs()]);
+      await fetchTree();
     }
   },
 );
@@ -308,6 +335,9 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="space-y-4">
+    <p v-if="catalogsLoading" role="status" class="rounded-md border border-line bg-soft px-3 py-2 text-xs text-muted">
+      Cargando las opciones necesarias para configurar la cuenta…
+    </p>
     <!-- 1. Banda Ejecutiva de KPIs del Plan Contable -->
     <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
       <!-- KPI 1: Total Cuentas -->
