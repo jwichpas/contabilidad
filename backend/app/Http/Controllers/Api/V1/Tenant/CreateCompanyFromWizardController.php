@@ -221,6 +221,10 @@ final readonly class CreateCompanyFromWizardController
                     // áreas NIC 7 aisladas por tenant. No importar personas,
                     // bancos ni centros de costo con cuentas ficticias 94/95.
                     $this->operationalDefaults->installForCompany($companyId, true);
+                    // Inicializar el maestro de subdiarios para esta nueva empresa.
+                    foreach (\App\Support\Accounting\JournalSubdiaryCatalog::labels() as $code => $name) {
+                        \App\Models\CompanySubdiary::query()->create(['code' => $code, 'name' => $name]);
+                    }
 
                     // La auditoria de alta es obligatoria y atomica.
                     // AuditLoggerService captura excepciones para eventos
