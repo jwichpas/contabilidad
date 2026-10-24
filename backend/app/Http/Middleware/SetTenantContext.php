@@ -37,12 +37,13 @@ final readonly class SetTenantContext
             throw new AccessDeniedHttpException('Se requiere autenticación para establecer el contexto de empresa.');
         }
 
+        $middlewareStarted = hrtime(true);
         $resolvedCompanyId = $this->resolveTargetCompanyId($request, $user);
 
         // La validación de membresía también requiere el RLS de company_user.
         // Ejecutar la consulta de membresía Y el controlador en una sola transacción
         // de contexto local evita fugas de tenant por el pool Supavisor.
-        return $this->tenantContext->run(
+        $response = $this->tenantContext->run(
             $resolvedCompanyId,
             function () use ($request, $next, $user, $resolvedCompanyId): Response {
                 if (! $this->userHasActiveMembership($user->id, $resolvedCompanyId)) {
@@ -54,6 +55,17 @@ final readonly class SetTenantContext
                 return $next($request);
             }
         );
+
+        // Includes tenant authorization, SET LOCAL, controller and transaction.
+        // This overlaps with controller_total, so the two values must never be
+        // added together. No identity, query values or credentials are exposed.
+        $elapsed = number_format((hrtime(true) - $middlewareStarted) / 1000000, 1, '.', '');
+        $existing = (string) $response->headers->get('Server-Timing', '');
+        $response->headers->set(
+            'Server-Timing',
+            ($existing !== '' ? $existing.', ' : '').'tenant_total;dur='.$elapsed
+        );
+        return $response;
     }
 
     private function resolveTargetCompanyId(Request $request, User $user): int
