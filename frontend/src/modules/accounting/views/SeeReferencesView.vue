@@ -114,27 +114,27 @@ watch(searchInput, () => { pageIndex.value = 0; });
         <h1 id="see-heading" class="mt-1 text-2xl font-semibold text-foreground">Catálogos de facturación electrónica</h1>
         <p class="mt-1 text-sm text-muted">Consulta de códigos SEE e INEI compartidos por todas las empresas.</p>
       </div>
-      <span class="rounded-full border border-line bg-soft px-3 py-1 text-xs text-muted">Solo lectura</span>
+      <span class="rounded-full border border-border bg-soft px-3 py-1 text-xs text-muted">Solo lectura</span>
     </div>
     <div class="flex items-start gap-2 rounded-lg border border-amber-300/50 bg-amber-50/70 p-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100" role="note">
       <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
       <p>Archivo histórico de consulta, pendiente de conciliación completa con las versiones vigentes. Los catálogos 15, 19, 20 y 55 tienen diferencias documentadas frente a anexos SUNAT; la unidad A11 tiene dos descripciones. No use esta vista para validar comprobantes.</p>
     </div>
-    <div class="flex flex-wrap gap-2 border-b border-line pb-3" aria-label="Tipo de referencia">
-      <button type="button" :aria-pressed="section === 'catalogs'" :class="section === 'catalogs' ? 'bg-brand text-brandtx' : 'border border-line bg-surf text-foreground hover:bg-soft'" class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium" @click="chooseSection('catalogs')"><BookOpen class="h-4 w-4" /> Catálogos SEE</button>
-      <button type="button" :aria-pressed="section === 'ubigeos'" :class="section === 'ubigeos' ? 'bg-brand text-brandtx' : 'border border-line bg-surf text-foreground hover:bg-soft'" class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium" @click="chooseSection('ubigeos')"><MapPin class="h-4 w-4" /> Ubigeo INEI</button>
+    <div class="flex flex-wrap gap-2 border-b border-border pb-3" aria-label="Tipo de referencia">
+      <button type="button" :aria-pressed="section === 'catalogs'" :class="section === 'catalogs' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium" @click="chooseSection('catalogs')"><BookOpen class="h-4 w-4" /> Catálogos SEE</button>
+      <button type="button" :aria-pressed="section === 'ubigeos'" :class="section === 'ubigeos' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium" @click="chooseSection('ubigeos')"><MapPin class="h-4 w-4" /> Ubigeo INEI</button>
     </div>
-    <div class="rounded-xl border border-line bg-surf p-4 space-y-4">
+    <div class="rounded-xl border border-border bg-surface p-4 space-y-4">
       <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div v-if="section === 'catalogs'" class="min-w-0 text-xs font-medium text-muted">
           <span id="see-catalog-label">Catálogo SEE</span>
           <Combobox :model-value="catalogNumber" @update:model-value="chooseCatalog">
             <div class="relative mt-1.5">
-              <div class="flex w-full items-center rounded-md border border-line bg-surf text-foreground focus-within:ring-2 focus-within:ring-brand">
+              <div class="flex w-full items-center rounded-md border border-border bg-surface text-foreground focus-within:ring-2 focus-within:ring-brand">
                 <ComboboxInput aria-labelledby="see-catalog-label" class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none" :display-value="displayCatalog" @change="catalogFilter = ($event.target as HTMLInputElement).value" />
                 <ComboboxButton class="shrink-0 px-3 py-2.5" aria-label="Mostrar catálogos"><ChevronsUpDown class="h-4 w-4" /></ComboboxButton>
               </div>
-              <ComboboxOptions class="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-md border border-line bg-surf p-1 text-sm text-foreground shadow-lg focus:outline-none">
+              <ComboboxOptions class="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-surface p-1 text-sm text-foreground shadow-pop focus:outline-none">
                 <div v-if="catalogsQuery.isPending.value" class="px-3 py-2 text-muted">Cargando catálogos…</div>
                 <div v-else-if="filteredCatalogs.length === 0" class="px-3 py-2 text-muted">Sin coincidencias</div>
                 <ComboboxOption v-for="catalog in filteredCatalogs" :key="catalog.number" v-slot="{ active, selected }" :value="catalog.number" as="template">
@@ -152,7 +152,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
           Buscar por {{ section === 'catalogs' ? 'código o descripción' : 'código, distrito, provincia o departamento' }}
           <span class="relative mt-1.5 block">
             <Search class="absolute left-3 top-3 h-4 w-4 text-muted" />
-            <input v-model="searchInput" type="search" maxlength="100" class="w-full rounded-md border border-line bg-surf py-2.5 pl-9 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand" :placeholder="section === 'catalogs' ? 'Ej. PEN, NIU, PE…' : 'Ej. 230101, Tacna…'" />
+            <input v-model="searchInput" type="search" maxlength="100" class="w-full rounded-md border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand" :placeholder="section === 'catalogs' ? 'Ej. PEN, NIU, PE…' : 'Ej. 230101, Tacna…'" />
           </span>
         </label>
       </div>
@@ -161,8 +161,8 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <p v-if="isLoading" role="status" class="py-8 text-center text-sm text-muted">Cargando referencias…</p>
       <div v-else-if="section === 'catalogs' && catalogQuery.data.value" class="overflow-x-auto">
         <table class="w-full min-w-[600px] text-left text-sm">
-          <thead class="border-b border-line text-xs uppercase tracking-wide text-muted"><tr><th scope="col" class="py-2 pr-4">Código</th><th scope="col" class="py-2 pr-4">Descripción</th><th scope="col" class="py-2">Información adicional</th></tr></thead>
-          <tbody><tr v-for="row in catalogTable.getRowModel().rows" :key="`${catalogNumber}-${row.original.source_row}`" class="border-b border-line/60 align-top">
+          <thead class="border-b border-border text-xs uppercase tracking-wide text-muted"><tr><th scope="col" class="py-2 pr-4">Código</th><th scope="col" class="py-2 pr-4">Descripción</th><th scope="col" class="py-2">Información adicional</th></tr></thead>
+          <tbody><tr v-for="row in catalogTable.getRowModel().rows" :key="`${catalogNumber}-${row.original.source_row}`" class="border-b border-border/60 align-top">
             <td class="py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }} <span v-if="row.original.is_ambiguous" class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">Ambiguo</span></td>
             <td class="py-3 pr-4 text-foreground">{{ row.original.description }}</td>
             <td class="py-3 text-xs text-muted"><span v-for="(value, key) in row.original.details" :key="key" class="mr-2 inline-block">{{ key }}: {{ value }}</span></td>
@@ -172,16 +172,16 @@ watch(searchInput, () => { pageIndex.value = 0; });
       </div>
       <div v-else-if="ubigeoQuery.data.value" class="overflow-x-auto">
         <table class="w-full min-w-[680px] text-left text-sm">
-          <thead class="border-b border-line text-xs uppercase tracking-wide text-muted"><tr><th scope="col" class="py-2 pr-4">Ubigeo</th><th scope="col" class="py-2 pr-4">Distrito</th><th scope="col" class="py-2 pr-4">Provincia</th><th scope="col" class="py-2">Departamento</th></tr></thead>
-          <tbody><tr v-for="row in ubigeoTable.getRowModel().rows" :key="row.original.code" class="border-b border-line/60"><td class="py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }}</td><td class="py-3 pr-4 text-foreground">{{ row.original.district }}</td><td class="py-3 pr-4 text-muted">{{ row.original.province }}</td><td class="py-3 text-muted">{{ row.original.department }}</td></tr></tbody>
+          <thead class="border-b border-border text-xs uppercase tracking-wide text-muted"><tr><th scope="col" class="py-2 pr-4">Ubigeo</th><th scope="col" class="py-2 pr-4">Distrito</th><th scope="col" class="py-2 pr-4">Provincia</th><th scope="col" class="py-2">Departamento</th></tr></thead>
+          <tbody><tr v-for="row in ubigeoTable.getRowModel().rows" :key="row.original.code" class="border-b border-border/60"><td class="py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }}</td><td class="py-3 pr-4 text-foreground">{{ row.original.district }}</td><td class="py-3 pr-4 text-muted">{{ row.original.province }}</td><td class="py-3 text-muted">{{ row.original.department }}</td></tr></tbody>
         </table>
         <p v-if="rowCount === 0" class="py-8 text-center text-sm text-muted">No hay ubigeos para esta búsqueda.</p>
       </div>
-      <div v-if="!isLoading && !error && (catalogQuery.data.value || ubigeoQuery.data.value)" class="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-xs text-muted">
+      <div v-if="!isLoading && !error && (catalogQuery.data.value || ubigeoQuery.data.value)" class="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-muted">
         <span>{{ pageLabel }} · página {{ pageIndex + 1 }} de {{ pageCount }}</span>
         <div class="flex gap-2">
-          <button type="button" class="rounded-md border border-line px-3 py-1.5 text-foreground disabled:opacity-40" :disabled="pageIndex <= 0" @click="pageIndex--">Anterior</button>
-          <button type="button" class="rounded-md border border-line px-3 py-1.5 text-foreground disabled:opacity-40" :disabled="pageIndex >= pageCount - 1" @click="pageIndex++">Siguiente</button>
+          <button type="button" class="rounded-md border border-border px-3 py-1.5 text-foreground disabled:opacity-40" :disabled="pageIndex <= 0" @click="pageIndex--">Anterior</button>
+          <button type="button" class="rounded-md border border-border px-3 py-1.5 text-foreground disabled:opacity-40" :disabled="pageIndex >= pageCount - 1" @click="pageIndex++">Siguiente</button>
         </div>
       </div>
     </div>
