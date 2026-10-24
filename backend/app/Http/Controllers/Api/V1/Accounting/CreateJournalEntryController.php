@@ -328,6 +328,7 @@ final readonly class CreateJournalEntryController
             oldValues: null,
             newValues: [
                 'entry_number' => $journalEntry->entry_number,
+                'subdiary_code' => $journalEntry->subdiary_code,
                 'entry_date' => $journalEntry->entry_date->toDateString(),
                 'currency' => $journalEntry->currency,
                 'exchange_rate' => $journalEntry->exchange_rate,
