@@ -347,6 +347,7 @@ export class AccountingApiClient {
     cash_flow_areas: readonly CashFlowAreaItem[];
     next_number: NextCorrelativeResponse;
     exchange_rates: CompanyExchangeRatesResponse;
+    subdiaries: readonly { code: string; name: string }[];
   }> {
     const result = await this.request<{ data: {
       accounts: OperationalAccount[];
@@ -355,6 +356,7 @@ export class AccountingApiClient {
       cash_flow_areas: CashFlowAreaItem[];
       next_number: NextCorrelativeResponse;
       exchange_rates: CompanyExchangeRatesResponse;
+      subdiaries: { code: string; name: string }[];
     } }>(
       `/api/v1/accounting/journal-entries/editor-bootstrap?date=${encodeURIComponent(date)}`,
       { method: 'GET' }, true,
