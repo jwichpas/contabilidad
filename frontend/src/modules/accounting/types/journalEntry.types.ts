@@ -3,6 +3,14 @@ export type EntryStatus = 'POSTED' | 'REVERSED';
 export type CurrencyCode = 'PEN' | 'USD' | 'EUR';
 export type ExchangeRateType = 'BUY' | 'SELL' | 'PARITY';
 
+export interface CompanySubdiaryItem {
+  readonly id: number;
+  readonly company_id: number;
+  readonly code: string;
+  readonly name: string;
+  readonly is_active: boolean;
+}
+
 export interface OperationalAccount {
   readonly id: number;
   readonly uuid?: string;
