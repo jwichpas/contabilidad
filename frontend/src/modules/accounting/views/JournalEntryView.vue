@@ -435,46 +435,55 @@ async function fetchNextNumber(): Promise<void> {
   }
 }
 
+let loadSequence = 0;
+const historyLoaded = shallowRef(false);
+
+async function loadHistory(): Promise<void> {
+  const tenant = props.activeCompanyId;
+  try {
+    const entries = await apiClient.value.fetchJournalEntries({ limit: 50 });
+    if (tenant !== props.activeCompanyId) return;
+    journalEntries.value = entries;
+    historyLoaded.value = true;
+  } catch (e) {
+    errorMessage.value = e instanceof Error ? e.message : 'No se pudo cargar el Libro Diario.';
+  }
+}
+
 async function loadCatalogsAndHistory(): Promise<void> {
+  const sequence = ++loadSequence;
+  const tenant = props.activeCompanyId;
   isLoading.value = true;
   errorMessage.value = null;
+  historyLoaded.value = false;
+  journalEntries.value = [];
   try {
-    const [accounts, entries, nextNum, ratesRes, centers, areas, flows] = await Promise.all([
-      apiClient.value.fetchOperationalAccounts(),
-      apiClient.value.fetchJournalEntries({ limit: 50 }),
-      apiClient.value.fetchNextJournalEntryNumber(entryDate.value),
-      apiClient.value.fetchCompanyExchangeRates(entryDate.value).catch(() => null),
-      apiClient.value.fetchCostCenters(),
-      apiClient.value.fetchCompanyAreas(),
-      apiClient.value.fetchCashFlowAreas(),
-    ]);
-
-    operationalAccounts.value = accounts;
-    costCenters.value = centers;
-    companyAreas.value = areas;
-    cashFlowAreas.value = flows;
-    journalEntries.value = entries;
-    entryNumber.value = nextNum.next_number;
-
-    if (ratesRes) {
-      baseCurrencyInfo.value = ratesRes.base_currency;
-      requiredCurrencyRates.value = ratesRes.required_currencies.map((c) => ({
-        currency_id: c.currency_id,
-        code: c.code,
-        name: c.name,
-        symbol: c.symbol,
-        buy_rate: c.buy_rate,
-        sell_rate: c.sell_rate,
-        is_recorded_for_date: c.is_recorded_for_date,
-        source: c.source,
-      }));
-      syncActiveVoucherExchangeRate();
-    }
+    const config = await apiClient.value.fetchJournalEditorBootstrap(entryDate.value);
+    if (sequence !== loadSequence || tenant !== props.activeCompanyId) return;
+    operationalAccounts.value = config.accounts;
+    costCenters.value = config.cost_centers;
+    companyAreas.value = config.company_areas;
+    cashFlowAreas.value = config.cash_flow_areas;
+    entryNumber.value = config.next_number.next_number;
+    baseCurrencyInfo.value = config.exchange_rates.base_currency;
+    requiredCurrencyRates.value = config.exchange_rates.required_currencies.map(c => ({
+      currency_id: c.currency_id,
+      code: c.code,
+      name: c.name,
+      symbol: c.symbol,
+      buy_rate: c.buy_rate,
+      sell_rate: c.sell_rate,
+      is_recorded_for_date: c.is_recorded_for_date,
+      source: c.source,
+    }));
+    syncActiveVoucherExchangeRate();
+    if (activeTab.value === 'history') void loadHistory();
   } catch (e) {
+    if (sequence !== loadSequence || tenant !== props.activeCompanyId) return;
     errorMessage.value =
-      e instanceof Error ? e.message : 'Error al cargar los catálogos de asientos.';
+      e instanceof Error ? e.message : 'Error al cargar el editor de asientos.';
   } finally {
-    isLoading.value = false;
+    if (sequence === loadSequence) isLoading.value = false;
   }
 }
 
@@ -629,6 +638,10 @@ function toggleExpandEntry(id: number): void {
 watch(entryDate, (newDate) => {
   void fetchNextNumber();
   void loadExchangeRatesForDate(newDate);
+});
+
+watch(activeTab, (tab) => {
+  if (tab === 'history' && !historyLoaded.value) void loadHistory();
 });
 
 watch(currency, () => {
@@ -1229,7 +1242,7 @@ onMounted(() => {
           <button
             type="button"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-line bg-surf hover:bg-soft transition-colors cursor-pointer"
-            @click="loadCatalogsAndHistory"
+            @click="loadHistory"
           >
             <RefreshCw class="w-3.5 h-3.5 text-muted" />
             <span>Actualizar</span>
