@@ -49,6 +49,22 @@ beforeEach(function (): void {
 });
 
 
+it('returns only the fields needed by journal area selectors', function (): void {
+    $this->getJson('/api/v1/company/areas')->assertOk()
+        ->assertJsonPath('data.0.id', $this->area->id)
+        ->assertJsonPath('data.0.name', 'Área ficticia')
+        ->assertJsonMissingPath('data.0.manager_name')
+        ->assertJsonMissingPath('data.0.description')
+        ->assertJsonMissingPath('data.0.uuid')
+        ->assertJsonMissingPath('data.0.created_at');
+
+    $this->getJson('/api/v1/company/cash-flow-areas')->assertOk()
+        ->assertJsonPath('data.0.id', $this->flow->id)
+        ->assertJsonPath('data.0.activity_category', 'OPERATING')
+        ->assertJsonMissingPath('data.0.uuid')
+        ->assertJsonMissingPath('data.0.created_at');
+});
+
 it('posts both areas and preserves idempotent replay with limited public fields', function (): void {
     $this->withHeader('Idempotency-Key', 'journal-area-'.bin2hex(random_bytes(10)));
     $first = $this->postJson('/api/v1/accounting/journal-entries', $this->payload)->assertCreated()
