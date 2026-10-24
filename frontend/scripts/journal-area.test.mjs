@@ -48,7 +48,7 @@ test('switching journal account clears all four dimensions without changing amou
 
 test('journal view wires account reset, conditional dimensions and compact exchange rates', () => {
   const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
-  assert.match(view, /@change="resetAccountDimensions\(line\)"/);
+  assert.match(view, /@update:model-value="resetAccountDimensions\(line\)"/);
   assert.match(view, /:disabled="isSubmitting"/);
   assert.match(view, /requires_cost_center/);
   assert.match(view, /entityRequired\(operationalAccounts\.find/);
@@ -77,4 +77,32 @@ test('account setup controls organization requirement and PUT sends complete req
   assert.match(catalog, /is_active: modalEditingRow\.value\.node\.is_active/);
   assert.match(tree, /requires_company_area: formValues\.requires_company_area \?\? false/);
   assert.match(tree, /requires_company_area: payload\.requires_company_area/);
+});
+
+test('account autocomplete filters without a native select with thousands of options', () => {
+  const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
+  const picker = readFileSync(new URL('../src/modules/accounting/components/JournalAccountCombobox.vue', import.meta.url), 'utf8');
+  assert.match(view, /<JournalAccountCombobox/);
+  assert.match(picker, /role="combobox"/);
+  assert.match(picker, /role="listbox"/);
+  assert.match(picker, /role="option"/);
+  assert.match(picker, /found\.length === 40/);
+  assert.match(picker, /normalize\('NFD'\)/);
+  assert.match(picker, /event\.key === 'ArrowDown'/);
+  assert.match(picker, /event\.key === 'Enter'/);
+});
+
+test('journal keeps exact money strings, fetches one bootstrap and exposes persisted subdiary', () => {
+  const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('../src/modules/accounting/api/httpClient.ts', import.meta.url), 'utf8');
+  assert.match(view, /:value="line\.debitLocal"/);
+  assert.match(view, /:value="line\.creditLocal"/);
+  assert.match(view, /inputmode="decimal"/);
+  assert.doesNotMatch(view, /v-model="line\.(debitLocal|creditLocal)"/);
+  assert.match(view, /onAmountChange\(line, 'debit', \(\$event\.target as HTMLInputElement\)\.value\)/);
+  assert.match(view, /fetchJournalEditorBootstrap\(entryDate\.value\)/);
+  assert.match(view, /watch\(activeTab/);
+  assert.match(client, /\/editor-bootstrap\?date=/);
+  assert.match(view, /v-model="subdiaryCode"/);
+  assert.match(view, /subdiary_code: subdiaryCode\.value/);
 });
