@@ -43,6 +43,7 @@ final readonly class CreateAccountingAccountController
             'requires_auxiliary' => $dto->requiresAuxiliary,
             'entity_requirement_type' => $dto->entityRequirementType,
             'requires_cost_center' => $dto->requiresCostCenter,
+            'requires_company_area' => $dto->requiresCompanyArea,
             'has_automatic_destination' => $dto->hasAutomaticDestination,
             'destination_debit_code' => $dto->destinationDebitCode,
             'destination_credit_code' => $dto->destinationCreditCode,
