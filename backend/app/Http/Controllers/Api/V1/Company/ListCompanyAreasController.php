@@ -18,7 +18,8 @@ final readonly class ListCompanyAreasController
         $areas = CompanyArea::query()
             ->whereRaw('company_areas.is_active IS TRUE')
             ->orderBy('code')
-            ->get();
+            // El selector del Libro Diario no necesita responsable, descripción ni metadatos internos.
+            ->get(['id', 'company_id', 'code', 'name', 'is_active']);
 
         return response()->json([
             'data' => $areas,
