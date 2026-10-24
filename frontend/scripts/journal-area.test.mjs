@@ -186,3 +186,17 @@ test('tenant middleware reports total time separately from the journal controlle
   assert.match(middleware, /userHasActiveMembership/);
   assert.match(middleware, /tenantContext->run/);
 });
+
+test('exchange-rate catalog uses one currency join and preserves exact/historical/default cases', () => {
+  const fx = readFileSync(new URL('../../backend/app/Http/Controllers/Api/V1/Company/GetCompanyExchangeRatesController.php', import.meta.url), 'utf8');
+  const requestTiming = readFileSync(new URL('../../backend/app/Http/Middleware/JournalRequestTiming.php', import.meta.url), 'utf8');
+  const bootstrap = readFileSync(new URL('../../backend/bootstrap/app.php', import.meta.url), 'utf8');
+  assert.match(fx, /join\('currencies as currency_catalog'/);
+  assert.doesNotMatch(fx, /->with\('currency'\)/);
+  assert.match(fx, /DATABASE_EXACT/);
+  assert.match(fx, /LATEST_HISTORICAL/);
+  assert.match(fx, /DEFAULT_PRESET/);
+  assert.match(fx, /recent_history/);
+  assert.match(requestTiming, /request_total;dur=/);
+  assert.match(bootstrap, /prepend\(JournalRequestTiming::class\)/);
+});
