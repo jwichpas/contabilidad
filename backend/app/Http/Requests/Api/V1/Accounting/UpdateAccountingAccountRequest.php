@@ -40,6 +40,7 @@ final class UpdateAccountingAccountRequest extends FormRequest
             'requires_auxiliary' => ['required', 'boolean'],
             'entity_requirement_type' => ['sometimes', 'string', Rule::enum(EntityRequirementType::class)],
             'requires_cost_center' => ['sometimes', 'boolean'],
+            'requires_company_area' => ['sometimes', 'boolean'],
             'has_automatic_destination' => ['sometimes', 'boolean'],
             'destination_debit_code' => ['nullable', 'string', 'max:20', 'regex:/^9[0-9A-Za-z]+$/'],
             'destination_credit_code' => ['nullable', 'string', 'max:20', 'regex:/^7[89][0-9A-Za-z]*$/'],
@@ -69,6 +70,10 @@ final class UpdateAccountingAccountRequest extends FormRequest
 
                 $isOperational = (bool) $this->input('is_operational');
                 $hasAutoDest = (bool) $this->input('has_automatic_destination', false);
+                if ((bool) $this->input('requires_company_area', false) && ! $isOperational) {
+                    $validator->errors()->add('requires_company_area',
+                        'Solo una cuenta operativa puede exigir un área organizativa.');
+                }
                 $destDebit = $this->input('destination_debit_code');
                 $destCredit = $this->input('destination_credit_code');
 
