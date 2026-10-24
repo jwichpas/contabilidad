@@ -16,10 +16,11 @@ test('each account role filters and validates the matching active entity flag', 
     assert.equal(entityMatches(account, { is_active: false, [role]: true }), false);
   }
 });
-test('optional entities still must be active and multi-role entities are accepted', () => {
+test('unrequested entities are rejected while required multi-role entities are accepted', () => {
   const optional = { requires_auxiliary: false, entity_requirement_type: 'NONE' };
   assert.equal(entityMatches(optional, null), true);
   assert.equal(entityMatches(optional, { is_active: false }), false);
+  assert.equal(entityMatches(optional, { is_active: true }), false);
   const entity = { is_active: true, is_client: true, is_supplier: true };
   for (const type of ['CUSTOMER', 'SUPPLIER', 'ANY_THIRD_PARTY']) {
     assert.equal(entityMatches({ requires_auxiliary: false, entity_requirement_type: type }, entity), true);
