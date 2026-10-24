@@ -61,12 +61,21 @@ function choose(entity: EntityMaster | null): void {
 </script>
 
 <template>
-  <div class="min-w-56 space-y-1">
+  <div class="min-w-[200px]">
     <button type="button" class="w-full rounded-md border border-line px-2 py-1.5 text-left text-xs"
       :disabled="disabled || !account" :aria-expanded="open" @click="toggle">
-      {{ modelValue ? `${modelValue.tax_id} · ${modelValue.legal_name}` : required ? 'Seleccionar anexo obligatorio' : 'Sin anexo (opcional)' }}
+      <span class="block max-w-[220px] truncate">{{ modelValue ? `${modelValue.tax_id} · ${modelValue.legal_name}` : required ? 'Seleccionar anexo obligatorio' : 'Sin anexo' }}</span>
     </button>
-    <div v-if="open" class="space-y-2 rounded-md border border-line bg-surf p-2">
+    <!-- Dialog outside the scrollable journal grid, never expands its row. -->
+    <Teleport to="body">
+    <div v-if="open" class="fixed inset-0 z-[10000] flex items-start justify-center bg-slate-950/40 px-4 pt-[12vh]"
+      @mousedown.self="open = false">
+      <div role="dialog" aria-modal="true" aria-label="Buscar anexo contable"
+        class="w-full max-w-xl space-y-3 rounded-xl border border-line bg-surf p-4 text-xs text-foreground shadow-2xl">
+        <div class="flex items-center justify-between gap-3">
+          <strong class="text-sm">Seleccionar anexo / tercero</strong>
+          <button type="button" class="rounded border border-line px-3 py-1" @click="open = false">Cerrar</button>
+        </div>
       <div class="flex gap-1">
         <input v-model="search" maxlength="100" aria-label="Buscar anexo por nombre o documento"
           placeholder="Nombre o documento" class="min-w-0 flex-1 rounded border border-line bg-surf px-2 py-1"
@@ -88,6 +97,8 @@ function choose(entity: EntityMaster | null): void {
         <button type="button" :disabled="busy || page >= lastPage" @click="load(page + 1)">Siguiente</button>
       </div>
       <button type="button" @click="choose(null)">Quitar selección</button>
+      </div>
     </div>
+    </Teleport>
   </div>
 </template>
