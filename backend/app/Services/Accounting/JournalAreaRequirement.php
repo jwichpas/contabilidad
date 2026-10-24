@@ -21,6 +21,9 @@ final class JournalAreaRequirement
             }
             return;
         }
+        if (! $required) {
+            throw new DomainException('La cuenta no habilita un área de flujo de efectivo.');
+        }
         if (! ($area['is_active'] ?? false)) {
             throw new DomainException('El área de flujo seleccionada está inactiva.');
         }
@@ -35,17 +38,39 @@ final class JournalAreaRequirement
         }
     }
 
+    public static function validateCompanyArea(bool $required, ?array $area): void
+    {
+        if (! $required && $area !== null) {
+            throw new DomainException('La cuenta no habilita un área organizativa.');
+        }
+        if ($required && $area === null) {
+            throw new DomainException('La cuenta requiere un área organizativa activa.');
+        }
+        if ($area !== null && ! ($area['is_active'] ?? false)) {
+            throw new DomainException('El área organizativa está inactiva.');
+        }
+    }
+
     /** Outer tenant transaction holds shared locks through posting. */
     public static function validateSelection(int $companyId, bool $required, string $category,
-        ?int $companyAreaId, ?int $cashFlowAreaId): void
+        ?int $companyAreaId, ?int $cashFlowAreaId, bool $requiresCompanyArea = false): void
     {
+        // Never accept a dimension that the account does not require.
+        if (! $requiresCompanyArea && $companyAreaId !== null) {
+            throw new DomainException('La cuenta no habilita un área organizativa.');
+        }
+        if (! $required && $cashFlowAreaId !== null) {
+            throw new DomainException('La cuenta no habilita un área de flujo de efectivo.');
+        }
+        $companyArea = null;
         if ($companyAreaId !== null) {
-            $area = DB::table('company_areas')->where('company_id', $companyId)->where('id', $companyAreaId)
+            $companyArea = DB::table('company_areas')->where('company_id', $companyId)->where('id', $companyAreaId)
                 ->sharedLock()->first(['is_active']);
-            if ($area === null || ! $area->is_active) {
-                throw new DomainException('Área organizativa inactiva, ajena o inexistente.');
+            if ($companyArea === null) {
+                throw new DomainException('Área organizativa ajena o inexistente.');
             }
         }
+        self::validateCompanyArea($requiresCompanyArea, $companyArea === null ? null : (array) $companyArea);
         $flow = null;
         if ($cashFlowAreaId !== null) {
             $flow = DB::table('cash_flow_areas')->where('company_id', $companyId)->where('id', $cashFlowAreaId)
