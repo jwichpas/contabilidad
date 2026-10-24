@@ -24,6 +24,7 @@ import type { EntityMaster } from '../../company/types/entityMaster.types';
 import JournalEntityPicker from '../components/JournalEntityPicker.vue';
 import { entityMatches } from '../utils/journalEntity';
 import { cashFlowMatches } from '../utils/journalArea';
+import { resetAccountDimensions } from '../utils/journalLine';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import { SystemDecimal } from '../../../shared/types/numeric.types';
 import type { CompanyId } from '../types/accountingAccount.types';
@@ -850,104 +851,40 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Panel de Tipos de Cambio Diarios Obligatorios por Empresa (Multi-Divisa) -->
-        <div
-          v-if="requiredCurrencyRates.length > 0"
-          class="rounded-lg bg-soft/60 border border-line p-3.5 space-y-3"
-        >
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-2.5">
-            <div class="flex items-center gap-2">
-              <Coins class="w-4 h-4 text-brand" />
-              <span class="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Tipos de Cambio Diarios Obligatorios ({{ requiredCurrencyRates.length }} {{ requiredCurrencyRates.length === 1 ? 'Moneda Secundaria' : 'Monedas Secundarias' }})
-              </span>
-              <span class="tag ok font-mono text-[10px]">
-                Base: {{ baseCurrencyInfo.code }}
-              </span>
+        <!-- Franja compacta de tipos de cambio por moneda secundaria.
+             Mantener ambos valores editables: el POST sigue exigiendo compra y venta. -->
+        <div v-if="requiredCurrencyRates.length > 0"
+          class="rounded-md border border-line bg-soft/50 px-3 py-2">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
+              title="Compra y venta son obligatorias para cada moneda secundaria configurada">
+              <Coins class="h-4 w-4 text-brand shrink-0" />
+              <span>T.C. diario · {{ entryDate }}</span>
+              <span class="text-[10px] font-normal text-muted">(base {{ baseCurrencyInfo.code }})</span>
+              <Loader2 v-if="isLoadingRates" class="h-3 w-3 animate-spin text-brand" />
             </div>
-            <div class="flex items-center gap-2">
-              <span v-if="isLoadingRates" class="flex items-center gap-1 text-[11px] text-muted">
-                <Loader2 class="w-3 h-3 animate-spin text-brand" />
-                Consultando...
+            <div v-for="rateItem in requiredCurrencyRates" :key="rateItem.currency_id"
+              class="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-surf px-2 py-1"
+              :class="currency === rateItem.code ? 'border-brand/60' : 'border-line'">
+              <span class="text-xs font-semibold text-foreground">{{ rateItem.code }}</span>
+              <label class="flex items-center gap-1 text-[10px] text-muted">
+                Compra
+                <input :value="rateItem.buy_rate" type="number" step="0.000001" min="0.000001" required
+                  :aria-label="`Tipo de cambio compra ${rateItem.code}`"
+                  class="w-[92px] rounded border border-line bg-soft px-1.5 py-1 text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  @input="updateRateForCurrency(rateItem.code, 'buy_rate', ($event.target as HTMLInputElement).value)" />
+              </label>
+              <label class="flex items-center gap-1 text-[10px] text-muted">
+                Venta
+                <input :value="rateItem.sell_rate" type="number" step="0.000001" min="0.000001" required
+                  :aria-label="`Tipo de cambio venta ${rateItem.code}`"
+                  class="w-[92px] rounded border border-line bg-soft px-1.5 py-1 text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  @input="updateRateForCurrency(rateItem.code, 'sell_rate', ($event.target as HTMLInputElement).value)" />
+              </label>
+              <span class="text-[10px] font-medium"
+                :class="rateItem.is_recorded_for_date ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'">
+                {{ rateItem.is_recorded_for_date ? '✓ En BD' : 'Pendiente' }}
               </span>
-              <span class="text-[11px] text-muted font-mono">
-                Fecha Voucher: {{ entryDate }}
-              </span>
-            </div>
-          </div>
-
-          <p class="text-[11px] text-muted">
-            Por normativa contable y configuración multi-divisa de la empresa, es obligatorio especificar el tipo de cambio oficial de compra y venta para cada moneda secundaria antes de registrar el asiento contable.
-          </p>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div
-              v-for="rateItem in requiredCurrencyRates"
-              :key="rateItem.currency_id"
-              :class="[
-                'p-3 rounded-md bg-surf border space-y-2 transition-all',
-                currency === rateItem.code
-                  ? 'border-brand shadow-xs ring-1 ring-brand/30'
-                  : 'border-line',
-              ]"
-            >
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-xs text-foreground flex items-center gap-1.5">
-                  <span class="w-5 h-5 rounded-full bg-brand/10 text-brand font-mono font-bold flex items-center justify-center text-[10px]">
-                    {{ rateItem.symbol }}
-                  </span>
-                  {{ rateItem.code }} · {{ rateItem.name }}
-                </span>
-
-                <div class="flex items-center gap-1">
-                  <span
-                    v-if="currency === rateItem.code"
-                    class="tag ok font-mono text-[9px]"
-                  >
-                    Voucher
-                  </span>
-                  <span
-                    :class="[
-                      'tag font-mono text-[10px]',
-                      rateItem.is_recorded_for_date ? 'ok' : 'wa',
-                    ]"
-                  >
-                    {{ rateItem.is_recorded_for_date ? '✓ En BD' : '⚠️ Pendiente' }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <label class="block text-[10px] font-semibold text-muted mb-0.5">
-                    T.C. Compra (14,6)
-                  </label>
-                  <input
-                    :value="rateItem.buy_rate"
-                    type="number"
-                    step="0.0001"
-                    min="0.0001"
-                    required
-                    class="w-full px-2 py-1 text-xs num rounded bg-soft border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand font-semibold"
-                    @input="updateRateForCurrency(rateItem.code, 'buy_rate', ($event.target as HTMLInputElement).value)"
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-[10px] font-semibold text-muted mb-0.5">
-                    T.C. Venta (14,6)
-                  </label>
-                  <input
-                    :value="rateItem.sell_rate"
-                    type="number"
-                    step="0.0001"
-                    min="0.0001"
-                    required
-                    class="w-full px-2 py-1 text-xs num rounded bg-soft border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand font-semibold"
-                    @input="updateRateForCurrency(rateItem.code, 'sell_rate', ($event.target as HTMLInputElement).value)"
-                  />
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1036,7 +973,7 @@ onMounted(() => {
                 <td class="py-2 px-3">
                   <select
                     v-model="line.accountId"
-                    @change="line.cashFlowAreaId = null"
+                    @change="resetAccountDimensions(line)"
                     class="w-full px-2.5 py-1.5 text-xs font-mono rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
                   >
                     <option :value="null">-- Seleccionar Cuenta Operativa --</option>
@@ -1050,14 +987,22 @@ onMounted(() => {
                   </select>
                 </td>
 
-                <!-- Centro de costo opcional; no activa transferencia automática 94/95-79. -->
+                <!-- Los centros son opcionales salvo que la cuenta los exija.
+                     Selecciones opcionales siguen permitidas por las reglas del backend. -->
                 <td class="py-2 px-3">
+                  <label class="block text-[10px] text-muted mb-1"
+                    :class="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'font-semibold text-amber-700 dark:text-amber-300' : ''">
+                    {{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'Obligatorio' : 'Opcional' }}
+                  </label>
                   <select
                     v-model="line.costCenterId"
-                    class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                    title="Dimensión de costo, sin distribución automática por ahora"
+                    :disabled="isSubmitting || !line.accountId"
+                    class="w-full px-2 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50"
+                    title="Dimensión opcional, salvo que la cuenta exija centro; no activa por sí sola transferencia 94/95-79"
                   >
-                    <option :value="null">Sin centro</option>
+                    <option :value="null">
+                      {{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ? 'Seleccionar centro obligatorio' : 'Sin centro (opcional)' }}
+                    </option>
                     <option v-for="cc in costCenters" :key="cc.id" :value="cc.id">
                       {{ cc.code }} · {{ cc.name }}
                     </option>
@@ -1065,14 +1010,15 @@ onMounted(() => {
                 </td>
 
                 <td class="py-2 px-3">
-                  <JournalEntityPicker v-model="line.entity" :api="apiClient"
+                  <JournalEntityPicker :key="`${line.id}-${line.accountId ?? 'none'}`"
+                    v-model="line.entity" :api="apiClient"
                     :account="operationalAccounts.find((account) => account.id === line.accountId)"
-                    :disabled="isSubmitting" />
+                    :disabled="isSubmitting || !line.accountId" />
                 </td>
 
                 <td class="py-2 px-3 min-w-60">
                   <label class="block text-[11px] text-muted">Área organizativa (opcional)
-                    <select v-model="line.companyAreaId" :disabled="isSubmitting"
+                    <select v-model="line.companyAreaId" :disabled="isSubmitting || !line.accountId"
                       class="mt-1 w-full rounded-md border border-line bg-surf px-2 py-1.5 text-xs text-foreground">
                       <option :value="null">Sin área organizativa</option>
                       <option v-for="area in companyAreas" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
@@ -1082,7 +1028,7 @@ onMounted(() => {
                     <span v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"> (obligatoria)</span>
                     <select v-model="line.cashFlowAreaId" :disabled="isSubmitting || !line.accountId"
                       class="mt-1 w-full rounded-md border border-line bg-surf px-2 py-1.5 text-xs text-foreground">
-                      <option :value="null">Sin área de flujo</option>
+                      <option :value="null">{{ operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area ? "Seleccionar flujo obligatorio" : "Sin área de flujo (opcional)" }}</option>
                       <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(operationalAccounts.find(a => a.id === line.accountId), area))"
                         :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
                     </select>
