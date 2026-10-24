@@ -365,6 +365,35 @@ export class AccountingApiClient {
     return result.data;
   }
 
+  public async fetchCompanySubdiaries(activeOnly = false): Promise<readonly CompanySubdiaryItem[]> {
+    const response = await this.request<{ data: CompanySubdiaryItem[] }>(
+      `/api/v1/company/subdiaries${activeOnly ? '?active_only=1' : ''}`, { method: 'GET' }, true,
+    );
+    return response.data;
+  }
+
+  public async createCompanySubdiary(payload: { code: string; name: string }): Promise<CompanySubdiaryItem> {
+    const response = await this.request<{ data: CompanySubdiaryItem }>(
+      '/api/v1/company/subdiaries', { method: 'POST', body: JSON.stringify(payload) }, true,
+    );
+    return response.data;
+  }
+
+  public async renameCompanySubdiary(id: number, name: string): Promise<CompanySubdiaryItem> {
+    const response = await this.request<{ data: CompanySubdiaryItem }>(
+      `/api/v1/company/subdiaries/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }, true,
+    );
+    return response.data;
+  }
+
+  public async setCompanySubdiaryActive(id: number, isActive: boolean): Promise<CompanySubdiaryItem> {
+    const response = await this.request<{ data: CompanySubdiaryItem }>(
+      `/api/v1/company/subdiaries/${id}/status`,
+      { method: 'PATCH', body: JSON.stringify({ is_active: isActive }) }, true,
+    );
+    return response.data;
+  }
+
   /**
    * Catálogo plano de cuentas operativas para digitación en asientos contables.
    */
