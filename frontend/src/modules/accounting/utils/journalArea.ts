@@ -10,7 +10,8 @@ export function cashFlowMatches(account: CashFlowRule | undefined, area: CashFlo
   if (!account) return false;
   const category = account.cash_flow_category;
   if (!['NONE', 'CASH_EQUIVALENT', 'OPERATING', 'INVESTING', 'FINANCING'].includes(category)) return false;
-  if (!area) return !account.requires_cash_flow_area;
+  if (!account.requires_cash_flow_area) return area === null;
+  if (!area) return false;
   if (!area.is_active || !['CASH_EQUIVALENT', 'OPERATING', 'INVESTING', 'FINANCING'].includes(area.activity_category)) return false;
   return category === 'NONE' || category === 'CASH_EQUIVALENT' || area.activity_category === category;
 }
