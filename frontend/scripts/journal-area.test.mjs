@@ -68,10 +68,13 @@ test('cash flow does not permit a dimension when the account flag is disabled', 
 test('account setup controls organization requirement and PUT sends complete required fields', () => {
   const modal = readFileSync(new URL('../src/modules/accounting/components/AccountFormModal.vue', import.meta.url), 'utf8');
   const catalog = readFileSync(new URL('../src/modules/accounting/views/AccountingCatalogView.vue', import.meta.url), 'utf8');
+  const tree = readFileSync(new URL('../src/modules/accounting/composables/useAccountTree.ts', import.meta.url), 'utf8');
   assert.match(modal, /v-model="form\.requires_company_area"/);
   assert.match(modal, /requires_company_area: form\.requires_company_area/);
   assert.match(catalog, /requires_company_area: payload\.requires_company_area/);
   assert.match(catalog, /account_type: payload\.account_type/);
   assert.match(catalog, /balance_type: payload\.balance_type/);
   assert.match(catalog, /is_active: modalEditingRow\.value\.node\.is_active/);
+  assert.match(tree, /requires_company_area: formValues\.requires_company_area \?\? false/);
+  assert.match(tree, /requires_company_area: payload\.requires_company_area/);
 });
