@@ -218,11 +218,13 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
         ->assertJsonPath('data.exchange_rates.rate_date', '2026-10-24');
     $timing = (string) $response->headers->get('Server-Timing');
     expect($timing)
-        ->toContain('accounts;dur=')
-        ->toContain('schema_accounts;dur=')
-        ->toContain('schema_subdiaries;dur=')
-        ->toContain('subdiaries;dur=')
-        ->toContain('controller_total;dur=');
+        ->toContain('catalogs_sql;dur=')
+        ->toContain('next_number;dur=')
+        ->toContain('exchange_rates;dur=')
+        ->toContain('controller_total;dur=')
+        ->toContain('tenant_total;dur=')
+        ->not->toContain('password')
+        ->not->toContain('tax_id');
     $this->tenant->run($this->company->id, function (): void {
         expect(JournalEntry::query()->count())->toBe(0);
         expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
@@ -242,4 +244,37 @@ it('rejects new postings to an inactive subdiary but preserves reversal classifi
         'reversal_date' => '2026-10-24',
         'reason' => 'Extorno de subdiario ya inactivo',
     ])->assertCreated()->assertJsonPath('data.subdiary_code', 'BANCOS');
+});
+
+it('keeps five batched journal selector catalogs isolated to the current company', function (): void {
+    $otherCompany = Company::query()->create([
+        'tax_id' => '20'.random_int(100000000, 999999999),
+        'business_name' => 'Isolated Other Fixture',
+        'legal_address' => 'Only fictional',
+        'is_active' => true,
+    ]);
+    $this->tenant->run($otherCompany->id, function (): void {
+        \App\Models\CompanySubdiary::query()->create([
+            'code' => 'FOREIGN_ONLY', 'name' => 'Do not expose to other tenants',
+        ]);
+        CompanyArea::query()->create([
+            'code' => 'FOREIGN_AREA', 'name' => 'No cross-tenant exposure', 'is_active' => true,
+        ]);
+        CashFlowArea::query()->create([
+            'code' => 'FOREIGN_FLOW', 'name' => 'No cross-tenant flow exposure',
+            'activity_category' => 'OPERATING', 'flow_direction' => 'BOTH', 'is_active' => true,
+        ]);
+    });
+
+    $response = $this->getJson('/api/v1/accounting/journal-entries/editor-bootstrap?date=2026-10-24')
+        ->assertOk()
+        ->assertJsonPath('data.accounts.0.id', $this->account->id)
+        ->assertJsonFragment(['code' => 'GENERAL', 'name' => 'Diario general']);
+
+    $data = $response->json('data');
+    expect(array_column($data['subdiaries'], 'code'))->not->toContain('FOREIGN_ONLY');
+    expect(array_column($data['company_areas'], 'code'))->not->toContain('FOREIGN_AREA');
+    expect(array_column($data['cash_flow_areas'], 'code'))->not->toContain('FOREIGN_FLOW');
+    expect($data['company_areas'][0]['company_id'])->toBe($this->company->id);
+    expect($data['cash_flow_areas'][0]['company_id'])->toBe($this->company->id);
 });
