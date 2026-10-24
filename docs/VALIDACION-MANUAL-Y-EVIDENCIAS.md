@@ -169,6 +169,10 @@ pnpm build
 
 No ejecutar pruebas Feature contra producción ni reusar períodos o asientos reales. La aceptación visual debe incluir cuenta sin requisitos (guiones), cuenta con anexo, cuenta con centro, cuenta con flujo, cuenta con área organizativa configurada deliberadamente, cambio de cuenta que limpia dimensiones y extorno histórico conservado. **F3.3 sigue [ ], 8/32 (25%).**
 
+## Evidencia F3.3 — subdiarios configurables por empresa (24/10/2026)
+
+A partir de salidas PowerShell comunicadas por el usuario: migración aditiva `2026_10_24_140000_create_company_subdiaries.php` **DONE (~1 s)**; Unit de esquema **1/1 PASS (8 aserciones, 0,28 s)**; Feature `CompanySubdiaryMasterTest` **3/3 PASS (35 aserciones, 59,82 s)**, `JournalAreaDimensionTest` **10/10 PASS (75 aserciones, 244,78 s)**, `JournalEntityDimensionTest` **4/4 PASS (30 aserciones, 113,66 s)**. Total Feature **17/17 PASS, 140 aserciones**; frontend **41/41 PASS**; compilación Vite 6.4.4 y Vue TS **PASS (1.635 módulos, 2,52 s)**. **No se adjuntó salida SQL comprobable del postflight** `check-company-subdiaries-schema.php --check`; la línea siguiente en el mensaje corresponde a PHPUnit. Repetir únicamente diagnóstico **read-only** para verificar `Ran`, FORCE RLS y FK antes de certificar el despliegue. La captura anterior pertenece a la UI previa a los Teleports; confirmar visualmente nuevo diseño y aislamiento al cambiar de empresa. F3.3 sigue **[ ]**, checklist **8/32 (25%)**.
+
 ## Registro de evidencias verificadas
 
 | Fecha | Referencia | Evidencia recibida/verificada | Estado |
