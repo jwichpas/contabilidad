@@ -279,3 +279,54 @@ it('keeps five batched journal selector catalogs isolated to the current company
     expect($data['company_areas'][0]['company_id'])->toBe($this->company->id);
     expect($data['cash_flow_areas'][0]['company_id'])->toBe($this->company->id);
 });
+
+it('keeps exact, historical and default multicurrency rates with a joined currency catalog', function (): void {
+    $pen = \App\Models\Currency::query()->firstOrCreate(['code' => 'PEN'], [
+        'sunat_code' => '1', 'name' => 'Soles', 'symbol' => 'S/', 'is_base_currency' => true,
+    ]);
+    $usd = \App\Models\Currency::query()->firstOrCreate(['code' => 'USD'], [
+        'sunat_code' => '2', 'name' => 'Dólares', 'symbol' => '$',
+    ]);
+    $eur = \App\Models\Currency::query()->firstOrCreate(['code' => 'EUR'], [
+        'sunat_code' => '9', 'name' => 'Euros', 'symbol' => '€',
+    ]);
+
+    $this->tenant->run($this->company->id, function () use ($pen, $usd, $eur): void {
+        foreach ([[$pen, true], [$usd, false], [$eur, false]] as [$currency, $isBase]) {
+            \App\Models\CompanyCurrency::query()->create([
+                'currency_id' => $currency->id, 'is_base' => $isBase, 'is_active' => true,
+            ]);
+        }
+        \App\Models\ExchangeRate::query()->create([
+            'rate_date' => '2026-10-24',
+            'source_currency' => 'USD', 'target_currency' => 'PEN',
+            'buy_rate' => '3.741000', 'sell_rate' => '3.755000',
+        ]);
+        \App\Models\ExchangeRate::query()->create([
+            'rate_date' => '2026-10-23',
+            'source_currency' => 'EUR', 'target_currency' => 'PEN',
+            'buy_rate' => '4.083000', 'sell_rate' => '4.121000',
+        ]);
+    });
+
+    $response = $this->getJson('/api/v1/company/exchange-rates?date=2026-10-24')
+        ->assertOk()
+        ->assertJsonPath('data.base_currency.code', 'PEN')
+        ->assertJsonCount(2, 'data.required_currencies')
+        ->assertJsonPath('data.required_currencies.0.code', 'USD')
+        ->assertJsonPath('data.required_currencies.0.source', 'DATABASE_EXACT')
+        ->assertJsonPath('data.required_currencies.0.is_recorded_for_date', true)
+        ->assertJsonPath('data.required_currencies.0.buy_rate', '3.741000')
+        ->assertJsonPath('data.required_currencies.1.code', 'EUR')
+        ->assertJsonPath('data.required_currencies.1.source', 'LATEST_HISTORICAL')
+        ->assertJsonPath('data.required_currencies.1.is_recorded_for_date', false)
+        ->assertJsonPath('data.required_currencies.1.sell_rate', '4.121000')
+        ->assertJsonCount(2, 'data.recent_history');
+
+    $this->getJson('/api/v1/company/exchange-rates?date=2026-10-22')
+        ->assertOk()
+        ->assertJsonPath('data.required_currencies.0.source', 'DEFAULT_PRESET')
+        ->assertJsonPath('data.required_currencies.0.buy_rate', '3.742000')
+        ->assertJsonPath('data.required_currencies.1.source', 'DEFAULT_PRESET')
+        ->assertJsonPath('data.required_currencies.1.sell_rate', '4.112000');
+});
