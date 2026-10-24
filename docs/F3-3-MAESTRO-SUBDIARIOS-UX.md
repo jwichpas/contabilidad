@@ -141,3 +141,29 @@ php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="journal ed
 ```
 
 Después de recargar `#diario`, capturar Chrome Network `editor-bootstrap` → **Server-Timing**, `Timing → Waiting (TTFB)` y tiempo/tamaño completos. También comparar navegación desde `#plan-cuentas`, donde los catálogos auxiliares ahora se difieren al abrir el formulario. **Sin migraciones ni POST reales.** Hasta verificarlo, no hay mejora de tiempo acreditada y F3.3 sigue abierta **8/32 (25 %)**.
+
+## Segunda medición tras agrupar catálogos y optimización FX — 24/10/2026
+
+**Evidencia recibida de Chrome:** `editor-bootstrap` HTTP 200, **Waiting (TTFB) 4,11 s**, `Content Download` **2,78 ms**; `Server-Timing` reporta `catalogs_sql=681,7 ms`, `next_number=291,1 ms`, `exchange_rates=868,2 ms`, `controller_total=1841,0 ms`, `tenant_total=2608,6 ms`. Frente a los 6,41 s anteriormente informados, la duración observable del servidor/TTFB baja aproximadamente **2,30 s (~36%)**; `controller_total` baja desde 3586,1 a 1841,0 ms (~49%). Debe interpretarse como comparación aproximada entre métricas de Chrome sin idéntico nombre; documentar solicitudes bajo las mismas condiciones cuando se mida de nuevo. Ni `controller_total` ni `tenant_total` se suman: el segundo incluye al primero.
+
+**Hallazgos:** `exchange_rates` domina el controlador (868,2 ms) y se compone de una lectura de monedas de la empresa, carga relacionada de nombres/símbolos y selección de tasas históricas, además de la evaluación de valores por defecto. La diferencia entre `tenant_total` y `controller_total` es ~767,6 ms (autorización de empresa/contexto/commit); entre Waiting en Chrome y `tenant_total`, aproximadamente 1,50 s podrían deberse a autenticación previa, preparación de Laravel, proxy u otra sobrecarga. No se puede distribuirla sin más instrumentación.
+
+**Incremento preparado en main, pendiente de pruebas:** en `GetCompanyExchangeRatesController.php` se cambió el `with('currency')` por un **JOIN SQL** de `company_currencies` con el catálogo global `currencies`, manteniendo filtro por `company_id`, reglas de selección exacta/histórica/predeterminada y la misma forma JSON en el endpoint standalone. De esta forma se evita una consulta de hidratación a Neon; la lectura de hasta 100 tasas permanece intacta. `JournalRequestTiming` se añadió como middleware global **solo instrumentado para GET del bootstrap**: añade `request_total;dur=...` antes de autenticación de ruta y después de respuesta de contexto de empresa. Se mantiene `tenant_total`, `controller_total` y submediciones. `request_total` incluye `tenant_total`; no sumar cronómetros superpuestos. Las duraciones no revelan tokens, SQL ni datos de cliente.
+
+**Pruebas añadidas:** en `JournalAreaDimensionTest.php` un test para comparar valores PEN/USD/EUR exactos, históricos y predeterminados, y una aserción de `request_total` (12 pruebas Feature previstas); `journal-area.test.mjs` comprueba JOIN y middleware (47 frontend previstas). **No se afirma PASS ni mejora adicional sin logs.** Ninguna migración ni escritura de asientos.
+
+**Verificación manual segura:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd frontend
+pnpm test:unit
+pnpm build
+cd ..\backend
+php -l app/Http/Controllers/Api/V1/Company/GetCompanyExchangeRatesController.php
+php -l app/Http/Middleware/JournalRequestTiming.php
+php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="loads journal editor catalogs|keeps exact, historical"
+```
+
+Una vez que pasen las pruebas, medir Chrome **Waiting**, total y cabecera `Server-Timing` nueva: `catalogs_sql`, `next_number`, `exchange_rates`, `controller_total`, `tenant_total`, `request_total`. Idealmente probar recarga con caché deshabilitada y sin descargas paralelas para comparar. No ejecutar migraciones ni POST de contabilidad.
