@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Company\UpdateCompanySettingsController;
 use App\Http\Controllers\Api\V1\Tenant\CompanyOnboardingCapabilityController;
 use App\Http\Controllers\Api\V1\Tenant\CreateCompanyFromWizardController;
 use App\Http\Controllers\Api\V1\Tenant\SwitchActiveCompanyController;
+use App\Http\Middleware\JournalAuthenticatedTiming;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\RequireCompanyRole;
 use Illuminate\Support\Facades\Route;
@@ -93,7 +94,7 @@ Route::prefix('v1')->group(function (): void {
         });
 
         // Rutas protegidas por contexto Multi-Tenant (SetTenantContext + PostgreSQL RLS)
-        Route::middleware([SetTenantContext::class])->group(function (): void {
+        Route::middleware([JournalAuthenticatedTiming::class, SetTenantContext::class])->group(function (): void {
             // Plan de Cuentas Contables (PCGE 2026)
             Route::prefix('accounting/accounts')->group(function (): void {
                 Route::get('/tree', ListAccountingAccountTreeController::class)
