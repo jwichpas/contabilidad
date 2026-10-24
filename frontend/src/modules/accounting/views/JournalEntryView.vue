@@ -19,7 +19,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-vue-next';
-import type { OperationalAccount } from '../types/journalEntry.types';
+import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { EntityMaster } from '../../company/types/entityMaster.types';
 import JournalEntityPicker from '../components/JournalEntityPicker.vue';
 import JournalAccountCombobox from '../components/JournalAccountCombobox.vue';
@@ -59,7 +59,7 @@ const errorMessage = shallowRef<string | null>(null);
 const successMessage = shallowRef<string | null>(null);
 
 // Catálogo de Cuentas Operativas (Nivel 4+)
-const operationalAccounts = shallowRef<readonly OperationalAccount[]>([]);
+const operationalAccounts = shallowRef<readonly JournalEditorAccount[]>([]);
 const costCenters = shallowRef<readonly CostCenterItem[]>([]);
 const companyAreas = shallowRef<readonly CompanyAreaItem[]>([]);
 const cashFlowAreas = shallowRef<readonly CashFlowAreaItem[]>([]);
