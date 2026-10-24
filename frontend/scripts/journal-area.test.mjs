@@ -200,3 +200,15 @@ test('exchange-rate catalog uses one currency join and preserves exact/historica
   assert.match(requestTiming, /request_total;dur=/);
   assert.match(bootstrap, /prepend\(JournalRequestTiming::class\)/);
 });
+
+test('journal authorization profiling keeps live membership checks and safe timing headers', () => {
+  const tenant = readFileSync(new URL('../../backend/app/Http/Middleware/SetTenantContext.php', import.meta.url), 'utf8');
+  const authTiming = readFileSync(new URL('../../backend/app/Http/Middleware/JournalAuthenticatedTiming.php', import.meta.url), 'utf8');
+  const routes = readFileSync(new URL('../../backend/routes/api.php', import.meta.url), 'utf8');
+  assert.match(tenant, /tenant_membership;dur=/);
+  assert.match(tenant, /userHasActiveMembership\(/);
+  assert.match(tenant, /tenantContext->run\(/);
+  assert.match(authTiming, /post_auth_total;dur=/);
+  assert.match(routes, /JournalAuthenticatedTiming::class, SetTenantContext::class/);
+  assert.match(routes, /auth:sanctum/);
+});
