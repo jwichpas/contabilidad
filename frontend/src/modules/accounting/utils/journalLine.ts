@@ -5,8 +5,6 @@ export interface JournalAccountDimensions {
   companyAreaId: number | null;
   cashFlowAreaId: number | null;
   entity: unknown | null;
-  showOptionalCostCenter?: boolean;
-  showOptionalEntity?: boolean;
 }
 
 export function resetAccountDimensions(line: JournalAccountDimensions): void {
@@ -14,7 +12,4 @@ export function resetAccountDimensions(line: JournalAccountDimensions): void {
   line.companyAreaId = null;
   line.cashFlowAreaId = null;
   line.entity = null;
-  // Closed optional pickers belong to the previous account configuration.
-  line.showOptionalCostCenter = false;
-  line.showOptionalEntity = false;
 }
