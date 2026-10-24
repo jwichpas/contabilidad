@@ -149,7 +149,7 @@ final readonly class PostJournalEntryService
                 $account = DB::table('accounting_accounts')
                     ->where('company_id', (int) $period->company_id)
                     ->where('id', (int) $line['accounting_account_id'])
-                    ->sharedLock()->first(['requires_cost_center','requires_auxiliary','entity_requirement_type','requires_cash_flow_area','cash_flow_category','has_automatic_destination','account_type','code','is_operational','is_active']);
+                    ->sharedLock()->first(['requires_cost_center','requires_company_area','requires_auxiliary','entity_requirement_type','requires_cash_flow_area','cash_flow_category','has_automatic_destination','account_type','code','is_operational','is_active']);
                 if ($account === null) {
                     throw new DomainException(sprintf('Cuenta de partida #%d no pertenece a la empresa activa.', $index + 1));
                 }
@@ -163,11 +163,15 @@ final readonly class PostJournalEntryService
                     JournalAreaRequirement::validateSelection((int) $period->company_id,
                         (bool) $account->requires_cash_flow_area, (string) $account->cash_flow_category,
                         $companyAreaId === null ? null : (int) $companyAreaId,
-                        $cashFlowAreaId === null ? null : (int) $cashFlowAreaId);
+                        $cashFlowAreaId === null ? null : (int) $cashFlowAreaId,
+                        (bool) $account->requires_company_area);
                 } catch (DomainException $exception) {
                     throw new DomainException(sprintf('Partida #%d: %s', $index + 1, $exception->getMessage()));
                 }
                 $manualAccountCodes[] = (string)$account->code;
+                if (! (bool) $account->requires_cost_center && $centerId !== null) {
+                    throw new DomainException(sprintf('La cuenta de la partida #%d no habilita centro de costos.', $index + 1));
+                }
                 if ((bool) $account->requires_cost_center && $centerId === null) {
                     throw new DomainException(sprintf('La partida #%d requiere un centro de costos activo.', $index + 1));
                 }
