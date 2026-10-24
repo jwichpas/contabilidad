@@ -1,12 +1,12 @@
 # F3.3 — Maestro configurable de subdiarios y mejoras visuales del Libro Diario
 
-**Fecha:** 24/10/2026 · **Estado:** cambios publicados en `main`, pruebas posteriores y migración nueva pendientes. **Plan Maestro: 8/32 (25%), F3.3 abierta**.
+**Fecha:** 24/10/2026 · **Estado:** migración `2026_10_24_140000_create_company_subdiaries` **DONE (~1 s)**, Unit **1/1 (8 aserciones)**, Feature **17/17 (140 aserciones)**, frontend **41/41** y compilación **PASS (1.635 módulos, 2,52 s)** según evidencia manual del usuario. **Pendientes:** salida legible del diagnóstico SQL posterior `Ran` + RLS/FK y aceptación visual actualizada. **Plan Maestro: 8/32 (25%), F3.3 abierta**.
 
 ## Decisión funcional
 
 El selector de subdiario del Libro Diario **ya no debe depender de un array hardcodeado**. Se añadió un maestro real, editable **por empresa**, separado del `entry_type` del voucher. El código histórico seleccionado sigue almacenado en `journal_entries.subdiary_code`, sin cambiar la numeración global por período contable.
 
-### Base de datos (migración nueva NO ejecutada)
+### Base de datos (migración ejecutada manualmente en DEV)
 
 `backend/database/migrations/2026_10_24_140000_create_company_subdiaries.php`: crea `company_subdiaries` con `(id, company_id, code, name, is_active, timestamps)`, único `(company_id, code)`, RLS `ENABLE + FORCE` y permisos sin DELETE para `app_backend`. Inserta los ocho códigos previamente soportados **para cada empresa existente**, sin insertar ni modificar asientos, períodos ni tasas de cambio. Sustituye el CHECK cerrado de ocho códigos por una **FK compuesta de `(company_id, subdiary_code)` en `journal_entries` hacia `(company_id, code)`**: protege tanto la identidad de la empresa como los códigos históricos. Cualquier rollback/limpieza de esta migración es deliberadamente bloqueado; requiere plan de datos aprobado. Se preserva la migración anterior `2026_10_24_130000_add_journal_entry_subdiary.php` que ya está instalada en Neon DEV.
 
@@ -32,7 +32,7 @@ En una imagen de 1600 píxeles, el buscador de cuentas se desplegaba dentro de `
 
 ## Verificación manual de despliegue (exclusivamente DEV)
 
-**Antes de aplicar la migración:** confirmar `.env` local mediante `phase2-neon-connection-diagnostic.php --check`, obtener respaldo de la rama `contabilidad-dev`, ejecutar `php scripts/check-company-subdiaries-schema.php --check` y verificar **Pending + tabla false**. Si el esquema difiere, no continuar. **No ejecutar `migrate`, `migrate:fresh` ni rollback generales.**
+**Migración ya aplicada según salida del usuario: NO repetirla.** Para una auditoría independiente del estado resultante, solo ejecutar el diagnóstico de lectura `php scripts/check-company-subdiaries-schema.php --check` y comprobar `Ran`, tabla existente, FORCE RLS y FK intraempresa. Nunca ejecutar `migrate`, `migrate:fresh` ni rollback generales para volver a instalarla.
 
 ```powershell
 cd C:\Proyectos\contabilidad
@@ -56,5 +56,7 @@ cd ..\frontend
 pnpm test:unit
 pnpm build
 ```
+
+**Evidencia ejecutada el 24/10/2026:** `CompanySubdiaryMigrationSqlTest` **1/1 PASS (8 aserciones, 0,28 s)**; migración específica **DONE (~1 s)**; `CompanySubdiaryMasterTest` **3/3 PASS (35 aserciones, 59,82 s)**; `JournalAreaDimensionTest` **10/10 PASS (75 aserciones, 244,78 s)**; `JournalEntityDimensionTest` **4/4 PASS (30 aserciones, 113,66 s)**; frontend **41/41 PASS (0 fallos)**; `vue-tsc -b && vite build` **PASS (1.635 módulos, 2,52 s)**. El texto proporcionado después del comando `check-company-subdiaries-schema.php --check` muestra directamente la salida de PHPUnit, así que el **diagnóstico posterior no está acreditado** por una salida diferenciada. No hay evidencia de aceptación visual del diseño nuevo, rendimiento real ni prueba de alta y edición desde navegador. F3.3 permanece [ ], 8/32.
 
 **Criterios de aceptación:** maestro permite crear, editar nombre, desactivar, reactivar en empresa DEMO sin copiar a otras empresas; POST rechaza subdiario inactivo y de tenant ajeno; extorno conserva subdiario original; pantallas sin clipping; compilación Vue y 41/41 pruebas frontend previstas; Feature `CompanySubdiaryMasterTest` (3 tests nuevos) y `JournalAreaDimensionTest` (10 tests previstos) sin FAIL. No declarar PASS sin logs manuales.
