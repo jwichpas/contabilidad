@@ -79,6 +79,8 @@ El correlativo **continúa siendo global por empresa y período fiscal**, no un 
 
  tanto al abrir como al cerrar la función y preserva `SET search_path = pg_catalog`. Se añadió `backend/tests/Unit/JournalSubdiaryMigrationSqlTest.php` para comprobar delimitadores simétricos sin consultar la base.
 
+**Nota del 24/10/2026:** el usuario ejecutó `JournalSubdiaryMigrationSqlTest` (**1/1 PASS, 5 aserciones**) y `migrate:status` (**Pending**); el comando `php artisan tinker` falló porque Tinker no está instalado. Se creó `scripts/check-journal-subdiary-schema.php --check`, consulta **solo lectura** que comprueba tanto la columna como la tabla de migraciones sin depender de Tinker, con bloqueo ante configuración distinta de Neon DEV.
+
 **No se declaró rollback ni instalación completa.** PostgreSQL admite DDL transaccional y Laravel suele ejecutar estas migraciones en transacción, pero el estado real debe comprobarse sin escritura. Antes de repetir, ejecutar:
 
 ```powershell
@@ -86,7 +88,7 @@ cd C:\Proyectos\contabilidad
 git pull --ff-only origin main
 cd backend
 php artisan migrate:status --database=pgsql_migrations
-php artisan tinker --execute="dump(Schema::connection('pgsql_migrations')->hasColumn('journal_entries', 'subdiary_code'));"
+php scripts/check-journal-subdiary-schema.php --check
 php artisan test tests/Unit/JournalSubdiaryMigrationSqlTest.php
 ```
 
