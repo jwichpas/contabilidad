@@ -111,14 +111,14 @@ final readonly class CreateJournalEntryController
         // Locks remain held by the outer tenant transaction until posting completes.
         foreach ($validated['lines'] as $index => $line) {
             $account = AccountingAccount::query()->where('id', (int) $line['accounting_account_id'])
-                ->sharedLock()->first(['entity_requirement_type', 'requires_auxiliary', 'requires_cost_center', 'requires_company_area', 'requires_cash_flow_area', 'cash_flow_category']);
+                ->sharedLock()->first(['entity_requirement_type', 'requires_auxiliary', 'requires_cost_center', 'has_automatic_destination', 'requires_company_area', 'requires_cash_flow_area', 'cash_flow_category']);
             if ($account === null) {
                 return response()->json(['message' => 'Cuenta ajena o inexistente en partida #'.($index + 1).'.'], 422);
             }
-            if ((bool) $account->requires_cost_center && ! isset($line['cost_center_id'])) {
+            if (((bool) $account->requires_cost_center || (bool) $account->has_automatic_destination) && ! isset($line['cost_center_id'])) {
                 return response()->json(['message' => 'Partida #'.($index + 1).': la cuenta exige centro de costos.'], 422);
             }
-            if (! (bool) $account->requires_cost_center && isset($line['cost_center_id'])) {
+            if (! ((bool) $account->requires_cost_center || (bool) $account->has_automatic_destination) && isset($line['cost_center_id'])) {
                 return response()->json(['message' => 'Partida #'.($index + 1).': la cuenta no habilita centro de costos.'], 422);
             }
             $type = $account->entity_requirement_type;
