@@ -167,3 +167,29 @@ php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="loads jour
 ```
 
 Una vez que pasen las pruebas, medir Chrome **Waiting**, total y cabecera `Server-Timing` nueva: `catalogs_sql`, `next_number`, `exchange_rates`, `controller_total`, `tenant_total`, `request_total`. Idealmente probar recarga con caché deshabilitada y sin descargas paralelas para comparar. No ejecutar migraciones ni POST de contabilidad.
+
+## Tercera medición: autenticación y tenant — 24/10/2026
+
+**Evidencia del usuario:** Chrome `Waiting` **3,81 s**, descarga **2,43 ms**. `Server-Timing`: `catalogs_sql=684,4 ms`, `next_number=291,9 ms`, `exchange_rates=582,4 ms`, `controller_total=1558,8 ms`, `tenant_total=2330,7 ms`, `request_total=3794,5 ms`. La tasa de cambio pasó de 868,2 a 582,4 ms (−285,8 ms; ~33 %) tras JOIN de monedas. La espera del navegador pasó de 4,11 a 3,81 s (~7 % menos); el controlador de 1841 a 1558,8 ms (~15 % menos).
+
+**Pruebas confirmadas por PowerShell:** `pnpm test:unit` **47/47 PASS**; `pnpm build` **PASS (1635 módulos, 3,16 s)**; análisis de sintaxis PHP **PASS** para `GetCompanyExchangeRatesController.php` y `JournalRequestTiming.php`; `JournalAreaDimensionTest.php` **12/12 PASS (114 aserciones, 261,70 s)**. Por tanto el JOIN FX mantuvo los casos exacto, último histórico y predeterminado, y las Feature transaccionales ficticias pasaron.
+
+**Tiempo pendiente de atribuir:** `request_total − tenant_total = 1463,8 ms` antes del alcance del middleware de empresa (incluye rutas, Sanctum y otra infraestructura Laravel); `tenant_total − controller_total = 771,9 ms` para SET LOCAL, autorización de membresía y ciclo de transacción. La cabecera mide tiempos **anidados**, por lo que no se suman. Las ~2,43 ms de descarga descartan transferencia de contenido como demora dominante en esa solicitud.
+
+**Nueva instrumentación publicada, sin cambiar autenticación ni permisos:** se añadió `JournalAuthenticatedTiming` dentro del grupo `auth:sanctum` y antes de `SetTenantContext` para emitir `post_auth_total`. El middleware existente `SetTenantContext` agrega `tenant_membership` midiendo la consulta obligatoria de membresía que **continúa verificándose en cada petición**. No se cachea acceso, no se desactiva Sanctum, RLS ni `SET LOCAL`. No emite SQL, identificadores ni tokens. Dos nuevas aserciones Feature en el caso de bootstrap y un caso Node (**48 frontend esperados, 12 Feature esperados**); pruebas posteriores a esta instrumentación **aún no ejecutadas**.
+
+**Verificación (sin migrar ni registrar asientos):**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd frontend
+pnpm test:unit
+pnpm build
+cd ..\backend
+php -l app/Http/Middleware/JournalAuthenticatedTiming.php
+php -l app/Http/Middleware/SetTenantContext.php
+php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="loads journal editor catalogs"
+```
+
+Al volver a Chrome, copiar `Server-Timing` completo con `request_total`, `post_auth_total`, `tenant_total`, `tenant_membership`, `controller_total`, `catalogs_sql`, `next_number`, `exchange_rates`; medir mismo módulo con caché y número de peticiones de fondo comparables. Verificar jerarquía `request_total >= post_auth_total >= tenant_total >= controller_total` de forma aproximada: diferenciales permiten identificar etapa de autenticación frente a preparación SQL/tenant. Si falta un valor, revisar orden real de middleware. Solo seguir optimizando tras pruebas y mediciones.
