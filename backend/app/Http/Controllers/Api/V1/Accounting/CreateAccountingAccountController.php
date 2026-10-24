@@ -9,6 +9,7 @@ use App\Http\Resources\Api\V1\Accounting\AccountingAccountResource;
 use App\Models\AccountingAccount;
 use App\Services\Security\AuditLoggerService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Single Action Controller para crear una nueva cuenta contable dentro del tenant activo.
@@ -21,6 +22,9 @@ final readonly class CreateAccountingAccountController
 
     public function __invoke(CreateAccountingAccountRequest $request): JsonResponse
     {
+        if (! Schema::hasColumn('accounting_accounts', 'requires_company_area')) {
+            return response()->json(['message' => 'Falta aplicar la migración de requisitos organizativos por cuenta.'], 503);
+        }
         $dto = $request->toDto();
 
         $parentPath = null;
