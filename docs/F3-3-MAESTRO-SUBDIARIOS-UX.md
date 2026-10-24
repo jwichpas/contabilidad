@@ -44,10 +44,9 @@ php -l database/migrations/2026_10_24_140000_create_company_subdiaries.php
 php artisan test tests/Unit/CompanySubdiaryMigrationSqlTest.php
 ```
 
-Solo tras confirmación de precondiciones y respaldo de DEV:
+Con la migración ya instalada, **solo verificar** su estado y continuar con pruebas, sin repetir DDL:
 
 ```powershell
-php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_140000_create_company_subdiaries.php --force
 php scripts/check-company-subdiaries-schema.php --check
 php artisan test tests/Feature/CompanySubdiaryMasterTest.php --debug
 php artisan test tests/Feature/JournalAreaDimensionTest.php --debug
