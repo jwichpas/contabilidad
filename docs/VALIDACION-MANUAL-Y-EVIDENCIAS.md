@@ -130,6 +130,30 @@ El mismo wrapper Windows `phase2-active-rls-docker.ps1` instala ahora **20 migra
 
 Salida de PowerShell compartida por el usuario: `php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_100000_add_journal_line_areas.php --force` → `Nothing to migrate`; `JournalAreaRequirementTest.php` **2/2 PASS (5 aserciones; 0,28 s)** y `JournalAreaDimensionTest.php --debug` **5/5 PASS (44 aserciones; 120,87 s; Exit Code 0)** con PHP 8.5.12 y PHPUnit 12.5.33. En particular, pasaron el filtrado del catálogo, persistencia y replay, validación tenant/estado/categoría sin período o FX residuales, extornos históricos y dimensiones opcionales. Las pruebas Feature usan transacciones reversibles; no se afirma COMMIT de asientos nuevos. No se adjuntó resultado del diagnóstico de conexión en este turno. El resultado del verificador documental se aportó posteriormente. **La aceptación visual, las pruebas de FK directa y la concurrencia permanecen pendientes; F3.3 [ ], 8/32 (25%).** El usuario ejecutó posteriormente `pnpm test:unit` (**33/33 PASS; 0 fallos, 0 omitidos**) y `pnpm build` (**vue-tsc -b + Vite 6.4.4 PASS; 1.630 módulos, 2,97 s**), validando que el ajuste Vue compila y el conjunto unitario existente no falla; no existe evidencia de una prueba específica del mensaje ni de aceptación visual. `php scripts/verify-plan-master-checklist.php --check` devolvió **PASS: 8/32 aprobadas, 24/32 pendientes; fase F3 y F3.4/F3.5 reconciliados**. Esta última comprobación es documental; no certifica el sistema. [Detalle](F3-3-AREAS-EN-PARTIDAS.md).
 
+
+## Nueva especificación F3.3 — estricto por configuración (24/10/2026)
+
+**Pendiente de validación**: a solicitud del usuario, cada dimensión se habilita **únicamente** por el indicador de la cuenta, sin campos opcionales. Se añadió migración `2026_10_24_120000_add_account_requires_company_area.php` con columna `requires_company_area` NOT NULL default FALSE, backend rechaza selecciones extrañas a la regla, frontend condiciona selectores y pruebas de regresión cambiadas. No se aplicó ninguna migración remotamente. Las ejecuciones manuales **35/35 frontend**, build y Feature/Unit anteriores permanecen como evidencia histórica, **no certifican esta revisión**.
+
+Antes de instalar en **contabilidad-dev**: verificar con `php scripts/phase2-neon-connection-diagnostic.php --check`, disponer del respaldo y comprobar conexión de migraciones. Solo en entorno confirmado:
+
+```powershell
+cd C:\\Proyectos\\contabilidad
+git pull --ff-only origin main
+cd backend
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_120000_add_account_requires_company_area.php --force
+php artisan migrate:status --database=pgsql_migrations
+php artisan test tests/Unit/JournalAreaRequirementTest.php
+php artisan test tests/Unit/JournalEntityRequirementTest.php
+php artisan test tests/Feature/JournalAreaDimensionTest.php --debug
+php artisan test tests/Feature/JournalEntityDimensionTest.php --debug
+cd ..\\frontend
+pnpm test:unit
+pnpm build
+```
+
+No ejecutar pruebas Feature contra producción ni reusar períodos o asientos reales. La aceptación visual debe incluir cuenta sin requisitos (guiones), cuenta con anexo, cuenta con centro, cuenta con flujo, cuenta con área organizativa configurada deliberadamente, cambio de cuenta que limpia dimensiones y extorno histórico conservado. **F3.3 sigue [ ], 8/32 (25%).**
+
 ## Registro de evidencias verificadas
 
 | Fecha | Referencia | Evidencia recibida/verificada | Estado |
