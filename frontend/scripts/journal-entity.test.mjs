@@ -21,6 +21,7 @@ test('unrequested entities are rejected while required multi-role entities are a
   assert.equal(entityMatches(optional, null), true);
   assert.equal(entityMatches(optional, { is_active: false }), false);
   assert.equal(entityMatches(optional, { is_active: true }), false);
+  assert.equal(entityRequired(optional), false);
   const entity = { is_active: true, is_client: true, is_supplier: true };
   for (const type of ['CUSTOMER', 'SUPPLIER', 'ANY_THIRD_PARTY']) {
     assert.equal(entityMatches({ requires_auxiliary: false, entity_requirement_type: type }, entity), true);
