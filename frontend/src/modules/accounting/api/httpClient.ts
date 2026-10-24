@@ -23,6 +23,7 @@ import type {
 import type {
   CreateJournalEntryPayload,
   JournalEntryResponse,
+  JournalEditorAccount,
   CompanySubdiaryItem,
   NextCorrelativeResponse,
   OperationalAccount,
@@ -342,7 +343,7 @@ export class AccountingApiClient {
    * authenticated request; journal history is deliberately loaded on demand.
    */
   public async fetchJournalEditorBootstrap(date: string): Promise<{
-    accounts: readonly OperationalAccount[];
+    accounts: readonly JournalEditorAccount[];
     cost_centers: readonly CostCenterItem[];
     company_areas: readonly CompanyAreaItem[];
     cash_flow_areas: readonly CashFlowAreaItem[];
@@ -351,7 +352,7 @@ export class AccountingApiClient {
     subdiaries: readonly { code: string; name: string }[];
   }> {
     const result = await this.request<{ data: {
-      accounts: OperationalAccount[];
+      accounts: JournalEditorAccount[];
       cost_centers: CostCenterItem[];
       company_areas: CompanyAreaItem[];
       cash_flow_areas: CashFlowAreaItem[];
