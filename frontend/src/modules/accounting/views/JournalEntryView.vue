@@ -574,12 +574,18 @@ async function handleSubmit(): Promise<void> {
 
     const savedEntry = await apiClient.value.createJournalEntry(payload, key);
     pendingJournalAttempt = null;
+
+    // Limpiar antes de mostrar el éxito: clearForm también borra las alertas.
+    clearForm();
     successMessage.value = `¡Asiento ${savedEntry.entry_number} asentado exitosamente en el Libro Diario!`;
 
-    // Recargar historial y limpiar formulario
-    clearForm();
-    const updatedEntries = await apiClient.value.fetchJournalEntries({ limit: 50 });
-    journalEntries.value = updatedEntries;
+    // El POST ya quedó confirmado. Si falla el GET del historial, no presentar
+    // el guardado como fallido ni sugerir volver a registrar el mismo asiento.
+    try {
+      journalEntries.value = await apiClient.value.fetchJournalEntries({ limit: 50 });
+    } catch {
+      errorMessage.value = 'El asiento se registró, pero no se pudo actualizar el historial. Recargue la vista para consultarlo; no vuelva a registrarlo.';
+    }
   } catch (e) {
     // Keep the key after an ambiguous network/server error, but not after
     // a conclusive client-side rejection (HTTP 400/409/422).
