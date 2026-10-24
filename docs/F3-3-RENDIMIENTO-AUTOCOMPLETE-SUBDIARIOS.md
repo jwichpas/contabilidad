@@ -1,6 +1,6 @@
 # F3.3 · Libro Diario: latencia, autocomplete, totales y subdiarios
 
-**Fecha:** 24/10/2026. **Estado:** migración de subdiarios **DONE** según ejecución manual del usuario (908,49 ms); verificación posterior `Ran`/columna, pruebas Feature/frontend/build y aceptación visual **pendientes**. Checklist rector **8/32 (25%)**, F3.3 abierta.
+**Fecha:** 24/10/2026. **Estado:** migración de subdiarios **Ran + columna true**, Feature áreas **9/9 PASS (70 aserciones; 189,85 s)**, frontend **39/39 PASS** y compilación **PASS (1633 módulos; 2,55 s)** según resultados de PowerShell del usuario. Aceptación visual parcial; rendimiento real pendiente. Checklist rector **8/32 (25%)**, F3.3 abierta.
 
 ## Evidencia inicial y causas identificadas
 
@@ -15,6 +15,13 @@ La captura también mostró importes visibles `10` en Debe/Haber, mientras que l
 3. **Carga consolidada**: nueva ruta solo lectura `GET /api/v1/accounting/journal-entries/editor-bootstrap?date=YYYY-MM-DD` reutiliza controladores autorizados bajo el mismo contexto de empresa y devuelve cuentas, centros, áreas, flujos, próximo correlativo, cambios y catálogo de subdiarios. Las seis consultas ahora comparten una única solicitud HTTP. `Server-Timing` desglosa sus duraciones (`accounts`, `cost_centers`, `company_areas`, `cash_flow_areas`, `next_number`, `exchange_rates`). **No hay tiempos nuevos medidos todavía** y no se promete un resultado sin evidencia.
 4. **Historial bajo demanda**: `journal-entries?limit=50` se consulta al entrar a la pestaña `Libro Diario`, no para dibujar `Nuevo Asiento`. Guardados confirmados mantienen su idempotencia y el mensaje de éxito.
 
+## Próximo incremento propuesto: maestro de subdiarios por empresa
+
+**Estado actual verificado:** todavía no existe una tabla independiente de subdiarios ni una interfaz para crearlos, renombrarlos, agregarlos o desactivarlos. Las ocho opciones se definen en el archivo PHP `JournalSubdiaryCatalog.php` y quedan almacenadas como `journal_entries.subdiary_code`. El CHECK de PostgreSQL y la validación `Rule::in` del POST rechazan códigos nuevos no declarados en esos catálogos.
+
+**Diseño propuesto, no implementado ni migrado:** tabla `company_subdiaries` con aislamiento por `company_id`, ID, código único por empresa, nombre, estado y metadatos de auditoría; administración por usuarios autorizados (ADMIN / CHIEF_ACCOUNTANT), consulta por personal contable; los históricos deben seguir siendo consultables aunque el subdiario haya sido desactivado. Código estable tras su uso, edición controlada del nombre, desactivación sin eliminación física. Migrar los códigos existentes por empresa con respaldo y verificación. Para aceptar códigos configurables, sustituir el CHECK cerrado y la validación hardcodeada de PHP por validación tenant-safe contra el maestro, preservando referencias de asientos inmutables y extornos históricos. No cambiar la numeración por empresa/período por accidente.
+
+**Evidencia manual recibida:** `check-journal-subdiary-schema.php --check`: Ran y columna true; `JournalAreaDimensionTest.php --debug`: 9/9 PASS, 70 aserciones; `pnpm test:unit`: 39/39 PASS; `pnpm build`: PASS, 1633 módulos en 2,55 s. La captura acredita la presencia del selector, no el CRUD ni una mejora de velocidad cuantificada.
 ## Subdiarios contables: nueva columna real, no alias del tipo de asiento
 
 El esquema anterior solo tenía `entry_type` (STANDARD, OPENING, ADJUSTMENT, REVERSAL, CLOSING). El subdiario es una dimensión distinta. La migración aditiva **`2026_10_24_130000_add_journal_entry_subdiary.php`** crea `journal_entries.subdiary_code VARCHAR(24) NOT NULL DEFAULT 'GENERAL'` con CHECK y actualiza la función de inmutabilidad para proteger esta columna al marcar un asiento como REVERSED. Los asientos existentes conservan el valor `GENERAL` como clasificación transitoria predeterminada; no se recalculan importes ni correlativos.
