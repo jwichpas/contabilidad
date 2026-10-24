@@ -30,6 +30,7 @@ final readonly class ListOperationalAccountsController
                 'balance_type',
                 'currency_mode',
                 'requires_cost_center',
+                'requires_company_area',
                 'requires_auxiliary',
                 'entity_requirement_type',
                 'requires_cash_flow_area',
