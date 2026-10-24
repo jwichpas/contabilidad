@@ -101,7 +101,9 @@ const activeCompanyIdString = computed<string>({
         <ChevronRight class="w-3.5 h-3.5 text-muted hidden md:inline shrink-0" />
         <span class="font-semibold text-foreground truncate">
           {{
-            currentModule === 'journal'
+            currentModule === 'subdiaries'
+              ? 'Maestro de subdiarios'
+              : currentModule === 'journal'
               ? 'Libro Diario Bimoneda (Vouchers Contables)'
               : currentModule === 'fiscal-periods'
                 ? 'Períodos contables · Cierre y auditoría'
