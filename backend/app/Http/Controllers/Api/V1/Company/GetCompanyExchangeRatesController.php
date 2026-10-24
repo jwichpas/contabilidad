@@ -31,16 +31,24 @@ final readonly class GetCompanyExchangeRatesController
             : CarbonImmutable::today();
 
         // Obtener monedas de la empresa
+        // Avoid a second Neon trip to eager-load `currencies`. The global
+        // currency catalog joins only active company-owned rows, under FORCE RLS.
         $companyCurrencies = CompanyCurrency::query()
-            ->where('company_id', $companyId)
-            ->with('currency')
+            ->join('currencies as currency_catalog', 'currency_catalog.id', '=', 'company_currencies.currency_id')
+            ->where('company_currencies.company_id', $companyId)
             ->whereRaw('company_currencies.is_active IS TRUE')
-            ->orderByDesc('is_base')
-            ->orderBy('id')
-            ->get();
+            ->orderByDesc('company_currencies.is_base')
+            ->orderBy('company_currencies.id')
+            ->get([
+                'company_currencies.currency_id',
+                'company_currencies.is_base',
+                'currency_catalog.code as currency_code',
+                'currency_catalog.name as currency_name',
+                'currency_catalog.symbol as currency_symbol',
+            ]);
 
         $baseCompanyCurrency = $companyCurrencies->firstWhere('is_base', true);
-        $baseCode = $baseCompanyCurrency?->currency?->code ?? 'PEN';
+        $baseCode = $baseCompanyCurrency?->currency_code ?? 'PEN';
 
         $secondaryCompanyCurrencies = $companyCurrencies->where('is_base', false);
 
@@ -55,7 +63,7 @@ final readonly class GetCompanyExchangeRatesController
         $ratesList = [];
 
         foreach ($secondaryCompanyCurrencies as $sec) {
-            $currencyCode = $sec->currency->code;
+            $currencyCode = $sec->currency_code;
 
             // 1. Buscar en memoria tipo de cambio exacto para la fecha
             /** @var ExchangeRate|null $exactRate */
@@ -65,10 +73,10 @@ final readonly class GetCompanyExchangeRatesController
 
             if ($exactRate !== null) {
                 $ratesList[] = [
-                    'currency_id' => $sec->currency->id,
+                    'currency_id' => $sec->currency_id,
                     'code' => $currencyCode,
-                    'name' => $sec->currency->name,
-                    'symbol' => $sec->currency->symbol,
+                    'name' => $sec->currency_name,
+                    'symbol' => $sec->currency_symbol,
                     'buy_rate' => (string) $exactRate->buy_rate,
                     'sell_rate' => (string) $exactRate->sell_rate,
                     'is_recorded_for_date' => true,
@@ -85,10 +93,10 @@ final readonly class GetCompanyExchangeRatesController
             $defaultSell = $currencyCode === 'USD' ? '3.758000' : ($currencyCode === 'EUR' ? '4.112000' : '1.000000');
 
             $ratesList[] = [
-                'currency_id' => $sec->currency->id,
+                'currency_id' => $sec->currency_id,
                 'code' => $currencyCode,
-                'name' => $sec->currency->name,
-                'symbol' => $sec->currency->symbol,
+                'name' => $sec->currency_name,
+                'symbol' => $sec->currency_symbol,
                 'buy_rate' => $latestRate ? (string) $latestRate->buy_rate : $defaultBuy,
                 'sell_rate' => $latestRate ? (string) $latestRate->sell_rate : $defaultSell,
                 'is_recorded_for_date' => false,
@@ -110,8 +118,8 @@ final readonly class GetCompanyExchangeRatesController
                 'rate_date' => $rateDate->toDateString(),
                 'base_currency' => [
                     'code' => $baseCode,
-                    'name' => $baseCompanyCurrency?->currency?->name ?? 'Soles',
-                    'symbol' => $baseCompanyCurrency?->currency?->symbol ?? 'S/',
+                    'name' => $baseCompanyCurrency?->currency_name ?? 'Soles',
+                    'symbol' => $baseCompanyCurrency?->currency_symbol ?? 'S/',
                 ],
                 'required_currencies' => $ratesList,
                 'recent_history' => $recentHistory,
