@@ -137,7 +137,8 @@ it('copies inactive historical area references on reversal', function (): void {
 
 it('omits areas when the account does not configure them and exposes current requirements', function (): void {
     $this->getJson('/api/v1/accounting/accounts/operational')->assertOk()
-        ->assertJsonPath('data.0.cash_flow_category', 'OPERATING');
+        ->assertJsonPath('data.0.cash_flow_category', 'OPERATING')
+        ->assertJsonPath('data.0.requires_company_area', true);
     $this->tenant->run($this->company->id, fn () => $this->account->update([
         'requires_company_area' => false, 'requires_cash_flow_area' => false, 'cash_flow_category' => 'NONE',
     ]));
@@ -155,12 +156,18 @@ it('rejects dimensions when the account does not configure them', function (): v
     $this->tenant->run($this->company->id, fn () => $this->account->update([
         'requires_company_area' => false, 'requires_cash_flow_area' => false, 'cash_flow_category' => 'NONE',
     ]));
-    foreach (['company_area_id', 'cash_flow_area_id'] as $field) {
+    foreach (['company_area_id', 'cash_flow_area_id', 'cost_center_id'] as $field) {
         $invalid = $this->payload;
-        $this->postJson('/api/v1/accounting/journal-entries', $invalid)->assertUnprocessable();
-        foreach ($invalid['lines'] as &$line) { unset($line[$field]); }
+        foreach ($invalid['lines'] as &$line) {
+            unset($line['company_area_id'], $line['cash_flow_area_id']);
+        }
         unset($line);
+        $invalid['lines'][0][$field] = $field === 'cost_center_id' ? 123456 : $this->payload['lines'][0][$field];
         $this->postJson('/api/v1/accounting/journal-entries', $invalid)->assertUnprocessable();
     }
-    $this->tenant->run($this->company->id, fn () => expect(JournalEntry::query()->count())->toBe(0));
+    $this->tenant->run($this->company->id, function (): void {
+        expect(JournalEntry::query()->count())->toBe(0);
+        expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
+        expect(DB::table('exchange_rates')->where('company_id', $this->company->id)->count())->toBe(0);
+    });
 });
