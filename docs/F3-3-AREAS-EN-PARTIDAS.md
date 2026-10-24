@@ -45,6 +45,26 @@ php scripts/verify-plan-master-checklist.php --check
 - **Checklist documental (24/10/2026):** `php scripts/verify-plan-master-checklist.php --check` **PASS, 8/32 aprobadas y 24/32 pendientes**; tabla de evidencias, fase F3 y subhitos F3.4/F3.5 reconciliados. Es coherencia documental, no prueba funcional. Sigue sin adjuntarse el resultado del diagnóstico de conexión.
 - Pendientes adicionales: aceptación visual, comprobación directa de FKs y concurrencia. Área organizativa obligatoria por cuenta todavía no existe en el modelo de cuenta: este incremento la trata como opcional.
 
-Prueba visual: en una empresa DEMO, seleccionar áreas existentes y registrar un asiento ficticio balanceado. Recargar el detalle y comprobar ambas referencias. Para una cuenta con flujo obligatorio, omitirlo debe impedir guardar; cambiar de cuenta limpia la selección de flujo. Cambiar la empresa desmonta el borrador y carga los catálogos de la nueva empresa. Probar extorno en período abierto sobre el asiento ficticio.
+## Guía de aceptación visual en navegador — PENDIENTE
+
+**Preparación segura.** Usar exclusivamente una cuenta DEMO en Neon `contabilidad-dev`, confirmar primero `php scripts/phase2-neon-connection-diagnostic.php --check` y acceder al frontend Vite local conectado con Laravel. No publicar token, credenciales ni información de una empresa real. La compilación y los tests anteriores no sustituyen esta prueba.
+
+**A. Validación sin escritura de asientos (realizar primero):**
+
+1. Entrar a **Libro Diario → Nuevo Asiento (Voucher)** con empresa DEMO. Verificar que aparecen al menos dos partidas y que los selectores **Área organizativa** y **Área de flujo de efectivo** están visibles.
+2. En una partida, escoger una cuenta operativa configurada con `requires_cash_flow_area=true`. Confirmar que la interfaz muestra **(obligatoria)** y filtra las áreas por categoría compatible (OPERATING, INVESTING, FINANCING o CASH_EQUIVALENT según la cuenta).
+3. Elegir un área de flujo y luego cambiar a otra cuenta: debe limpiarse el área de flujo anterior. Probar área organizativa opcional sin selección y elegir después un área activa de la empresa.
+4. Completar temporalmente las dos partidas con cuentas/anexos/tipos de cambio que correspondan, glosa ficticia e importes idénticos Debe/Haber. Dejar sin seleccionar el área de flujo de una cuenta que la exige. Pulsar **Asentar Asiento** una sola vez: **debe aparecer un mensaje de validación y no debe registrarse ningún asiento**. No pulsar si falta una condición que pudiera permitir el guardado.
+5. Sin guardar, cambiar de empresa DEMO mediante el selector global. Volver a Libro Diario y comprobar que el borrador anterior no reaparece y que los catálogos corresponden a la nueva empresa. Regresar a la empresa inicial si procede. Registrar captura sin credenciales ni datos privados.
+
+**B. Registro positivo y extorno (solo después de aprobar la etapa A y autorizar datos de prueba persistentes):**
+
+1. Registrar línea base del período y número de asientos; elegir fecha dentro de un período confirmado como **OPEN** y un asiento ficticio nuevo, cuadrado en PEN/USD, con las dimensiones requeridas. No repetir una operación si se desconoce si el POST llegó a grabar.
+2. Pulsar **Asentar Asiento** una vez. Anotar número/ID y comprobar que se mantiene visible la confirmación de éxito aun después de limpiar el formulario.
+3. Abrir **Libro Diario** e inspeccionar el detalle: verificar IDs/nombres de ambas áreas y los montos exactos en ambas monedas. Actualizar la vista y comprobar que las referencias siguen iguales.
+4. Con período abierto y controles de autorización adecuados, probar el extorno de ese asiento ficticio usando el flujo permitido por el sistema; verificar inversión de importes y conservación de las referencias originales de área. No ejecutar extornos sobre el asiento histórico ID 52 ni sobre datos reales.
+5. Comprobar el delta contra la línea base, asientos, auditoría, tipos de cambio e idempotencia. Cualquier cambio persistente esperado debe quedar expresamente registrado; no usar `migrate:fresh`, SQL destructivo ni limpiar tablas para restaurar el baseline.
+
+**Criterios de aceptación:** capturas del selector y rechazo local (sin POST exitoso); comprobación de cambio de empresa; y, en etapa B autorizada, evidencia del POST, detalle recargado, extorno y persistencia esperada. Anotar fecha, empresa DEMO, resultado PASS/FAIL y comportamiento. Mientras falten etapas B, verificación directa de FKs, concurrencia y casos multisectoriales, mantener **F3.3 [ ] y 8/32 (25%)**.
 
 Quedan pendientes cuentas bancarias, medios de pago, CRUD de áreas, escenarios multisectoriales y aceptación funcional completa de F3.3. Los resultados anteriores de anexos (4/4, 29 aserciones) no validan automáticamente este incremento.
