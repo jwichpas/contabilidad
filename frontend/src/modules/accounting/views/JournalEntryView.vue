@@ -339,7 +339,10 @@ function removeLine(index: number): void {
   }
 }
 
-function onAmountChange(line: EditingLine, side: 'debit' | 'credit'): void {
+function onAmountChange(line: EditingLine, side: 'debit' | 'credit', rawValue: string): void {
+  // Mantener la entrada como texto decimal: Vue convierte v-model:number a IEEE-754.
+  if (side === 'debit') line.debitLocal = rawValue;
+  else line.creditLocal = rawValue;
   if (side === 'debit') {
     if (line.debitLocal) {
       line.creditLocal = '';
@@ -1067,26 +1070,26 @@ onMounted(() => {
                 <!-- Debe PEN -->
                 <td class="py-2 px-3">
                   <input
-                    v-model="line.debitLocal"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    :value="line.debitLocal"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
                     placeholder="0.00"
                     class="w-full px-2.5 py-1.5 text-xs num text-right font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                    @input="onAmountChange(line, 'debit')"
+                    @input="onAmountChange(line, 'debit', ($event.target as HTMLInputElement).value)"
                   />
                 </td>
 
                 <!-- Haber PEN -->
                 <td class="py-2 px-3">
                   <input
-                    v-model="line.creditLocal"
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    :value="line.creditLocal"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
                     placeholder="0.00"
                     class="w-full px-2.5 py-1.5 text-xs num text-right font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                    @input="onAmountChange(line, 'credit')"
+                    @input="onAmountChange(line, 'credit', ($event.target as HTMLInputElement).value)"
                   />
                 </td>
 
