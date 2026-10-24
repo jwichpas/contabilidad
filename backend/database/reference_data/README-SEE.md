@@ -23,6 +23,15 @@ y `GET /api/v1/catalogs/sunat-see/ubigeos` (filtros `q`, `department`, `province
 `/api/v1/catalogs/sunat/{tableNumber}` sigue siendo exclusivamente el catálogo anterior PLE/SIRE.
 Para el ubigeo usar el endpoint específico: el catálogo SEE 13 es solo una referencia.
 
+El catálogo 20 dispone además de una edición atribuida al [Anexo I SUNAT de 2024](https://www.sunat.gob.pe/legislacion/superin/2024/anexo1-000240-2024.pdf):
+`GET /api/v1/catalogs/sunat-see/20?version=2024-anexo-i` (14 motivos). La versión histórica
+de nueve filas sigue disponible con `version=historical` o sin parámetro. Ambas son globales,
+de solo lectura, y no alteran PLE/SIRE. Instalar la migración posterior:
+
+```bash
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_160000_add_see_catalog_20_sunat_2024_version.php --force
+```
+
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
 
 ```bash

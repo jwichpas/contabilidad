@@ -32,6 +32,8 @@ export interface SeePage<T> {
     readonly last_page: number;
     readonly classification: string;
     readonly catalog_number?: string;
+    readonly version?: string;
+    readonly source_url?: string | null;
     readonly name?: string;
     readonly item_count?: number;
     readonly source_sha256?: string;

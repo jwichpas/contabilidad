@@ -12,6 +12,7 @@ const client = new AccountingApiClient('', { getAccessToken: props.getAccessToke
 type Section = 'catalogs' | 'ubigeos';
 const section = shallowRef<Section>('catalogs');
 const catalogNumber = shallowRef('02');
+const catalogVersion = shallowRef('historical');
 const catalogFilter = shallowRef('');
 const searchInput = shallowRef('');
 const pageIndex = shallowRef(0);
@@ -24,9 +25,9 @@ const catalogsQuery = useQuery({
   staleTime: cacheTime, gcTime: cacheTime, retry: 1, refetchOnWindowFocus: false,
 });
 const catalogQuery = useQuery({
-  queryKey: computed(() => ['see-catalog', catalogNumber.value]),
+  queryKey: computed(() => ['see-catalog', catalogNumber.value, catalogVersion.value]),
   enabled: computed(() => section.value === 'catalogs'),
-  queryFn: ({ signal }) => client.fetchSeeCatalog(catalogNumber.value, { q: '', page: 1, signal }),
+  queryFn: ({ signal, queryKey }) => client.fetchSeeCatalog(queryKey[1] ?? '02', { q: '', page: 1, version: queryKey[2], signal }),
   staleTime: cacheTime, gcTime: cacheTime, retry: 1, refetchOnWindowFocus: false,
 });
 const ubigeoQuery = useQuery({
@@ -56,12 +57,17 @@ function chooseSection(next: Section): void {
 }
 function chooseCatalog(number: string): void {
   if (number === catalogNumber.value) return;
-  catalogNumber.value = number; catalogFilter.value = ''; searchInput.value = ''; pageIndex.value = 0;
+  catalogNumber.value = number; catalogVersion.value = number === '20' ? '2024-anexo-i' : 'historical';
+  catalogFilter.value = ''; searchInput.value = ''; pageIndex.value = 0;
+}
+function chooseVersion(event: Event): void {
+  catalogVersion.value = (event.target as HTMLSelectElement).value;
+  searchInput.value = ''; pageIndex.value = 0;
 }
 function displayCatalog(value: unknown): string {
   const number = typeof value === 'string' ? value : catalogNumber.value;
   const item = catalogs.value.find((catalog) => catalog.number === number);
-  return item ? `${item.number} · ${item.name} (${item.item_count})` : `Catálogo ${number}`;
+  return item ? `${item.number} · ${item.name} ${number === '20' ? '(versiones)' : `(${item.item_count})`}` : `Catálogo ${number}`;
 }
 function retry(): void {
   if (section.value === 'ubigeos') void ubigeoQuery.refetch();
@@ -118,7 +124,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
     </div>
     <div class="flex items-start gap-2 rounded-lg border border-amber-300/50 bg-amber-50/70 p-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100" role="note">
       <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
-      <p>Archivo histórico de consulta, pendiente de conciliación completa con las versiones vigentes. Los catálogos 15, 19, 20 y 55 tienen diferencias documentadas frente a anexos SUNAT; la unidad A11 tiene dos descripciones. No use esta vista para validar comprobantes.</p>
+      <p>La mayoría de los catálogos provienen de un archivo histórico pendiente de conciliación. Los catálogos 15, 19 y 55 tienen diferencias documentadas; el 20 ofrece además una versión cotejada con el anexo SUNAT 2024. La unidad A11 tiene dos descripciones. No use esta vista para validar comprobantes.</p>
     </div>
     <div class="flex flex-wrap gap-2 border-b border-border pb-3" aria-label="Tipo de referencia">
       <button type="button" :aria-pressed="section === 'catalogs'" :class="section === 'catalogs' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium" @click="chooseSection('catalogs')"><BookOpen class="h-4 w-4" /> Catálogos SEE</button>
@@ -139,7 +145,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
                 <div v-else-if="filteredCatalogs.length === 0" class="px-3 py-2 text-muted">Sin coincidencias</div>
                 <ComboboxOption v-for="catalog in filteredCatalogs" :key="catalog.number" v-slot="{ active, selected }" :value="catalog.number" as="template">
                   <li :class="active ? 'bg-soft' : ''" class="flex cursor-pointer items-center justify-between gap-2 rounded px-3 py-2">
-                    <span class="min-w-0">{{ catalog.number }} · {{ catalog.name }} ({{ catalog.item_count }})</span>
+                    <span class="min-w-0">{{ catalog.number }} · {{ catalog.name }} {{ catalog.number === '20' ? '(versiones)' : `(${catalog.item_count})` }}</span>
                     <Check v-if="selected" class="h-4 w-4 shrink-0 text-brand" />
                   </li>
                 </ComboboxOption>
@@ -148,6 +154,12 @@ watch(searchInput, () => { pageIndex.value = 0; });
           </Combobox>
         </div>
         <div v-else class="flex items-end gap-2 text-sm text-muted"><Globe2 class="mb-1 h-5 w-5 text-brand" /> 1,874 distritos en el archivo suministrado</div>
+        <label v-if="section === 'catalogs' && catalogNumber === '20'" class="block text-xs font-medium text-muted">Versión del catálogo 20
+          <select :value="catalogVersion" class="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand" @change="chooseVersion">
+            <option value="2024-anexo-i">Anexo SUNAT 2024 · 14 códigos</option>
+            <option value="historical">Archivo recibido · 9 códigos</option>
+          </select>
+        </label>
         <label class="block text-xs font-medium text-muted">
           Buscar por {{ section === 'catalogs' ? 'código o descripción' : 'código, distrito, provincia o departamento' }}
           <span class="relative mt-1.5 block">
@@ -156,7 +168,8 @@ watch(searchInput, () => { pageIndex.value = 0; });
           </span>
         </label>
       </div>
-      <p v-if="section === 'catalogs' && currentCatalog" class="text-sm text-muted">Catálogo {{ currentCatalog.number }} · {{ currentCatalog.name }} · {{ currentCatalog.item_count.toLocaleString('es-PE') }} registros en el archivo.</p>
+      <p v-if="section === 'catalogs' && currentCatalog" class="text-sm text-muted">Catálogo {{ currentCatalog.number }} · {{ currentCatalog.name }} · {{ (catalogQuery.data.value?.meta.item_count ?? currentCatalog.item_count).toLocaleString('es-PE') }} registros {{ catalogVersion === 'historical' ? 'en el archivo histórico' : 'en el anexo SUNAT 2024' }}.</p>
+      <p v-if="section === 'catalogs' && catalogNumber === '20' && catalogVersion === '2024-anexo-i'" class="text-xs text-muted">Fuente: <a class="underline" href="https://www.sunat.gob.pe/legislacion/superin/2024/anexo1-000240-2024.pdf" target="_blank" rel="noopener noreferrer">Anexo I de la R.S. 000240-2024/SUNAT</a>. La consulta no determina por sí sola la validez de una guía según su fecha y modalidad.</p>
       <p v-if="error" role="alert" class="rounded-md border border-neg/30 bg-neg/10 px-3 py-2 text-sm text-neg">{{ error }} <button type="button" class="ml-2 underline" @click="retry">Reintentar</button></p>
       <p v-if="isLoading" role="status" class="py-8 text-center text-sm text-muted">Cargando referencias…</p>
       <div v-else-if="section === 'catalogs' && catalogQuery.data.value" class="overflow-x-auto" role="region" aria-label="Tabla del catálogo SEE" tabindex="0">

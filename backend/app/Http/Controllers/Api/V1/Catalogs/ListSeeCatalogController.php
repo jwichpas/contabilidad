@@ -19,10 +19,19 @@ final readonly class ListSeeCatalogController
 
         $validated = $request->validate([
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'version' => ['sometimes', 'string', 'max:40', 'alpha_dash'],
             // La consulta global se descarga una vez y se filtra localmente en el navegador.
             'per_page' => ['sometimes', 'integer', 'between:1,2000'],
         ]);
-        $query = DB::table('see_catalog_items')->where('catalog_number', $number);
+        $version = $validated['version'] ?? 'historical';
+        $reference = $version === 'historical' ? $catalog : DB::table('see_catalog_versions')
+            ->where('catalog_number', $number)->where('version', $version)->first();
+        abort_if($reference === null, 404, 'Versión SEE desconocida para este catálogo.');
+        $query = DB::table($version === 'historical' ? 'see_catalog_items' : 'see_catalog_version_items')
+            ->where('catalog_number', $number);
+        if ($version !== 'historical') {
+            $query->where('version', $version);
+        }
         if (isset($validated['q']) && $validated['q'] !== '') {
             $q = mb_strtolower($validated['q']);
             $query->where(function ($sub) use ($q): void {
@@ -36,16 +45,20 @@ final readonly class ListSeeCatalogController
             'data' => $page->getCollection()->map(static fn ($item): array => [
                 'code' => $item->code,
                 'description' => $item->description,
-                'details' => json_decode($item->details, true, 512, JSON_THROW_ON_ERROR),
+                'details' => $version === 'historical'
+                    ? json_decode($item->details, true, 512, JSON_THROW_ON_ERROR) : new \stdClass(),
                 'source_row' => $item->source_row,
-                'is_ambiguous' => in_array($item->is_ambiguous, [true, 1, '1', 't'], true),
+                'is_ambiguous' => $version === 'historical'
+                    && in_array($item->is_ambiguous, [true, 1, '1', 't'], true),
             ]),
             'meta' => [
-                'catalog_number' => $catalog->number,
-                'name' => $catalog->name,
-                'classification' => $catalog->classification,
-                'source_sha256' => $catalog->source_sha256,
-                'item_count' => $catalog->item_count,
+                'catalog_number' => $reference->catalog_number ?? $catalog->number,
+                'version' => $version,
+                'name' => $reference->name,
+                'classification' => $reference->classification,
+                'source_sha256' => $reference->source_sha256,
+                'source_url' => $reference->source_url ?? null,
+                'item_count' => $reference->item_count,
                 'total' => $page->total(),
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),

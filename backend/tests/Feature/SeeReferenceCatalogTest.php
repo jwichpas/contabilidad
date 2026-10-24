@@ -49,3 +49,24 @@ it('lists global ubigeos and exposes no writes for company users', function (): 
     $this->postJson('/api/v1/catalogs/sunat-see/ubigeos', ['code' => '999999'])
         ->assertStatus(405);
 });
+
+it('serves SUNAT 2024 catalog 20 as a separate version without changing historical rows or PLE', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/20?version=historical')
+        ->assertOk()->assertJsonPath('meta.total', 9)
+        ->assertJsonPath('meta.classification', 'SUPPLIED_SEE_SNAPSHOT_UNVERIFIED');
+    $this->getJson('/api/v1/catalogs/sunat-see/20?version=2024-anexo-i')
+        ->assertOk()->assertJsonPath('meta.total', 14)
+        ->assertJsonPath('meta.version', '2024-anexo-i')
+        ->assertJsonPath('meta.classification', 'SUNAT_ANNEX_I_2024_REFERENCE')
+        ->assertJsonFragment(['code' => '03', 'description' => 'Venta con entrega a terceros'])
+        ->assertJsonFragment(['code' => '19', 'description' => 'Traslado de mercancía extranjera']);
+    $this->getJson('/api/v1/catalogs/sunat-see/20?version=2024-anexo-i&q=consignaci%C3%B3n')
+        ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.code', '05');
+    $this->getJson('/api/v1/catalogs/sunat-see/20?version=otro')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat-see/19?version=2024-anexo-i')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat/03')->assertOk()->assertDontSee('Venta con entrega a terceros');
+});

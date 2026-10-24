@@ -19,7 +19,7 @@ test('SEE view renders cached catalog rows with client-side page size 25', async
       source_row: i + 1, is_ambiguous: false,
     }));
     queryClient.setQueryData(['see-catalogs'], [{ number: '02', name: 'Monedas', item_count: 30, classification: 'test' }]);
-    queryClient.setQueryData(['see-catalog', '02'], {
+    queryClient.setQueryData(['see-catalog', '02', 'historical'], {
       data: rows, meta: { total: 30, current_page: 1, last_page: 1, classification: 'test' },
     });
     const html = await renderToString(createSSRApp(View, { getAccessToken: () => null })

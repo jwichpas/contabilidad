@@ -25,7 +25,7 @@ También se cotejó el [Anexo I SUNAT de 2024](https://www.sunat.gob.pe/legislac
 | 17 Tipo de operación | 12 | Claves coinciden con Anexo 2017. |
 | 18 Modalidad de traslado | 2 | Claves coinciden con Anexo 2017. |
 | 19 Estado de ítem | 3 | **Falta `4`** («Anulado en el día») respecto del Anexo 2017. |
-| 20 Motivos de traslado | 9 | Coincide con 2017, pero el anexo 2024 registra 14: faltan `03`, `05`, `06`, `07`, `17`. |
+| 20 Motivos de traslado | 9 | El archivo histórico coincide en claves con 2017; el anexo 2024 registra 14 y cambió la descripción de `19`. Se agregó una versión independiente `2024-anexo-i` de 14 filas con fuente SUNAT; el archivo de 9 filas permanece intacto. |
 | 21 Documentos relacionados guía | 6 | Claves coinciden con Anexo 2017. |
 | 22 Percepción | 3 | Claves coinciden con Anexo 2017. |
 | 23 Retención | 1 | Clave coincide con Anexo 2017. |
@@ -41,3 +41,5 @@ También se cotejó el [Anexo I SUNAT de 2024](https://www.sunat.gob.pe/legislac
 | 58 Tipo medidor luz | 2 | Claves coinciden con Anexo 2017. |
 
 **Cobertura adicional:** el Anexo 2017 también incluye catálogos 26 (tipo de préstamo) y 27 (indicador de primera vivienda), ausentes del archivo suministrado. El conjunto SEE actual se conserva como instantánea histórica de solo lectura y separado de PLE/SIRE; no habilitarlo como validador normativo ni sustituir códigos en documentos históricos sin una migración versionada y contrastada con la normativa aplicable a la fecha del documento.
+
+**Versión adicional 20:** `see_catalog_20_anexo_i_2024.json` transcribe las 14 filas del Anexo I de la R.S. 000240-2024/SUNAT, con SHA-256 fijado en una migración posterior. `GET /api/v1/catalogs/sunat-see/20?version=2024-anexo-i` devuelve esa edición; el endpoint sin `version` sigue devolviendo el archivo recibido. Esta consulta no presupone que el anexo 2024 sea suficiente para validar toda guía en 2026.
