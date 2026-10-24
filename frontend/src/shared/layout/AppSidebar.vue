@@ -6,7 +6,6 @@ import {
   CalendarRange,
   Building2,
   CirclePlus,
-  Calculator,
   FileBarChart2,
   FolderTree,
   Users,
@@ -289,24 +288,7 @@ const activeCompanyIdString = computed<string>({
               </span>
             </button>
 
-            <!-- Centros de Costos -->
-            <div
-              class="flex items-center justify-between px-3 py-2 rounded-md text-white/70 hover:bg-white/5 hover:text-white text-xs transition-colors cursor-default"
-              title="Centros de Costos y Destinos Automáticos 94/95 vs 79"
-            >
-              <span class="flex items-center gap-2.5 truncate">
-                <Calculator class="w-4 h-4 shrink-0 text-white/50" />
-                <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                  Centros de Costos (94/95)
-                </span>
-              </span>
-              <span
-                v-if="!isCollapsed || isOpenMobile"
-                class="tag ok font-mono text-[10px] px-1.5 py-0 border-emerald-400 text-emerald-300"
-              >
-                Activo
-              </span>
-            </div>
+
           </div>
 
           <div class="space-y-1">
