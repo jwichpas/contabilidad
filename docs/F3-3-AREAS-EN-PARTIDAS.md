@@ -1,5 +1,20 @@
 # F3.3 · Áreas organizativas y de flujo en partidas
 
+## Validación manual de reglas estrictas — 24/10/2026 (evidencia recibida)
+
+En PowerShell, el usuario reportó los siguientes resultados:
+
+- `pnpm test:unit`: **37/37 PASS**, cero fallos, cero omitidas; **176,14 ms**. Es evidencia del conjunto de pruebas antes del ajuste posterior a `useAccountTree.ts`.
+- `pnpm build`: **FAIL por TS2741** en `frontend/src/modules/accounting/composables/useAccountTree.ts:202`: el `newNode: AccountingAccountResponse` no incorporaba `requires_company_area`. El backend no tiene relación con este error de tipado.
+- `php scripts/phase2-neon-connection-diagnostic.php --check`: comprobaciones de configuración **PASS** para entorno declarado `contabilidad-dev`, sin consulta SQL. Confirmación de declaración local, no una identificación remota independiente de rama.
+- Migración **`2026_10_24_120000_add_account_requires_company_area.php` ejecutada por el usuario y `DONE` en 545,20 ms**; `php artisan migrate:status --database=pgsql_migrations` la muestra **`[28] Ran`**. Las migraciones históricas marcadas `Pending` en esa salida no se deben ejecutar masivamente; no usar `migrate` sin ruta explícita.
+- Laravel Unit: `JournalAreaRequirementTest` **3/3 PASS, 12 aserciones** y `JournalEntityRequirementTest` **2/2 PASS, 16 aserciones**.
+- Laravel Feature: `JournalAreaDimensionTest` **6/6 PASS, 51 aserciones, 140,51 s, Exit Code 0** y `JournalEntityDimensionTest` **4/4 PASS, 30 aserciones, 104,02 s, Exit Code 0**.
+- **Total Laravel: 15/15 PASS, 109 aserciones.** Las Feature ejecutaron pruebas reversibles, no certifican una aceptación visual.
+- Se corrigió el fallo de compilación agregando `requires_company_area` tanto a `newNode` como al espejo de actualización en `useAccountTree.ts`. Se añadió una aserción de regresión al test JS existente, sin incrementar el número de pruebas. **`pnpm build` y `pnpm test:unit` quedan pendientes de nueva ejecución tras este cambio**.
+
+**Estado F3.3:** abierta, **8/32 (25%)**, aceptación visual de dimensiones estrictas, pruebas FK/concurrencia y escenarios de maestros todavía pendientes. No se ha ejecutado ninguna operación remota desde GitHub/ChatGPT.
+
 ## Decisión funcional vigente · 24/10/2026 — Dimensiones estrictamente por cuenta
 
 **Esta sección reemplaza la interpretación anterior de dimensiones «opcionales» descrita en el historial de esta guía.** El usuario confirmó en la aceptación visual que una dimensión **solo puede digitarse cuando una regla de configuración de la cuenta operativa la exige**. No se ofrecen botones «+ Centro opcional» / «+ Anexo opcional», ni asignación voluntaria de áreas.
