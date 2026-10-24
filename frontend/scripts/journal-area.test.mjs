@@ -154,7 +154,7 @@ test('journal bootstrap projects only accounts and flags needed by the voucher f
   assert.match(backend, /AccountingAccount::query\(\)/);
   assert.match(backend, /'requires_cash_flow_area'/);
   assert.match(backend, /'entity_requirement_type'/);
-  assert.match(backend, /accounts;dur=/);
+  assert.match(backend, /catalogs_sql;dur=/);
   assert.match(dto, /type JournalEditorAccount = Pick<OperationalAccount/);
   assert.match(picker, /items-center justify-center/);
   assert.match(picker, /max-h-\[min\(80vh,650px\)\]/);
@@ -171,10 +171,18 @@ test('account edit catalogs are loaded lazily only when the account form opens',
 
 test('bootstrap exposes request profiling stages without leaking SQL or credentials', () => {
   const backend = readFileSync(new URL('../../backend/app/Http/Controllers/Api/V1/Accounting/GetJournalEditorBootstrapController.php', import.meta.url), 'utf8');
-  assert.match(backend, /schema_accounts;dur=/);
-  assert.match(backend, /schema_subdiaries;dur=/);
-  assert.match(backend, /subdiaries;dur=/);
+  assert.match(backend, /catalogs_sql;dur=/);
+  assert.match(backend, /jsonb_agg/);
+  assert.match(backend, /company_id = \?::bigint/);
   assert.match(backend, /controller_total;dur=/);
   assert.match(backend, /Server-Timing/);
   assert.doesNotMatch(backend, /header\('Server-Timing'.*getQueryLog/);
+});
+
+test('tenant middleware reports total time separately from the journal controller', () => {
+  const middleware = readFileSync(new URL('../../backend/app/Http/Middleware/SetTenantContext.php', import.meta.url), 'utf8');
+  assert.match(middleware, /tenant_total;dur=/);
+  assert.match(middleware, /Server-Timing/);
+  assert.match(middleware, /userHasActiveMembership/);
+  assert.match(middleware, /tenantContext->run/);
 });
