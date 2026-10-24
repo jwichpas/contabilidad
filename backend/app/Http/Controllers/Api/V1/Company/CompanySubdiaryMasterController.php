@@ -10,6 +10,7 @@ use App\Support\Tenant\TenantContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
@@ -58,7 +59,11 @@ final readonly class CompanySubdiaryMasterController
             throw ValidationException::withMessages(['code' => ['Ya existe ese código en la empresa.']]);
         }
         try {
-            $record = CompanySubdiary::query()->create(['code' => $code, 'name' => $name]);
+            // SAVEPOINT protects the outer tenant transaction if a concurrent
+            // request inserts the same unique (company_id, code) first.
+            $record = DB::transaction(fn () =>
+                CompanySubdiary::query()->create(['code' => $code, 'name' => $name])
+            );
         } catch (QueryException $exception) {
             if ($exception->getCode() === '23505') {
                 throw ValidationException::withMessages(['code' => ['El código ya está registrado.']]);
