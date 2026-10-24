@@ -23,7 +23,7 @@ final readonly class ListCashFlowAreasController
 
         $areas = $query
             ->orderBy('code')
-            ->get();
+            ->get(['id', 'company_id', 'code', 'name', 'activity_category', 'flow_direction', 'is_active']);
 
         return response()->json([
             'data' => $areas,
