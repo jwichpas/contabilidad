@@ -999,20 +999,23 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[1080px]">
+        <p class="px-4 pb-2 text-[11px] text-muted lg:hidden">
+          Deslice horizontalmente para ver todas las columnas del asiento.
+        </p>
+        <div class="w-full overflow-x-auto overscroll-x-contain pb-3">
+          <table class="w-full min-w-[1800px] table-fixed text-left border-collapse">
             <thead>
               <tr class="bg-surface-muted border-b border-border text-[11px] font-bold text-muted uppercase">
                 <th class="py-2.5 px-3 w-10 text-center">#</th>
-                <th class="py-2.5 px-3 w-[340px]">Cuenta Contable Operativa</th>
-                <th class="py-2.5 px-3 w-44" title="Obligatorio solo si la cuenta contable lo exige; no genera transferencia automática">Centro de costo</th>
-                <th class="py-2.5 px-3 w-64">Anexo / Tercero</th>
-                <th class="py-2.5 px-3 w-64">Áreas</th>
-                <th class="py-2.5 px-3">Glosa Específica</th>
-                <th class="py-2.5 px-3 w-36 text-right">Debe ({{ baseCurrencyInfo.code }})</th>
-                <th class="py-2.5 px-3 w-36 text-right">Haber ({{ baseCurrencyInfo.code }})</th>
-                <th class="py-2.5 px-3 w-28 text-right text-muted font-mono">Debe ({{ activeForeignCurrency.code }})</th>
-                <th class="py-2.5 px-3 w-28 text-right text-muted font-mono">Haber ({{ activeForeignCurrency.code }})</th>
+                <th class="py-2.5 px-3 w-[300px]">Cuenta Contable Operativa</th>
+                <th class="py-2.5 px-3 w-[170px]" title="Solo si la cuenta lo exige">Centro de costo</th>
+                <th class="py-2.5 px-3 w-[230px]">Anexo / Tercero</th>
+                <th class="py-2.5 px-3 w-[265px]">Áreas</th>
+                <th class="py-2.5 px-3 w-[185px]">Glosa Específica</th>
+                <th class="py-2.5 px-3 w-[125px] text-right">Debe ({{ baseCurrencyInfo.code }})</th>
+                <th class="py-2.5 px-3 w-[125px] text-right">Haber ({{ baseCurrencyInfo.code }})</th>
+                <th class="py-2.5 px-3 w-[100px] text-right text-muted font-mono">Debe ({{ activeForeignCurrency.code }})</th>
+                <th class="py-2.5 px-3 w-[100px] text-right text-muted font-mono">Haber ({{ activeForeignCurrency.code }})</th>
                 <th class="py-2.5 px-2 w-12 text-center"></th>
               </tr>
             </thead>
@@ -1021,7 +1024,7 @@ onMounted(() => {
               <tr
                 v-for="(line, idx) in lines"
                 :key="line.id"
-                class="hover:bg-surface-muted/50 transition-colors"
+                class="align-top hover:bg-surface-muted/50 transition-colors"
               >
                 <!-- Número de Línea -->
                 <td class="py-2 px-3 text-center font-mono text-muted text-[11px]">
