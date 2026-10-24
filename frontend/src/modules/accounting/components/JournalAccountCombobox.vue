@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
-import type { OperationalAccount } from '../types/journalEntry.types';
+import type { JournalEditorAccount } from '../types/journalEntry.types';
 
 const props = withDefaults(defineProps<{
   modelValue: number | null;
-  accounts: readonly OperationalAccount[];
+  accounts: readonly JournalEditorAccount[];
   disabled?: boolean;
 }>(), { disabled: false });
 const emit = defineEmits<{ 'update:modelValue': [id: number | null] }>();
@@ -23,7 +23,7 @@ function fold(value: string): string {
 }
 const matches = computed(() => {
   const words = fold(query.value.trim()).split(/\s+/).filter(Boolean);
-  const found: OperationalAccount[] = [];
+  const found: JournalEditorAccount[] = [];
   for (const a of props.accounts) {
     if (words.length && !words.every(word => fold(`${a.code} ${a.name}`).includes(word))) continue;
     found.push(a);
@@ -59,7 +59,7 @@ async function show(): Promise<void> {
   await nextTick();
   reposition();
 }
-function choose(account: OperationalAccount): void {
+function choose(account: JournalEditorAccount): void {
   if (account.id !== props.modelValue) emit('update:modelValue', account.id);
   open.value = false;
   query.value = '';
