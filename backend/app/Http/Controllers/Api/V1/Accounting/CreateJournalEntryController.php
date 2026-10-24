@@ -108,9 +108,15 @@ final readonly class CreateJournalEntryController
         // Locks remain held by the outer tenant transaction until posting completes.
         foreach ($validated['lines'] as $index => $line) {
             $account = AccountingAccount::query()->where('id', (int) $line['accounting_account_id'])
-                ->sharedLock()->first(['entity_requirement_type', 'requires_auxiliary', 'requires_cash_flow_area', 'cash_flow_category']);
+                ->sharedLock()->first(['entity_requirement_type', 'requires_auxiliary', 'requires_cost_center', 'requires_company_area', 'requires_cash_flow_area', 'cash_flow_category']);
             if ($account === null) {
                 return response()->json(['message' => 'Cuenta ajena o inexistente en partida #'.($index + 1).'.'], 422);
+            }
+            if ((bool) $account->requires_cost_center && ! isset($line['cost_center_id'])) {
+                return response()->json(['message' => 'Partida #'.($index + 1).': la cuenta exige centro de costos.'], 422);
+            }
+            if (! (bool) $account->requires_cost_center && isset($line['cost_center_id'])) {
+                return response()->json(['message' => 'Partida #'.($index + 1).': la cuenta no habilita centro de costos.'], 422);
             }
             $type = $account->entity_requirement_type;
             try {
@@ -122,7 +128,8 @@ final readonly class CreateJournalEntryController
                 JournalAreaRequirement::validateSelection($companyId, (bool) $account->requires_cash_flow_area,
                     $category instanceof \BackedEnum ? $category->value : (string) $category,
                     isset($line['company_area_id']) ? (int) $line['company_area_id'] : null,
-                    isset($line['cash_flow_area_id']) ? (int) $line['cash_flow_area_id'] : null);
+                    isset($line['cash_flow_area_id']) ? (int) $line['cash_flow_area_id'] : null,
+                    (bool) $account->requires_company_area);
             } catch (DomainException $exception) {
                 return response()->json(['message' => 'Partida #'.($index + 1).': '.$exception->getMessage()], 422);
             }
