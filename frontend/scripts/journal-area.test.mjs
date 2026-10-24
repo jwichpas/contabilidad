@@ -54,7 +54,7 @@ test('journal view wires account reset, conditional dimensions and compact excha
   assert.match(view, /entityRequired\(operationalAccounts\.find/);
   assert.match(view, /requires_company_area/);
   assert.doesNotMatch(view, /\+ Centro opcional|\+ Anexo opcional/);
-  assert.match(view, /:key="`\$\{line\.id\}-\$\{line\.accountId/);
+  assert.match(view, /:key="line\\.id/);
   assert.match(view, /T\.C\. diario ·/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'buy_rate'/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'sell_rate'/);
@@ -116,8 +116,8 @@ test('floating account and entity pickers stay outside the scrollable journal gr
   assert.match(account, /zIndex: '9999'/);
   assert.match(entity, /<Teleport to="body">/);
   assert.match(entity, /role="dialog"/);
-  assert.match(view, /min-w-\[1800px\]/);
-  assert.match(view, /overscroll-x-contain/);
+  assert.match(view, /min-w-\\[1040px\\]/);
+  assert.match(view, /overflow-x-auto/);
 });
 
 test('subdiary master is a separate company-scoped route with controlled CRUD', () => {
