@@ -8,6 +8,8 @@ use App\Http\Requests\Api\V1\Accounting\UpdateAccountingAccountRequest;
 use App\Http\Resources\Api\V1\Accounting\AccountingAccountResource;
 use App\Models\AccountingAccount;
 use App\Services\Security\AuditLoggerService;
+use Illuminate\Support\Facades\Schema;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Single Action Controller para editar una cuenta contable existente del tenant activo.
@@ -20,6 +22,9 @@ final readonly class UpdateAccountingAccountController
 
     public function __invoke(UpdateAccountingAccountRequest $request, int $accountId): AccountingAccountResource
     {
+        if (! Schema::hasColumn('accounting_accounts', 'requires_company_area')) {
+            throw new HttpException(503, 'Falta aplicar la migración de requisitos organizativos por cuenta.');
+        }
         $account = AccountingAccount::query()->findOrFail($accountId);
         $oldValues = [
             'name' => $account->name,
