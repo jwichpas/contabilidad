@@ -33,6 +33,8 @@ beforeEach(function (): void {
                 'requires_cash_flow_area' => $i === 5,
                 'cash_flow_category' => $i === 5 ? 'OPERATING' : 'NONE']);
         }
+        \App\Models\CompanySubdiary::query()->create(['code' => 'GENERAL', 'name' => 'Diario general']);
+        \App\Models\CompanySubdiary::query()->create(['code' => 'BANCOS', 'name' => 'Bancos']);
         $this->account = $parent;
         $this->area = CompanyArea::query()->create(['code' => 'TEST-ADM', 'name' => 'Área ficticia',
             'manager_name' => 'PRIVATE-FIXTURE', 'is_active' => true]);
