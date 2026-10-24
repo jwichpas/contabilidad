@@ -41,6 +41,7 @@ use Illuminate\Support\Facades\Cache;
  * @property bool $requires_auxiliary
  * @property EntityRequirementType $entity_requirement_type
  * @property bool $requires_cost_center
+ * @property bool $requires_company_area
  * @property bool $has_automatic_destination
  * @property string|null $destination_debit_code
  * @property string|null $destination_credit_code
@@ -75,6 +76,7 @@ final class AccountingAccount extends Model
         'requires_auxiliary',
         'entity_requirement_type',
         'requires_cost_center',
+        'requires_company_area',
         'has_automatic_destination',
         'destination_debit_code',
         'destination_credit_code',
@@ -121,6 +123,7 @@ final class AccountingAccount extends Model
             'requires_auxiliary' => 'boolean',
             'entity_requirement_type' => EntityRequirementType::class,
             'requires_cost_center' => 'boolean',
+            'requires_company_area' => 'boolean',
             'has_automatic_destination' => 'boolean',
             'destination_debit_code' => 'string',
             'destination_credit_code' => 'string',
