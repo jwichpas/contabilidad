@@ -216,3 +216,18 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
         expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
     });
 });
+
+it('rejects new postings to an inactive subdiary but preserves reversal classification', function (): void {
+    $payload = $this->payload;
+    $payload['subdiary_code'] = 'BANCOS';
+    $posted = $this->postJson('/api/v1/accounting/journal-entries', $payload)->assertCreated();
+    $this->tenant->run($this->company->id, fn () =>
+        \App\Models\CompanySubdiary::query()->where('code', 'BANCOS')->update(['is_active' => false])
+    );
+    $this->postJson('/api/v1/accounting/journal-entries', $payload)->assertUnprocessable();
+    $this->postJson('/api/v1/accounting/journal-entries/'.$posted->json('data.id').'/reverse', [
+        'fiscal_period_id' => $posted->json('data.fiscal_period_id'),
+        'reversal_date' => '2026-10-24',
+        'reason' => 'Extorno de subdiario ya inactivo',
+    ])->assertCreated()->assertJsonPath('data.subdiary_code', 'BANCOS');
+});
