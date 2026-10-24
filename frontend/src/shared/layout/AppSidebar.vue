@@ -80,7 +80,7 @@ const activeCompanyIdString = computed<string>({
     <!-- Barra Lateral Corporativa (Fija en Desktop, Drawer en Móvil/Tablet) -->
     <aside
       :class="[
-        'bg-brand text-brandtx flex flex-col justify-between border-r border-white/15 transition-all duration-200 z-50 shrink-0 font-sans',
+        'bg-brand text-brandtx flex flex-col justify-between overflow-y-auto overscroll-contain border-r border-white/15 transition-all duration-200 z-50 shrink-0 font-sans',
         isOpenMobile
           ? 'fixed inset-y-0 left-0 w-72 shadow-2xl'
           : 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen',
