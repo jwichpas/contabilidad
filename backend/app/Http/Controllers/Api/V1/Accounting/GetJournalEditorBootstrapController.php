@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Api\V1\Accounting;
 use App\Http\Controllers\Api\V1\Company\GetCompanyExchangeRatesController;
 use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
-use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
+use App\Models\CostCenter;
 use App\Support\Accounting\JournalSubdiaryCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +21,6 @@ final readonly class GetJournalEditorBootstrapController
 {
     public function __construct(
         private ListOperationalAccountsController $accounts,
-        private ListCostCentersController $centers,
         private ListCompanyAreasController $areas,
         private ListCashFlowAreasController $flows,
         private GetNextJournalEntryNumberController $nextNumber,
@@ -32,7 +31,6 @@ final readonly class GetJournalEditorBootstrapController
     {
         $handlers = [
             'accounts' => $this->accounts,
-            'cost_centers' => $this->centers,
             'company_areas' => $this->areas,
             'cash_flow_areas' => $this->flows,
             'next_number' => $this->nextNumber,
@@ -50,6 +48,19 @@ final readonly class GetJournalEditorBootstrapController
             $data[$name] = $response->getData(true)['data'] ?? null;
         }
 
+        // The editor needs only code/label/status. Do not eager-load analytic
+        // destination account relations required by the separate master screen.
+        $started = hrtime(true);
+        $data['cost_centers'] = CostCenter::query()
+            ->whereRaw('cost_centers.is_active IS TRUE')
+            ->orderBy('code')
+            ->get(['id', 'company_id', 'code', 'name', 'is_active'])
+            ->toArray();
+        $timings[] = 'cost_centers;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
+        // Full 40-row FX history is not needed by the editor.
+        if (isset($data['exchange_rates']['recent_history'])) {
+            unset($data['exchange_rates']['recent_history']);
+        }
         $data['subdiaries'] = JournalSubdiaryCatalog::options();
         return response()->json(['data' => $data])
             ->header('Server-Timing', implode(', ', $timings));
