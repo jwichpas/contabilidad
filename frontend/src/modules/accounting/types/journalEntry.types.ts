@@ -13,6 +13,7 @@ export interface OperationalAccount {
   readonly balance_type: string;
   readonly currency_mode: string;
   readonly requires_cost_center: boolean;
+  readonly has_automatic_destination: boolean;
   readonly requires_company_area: boolean;
   readonly requires_auxiliary: boolean;
   readonly entity_requirement_type: string;
