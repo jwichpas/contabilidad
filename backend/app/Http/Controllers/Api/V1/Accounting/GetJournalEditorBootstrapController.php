@@ -30,23 +30,28 @@ final readonly class GetJournalEditorBootstrapController
 
     public function __invoke(Request $request): JsonResponse
     {
-        $responses = [
-            'accounts' => ($this->accounts)($request),
-            'cost_centers' => ($this->centers)($request),
-            'company_areas' => ($this->areas)($request),
-            'cash_flow_areas' => ($this->flows)($request),
-            'next_number' => ($this->nextNumber)($request),
-            'exchange_rates' => ($this->rates)($request),
+        $handlers = [
+            'accounts' => $this->accounts,
+            'cost_centers' => $this->centers,
+            'company_areas' => $this->areas,
+            'cash_flow_areas' => $this->flows,
+            'next_number' => $this->nextNumber,
+            'exchange_rates' => $this->rates,
         ];
         $data = [];
-        foreach ($responses as $name => $response) {
+        $timings = [];
+        foreach ($handlers as $name => $handler) {
+            $started = hrtime(true);
+            $response = $handler($request);
+            $timings[] = $name.';dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
             if ($response->getStatusCode() !== 200) {
-                return $response;
+                return $response->header('Server-Timing', implode(', ', $timings));
             }
             $data[$name] = $response->getData(true)['data'] ?? null;
         }
 
         $data['subdiaries'] = JournalSubdiaryCatalog::options();
-        return response()->json(['data' => $data]);
+        return response()->json(['data' => $data])
+            ->header('Server-Timing', implode(', ', $timings));
     }
 }
