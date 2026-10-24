@@ -151,7 +151,7 @@ test('journal bootstrap projects only accounts and flags needed by the voucher f
   const backend = readFileSync(backendFile, 'utf8');
   const dto = readFileSync(new URL('../src/modules/accounting/types/journalEntry.types.ts', import.meta.url), 'utf8');
   const picker = readFileSync(new URL('../src/modules/accounting/components/JournalEntityPicker.vue', import.meta.url), 'utf8');
-  assert.match(backend, /AccountingAccount::query\(\)/);
+  assert.match(backend, /FROM public\.accounting_accounts a/);
   assert.match(backend, /'requires_cash_flow_area'/);
   assert.match(backend, /'entity_requirement_type'/);
   assert.match(backend, /catalogs_sql;dur=/);
