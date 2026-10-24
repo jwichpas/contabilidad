@@ -23,6 +23,7 @@ import type {
 import type {
   CreateJournalEntryPayload,
   JournalEntryResponse,
+  CompanySubdiaryItem,
   NextCorrelativeResponse,
   OperationalAccount,
 } from '../types/journalEntry.types';
