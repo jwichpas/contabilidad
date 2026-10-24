@@ -146,9 +146,17 @@ final readonly class PostJournalEntryService
                 $account = DB::table('accounting_accounts')
                     ->where('company_id', (int) $period->company_id)
                     ->where('id', (int) $line['accounting_account_id'])
-                    ->first(['requires_cost_center','has_automatic_destination','account_type','code','is_operational','is_active']);
+                    ->sharedLock()->first(['requires_cost_center','requires_auxiliary','entity_requirement_type','has_automatic_destination','account_type','code','is_operational','is_active']);
                 if ($account === null) {
                     throw new DomainException(sprintf('Cuenta de partida #%d no pertenece a la empresa activa.', $index + 1));
+                }
+                $entityId = $line['entity_id'] ?? null;
+                try {
+                    JournalEntityRequirement::validateSelection((int) $period->company_id,
+                        (string) $account->entity_requirement_type, (bool) $account->requires_auxiliary,
+                        $entityId === null ? null : (int) $entityId);
+                } catch (DomainException $exception) {
+                    throw new DomainException(sprintf('Partida #%d: %s', $index + 1, $exception->getMessage()));
                 }
                 $manualAccountCodes[] = (string)$account->code;
                 if ((bool) $account->requires_cost_center && $centerId === null) {
@@ -171,6 +179,7 @@ final readonly class PostJournalEntryService
                     'line_number' => $index + 1,
                     'accounting_account_id' => $line['accounting_account_id'],
                     'cost_center_id' => $centerId,
+                    'entity_id' => $entityId,
                     'description' => $line['description'] ?? null,
                     'debit_local' => Decimal::ofMonetary($line['debit_local'])->toString(),
                     'credit_local' => Decimal::ofMonetary($line['credit_local'])->toString(),
@@ -326,6 +335,8 @@ final readonly class PostJournalEntryService
                     'line_number' => $index + 1,
                     'accounting_account_id' => $line->accounting_account_id,
                     'cost_center_id' => $line->cost_center_id,
+                    // Copy the original reference, even if the entity is now inactive.
+                    'entity_id' => $line->entity_id,
                     'description' => sprintf('Extorno línea #%d', $line->line_number),
                     // Inversión exacta Debe <-> Haber en ambas monedas
                     'debit_local' => (string) $line->credit_local,

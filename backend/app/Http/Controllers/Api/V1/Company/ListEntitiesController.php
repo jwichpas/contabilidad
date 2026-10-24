@@ -37,6 +37,10 @@ final readonly class ListEntitiesController
             $query->whereRaw('entities.is_financial_institution IS TRUE');
         }
 
+        if ($request->boolean('is_shareholder')) {
+            $query->whereRaw('entities.is_shareholder IS TRUE');
+        }
+
         if ($request->boolean('is_tax_authority')) {
             $query->whereRaw('entities.is_tax_authority IS TRUE');
         }

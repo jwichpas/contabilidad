@@ -14,6 +14,7 @@ export interface OperationalAccount {
   readonly currency_mode: string;
   readonly requires_cost_center: boolean;
   readonly requires_auxiliary: boolean;
+  readonly entity_requirement_type: string;
   readonly requires_cash_flow_area: boolean;
 }
 
@@ -23,6 +24,8 @@ export interface JournalEntryLineResponse {
   readonly line_number: number;
   readonly accounting_account_id: number;
   readonly cost_center_id?: number | null;
+  readonly entity_id?: number | null;
+  readonly entity?: { readonly id: number; readonly tax_id: string; readonly legal_name: string } | null;
   readonly cost_center?: {
     readonly id: number;
     readonly code: string;
@@ -68,6 +71,7 @@ export interface JournalEntryResponse {
 export interface CreateJournalEntryLinePayload {
   readonly accounting_account_id: number;
   readonly cost_center_id?: number | null;
+  readonly entity_id?: number | null;
   readonly description?: string | null;
   readonly debit_local: string;
   readonly credit_local: string;

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Accounting;
 
 use App\Models\CompanyCurrency;
+use App\Models\AccountingAccount;
+use App\Services\Accounting\JournalEntityRequirement;
 use App\Models\ExchangeRate;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
@@ -53,12 +55,17 @@ final readonly class CreateJournalEntryController
             'lines' => ['required', 'array', 'min:2'],
             'lines.*.accounting_account_id' => ['required', 'integer', 'min:1'],
             'lines.*.cost_center_id' => ['nullable', 'integer', 'min:1'],
+            'lines.*.entity_id' => ['nullable', 'integer', 'min:1'],
             'lines.*.description' => ['nullable', 'string', 'max:250'],
             'lines.*.debit_local' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
             'lines.*.credit_local' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
             'lines.*.debit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
             'lines.*.credit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
         ]);
+
+        if (! Schema::hasColumn('journal_entry_lines', 'entity_id')) {
+            return response()->json(['message' => 'Falta aplicar la migración de anexos en partidas contables.'], 503);
+        }
 
         $companyId = $this->tenantContext->requireCompanyId(JournalEntry::class);
         $user = $request->user();
@@ -86,6 +93,31 @@ final readonly class CreateJournalEntryController
                 'message'=>'Solicitud idempotente: asiento existente recuperado sin crear movimientos.',
                 'data'=>$receipt['replayed'],
             ], 200)->header('Idempotency-Replayed', 'true');
+        }
+
+        // Preserve the routing lock order used by matrix promotion and cost-center edits:
+        // routing lock BEFORE account/entity row locks, held by the tenant transaction.
+        DB::selectOne('SELECT pg_advisory_xact_lock_shared(hashtextextended(?, 0))', [
+            'nexus:analytic-routing:'.$companyId,
+        ]);
+
+        // Reject entity errors BEFORE opening periods or persisting FX rates.
+        // Locks remain held by the outer tenant transaction until posting completes.
+        foreach ($validated['lines'] as $index => $line) {
+            $account = AccountingAccount::query()->where('id', (int) $line['accounting_account_id'])
+                ->sharedLock()->first(['entity_requirement_type', 'requires_auxiliary']);
+            if ($account === null) {
+                return response()->json(['message' => 'Cuenta ajena o inexistente en partida #'.($index + 1).'.'], 422);
+            }
+            $type = $account->entity_requirement_type;
+            try {
+                JournalEntityRequirement::validateSelection($companyId,
+                    $type instanceof \BackedEnum ? $type->value : (string) $type,
+                    (bool) $account->requires_auxiliary,
+                    isset($line['entity_id']) ? (int) $line['entity_id'] : null);
+            } catch (DomainException $exception) {
+                return response()->json(['message' => 'Partida #'.($index + 1).': '.$exception->getMessage()], 422);
+            }
         }
 
         $entryDate = CarbonImmutable::parse($validated['entry_date']);
@@ -233,6 +265,7 @@ final readonly class CreateJournalEntryController
             return [
                 'accounting_account_id' => (int) $line['accounting_account_id'],
                 'cost_center_id' => isset($line['cost_center_id']) ? (int) $line['cost_center_id'] : null,
+                'entity_id' => isset($line['entity_id']) ? (int) $line['entity_id'] : null,
                 'description' => $line['description'] ?? $validated['description'],
                 'debit_local' => Decimal::ofMonetary((string) $line['debit_local'])->toString(),
                 'credit_local' => Decimal::ofMonetary((string) $line['credit_local'])->toString(),
@@ -289,7 +322,7 @@ final readonly class CreateJournalEntryController
             );
         }
 
-        $journalEntry->load(['lines.account', 'lines.costCenter', 'fiscalPeriod']);
+        $journalEntry->load(['lines.account', 'lines.costCenter', 'lines.entity', 'fiscalPeriod']);
 
         return response()->json([
             'message' => 'Asiento contable registrado exitosamente con Partida Doble balanceada.',

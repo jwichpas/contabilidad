@@ -10,6 +10,7 @@ use App\Services\Security\AuditLoggerService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Extorno contable: NO modifica las partidas del asiento original.
@@ -31,6 +32,10 @@ final readonly class ReverseJournalEntryController
             'entry_number' => ['nullable','string','max:30'],
             'reason' => ['required','string','min:3','max:250'],
         ]);
+
+        if (! Schema::hasColumn('journal_entry_lines', 'entity_id')) {
+            return response()->json(['message' => 'Falta aplicar la migración de anexos en partidas contables.'], 503);
+        }
 
         try {
             $reversal = $this->service->reverse(
@@ -61,7 +66,7 @@ final readonly class ReverseJournalEntryController
             severity:'INFO',
         );
 
-        $reversal->load(['lines.account','lines.costCenter','fiscalPeriod']);
+        $reversal->load(['lines.account','lines.costCenter','lines.entity','fiscalPeriod']);
         return response()->json([
             'message'=>'Extorno contable registrado. El asiento original permanece inmutable.',
             'data'=>$reversal,

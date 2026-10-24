@@ -493,7 +493,7 @@ export class AccountingApiClient {
   /** Master entities: always scoped by Bearer and active company, never by a client-supplied tenant. */
   public async fetchEntities(params: {
     readonly search?: string;
-    readonly role?: 'all' | 'is_client' | 'is_supplier' | 'is_employee';
+    readonly role?: 'all' | 'is_client' | 'is_supplier' | 'is_employee' | 'is_shareholder' | 'is_financial_institution' | 'is_tax_authority';
     readonly page?: number;
   } = {}): Promise<EntityMasterPage> {
     const query = new URLSearchParams();
@@ -605,4 +605,3 @@ export class AccountingApiClient {
     );
   }
 }
-

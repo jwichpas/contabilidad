@@ -1,3 +1,5 @@
+> **F3.3 · Anexos en partidas (24/10/2026):** implementados selector por partida, validación por tipo de cuenta/empresa/estado, referencia histórica y copia en extorno. Frontend **30/30 pruebas y build PASS**; migración aditiva y pruebas Laravel pendientes de ejecución manual. [Instalación, alcance y aceptación](docs/F3-3-ANEXOS-EN-PARTIDAS.md). Avance oficial sin cambios: **8/32 (25%)**.
+
 # Plan maestro, hoja de ruta e hitos — Sistema Contable
 
 > **Documento rector vigente · Actualizado 23/10/2026 · Versión 2.2**  

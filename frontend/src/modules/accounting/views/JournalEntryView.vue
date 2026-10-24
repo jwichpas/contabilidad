@@ -1,10 +1,3 @@
-<script lang="ts">
-import type { OperationalAccount } from '../types/journalEntry.types';
-
-// Caché en memoria a nivel módulo: evita descargar 1,200 cuentas (329 kB) en cada navegación
-const operationalAccountsCache = new Map<number, readonly OperationalAccount[]>();
-</script>
-
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from 'vue';
 import {
@@ -26,6 +19,10 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-vue-next';
+import type { OperationalAccount } from '../types/journalEntry.types';
+import type { EntityMaster } from '../../company/types/entityMaster.types';
+import JournalEntityPicker from '../components/JournalEntityPicker.vue';
+import { entityMatches } from '../utils/journalEntity';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import { SystemDecimal } from '../../../shared/types/numeric.types';
 import type { CompanyId } from '../types/accountingAccount.types';
@@ -205,6 +202,7 @@ interface EditingLine {
   id: number;
   accountId: number | null;
   costCenterId: number | null;
+  entity: EntityMaster | null;
   description: string;
   debitLocal: string;
   creditLocal: string;
@@ -218,6 +216,7 @@ const lines = ref<EditingLine[]>([
     id: nextLineKey++,
     accountId: null,
     costCenterId: null,
+    entity: null,
     description: '',
     debitLocal: '',
     creditLocal: '',
@@ -228,6 +227,7 @@ const lines = ref<EditingLine[]>([
     id: nextLineKey++,
     accountId: null,
     costCenterId: null,
+    entity: null,
     description: '',
     debitLocal: '',
     creditLocal: '',
@@ -312,6 +312,7 @@ function addLine(): void {
     id: nextLineKey++,
     accountId: null,
     costCenterId: null,
+    entity: null,
     description: headerDescription.value,
     debitLocal: '',
     creditLocal: '',
@@ -381,6 +382,7 @@ function clearForm(): void {
       id: nextLineKey++,
       accountId: null,
       costCenterId: null,
+      entity: null,
       description: '',
       debitLocal: '',
       creditLocal: '',
@@ -391,6 +393,7 @@ function clearForm(): void {
       id: nextLineKey++,
       accountId: null,
       costCenterId: null,
+      entity: null,
       description: '',
       debitLocal: '',
       creditLocal: '',
@@ -416,13 +419,8 @@ async function loadCatalogsAndHistory(): Promise<void> {
   isLoading.value = true;
   errorMessage.value = null;
   try {
-    const cachedAccounts = operationalAccountsCache.get(props.activeCompanyId);
-    if (cachedAccounts && cachedAccounts.length > 0) {
-      operationalAccounts.value = cachedAccounts;
-    }
-
     const [accounts, entries, nextNum, ratesRes, centers] = await Promise.all([
-      cachedAccounts ? Promise.resolve(cachedAccounts) : apiClient.value.fetchOperationalAccounts(),
+      apiClient.value.fetchOperationalAccounts(),
       apiClient.value.fetchJournalEntries({ limit: 50 }),
       apiClient.value.fetchNextJournalEntryNumber(entryDate.value),
       apiClient.value.fetchCompanyExchangeRates(entryDate.value).catch(() => null),
@@ -430,7 +428,6 @@ async function loadCatalogsAndHistory(): Promise<void> {
     ]);
 
     operationalAccounts.value = accounts;
-    operationalAccountsCache.set(props.activeCompanyId, accounts);
     costCenters.value = centers;
     journalEntries.value = entries;
     entryNumber.value = nextNum.next_number;
@@ -493,6 +490,10 @@ async function handleSubmit(): Promise<void> {
       errorMessage.value = `La cuenta ${chosenAccount.code} requiere centro de costos en la línea #${i + 1}.`;
       return;
     }
+    if (!chosenAccount || !entityMatches(chosenAccount, l.entity)) {
+      errorMessage.value = `Seleccione un anexo activo del tipo exigido por la cuenta en la línea #${i + 1}.`;
+      return;
+    }
     const d = parseAmount(l.debitLocal);
     const c = parseAmount(l.creditLocal);
     if (d.isZero() && c.isZero()) {
@@ -520,6 +521,7 @@ async function handleSubmit(): Promise<void> {
       lines: lines.value.map((l) => ({
         accounting_account_id: l.accountId!,
         cost_center_id: l.costCenterId,
+        entity_id: l.entity?.id ?? null,
         description: l.description.trim() || headerDescription.value.trim(),
         debit_local: l.debitLocal.trim() || '0',
         credit_local: l.creditLocal.trim() || '0',
@@ -972,6 +974,7 @@ onMounted(() => {
                 <th class="py-2.5 px-3 w-10 text-center">#</th>
                 <th class="py-2.5 px-3 w-[340px]">Cuenta Contable Operativa</th>
                 <th class="py-2.5 px-3 w-44" title="Obligatorio solo si la cuenta contable lo exige; no genera transferencia automática">Centro de costo</th>
+                <th class="py-2.5 px-3 w-64">Anexo / Tercero</th>
                 <th class="py-2.5 px-3">Glosa Específica</th>
                 <th class="py-2.5 px-3 w-36 text-right">Debe ({{ baseCurrencyInfo.code }})</th>
                 <th class="py-2.5 px-3 w-36 text-right">Haber ({{ baseCurrencyInfo.code }})</th>
@@ -1021,6 +1024,12 @@ onMounted(() => {
                       {{ cc.code }} · {{ cc.name }}
                     </option>
                   </select>
+                </td>
+
+                <td class="py-2 px-3">
+                  <JournalEntityPicker v-model="line.entity" :api="apiClient"
+                    :account="operationalAccounts.find((account) => account.id === line.accountId)"
+                    :disabled="isSubmitting" />
                 </td>
 
                 <!-- Glosa de Línea -->
@@ -1087,7 +1096,7 @@ onMounted(() => {
             <!-- Fila de Totales y Diferencias -->
             <tfoot>
               <tr class="bg-soft border-t-2 border-line text-xs">
-                <td colspan="4" class="py-2.5 px-4 font-semibold text-foreground text-right uppercase tracking-wider">
+                <td colspan="5" class="py-2.5 px-4 font-semibold text-foreground text-right uppercase tracking-wider">
                   Totales Asiento:
                 </td>
                 <td class="py-2.5 px-3 text-right font-semibold num text-foreground">
@@ -1107,7 +1116,7 @@ onMounted(() => {
 
               <!-- Fila de Diferencia (Cuadre) -->
               <tr class="bg-surf text-xs">
-                <td colspan="4" class="py-2 px-4 text-right font-semibold text-muted">
+                <td colspan="5" class="py-2 px-4 text-right font-semibold text-muted">
                   Diferencia Partida Doble:
                 </td>
                 <td
@@ -1304,6 +1313,7 @@ onMounted(() => {
                             <th class="py-1.5 px-3 w-10 text-center">#</th>
                             <th class="py-1.5 px-3 w-40">Cuenta</th>
                             <th class="py-1.5 px-3 w-40">Centro de costo</th>
+                            <th class="py-1.5 px-3">Anexo</th>
                             <th class="py-1.5 px-3">Glosa de Línea</th>
                             <th class="py-1.5 px-3 w-32 text-right">Debe (PEN)</th>
                             <th class="py-1.5 px-3 w-32 text-right">Haber (PEN)</th>
@@ -1318,6 +1328,7 @@ onMounted(() => {
                               {{ l.account ? `${l.account.code} · ${l.account.name}` : `ID ${l.accounting_account_id}` }}
                             </td>
                             <td class="py-1.5 px-3 text-muted text-[11px]">{{ l.cost_center?.code || costCenters.find((cc) => cc.id === l.cost_center_id)?.code || '—' }}</td>
+                            <td class="py-1.5 px-3 text-xs">{{ l.entity ? `${l.entity.tax_id} · ${l.entity.legal_name}` : l.entity_id ? `Anexo ${l.entity_id}` : '—' }}</td>
                             <td class="py-1.5 px-3 text-muted text-xs">{{ l.description || entry.description }}</td>
                             <td class="py-1.5 px-3 text-right font-medium num">
                               {{ formatPostedAmount(l.debit_local) }}

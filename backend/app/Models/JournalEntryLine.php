@@ -40,6 +40,7 @@ final class JournalEntryLine extends Model
         'line_number',
         'accounting_account_id',
         'cost_center_id',
+        'entity_id',
         'description',
         'debit_local',
         'credit_local',
@@ -60,6 +61,7 @@ final class JournalEntryLine extends Model
             'line_number' => 'integer',
             'accounting_account_id' => 'integer',
             'cost_center_id' => 'integer',
+            'entity_id' => 'integer',
             'description' => 'string',
             'debit_local' => 'decimal:4',
             'credit_local' => 'decimal:4',
@@ -85,6 +87,13 @@ final class JournalEntryLine extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(AccountingAccount::class, 'accounting_account_id');
+    }
+
+    /** Public projection prevents banking/contact details leaking through journal JSON. */
+    public function entity(): BelongsTo
+    {
+        return $this->belongsTo(Entity::class, 'entity_id')
+            ->select(['id', 'company_id', 'identity_document_type_code', 'tax_id', 'legal_name']);
     }
 
     /** @return BelongsTo<CostCenter, $this> */

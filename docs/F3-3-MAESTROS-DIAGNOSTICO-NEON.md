@@ -1,3 +1,5 @@
+> **F3.3 · Anexos en partidas (24/10/2026):** implementados selector por partida, validación por tipo de cuenta/empresa/estado, referencia histórica y copia en extorno. Frontend **30/30 pruebas y build PASS**; migración aditiva y pruebas Laravel pendientes de ejecución manual. [Instalación, alcance y aceptación](F3-3-ANEXOS-EN-PARTIDAS.md). Avance oficial sin cambios: **8/32 (25%)**.
+
 # F3.3 · Maestros, dimensiones y escenarios multiempresa — diagnóstico inicial
 
 > **Incremento centros de costo · 23/10/2026:** API auditada y pantalla `#centros-costo` implementadas; 27/27 pruebas frontend y build aprobados. Feature PostgreSQL aprobada (10/10, 105 aserciones); aceptación funcional Vue completa pendiente. [Contrato, límites y validación](F3-3-CENTROS-COSTO.md). Sin nuevas migraciones; F3.3 sigue abierta.
