@@ -87,3 +87,31 @@ pnpm build
 ## Validación posterior del editor compacto — 24/10/2026
 
 Resultados del usuario tras cambiar el formulario a dos filas y reducir el DTO: `pnpm build` **PASS**, Vite 6.4.4, 1.635 módulos, **2,59 s**. Laravel `JournalAreaDimensionTest` **10/10 PASS, 80 aserciones, 241,97 s** (incluye 5 comprobaciones nuevas del DTO compacto). Frontend `pnpm test:unit` **42/43 PASS**; el único fallo fue `ENOENT` en una ruta incorrecta dentro de `frontend/scripts/journal-area.test.mjs` (se usaba `../../../backend`, que resolvía fuera del repositorio a `C:\Proyectos\backend`). **Corregida en `main` a `../../backend`** y añadida comprobación `existsSync` para informar claramente si falta el archivo. **Pendiente repetir `pnpm test:unit` para certificar 43/43**. No hay nueva medición HTTP ni aceptación visual posterior; F3.3 permanece [ ], 8/32.
+
+## Medición de latencia y carga diferida — 24/10/2026
+
+**Evidencia de Chrome:** GET `editor-bootstrap?date=2026-10-24`: HTTP 200, **6,24 s y 353 kB**, frente a 5,98 s y 505 kB. El volumen transferido bajó **152 kB (30,1 %)**, pero el tiempo subió **0,26 s (+4,3 %)**. La reducción de peso todavía **no es una optimización de latencia**.
+
+Otras solicitudes visibles en el Plan de Cuentas incluyen árbol (~3.096 kB), monedas, rubros, centros, áreas, tabla 03 y configuración, hasta 22,74 s de duración. Los tiempos del navegador no identifican por sí solos consultas SQL lentas: puede existir cola con el servidor PHP de desarrollo de Windows y latencia de conexión.
+
+**Cambios publicados en main sin migraciones ni escrituras:**
+
+- `AccountingCatalogView.vue` difiere la carga de seis catálogos auxiliares hasta que se abra el formulario de nueva cuenta o edición, en lugar de solicitarlos al entrar en el módulo o cambiar de empresa. El árbol contable permanece como única carga inicial. Al cambiar de empresa se invalida el estado de catálogos cargados.
+- `GetJournalEditorBootstrapController.php` agrega métricas `schema_accounts`, `schema_subdiaries`, `subdiaries`, `controller_total` a `Server-Timing`, conservando cuentas, áreas, número, TC y centros. Solo expone duraciones agregadas, sin SQL ni credenciales.
+- Dos casos nuevos en `journal-area.test.mjs`: **45 pruebas frontend esperadas**, sin ejecución posterior confirmada. Una Feature añade verificación del encabezado sin cambiar sus **10 casos**.
+
+**Validación manual:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git pull --ff-only origin main
+cd frontend
+pnpm test:unit
+pnpm build
+cd ..\backend
+php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="loads journal editor catalogs"
+```
+
+Después de recargar, comparar los módulos `#plan-cuentas` y `#diario`. En Chrome F12 → Network → seleccionar `editor-bootstrap` → Headers → **Response Headers**: copiar la cadena completa `server-timing`. También consultar en Timing **Waiting (TTFB)** y **Content Download**. Comprobar que monedas/rubros/áreas/cost centers/configuración se descarguen al abrir el modal de cuentas y no al entrar al plan.
+
+**Precaución:** no hay medición posterior a este cambio ni evidencia de 45/45 PASS. No ejecutar migraciones ni POST contables. F3.3 continúa **[ ] y 8/32 (25 %)**.
