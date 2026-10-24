@@ -19,7 +19,7 @@ test('specific activity requires its matching area and unknown categories fail c
   }
   assert.equal(cashFlowMatches({ requires_cash_flow_area: false, cash_flow_category: 'UNKNOWN' }, null), false);
 });
-test('cash equivalent accounts can classify each activity and optional NONE still validates areas', () => {
+test('disabled flow dimensions reject even known categories', () => {
   for (const category of ['NONE', 'CASH_EQUIVALENT']) {
     for (const activity of ['OPERATING', 'INVESTING', 'FINANCING', 'CASH_EQUIVALENT']) {
       assert.equal(cashFlowMatches({ requires_cash_flow_area: false, cash_flow_category: category },
@@ -52,6 +52,8 @@ test('journal view wires account reset, conditional dimensions and compact excha
   assert.match(view, /:disabled="isSubmitting"/);
   assert.match(view, /requires_cost_center/);
   assert.match(view, /entityRequired\(operationalAccounts\.find/);
+  assert.match(view, /requires_company_area/);
+  assert.doesNotMatch(view, /\+ Centro opcional|\+ Anexo opcional/);
   assert.match(view, /:key="`\$\{line\.id\}-\$\{line\.accountId/);
   assert.match(view, /T\.C\. diario ·/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'buy_rate'/);
