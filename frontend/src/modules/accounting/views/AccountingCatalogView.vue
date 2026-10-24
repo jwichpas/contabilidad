@@ -216,6 +216,8 @@ const handleModalSubmit = async (payload: CreateAccountingAccountPayload): Promi
   } else if (modalEditingRow.value !== null) {
     await updateAccount(modalEditingRow.value.node.id, {
       name: payload.name,
+      account_type: payload.account_type,
+      balance_type: payload.balance_type,
       currency_mode: payload.currency_mode,
       requires_currency: payload.requires_currency,
       requires_auxiliary: payload.requires_auxiliary,
@@ -229,6 +231,7 @@ const handleModalSubmit = async (payload: CreateAccountingAccountPayload): Promi
       cash_flow_category: payload.cash_flow_category,
       financial_statement_rubric: payload.financial_statement_rubric,
       is_operational: payload.is_operational,
+      is_active: modalEditingRow.value.node.is_active,
     });
   }
   isModalOpen.value = false;
