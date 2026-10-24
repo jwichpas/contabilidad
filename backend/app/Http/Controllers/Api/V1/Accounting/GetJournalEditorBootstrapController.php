@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\V1\Company\GetCompanyExchangeRatesController;
 use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Models\CostCenter;
-use App\Support\Accounting\JournalSubdiaryCatalog;
+use App\Models\CompanySubdiary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -61,7 +61,11 @@ final readonly class GetJournalEditorBootstrapController
         if (isset($data['exchange_rates']['recent_history'])) {
             unset($data['exchange_rates']['recent_history']);
         }
-        $data['subdiaries'] = JournalSubdiaryCatalog::options();
+        if (! \Illuminate\Support\Facades\Schema::hasTable('company_subdiaries')) {
+            return response()->json(['message' => 'Falta la migración del maestro de subdiarios.'], 503);
+        }
+        $data['subdiaries'] = CompanySubdiary::query()->where('is_active', true)
+            ->orderBy('code')->get(['id', 'code', 'name', 'is_active'])->toArray();
         return response()->json(['data' => $data])
             ->header('Server-Timing', implode(', ', $timings));
     }
