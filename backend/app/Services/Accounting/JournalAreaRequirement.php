@@ -32,7 +32,7 @@ final class JournalAreaRequirement
             throw new DomainException('El área de flujo tiene una categoría no reconocida.');
         }
         // A cash/equivalent account can carry operating, investing or financing flows.
-        // NONE leaves classification optional; a specific activity must match.
+        // A disabled dimension must stay NULL; a specific enabled activity must match.
         if (in_array($category, ['OPERATING', 'INVESTING', 'FINANCING'], true) && $activity !== $category) {
             throw new DomainException('El área de flujo no corresponde a la categoría configurada en la cuenta.');
         }
