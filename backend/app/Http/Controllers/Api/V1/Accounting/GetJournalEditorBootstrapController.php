@@ -30,17 +30,22 @@ final readonly class GetJournalEditorBootstrapController
 
     public function __invoke(Request $request): JsonResponse
     {
+        $controllerStarted = hrtime(true);
         $handlers = [
             'company_areas' => $this->areas,
             'cash_flow_areas' => $this->flows,
             'next_number' => $this->nextNumber,
             'exchange_rates' => $this->rates,
         ];
-        if (! Schema::hasColumn('accounting_accounts', 'requires_company_area')) {
-            return response()->json(['message' => 'Falta aplicar migración de requisitos por cuenta.'], 503);
-        }
         $data = [];
         $timings = [];
+        $started = hrtime(true);
+        $accountRulesAvailable = Schema::hasColumn('accounting_accounts', 'requires_company_area');
+        $timings[] = 'schema_accounts;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
+        if (! $accountRulesAvailable) {
+            return response()->json(['message' => 'Falta aplicar migración de requisitos por cuenta.'], 503)
+                ->header('Server-Timing', implode(', ', $timings));
+        }
 
         // Slim editor DTO: ids, labels and validation flags only. Avoid UUIDs,
         // account taxonomy and currencies that are irrelevant to the journal form.
@@ -80,11 +85,18 @@ final readonly class GetJournalEditorBootstrapController
         if (isset($data['exchange_rates']['recent_history'])) {
             unset($data['exchange_rates']['recent_history']);
         }
-        if (! \Illuminate\Support\Facades\Schema::hasTable('company_subdiaries')) {
-            return response()->json(['message' => 'Falta la migración del maestro de subdiarios.'], 503);
+        $started = hrtime(true);
+        $subdiarySchemaAvailable = Schema::hasTable('company_subdiaries');
+        $timings[] = 'schema_subdiaries;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
+        if (! $subdiarySchemaAvailable) {
+            return response()->json(['message' => 'Falta la migración del maestro de subdiarios.'], 503)
+                ->header('Server-Timing', implode(', ', $timings));
         }
+        $started = hrtime(true);
         $data['subdiaries'] = CompanySubdiary::query()->where('is_active', true)
             ->orderBy('code')->get(['id', 'code', 'name', 'is_active'])->toArray();
+        $timings[] = 'subdiaries;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
+        $timings[] = 'controller_total;dur='.number_format((hrtime(true) - $controllerStarted) / 1000000, 1, '.', '');
         return response()->json(['data' => $data])
             ->header('Server-Timing', implode(', ', $timings));
     }
