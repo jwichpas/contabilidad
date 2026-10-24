@@ -126,6 +126,10 @@ El mismo wrapper Windows `phase2-active-rls-docker.ps1` instala ahora **20 migra
 
 **2026-10-22 · PASS usuario:** `phase2-active-rls-docker.ps1` en Windows, PG18 20 migraciones, idempotencia RLS HTTP 201→200/409, 1 recibo sin duplicar auditoría/asiento, denegación de UPDATE, invisibilidad tenant B, concurrencia por segunda conexión, matriz ACTIVE reversible y eliminación del contenedor. Frontend: 16/16 pruebas unitarias, `pnpm typecheck` y `pnpm build` exitosos. **No se ha ejecutado la migración Neon**; [instalador de una sola migración vía Laravel](../backend/scripts/phase2-neon-journal-idempotency.php) y [prueba HTTP reversible](../backend/scripts/phase2-neon-analytic-http.php) preparados. [Runbook detallado](F2-2-IDEMPOTENCIA-POST.md).
 
+## Evidencia manual F3.3 — Áreas en partidas (24/10/2026)
+
+Salida de PowerShell compartida por el usuario: `php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_100000_add_journal_line_areas.php --force` → `Nothing to migrate`; `JournalAreaRequirementTest.php` **2/2 PASS (5 aserciones; 0,28 s)** y `JournalAreaDimensionTest.php --debug` **5/5 PASS (44 aserciones; 120,87 s; Exit Code 0)** con PHP 8.5.12 y PHPUnit 12.5.33. En particular, pasaron el filtrado del catálogo, persistencia y replay, validación tenant/estado/categoría sin período o FX residuales, extornos históricos y dimensiones opcionales. Las pruebas Feature usan transacciones reversibles; no se afirma COMMIT de asientos nuevos. No se adjuntó resultado del diagnóstico de conexión ni `verify-plan-master-checklist.php`. **La aceptación visual, las pruebas de FK directa y la concurrencia permanecen pendientes; F3.3 [ ], 8/32 (25%).** El ajuste Vue posterior de confirmación de registro está pendiente de compilación y prueba visual. [Detalle](F3-3-AREAS-EN-PARTIDAS.md).
+
 ## Registro de evidencias verificadas
 
 | Fecha | Referencia | Evidencia recibida/verificada | Estado |
