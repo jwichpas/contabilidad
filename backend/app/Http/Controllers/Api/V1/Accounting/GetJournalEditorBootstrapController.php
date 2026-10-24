@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Models\CostCenter;
 use App\Models\CompanySubdiary;
+use App\Models\AccountingAccount;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,7 +22,6 @@ use Illuminate\Http\Request;
 final readonly class GetJournalEditorBootstrapController
 {
     public function __construct(
-        private ListOperationalAccountsController $accounts,
         private ListCompanyAreasController $areas,
         private ListCashFlowAreasController $flows,
         private GetNextJournalEntryNumberController $nextNumber,
@@ -30,14 +31,32 @@ final readonly class GetJournalEditorBootstrapController
     public function __invoke(Request $request): JsonResponse
     {
         $handlers = [
-            'accounts' => $this->accounts,
             'company_areas' => $this->areas,
             'cash_flow_areas' => $this->flows,
             'next_number' => $this->nextNumber,
             'exchange_rates' => $this->rates,
         ];
+        if (! Schema::hasColumn('accounting_accounts', 'requires_company_area')) {
+            return response()->json(['message' => 'Falta aplicar migración de requisitos por cuenta.'], 503);
+        }
         $data = [];
         $timings = [];
+
+        // Slim editor DTO: ids, labels and validation flags only. Avoid UUIDs,
+        // account taxonomy and currencies that are irrelevant to the journal form.
+        $started = hrtime(true);
+        $data['accounts'] = AccountingAccount::query()
+            ->whereRaw('accounting_accounts.is_operational IS TRUE')
+            ->whereRaw('accounting_accounts.is_active IS TRUE')
+            ->orderBy('code')
+            ->get([
+                'id', 'code', 'name', 'requires_cost_center', 'has_automatic_destination',
+                'requires_company_area', 'requires_auxiliary', 'entity_requirement_type',
+                'requires_cash_flow_area', 'cash_flow_category',
+            ])
+            ->toArray();
+        $timings[] = 'accounts;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
+
         foreach ($handlers as $name => $handler) {
             $started = hrtime(true);
             $response = $handler($request);
