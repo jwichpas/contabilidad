@@ -5,25 +5,24 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Accounting;
 
 use App\Http\Controllers\Api\V1\Company\GetCompanyExchangeRatesController;
-use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
-use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
-use App\Models\CostCenter;
-use App\Models\CompanySubdiary;
 use App\Models\AccountingAccount;
-use Illuminate\Support\Facades\Schema;
+use App\Support\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
- * One HTTP/auth/RLS context to prime the manual journal editor instead of six
- * serialized requests on the Windows built-in PHP development server.
- * Read only: no periods, rates, accounts or journal movements are created.
+ * Read-only journal setup in one authorized tenant/RLS context.
+ *
+ * Five accounting dimensions arrive in ONE PostgreSQL roundtrip. Never cache
+ * company account requirements: a configuration change must affect the next
+ * journal draft immediately. Fiscal number and exchange rates retain their
+ * existing controller contracts.
  */
 final readonly class GetJournalEditorBootstrapController
 {
     public function __construct(
-        private ListCompanyAreasController $areas,
-        private ListCashFlowAreasController $flows,
+        private TenantContext $tenant,
         private GetNextJournalEntryNumberController $nextNumber,
         private GetCompanyExchangeRatesController $rates,
     ) {}
@@ -31,38 +30,82 @@ final readonly class GetJournalEditorBootstrapController
     public function __invoke(Request $request): JsonResponse
     {
         $controllerStarted = hrtime(true);
-        $handlers = [
-            'company_areas' => $this->areas,
-            'cash_flow_areas' => $this->flows,
+        $timings = [];
+        $companyId = $this->tenant->requireCompanyId(AccountingAccount::class);
+
+        // Explicit company predicates are an additional defence on top of
+        // PostgreSQL FORCE RLS and the request's SET LOCAL tenant context.
+        // Each JSONB aggregation selects only the fields used by the editor.
+        $started = hrtime(true);
+        $row = DB::selectOne(<<<'SQL'
+            SELECT
+              COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'id', a.id, 'code', a.code, 'name', a.name,
+                  'requires_cost_center', a.requires_cost_center,
+                  'has_automatic_destination', a.has_automatic_destination,
+                  'requires_company_area', a.requires_company_area,
+                  'requires_auxiliary', a.requires_auxiliary,
+                  'entity_requirement_type', a.entity_requirement_type,
+                  'requires_cash_flow_area', a.requires_cash_flow_area,
+                  'cash_flow_category', a.cash_flow_category
+                ) ORDER BY a.code)
+                FROM public.accounting_accounts a
+                WHERE a.company_id = ?::bigint
+                  AND a.is_operational IS TRUE AND a.is_active IS TRUE
+              ), '[]'::jsonb) AS accounts,
+              COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'id', a.id, 'company_id', a.company_id, 'code', a.code,
+                  'name', a.name, 'is_active', a.is_active
+                ) ORDER BY a.code)
+                FROM public.company_areas a
+                WHERE a.company_id = ?::bigint AND a.is_active IS TRUE
+              ), '[]'::jsonb) AS company_areas,
+              COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'id', a.id, 'company_id', a.company_id, 'code', a.code,
+                  'name', a.name, 'activity_category', a.activity_category,
+                  'flow_direction', a.flow_direction, 'is_active', a.is_active
+                ) ORDER BY a.code)
+                FROM public.cash_flow_areas a
+                WHERE a.company_id = ?::bigint AND a.is_active IS TRUE
+              ), '[]'::jsonb) AS cash_flow_areas,
+              COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'id', c.id, 'company_id', c.company_id, 'code', c.code,
+                  'name', c.name, 'is_active', c.is_active
+                ) ORDER BY c.code)
+                FROM public.cost_centers c
+                WHERE c.company_id = ?::bigint AND c.is_active IS TRUE
+              ), '[]'::jsonb) AS cost_centers,
+              COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'id', s.id, 'code', s.code, 'name', s.name,
+                  'is_active', s.is_active
+                ) ORDER BY s.code)
+                FROM public.company_subdiaries s
+                WHERE s.company_id = ?::bigint AND s.is_active IS TRUE
+              ), '[]'::jsonb) AS subdiaries
+            SQL, array_fill(0, 5, $companyId));
+
+        $data = [];
+        foreach (['accounts', 'company_areas', 'cash_flow_areas', 'cost_centers', 'subdiaries'] as $key) {
+            if ($row === null || ! is_string($row->{$key} ?? null)) {
+                return response()->json(['message' => 'No se pudo cargar el catálogo contable.'], 503);
+            }
+            $decoded = json_decode($row->{$key}, true, 512, JSON_THROW_ON_ERROR);
+            if (! is_array($decoded)) {
+                return response()->json(['message' => 'Respuesta de catálogo contable inválida.'], 503);
+            }
+            $data[$key] = $decoded;
+        }
+        $timings[] = 'catalogs_sql;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
+
+        foreach ([
             'next_number' => $this->nextNumber,
             'exchange_rates' => $this->rates,
-        ];
-        $data = [];
-        $timings = [];
-        $started = hrtime(true);
-        $accountRulesAvailable = Schema::hasColumn('accounting_accounts', 'requires_company_area');
-        $timings[] = 'schema_accounts;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
-        if (! $accountRulesAvailable) {
-            return response()->json(['message' => 'Falta aplicar migración de requisitos por cuenta.'], 503)
-                ->header('Server-Timing', implode(', ', $timings));
-        }
-
-        // Slim editor DTO: ids, labels and validation flags only. Avoid UUIDs,
-        // account taxonomy and currencies that are irrelevant to the journal form.
-        $started = hrtime(true);
-        $data['accounts'] = AccountingAccount::query()
-            ->whereRaw('accounting_accounts.is_operational IS TRUE')
-            ->whereRaw('accounting_accounts.is_active IS TRUE')
-            ->orderBy('code')
-            ->get([
-                'id', 'code', 'name', 'requires_cost_center', 'has_automatic_destination',
-                'requires_company_area', 'requires_auxiliary', 'entity_requirement_type',
-                'requires_cash_flow_area', 'cash_flow_category',
-            ])
-            ->toArray();
-        $timings[] = 'accounts;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
-
-        foreach ($handlers as $name => $handler) {
+        ] as $name => $handler) {
             $started = hrtime(true);
             $response = $handler($request);
             $timings[] = $name.';dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
@@ -72,31 +115,12 @@ final readonly class GetJournalEditorBootstrapController
             $data[$name] = $response->getData(true)['data'] ?? null;
         }
 
-        // The editor needs only code/label/status. Do not eager-load analytic
-        // destination account relations required by the separate master screen.
-        $started = hrtime(true);
-        $data['cost_centers'] = CostCenter::query()
-            ->whereRaw('cost_centers.is_active IS TRUE')
-            ->orderBy('code')
-            ->get(['id', 'company_id', 'code', 'name', 'is_active'])
-            ->toArray();
-        $timings[] = 'cost_centers;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
-        // Full 40-row FX history is not needed by the editor.
-        if (isset($data['exchange_rates']['recent_history'])) {
-            unset($data['exchange_rates']['recent_history']);
-        }
-        $started = hrtime(true);
-        $subdiarySchemaAvailable = Schema::hasTable('company_subdiaries');
-        $timings[] = 'schema_subdiaries;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
-        if (! $subdiarySchemaAvailable) {
-            return response()->json(['message' => 'Falta la migración del maestro de subdiarios.'], 503)
-                ->header('Server-Timing', implode(', ', $timings));
-        }
-        $started = hrtime(true);
-        $data['subdiaries'] = CompanySubdiary::query()->where('is_active', true)
-            ->orderBy('code')->get(['id', 'code', 'name', 'is_active'])->toArray();
-        $timings[] = 'subdiaries;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
+        // Exchange rates retain the authoritative daily values, but not the
+        // unused 40-row history present on the full FX configuration screen.
+        unset($data['exchange_rates']['recent_history']);
+
         $timings[] = 'controller_total;dur='.number_format((hrtime(true) - $controllerStarted) / 1000000, 1, '.', '');
+
         return response()->json(['data' => $data])
             ->header('Server-Timing', implode(', ', $timings));
     }
