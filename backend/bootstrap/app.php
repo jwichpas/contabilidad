@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\JournalRequestTiming;
 use App\Http\Middleware\SecurityHeadersMiddleware;
 use App\Http\Middleware\SetTenantContext;
 use Illuminate\Foundation\Application;
@@ -14,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(JournalRequestTiming::class);
         $middleware->append(SecurityHeadersMiddleware::class);
         $middleware->alias([
             'tenant' => SetTenantContext::class,
