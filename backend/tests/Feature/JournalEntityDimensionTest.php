@@ -30,6 +30,7 @@ beforeEach(function (): void {
                 'entity_requirement_type' => $i === 5 ? 'CUSTOMER' : 'NONE',
                 'requires_auxiliary' => $i === 5]);
         }
+        \App\Models\CompanySubdiary::query()->create(['code' => 'GENERAL', 'name' => 'Diario general']);
         $this->account = $parent;
         $this->entity = Entity::query()->create(['identity_document_type_code' => '1', 'tax_id' => '12345678',
             'legal_name' => 'Cliente ficticio', 'country_code' => 'PE', 'is_client' => true, 'is_active' => true,
