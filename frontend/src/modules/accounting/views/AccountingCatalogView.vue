@@ -221,6 +221,7 @@ const handleModalSubmit = async (payload: CreateAccountingAccountPayload): Promi
       requires_auxiliary: payload.requires_auxiliary,
       entity_requirement_type: payload.entity_requirement_type,
       requires_cost_center: payload.requires_cost_center,
+      requires_company_area: payload.requires_company_area,
       has_automatic_destination: payload.has_automatic_destination,
       destination_debit_code: payload.destination_debit_code,
       destination_credit_code: payload.destination_credit_code,
