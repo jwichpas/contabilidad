@@ -440,16 +440,23 @@ async function fetchNextNumber(): Promise<void> {
 
 let loadSequence = 0;
 const historyLoaded = shallowRef(false);
+const isLoadingHistory = shallowRef(false);
 
 async function loadHistory(): Promise<void> {
+  if (isLoadingHistory.value) return;
   const tenant = props.activeCompanyId;
+  isLoadingHistory.value = true;
   try {
     const entries = await apiClient.value.fetchJournalEntries({ limit: 50 });
     if (tenant !== props.activeCompanyId) return;
     journalEntries.value = entries;
     historyLoaded.value = true;
   } catch (e) {
-    errorMessage.value = e instanceof Error ? e.message : 'No se pudo cargar el Libro Diario.';
+    if (tenant === props.activeCompanyId) {
+      errorMessage.value = e instanceof Error ? e.message : 'No se pudo cargar el Libro Diario.';
+    }
+  } finally {
+    isLoadingHistory.value = false;
   }
 }
 
@@ -1272,7 +1279,11 @@ onMounted(() => {
           </button>
         </div>
 
-        <div v-if="journalEntries.length === 0" class="p-12 text-center">
+        <div v-if="isLoadingHistory" class="p-12 text-center text-sm text-muted" role="status">
+          <Loader2 class="w-5 h-5 animate-spin mx-auto mb-2 text-brand" />
+          Cargando Libro Diario…
+        </div>
+        <div v-else-if="journalEntries.length === 0" class="p-12 text-center">
           <BookOpen class="w-10 h-10 text-muted mx-auto mb-3 opacity-40" />
           <p class="text-sm font-semibold text-foreground">No hay asientos contables registrados</p>
           <p class="text-xs text-muted mt-1">
