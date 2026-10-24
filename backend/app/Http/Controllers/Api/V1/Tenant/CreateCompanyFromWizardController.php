@@ -141,6 +141,10 @@ final readonly class CreateCompanyFromWizardController
             @set_time_limit(120);
         }
 
+        if (! \Illuminate\Support\Facades\Schema::hasTable('company_subdiaries')) {
+            return response()->json(['message' => 'Falta instalar el maestro de subdiarios de la empresa.'], 503);
+        }
+
         try {
             $outcome = DB::transaction(function () use ($validated, $currencyMap, $currencyCodes, $taxId, $user, $request, $officialCiiu): array {
                 $company = Company::query()->create([
