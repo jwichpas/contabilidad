@@ -29,6 +29,13 @@ export interface OperationalAccount {
   readonly cash_flow_category: string;
 }
 
+/** Minimal editor projection; the complete OperationalAccount stays available to other masters. */
+export type JournalEditorAccount = Pick<OperationalAccount,
+  'id' | 'code' | 'name' | 'requires_cost_center' | 'has_automatic_destination' |
+  'requires_company_area' | 'requires_auxiliary' | 'entity_requirement_type' |
+  'requires_cash_flow_area' | 'cash_flow_category'
+>;
+
 export interface JournalEntryLineResponse {
   readonly id: number;
   readonly journal_entry_id: number;
