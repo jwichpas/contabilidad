@@ -22,6 +22,7 @@ export function entityMatches(account: EntityAccountRule | undefined,
   const type = account?.entity_requirement_type;
   if (type && type !== 'NONE' && type !== 'ANY_THIRD_PARTY' && !entityRoleFilter(type)) return false;
   if (!entity) return !entityRequired(account);
+  if (!entityRequired(account)) return false;
   if (!entity.is_active) return false;
   const role = entityRoleFilter(account?.entity_requirement_type);
   return !role || entity[role] === true;
