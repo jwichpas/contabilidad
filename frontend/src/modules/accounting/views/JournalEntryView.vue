@@ -22,6 +22,7 @@ import {
 import type { OperationalAccount } from '../types/journalEntry.types';
 import type { EntityMaster } from '../../company/types/entityMaster.types';
 import JournalEntityPicker from '../components/JournalEntityPicker.vue';
+import JournalAccountCombobox from '../components/JournalAccountCombobox.vue';
 import { entityMatches, entityRequired } from '../utils/journalEntity';
 import { cashFlowMatches } from '../utils/journalArea';
 import { resetAccountDimensions } from '../utils/journalLine';
@@ -984,22 +985,14 @@ onMounted(() => {
                   {{ idx + 1 }}
                 </td>
 
-                <!-- Selector de Cuenta Operativa -->
+                <!-- Autocomplete por código o nombre: máximo 40 opciones visibles. -->
                 <td class="py-2 px-3">
-                  <select
+                  <JournalAccountCombobox
                     v-model="line.accountId"
-                    @change="resetAccountDimensions(line)"
-                    class="w-full px-2.5 py-1.5 text-xs font-mono rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                  >
-                    <option :value="null">-- Seleccionar Cuenta Operativa --</option>
-                    <option
-                      v-for="acc in operationalAccounts"
-                      :key="acc.id"
-                      :value="acc.id"
-                    >
-                      {{ acc.code }} · {{ acc.name }}
-                    </option>
-                  </select>
+                    :accounts="operationalAccounts"
+                    :disabled="isSubmitting || isLoading"
+                    @update:model-value="resetAccountDimensions(line)"
+                  />
                 </td>
 
                 <!-- Cada dimensión se habilita solo si la configuración de la cuenta la exige. -->
