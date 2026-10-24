@@ -171,3 +171,31 @@ it('rejects dimensions when the account does not configure them', function (): v
         expect(DB::table('exchange_rates')->where('company_id', $this->company->id)->count())->toBe(0);
     });
 });
+
+it('persists the selected subdiary and copies it to the reversal without editing the original', function (): void {
+    $payload = $this->payload;
+    $payload['subdiary_code'] = 'BANCOS';
+    $entry = $this->postJson('/api/v1/accounting/journal-entries', $payload)->assertCreated()
+        ->assertJsonPath('data.subdiary_code', 'BANCOS');
+    $entryId = (int) $entry->json('data.id');
+    $this->getJson('/api/v1/accounting/journal-entries')->assertOk()
+        ->assertJsonPath('data.0.subdiary_code', 'BANCOS');
+    $this->postJson('/api/v1/accounting/journal-entries/'.$entryId.'/reverse', [
+        'fiscal_period_id' => $entry->json('data.fiscal_period_id'),
+        'reversal_date' => '2026-10-24',
+        'reason' => 'Extorno ficticio de subdiario',
+    ])->assertCreated()->assertJsonPath('data.subdiary_code', 'BANCOS');
+    $this->tenant->run($this->company->id, function () use ($entryId): void {
+        expect(JournalEntry::query()->findOrFail($entryId)->subdiary_code)->toBe('BANCOS');
+    });
+});
+
+it('rejects an invalid subdiary before opening periods or creating journal data', function (): void {
+    $payload = $this->payload;
+    $payload['subdiary_code'] = 'SUBDIARIO_INEXISTENTE';
+    $this->postJson('/api/v1/accounting/journal-entries', $payload)->assertUnprocessable();
+    $this->tenant->run($this->company->id, function (): void {
+        expect(JournalEntry::query()->count())->toBe(0);
+        expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
+    });
+});
