@@ -99,7 +99,7 @@ it('copies an inactive historical entity on reversal without rewriting original 
     });
 });
 
-it('keeps optional lines nullable and reads updated account requirements without stale cache', function (): void {
+it('omits anexo on accounts without a configured requirement and reads updated rules without stale cache', function (): void {
     $this->getJson('/api/v1/accounting/accounts/operational')->assertOk()
         ->assertJsonPath('data.0.entity_requirement_type', 'CUSTOMER');
     $this->tenant->run($this->company->id, fn () => $this->account->update([
@@ -107,6 +107,7 @@ it('keeps optional lines nullable and reads updated account requirements without
     ]));
     $this->getJson('/api/v1/accounting/accounts/operational')->assertOk()
         ->assertJsonPath('data.0.entity_requirement_type', 'NONE');
+    $this->postJson('/api/v1/accounting/journal-entries', $this->payload)->assertUnprocessable();
     $optional = $this->payload;
     foreach ($optional['lines'] as &$line) {
         unset($line['entity_id']);
