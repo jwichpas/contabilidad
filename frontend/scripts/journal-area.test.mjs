@@ -133,3 +133,27 @@ test('subdiary master is a separate company-scoped route with controlled CRUD', 
   assert.match(nav, /Maestro de subdiarios/);
   assert.match(api, /\/api\/v1\/company\/subdiaries/);
 });
+
+test('journal editor keeps bimonetary amount columns on the primary row with conditional dimensions beneath', () => {
+  const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
+  assert.match(view, /min-w-\[1040px\]/);
+  assert.match(view, /<td colspan="7"/);
+  assert.match(view, /Centro de costo obligatorio/);
+  assert.match(view, /Anexo \/ tercero obligatorio/);
+  assert.match(view, /Área organizativa obligatoria/);
+  assert.match(view, /Área de flujo de efectivo obligatoria/);
+  assert.doesNotMatch(view, /min-w-\[1800px\]/);
+});
+
+test('journal bootstrap projects only accounts and flags needed by the voucher form', () => {
+  const backend = readFileSync(new URL('../../../backend/app/Http/Controllers/Api/V1/Accounting/GetJournalEditorBootstrapController.php', import.meta.url), 'utf8');
+  const dto = readFileSync(new URL('../src/modules/accounting/types/journalEntry.types.ts', import.meta.url), 'utf8');
+  const picker = readFileSync(new URL('../src/modules/accounting/components/JournalEntityPicker.vue', import.meta.url), 'utf8');
+  assert.match(backend, /AccountingAccount::query\(\)/);
+  assert.match(backend, /'requires_cash_flow_area'/);
+  assert.match(backend, /'entity_requirement_type'/);
+  assert.match(backend, /accounts;dur=/);
+  assert.match(dto, /type JournalEditorAccount = Pick<OperationalAccount/);
+  assert.match(picker, /items-center justify-center/);
+  assert.match(picker, /max-h-\[min\(80vh,650px\)\]/);
+});
