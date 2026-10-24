@@ -43,6 +43,9 @@ final class JournalEntityRequirement
             }
             return;
         }
+        if ($type === 'NONE' && ! $requiresAuxiliary) {
+            throw new DomainException('La cuenta no habilita un anexo.');
+        }
         if (! ($entity['is_active'] ?? false)) {
             throw new DomainException('El anexo seleccionado está inactivo.');
         }
