@@ -9,10 +9,6 @@ it('keeps SEE separate from PLE and preserves the source ambiguity', function ()
         ['email' => 'see-reference-test@example.test'],
         ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
     );
-    $index = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see');
-    $index->assertOk()->assertJsonCount(33, 'data')
-        ->assertJsonFragment(['number' => '02', 'item_count' => 178]);
-
     $see = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/03?q=A11');
     $see->assertOk()->assertJsonPath('meta.catalog_number', '03')
         ->assertJsonPath('meta.total', 2)
@@ -25,6 +21,10 @@ it('keeps SEE separate from PLE and preserves the source ambiguity', function ()
         ->assertOk()->assertJsonFragment(['code' => 'PE', 'description' => 'PERU']);
     $this->getJson('/api/v1/catalogs/sunat-see/02?q=CLP')
         ->assertOk()->assertJsonFragment(['code' => 'CLP']);
+    $this->getJson('/api/v1/catalogs/sunat-see/02?page=1&per_page=25')
+        ->assertOk()->assertJsonPath('meta.total', 178)->assertJsonCount(25, 'data');
+    $this->getJson('/api/v1/catalogs/sunat-see/02?q=&page=1&per_page=25')
+        ->assertOk()->assertJsonPath('meta.total', 178);
     $this->getJson('/api/v1/catalogs/sunat-see/13')
         ->assertOk()->assertJsonPath('meta.item_count', 0);
 });
@@ -37,6 +37,10 @@ it('lists global ubigeos and exposes no writes for company users', function (): 
     $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/ubigeos?q=010101')
         ->assertOk()->assertJsonPath('meta.total', 1)
         ->assertJsonPath('data.0.district', 'Chachapoyas');
+    $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?page=1&per_page=25')
+        ->assertOk()->assertJsonPath('meta.total', 1874)->assertJsonCount(25, 'data');
+    $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?q=&page=1&per_page=25')
+        ->assertOk()->assertJsonPath('meta.total', 1874);
 
     $this->postJson('/api/v1/catalogs/sunat-see/ubigeos', ['code' => '999999'])
         ->assertStatus(405);

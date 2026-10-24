@@ -13,7 +13,7 @@ final readonly class ListSeeUbigeosController
     public function __invoke(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'q' => ['sometimes', 'string', 'max:100'],
+            'q' => ['sometimes', 'nullable', 'string', 'max:100'],
             'department' => ['sometimes', 'string', 'max:160'],
             'province' => ['sometimes', 'string', 'max:160'],
             'per_page' => ['sometimes', 'integer', 'between:1,100'],

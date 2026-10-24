@@ -351,7 +351,8 @@ export class AccountingApiClient {
     number: string,
     params: { readonly q: string; readonly page: number; readonly signal?: AbortSignal },
   ): Promise<SeePage<SeeCatalogItem>> {
-    const query = new URLSearchParams({ q: params.q, page: String(params.page), per_page: '25' });
+    const query = new URLSearchParams({ page: String(params.page), per_page: '25' });
+    if (params.q.trim()) query.set('q', params.q.trim());
     return this.request<SeePage<SeeCatalogItem>>(
       `/api/v1/catalogs/sunat-see/${encodeURIComponent(number)}?${query}`,
       { method: 'GET', signal: params.signal }, false,
@@ -361,7 +362,8 @@ export class AccountingApiClient {
   public async fetchSeeUbigeos(
     params: { readonly q: string; readonly page: number; readonly signal?: AbortSignal },
   ): Promise<SeePage<SeeUbigeo>> {
-    const query = new URLSearchParams({ q: params.q, page: String(params.page), per_page: '25' });
+    const query = new URLSearchParams({ page: String(params.page), per_page: '25' });
+    if (params.q.trim()) query.set('q', params.q.trim());
     return this.request<SeePage<SeeUbigeo>>(
       `/api/v1/catalogs/sunat-see/ubigeos?${query}`,
       { method: 'GET', signal: params.signal }, false,

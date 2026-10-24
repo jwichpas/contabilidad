@@ -18,7 +18,7 @@ final readonly class ListSeeCatalogController
         abort_if($catalog === null, 404);
 
         $validated = $request->validate([
-            'q' => ['sometimes', 'string', 'max:100'],
+            'q' => ['sometimes', 'nullable', 'string', 'max:100'],
             'per_page' => ['sometimes', 'integer', 'between:1,100'],
         ]);
         $query = DB::table('see_catalog_items')->where('catalog_number', $number);
