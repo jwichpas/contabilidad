@@ -64,6 +64,7 @@ final readonly class ReverseJournalEntryController
                 'status'=>'REVERSED',
                 'reversal_entry_id'=>(int)$reversal->id,
                 'reversal_entry_number'=>$reversal->entry_number,
+                'subdiary_code'=>$reversal->subdiary_code,
             ],
             request:$request,
             severity:'INFO',
