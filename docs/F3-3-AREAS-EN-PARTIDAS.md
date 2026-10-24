@@ -1,5 +1,26 @@
 # F3.3 · Áreas organizativas y de flujo en partidas
 
+## Decisión funcional vigente · 24/10/2026 — Dimensiones estrictamente por cuenta
+
+**Esta sección reemplaza la interpretación anterior de dimensiones «opcionales» descrita en el historial de esta guía.** El usuario confirmó en la aceptación visual que una dimensión **solo puede digitarse cuando una regla de configuración de la cuenta operativa la exige**. No se ofrecen botones «+ Centro opcional» / «+ Anexo opcional», ni asignación voluntaria de áreas.
+
+| Configuración en cuenta operativa | Campo en la partida |
+|---|---|
+| `requires_cost_center = true` o `has_automatic_destination = true` | Centro de costo **obligatorio** |
+| `requires_auxiliary = true` o `entity_requirement_type != NONE` | Anexo/tercero **obligatorio**, filtrado por rol de entidad |
+| `requires_company_area = true` | Área organizativa **obligatoria** |
+| `requires_cash_flow_area = true` | Área de flujo **obligatoria**, filtrada por categoría |
+
+Para cualquier indicador desactivado, el editor muestra un guion «—», envía `null` y el backend rechaza HTTP 422 si llega un identificador ajeno a la configuración (incluso desde un cliente externo). Cambiar la cuenta limpia los cuatro IDs antes de introducir una nueva selección. El extorno **no revalida estas reglas actuales sobre un asiento histórico**: debe conservar las referencias originales, incluso si la configuración o los maestros han cambiado.
+
+**Nueva migración aditiva (NO ejecutada por el agente):**
+`backend/database/migrations/2026_10_24_120000_add_account_requires_company_area.php`.
+Añade `accounting_accounts.requires_company_area BOOLEAN NOT NULL DEFAULT FALSE`. Con el valor inicial FALSE **ninguna cuenta existente exige por defecto área organizativa**; se debe habilitar conscientemente en el modal de configuración de las cuentas que la necesiten. No edita asientos preexistentes, no altera el historial y no incluye eliminación reversible automática.
+
+**Orden de despliegue manual solo Neon DEV:** confirmar antes diagnóstico `contabilidad-dev`, respaldos y conexión administrativa; instalar **solo** la migración anterior mediante Artisan en `pgsql_migrations` y verificar `migrate:status`. Mientras falta la columna nueva, el listado operativo y el POST devuelven 503 explícito; **no hacer POST de asientos** antes de aplicar la migración. Nunca `migrate:fresh`, borrar cuentas, alterar producción ni reejecutar F3.4/F3.5.
+
+**Pruebas añadidas/modificadas y pendientes de ejecución:** backend Unit `JournalAreaRequirementTest`, `JournalEntityRequirementTest`; Feature `JournalAreaDimensionTest`, `JournalEntityDimensionTest`; frontend `pnpm test:unit` y `pnpm build`. Los **35/35 PASS frontend y 5/5 Feature áreas** comunicados por el usuario **corresponden a la versión anterior de reglas opcionales** y no certifican este cambio. Aceptación visual de selectores estrictos posterior a la migración pendiente. **F3.3 [ ], 8/32 (25%).**
+
 24/10/2026. Implementación para validación manual en Neon DEV. **Avance oficial: 8/32 (25%); F3.3 abierta.**
 
 ## Alcance
