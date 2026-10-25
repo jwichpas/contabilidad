@@ -34,6 +34,7 @@ const pleTables = [
   { number: '27', name: 'Tipo de vinculación económica (2015)' },
   { number: '28', name: 'Patrimonio neto PLE (2015)' },
   { number: '30', name: 'Clasificación de bienes y servicios adquiridos' },
+  { number: '32', name: 'Modalidad de servicio de no domiciliado (2015)' },
 ] as const;
 const rucDatasets = [
   { number: 'contributor-types', name: 'Anexo 2 · Tipos de contribuyente' },
@@ -130,7 +131,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <button type="button" :aria-pressed="source === 'ple'" :class="source === 'ple' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ple')">Tablas PLE</button>
       <button type="button" :aria-pressed="source === 'ruc'" :class="source === 'ruc' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ruc')">Anexos RUC y CIIU</button>
     </div>
-    <p class="text-sm text-muted">{{ source === 'ple' ? 'Veintitrés tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
+    <p class="text-sm text-muted">{{ source === 'ple' ? 'Veinticuatro tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
     <div class="space-y-4 rounded-xl border border-border bg-surface p-4">
       <div class="grid gap-3 md:grid-cols-2">
         <div class="min-w-0 text-xs font-medium text-muted">
@@ -172,6 +173,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <p v-if="source === 'ple' && pleNumber === '27'" class="text-xs text-muted">La Tabla 27 reproduce criterios de vinculación económica del Anexo 3 PLE de 2015. Las descripciones largas se pueden desplegar; esta referencia histórica no decide si una empresa está vinculada actualmente.</p>
       <p v-if="source === 'ple' && pleNumber === '28'" class="text-xs text-muted">Estos 46 códigos de patrimonio pertenecen al Anexo 3 PLE de 2015. Son históricos y no reemplazan el PCGE vigente ni el plan de cuentas de la empresa; incluyen rubros de dos, tres y cuatro dígitos.</p>
       <p v-if="source === 'ple' && pleNumber === '30'" class="text-xs text-muted">Clasificación PLE de bienes y servicios adquiridos del anexo de 2015. Estos cinco códigos de consulta no clasifican compras automáticamente ni determinan el crédito fiscal.</p>
+      <p v-if="source === 'ple' && pleNumber === '32'" class="text-xs text-muted">Modalidades de servicio de no domiciliados del Anexo 3 PLE de 2015. Son referencias históricas: no determinan retenciones ni tratamiento tributario vigente. La Tabla 20 SIRE tiene su propia edición y espacio de códigos.</p>
       <p v-if="source === 'ple' && pleNumber === '03' && selectedEdition === 'latest'" class="text-xs text-muted">La tabla 03 incluye entidades históricas. Sus códigos son referencia PLE; no acreditan que un banco esté operativo ni habilitan su selección para cuentas actuales.</p>
       <p v-if="source === 'ple' && pleNumber === '12' && selectedEdition === 'latest'" class="text-xs text-muted">La edición cotejada contiene 47 operaciones de inventario. La carga inicial tiene 17 y asigna otro significado al código 07; no use ambas ediciones indistintamente en el kardex.</p>
       <p v-if="source === 'ple' && pleNumber === '11' && selectedEdition === 'latest'" class="text-xs text-muted">Los 30 códigos corresponden a la Tabla 11 PLE de 2015; no acreditan qué dependencias siguen operativas ni sustituyen la Tabla 4 de SIRE.</p>

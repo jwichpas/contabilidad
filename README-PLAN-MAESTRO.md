@@ -4,7 +4,7 @@
 
 # Plan maestro, hoja de ruta e hitos — Sistema Contable
 
-> **Documento rector vigente · Actualizado 25/10/2026 · Versión 2.3**  
+> **Documento rector vigente · Actualizado 25/10/2026 · Versión 2.4**  
 > Repositorio: `jwichpas/contabilidad` · Rama única: `main` · Base de desarrollo: **Neon PostgreSQL 18 / contabilidad-dev**.
 >
 > **Avance verificable: 8/32 actividades completas (25%).** El checklist de la [sección 10](#10-checklist-de-seguimiento) es la **fuente única** del conteo. Se distinguió expresamente entre una prueba/subetapa aprobada y una actividad amplia todavía pendiente.
@@ -23,6 +23,8 @@
 
 
 **Avance F6 de catálogos — 25/10/2026.** Las referencias globales son de solo lectura: catálogos SEE y ubigeo INEI, tablas PLE Anexo 3 y la Tabla 8 SUNAT tienen procedencia, espacio de códigos y versiones independientes; las preferencias de monedas, unidades y países por empresa no modifican la fuente global. La API y las vistas de consulta permiten elegir edición, buscar localmente en la tabla y mostrar códigos históricos con advertencias. El usuario reportó en Termux las migraciones de Tablas PLE 27, 28 y 30 como DONE y `SeeReferenceSourceTest` + `SeeReferenceCatalogTest` como **50 pruebas PASS, 618 aserciones**. Las Tablas 27, 28 y 30 corresponden a la edición histórica 2015, no acreditan aplicabilidad normativa individual en 2026. [Inventario técnico y fuente por tabla](backend/database/reference_data/README-SEE.md). Esta evidencia aporta a F6.1 pero **no la cierra**; el conteo sigue 8/32.
+
+**Trabajo F6 posterior a la validación:** se preparó la Tabla 32 PLE con tres códigos de modalidad de servicio para no domiciliados, edición `2015-06-anexo-3`, separada de la Tabla 20 SIRE. La migración `2026_10_25_180000` y las pruebas PHP quedan **pendientes de ejecución en DEV**; `pnpm build` y `pnpm test:unit` pasaron localmente (50/50). Este trabajo tampoco modifica la casilla F6.1 ni el conteo 8/32.
 
 ## Avance F3.2–F3.3 — 23/10/2026
 
@@ -496,7 +498,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - [ ] **F5.3** Validar cierres, reconciliación y reportes PDF/Excel.
 
 ### Fase 6 — SUNAT
-- [ ] **F6.1** Versionar catálogos SUNAT y generar archivos PLE aplicables. *Consulta global de solo lectura para SEE/INEI y otras tablas SUNAT, con espacios de códigos y ediciones independientes para PLE, SEE y SIRE; referencias históricas PLE hasta las tablas 27, 28 y 30 publicadas. El 25/10/2026 el usuario confirmó las migraciones `150000`, `160000` y `170000` DONE y los tests de origen/API 50/50 PASS (618 aserciones). Faltan cotejo de las demás tablas, comprobación de vigencia y aplicabilidad de cada edición, uso en validaciones operativas, generación/validación de archivos PLE y aceptación integral. Los PASS de catálogos no cierran F6.1.* [Inventario y procedencia](backend/database/reference_data/README-SEE.md).
+- [ ] **F6.1** Versionar catálogos SUNAT y generar archivos PLE aplicables. *Consulta global de solo lectura para SEE/INEI y otras tablas SUNAT, con espacios de códigos y ediciones independientes para PLE, SEE y SIRE; referencias históricas PLE hasta las tablas 27, 28 y 30 publicadas. El 25/10/2026 el usuario confirmó las migraciones `150000`, `160000` y `170000` DONE y los tests de origen/API 50/50 PASS (618 aserciones). La Tabla 32 está preparada en código como referencia histórica pero su migración y pruebas PHP aún no están ejecutadas. Faltan cotejo de las demás tablas, comprobación de vigencia y aplicabilidad de cada edición, uso en validaciones operativas, generación/validación de archivos PLE y aceptación integral. Los PASS de catálogos no cierran F6.1.* [Inventario y procedencia](backend/database/reference_data/README-SEE.md).
 - [ ] **F6.2** Incorporar registros RCE/RVIE y flujos de conciliación SIRE.
 - [ ] **F6.3** Validar formatos, duplicidades, observaciones y conciliación.
 - [ ] **F6.4** Implementar y probar SFE/SFMB (exportaciones bienes/servicios y empresas mixtas): origen del crédito, aplicación a IGV local, límites/arrastres, PDB, compensación/devolución y trazabilidad. [Documento de diseño](docs/F6-IGV-SFE-SFMB-EXPORTADORES.md).
@@ -505,6 +507,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 - [x] Separar los espacios de claves SEE, PLE Anexo 3, SIRE y Tabla 8; exponer consulta global versionada y de solo lectura en la API y el frontend.
 - [x] Registrar y probar en DEV las ediciones históricas PLE 27, 28 y 30: migraciones `150000`, `160000` y `170000` DONE; 50 pruebas PHP PASS, 618 aserciones, según salida del usuario del 25/10/2026.
+- [ ] Aplicar la migración `2026_10_25_180000_add_ple_table_32_nonresident_service.php` y ejecutar pruebas Laravel de fuentes/API; código preparado, sin resultado PHP reportado.
 - [ ] Conciliar las tablas PLE restantes con anexos oficiales y modificaciones posteriores, registrar fuente, fecha, hash y vigencia comprobada por edición; no etiquetar una edición histórica como vigente sin evidencia.
 - [ ] Incorporar reglas de uso de códigos en libros y archivos PLE por empresa/periodo, con pruebas de formatos y trazabilidad histórica; completar aceptación funcional F6.1.
 
@@ -539,7 +542,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | Hitos aprobados | **0/4** | H1–H4 requieren puertas completas |
 | Base de desarrollo | **Neon PG18**; 24 migraciones; 4 empresas; 9 membresías; 3 DRAFT; 0 ACTIVE; enero DEMO A OPEN, octubre empresa 4 OPEN, **asiento 52 persistido** | Evidencia F3.5 POST-COMMIT del 23/10/2026 |
 | Modalidad de pruebas | **Manual exclusivamente** | [Guía y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
-| Próximo trabajo funcional | **F3.3 aceptación integral y F6.1 conciliación del Anexo 3 PLE restante** | [Maestros F3.3](docs/F3-3-MAESTROS-DIAGNOSTICO-NEON.md) y [ediciones SUNAT](backend/database/reference_data/README-SEE.md); ninguna de estas actividades se declara cerrada |
+| Próximo trabajo funcional | **F3.3 aceptación integral y F6.1 Tabla 32/Anexo 3 PLE restante** | [Maestros F3.3](docs/F3-3-MAESTROS-DIAGNOSTICO-NEON.md) y [ediciones SUNAT](backend/database/reference_data/README-SEE.md); ninguna de estas actividades se declara cerrada |
 
 ### Evidencias que justifican las ocho actividades aprobadas
 
@@ -570,7 +573,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - **Comando de diagnóstico F0:** `php artisan contabilidad:auditar-fase0` (solo lectura; sin mutaciones).
 - Referencias internas: `plan-contable-2019.md`, `plan-contable-2026.md`, `tablas-sunat.md`, [inventario SEE/PLE/INEI](backend/database/reference_data/README-SEE.md) y [auditoría de fuentes](backend/database/reference_data/AUDITORIA-SEE-2026-10-24.md).
 - Guías oficiales a comprobar en F0: [SUNAT](https://www.sunat.gob.pe/), [MEF — Consejo Normativo de Contabilidad](https://www.gob.pe/mef), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Laravel](https://laravel.com/docs/11.x).
-- **Control de versiones:** **v2.3 — 2026-10-25 — hoja de ruta y checklist F6 reconciliados con migraciones PLE 27/28/30 y 50 tests PASS, sin adelantar el conteo 8/32**; **v2.2 — 2026-10-23 — cierre F3.1 8/32, PUT CIIU 4923 auditado ID 83 y verificado directamente en Neon DEV; pendiente F3.3 maestros**; **v2.1 — 2026-10-23 — reconciliación checklist 7/32, pruebas F3.4/F3.5 y asiento ID 52 persistido, evidencia de rendimiento 17,43 s**; **v2.0 — 2026-10-22 — checklist reconciliado 5/32, F2.3h certificado, prueba manual sin GitHub Actions, archivo histórico**; v1.7 — 2026-10-19 — Control estricto de decimales y credenciales de migración; v1.6 — 2026-10-19 — Cambios funcionales de seguridad y precisión en Laravel/Vue; v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
+- **Control de versiones:** **v2.4 — 2026-10-25 — Tabla PLE 32 preparada como consulta histórica, migración y PHP pendientes; F6.1 y 8/32 sin cambio**; **v2.3 — 2026-10-25 — hoja de ruta y checklist F6 reconciliados con migraciones PLE 27/28/30 y 50 tests PASS, sin adelantar el conteo 8/32**; **v2.2 — 2026-10-23 — cierre F3.1 8/32, PUT CIIU 4923 auditado ID 83 y verificado directamente en Neon DEV; pendiente F3.3 maestros**; **v2.1 — 2026-10-23 — reconciliación checklist 7/32, pruebas F3.4/F3.5 y asiento ID 52 persistido, evidencia de rendimiento 17,43 s**; **v2.0 — 2026-10-22 — checklist reconciliado 5/32, F2.3h certificado, prueba manual sin GitHub Actions, archivo histórico**; v1.7 — 2026-10-19 — Control estricto de decimales y credenciales de migración; v1.6 — 2026-10-19 — Cambios funcionales de seguridad y precisión en Laravel/Vue; v1.5 — 2026-10-19 — Preflight, respaldo no destructivo y matriz F0; v1.4 — 2026-10-19 — Laravel como único gestor de esquema y auditoría F0 read-only; v1.3 — 2026-10-19 — Workflow CI estático y riesgo runner; v1.2 — 2026-10-19 — Política de base única y F0 SQL; v1.1 — 2026-10-19 — Inicio F0 y enlace de diagnóstico; v1.0 — 2026-10-19 — plan aprobado para documentación previa a Fase 0. Los ajustes futuros deben registrar fecha, motivo y relación con decisiones/hallazgos.
 
 **Estado vigente 2026-10-25:** ver [sección 10](#10-checklist-de-seguimiento): **8/32 (25%)**, asiento de prueba ID 52 persistido en Neon DEV; F3.4/F3.5 PASS, referencias F6 parcialmente validadas, modalidad de pruebas manual y 0/4 hitos formalmente aprobados. [Historial del estado al 19/10](docs/HISTORIAL-PLAN-MAESTRO-2026-10.md).
 

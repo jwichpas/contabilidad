@@ -496,6 +496,20 @@ it('lists historical PLE acquisition classes without conflating them with operat
     $this->getJson('/api/v1/catalogs/sunat/30?version=legacy-seed')->assertNotFound();
 });
 
+it('lists the historical PLE service modalities independently of SIRE table 20', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/32')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.table_number', '32')
+        ->assertJsonPath('meta.total', 3)
+        ->assertJsonFragment(['code' => '1', 'name' => 'SERVICIO PRESTADO INTEGRAMENTE EN EL PERÚ'])
+        ->assertJsonFragment(['code' => '3', 'name' => 'SERVICIO PRESTADO EXCLUSIVAMENTE EN EL EXTRANJERO']);
+    $this->getJson('/api/v1/catalogs/sunat/32?version=legacy-seed')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

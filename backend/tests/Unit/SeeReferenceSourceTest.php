@@ -211,6 +211,16 @@ it('pins the five distinct PLE acquisition classification codes', function (): v
         ->and($source['rows'][4])->toBe(['5', 'OTROS GASTOS NO INCLUIDOS EN EL NUMERAL 4']);
 });
 
+it('pins the three PLE service modalities separately from SIRE table 20', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_32_nonresident_service_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('24b9f10ad3d71aac6a6b02aea39038a3cb5a68d22081a9a8c12935b0c521972d')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and($source['table_number'])->toBe('32')
+        ->and(array_column($source['rows'], 0))->toBe(['1', '2', '3'])
+        ->and($source['rows'][1])->toBe(['2', 'SERVICIO PRESTADO PARTE EN EL PERÚ Y PARTE EN EL EXTRANJERO']);
+});
+
 it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

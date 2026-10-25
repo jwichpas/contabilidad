@@ -1,0 +1,14 @@
+{
+  "version": "2015-06-anexo-3",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_pdf_sha256": "05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6",
+  "table_number": "32",
+  "name": "Modalidad del servicio prestado por el sujeto no domiciliado",
+  "source_note": "Tres códigos del Anexo 3 PLE 2015. Referencia histórica: no determina por sí sola la fuente de renta, retención ni tratamiento tributario vigente. La Tabla 20 del Anexo 1 SIRE es un espacio independiente.",
+  "rows": [
+    ["1", "SERVICIO PRESTADO INTEGRAMENTE EN EL PERÚ"],
+    ["2", "SERVICIO PRESTADO PARTE EN EL PERÚ Y PARTE EN EL EXTRANJERO"],
+    ["3", "SERVICIO PRESTADO EXCLUSIVAMENTE EN EL EXTRANJERO"]
+  ]
+}

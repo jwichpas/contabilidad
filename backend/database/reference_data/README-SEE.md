@@ -91,6 +91,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_150000_add_ple_table_27_economic_relationship.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_160000_add_ple_table_28_historical_net_equity.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_170000_add_ple_table_30_acquisition_classification.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_180000_add_ple_table_32_nonresident_service.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -216,3 +217,8 @@ se gestiona aparte; las denominaciones del anexo pueden diferir de ediciones pos
 La Tabla 30 del Anexo 3 PLE de 2015 clasifica cinco categorías de bienes y servicios
 adquiridos (`1`–`5`). `2026_10_25_170000` las publica solo para consulta histórica,
 sin clasificar compras de empresas ni atribuir crédito fiscal a ninguna operación.
+La Tabla 32 del mismo anexo enumera tres modalidades (`1`–`3`) de servicio prestado por
+un sujeto no domiciliado. `2026_10_25_180000` las publica como edición PLE histórica,
+global y de solo lectura, con hash del anexo original y del JSON fijados. No se usa
+para calcular retenciones ni rentas de fuente peruana y no se fusiona con la Tabla 20
+del Anexo 1 SIRE, que mantiene su propio espacio de claves y su propia edición.
