@@ -28,10 +28,15 @@ test('SEE view renders cached catalog rows with client-side page size 25', async
         classification: 'ISO_4217_LIST_ONE_2026_09_17_REFERENCE', version: '2026-09-17-list-one',
         source_url: 'https://www.six-group.com/example.xml' },
     });
-    const html = await renderToString(createSSRApp(View, { getAccessToken: () => null })
+    queryClient.setQueryData(['see-company-visibility', 1], {
+      currencies: rows.map(row => row.code), catalogs: { '03': null, '04': null },
+    });
+    const html = await renderToString(createSSRApp(View, {
+      getAccessToken: () => null, activeCompanyId: 1, canManage: true,
+    })
       .use(VueQueryPlugin, { queryClient }));
     assert.match(html, /CODE-25/);
-    assert.doesNotMatch(html, /CODE-26/);
+    assert.doesNotMatch(html, /CODE-26<!--\]-->/);
     assert.match(html, /1–25 de 30/);
     assert.match(html, /role="combobox"/);
     assert.match(html, /Lista ISO 4217/);

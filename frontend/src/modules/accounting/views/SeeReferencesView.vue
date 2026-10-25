@@ -5,10 +5,11 @@ import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getPagination
 import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from '@headlessui/vue';
 import { AlertTriangle, BookOpen, Check, ChevronsUpDown, Globe2, MapPin, Search } from 'lucide-vue-next';
 import { AccountingApiClient } from '../api/httpClient';
+import type { CompanyId } from '../types/accountingAccount.types';
 import type { SeeCatalogItem, SeeCatalogSummary, SeeUbigeo } from '../types/seeReferences.types';
 
-const props = defineProps<{ readonly getAccessToken: () => string | null }>();
-const client = new AccountingApiClient('', { getAccessToken: props.getAccessToken, getActiveCompanyId: () => null });
+const props = defineProps<{ readonly getAccessToken: () => string | null; readonly activeCompanyId: CompanyId; readonly canManage: boolean }>();
+const client = new AccountingApiClient('', { getAccessToken: props.getAccessToken, getActiveCompanyId: () => props.activeCompanyId });
 type Section = 'catalogs' | 'ubigeos';
 const section = shallowRef<Section>('catalogs');
 const catalogNumber = shallowRef('02');
@@ -19,6 +20,64 @@ const searchInput = shallowRef('');
 const pageIndex = shallowRef(0);
 const pageSize = 25;
 const cacheTime = 30 * 60 * 1000;
+const companyOnly = shallowRef(true);
+const editing = shallowRef(false);
+const selectedCodes = shallowRef<readonly string[]>([]);
+const saving = shallowRef(false);
+const saveError = shallowRef<string | null>(null);
+const saveSuccess = shallowRef<string | null>(null);
+
+const companyQuery = useQuery({
+  queryKey: computed(() => ['see-company-visibility', props.activeCompanyId]),
+  queryFn: ({ signal }) => client.fetchCompanySeeVisibility(signal),
+  staleTime: 0, retry: 1, refetchOnWindowFocus: false,
+});
+const customizable = computed(() => catalogNumber.value === '03' || catalogNumber.value === '04');
+const latestEdition = computed(() => catalogVersion.value === 'latest');
+const savedSelection = computed(() => customizable.value
+  ? companyQuery.data.value?.catalogs[catalogNumber.value as '03' | '04'] ?? null : null);
+const selectedSet = computed(() => new Set(selectedCodes.value));
+function beginEditing(): void {
+  selectedCodes.value = [...(savedSelection.value?.visible_codes ?? [])];
+  editing.value = true;
+  saveError.value = null;
+  saveSuccess.value = null;
+  companyOnly.value = false;
+  pageIndex.value = 0;
+}
+function stopEditing(): void {
+  editing.value = false;
+  selectedCodes.value = [];
+  saveError.value = null;
+  companyOnly.value = true;
+  pageIndex.value = 0;
+}
+function selectable(item: SeeCatalogItem): boolean {
+  return catalogNumber.value !== '03' || !['D', 'X', '¦'].includes(item.details['Estado fuente'] ?? '');
+}
+function toggleCode(code: string): void {
+  const next = new Set(selectedCodes.value);
+  if (next.has(code)) next.delete(code); else next.add(code);
+  selectedCodes.value = [...next];
+}
+async function saveSelection(): Promise<void> {
+  if (!customizable.value || !props.canManage || !catalogQuery.data.value || !latestEdition.value) return;
+  saving.value = true;
+  saveError.value = null;
+  saveSuccess.value = null;
+  try {
+    await client.saveCompanySeeVisibility(
+      catalogNumber.value as '03' | '04', selectedCodes.value,
+      savedSelection.value?.revision ?? 0, catalogQuery.data.value.meta.version ?? '',
+    );
+    await companyQuery.refetch();
+    stopEditing();
+    saveSuccess.value = 'Selección guardada para esta empresa.';
+  } catch (error) {
+    saveError.value = error instanceof Error ? error.message : 'No se pudo guardar la selección.';
+    await companyQuery.refetch();
+  } finally { saving.value = false; }
+}
 
 const catalogsQuery = useQuery({
   queryKey: ['see-catalogs'],
@@ -59,10 +118,12 @@ function chooseSection(next: Section): void {
 }
 function chooseCatalog(number: string): void {
   if (number === catalogNumber.value) return;
+  stopEditing(); saveSuccess.value = null;
   catalogNumber.value = number; catalogVersion.value = 'latest';
   catalogFilter.value = ''; searchInput.value = ''; pageIndex.value = 0;
 }
 function chooseVersion(event: Event): void {
+  stopEditing();
   catalogVersion.value = (event.target as HTMLSelectElement).value;
   searchInput.value = ''; pageIndex.value = 0;
 }
@@ -85,7 +146,19 @@ function retry(): void {
 
 const itemColumns = createColumnHelper<SeeCatalogItem>();
 const ubigeoColumns = createColumnHelper<SeeUbigeo>();
-const catalogRows = computed(() => [...(catalogQuery.data.value?.data ?? [])]);
+const catalogRows = computed(() => {
+  const items = catalogQuery.data.value?.data ?? [];
+  if (!companyOnly.value || editing.value || !latestEdition.value || !['02', '03', '04'].includes(catalogNumber.value)) return [...items];
+  if (!companyQuery.isSuccess.value) return [];
+  if (catalogNumber.value === '02') {
+    const active = new Set(companyQuery.data.value?.currencies ?? []);
+    return items.filter(item => active.has(item.code));
+  }
+  const preference = savedSelection.value;
+  if (!preference) return [...items];
+  const selected = new Set(preference.visible_codes);
+  return items.filter(item => selected.has(item.code));
+});
 const ubigeoRows = computed(() => [...(ubigeoQuery.data.value?.data ?? [])]);
 const catalogTable = useVueTable({
   get data() { return catalogRows.value; },
@@ -124,7 +197,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <div>
         <p class="text-xs font-semibold uppercase tracking-wider text-brand">Referencias globales</p>
         <h1 id="see-heading" class="mt-1 text-2xl font-semibold text-foreground">Catálogos de facturación electrónica</h1>
-        <p class="mt-1 text-sm text-muted">Consulta de códigos SEE e INEI compartidos por todas las empresas.</p>
+        <p class="mt-1 text-sm text-muted">Referencias SEE e INEI compartidas; cada empresa elige cuáles usar como acceso rápido.</p>
       </div>
       <span class="rounded-full border border-border bg-soft px-3 py-1 text-xs text-muted">Solo lectura</span>
     </div>
@@ -185,6 +258,34 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <p v-if="section === 'catalogs' && currentCatalog" class="text-sm text-muted">Catálogo {{ currentCatalog.number }} · {{ currentCatalog.name }} · {{ (catalogQuery.data.value?.meta.item_count ?? currentCatalog.item_count).toLocaleString('es-PE') }} registros · {{ resolvedVersion === 'historical' ? 'archivo recibido, sin versión vigente verificada' : `versión ${resolvedVersion}` }}.</p>
       <p v-if="section === 'catalogs' && catalogQuery.data.value?.meta.source_url" class="text-xs text-muted">Fuente: <a class="underline" :href="catalogQuery.data.value.meta.source_url" target="_blank" rel="noopener noreferrer">{{ catalogQuery.data.value.meta.classification.startsWith('ISO_') ? 'Lista ISO 4217' : catalogQuery.data.value.meta.classification.startsWith('UNECE_REC20_') ? 'UNECE Rec. 20' : catalogQuery.data.value.meta.classification.startsWith('UNCEFACT_') ? 'Lista UN/CEFACT' : 'Anexo SUNAT' }} {{ resolvedVersion }}</a>. La edición más reciente incorporada no determina por sí sola la validez de un comprobante según su fecha y modalidad.</p>
       <p v-if="section === 'catalogs' && catalogNumber === '03' && resolvedVersion !== 'historical'" class="text-xs text-muted">La edición UNECE 2021 incluye códigos marcados D (desaconsejados) y X (eliminados). El anexo SUNAT consultado remite a una revisión anterior; para validar comprobantes hay que cotejar la versión aplicable según su fecha.</p>
+      <div v-if="section === 'catalogs' && ['02', '03', '04'].includes(catalogNumber) && latestEdition" class="space-y-3 rounded-lg border border-border bg-soft p-3 text-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p class="font-semibold text-foreground">Visibilidad para la empresa activa</p>
+            <p class="text-xs text-muted" v-if="catalogNumber === '02'">{{ companyQuery.data.value?.currencies.join(', ') || 'Cargando monedas…' }} · se administran en <a href="#empresa" class="underline">Régimen de Divisas</a>. El catálogo ISO completo permanece disponible.</p>
+            <p class="text-xs text-muted" v-else-if="savedSelection">{{ savedSelection.visible_codes.length }} códigos elegidos · revisión {{ savedSelection.revision }} · edición {{ savedSelection.source_version }}.</p>
+            <p class="text-xs text-muted" v-else>Sin selección guardada: se muestran todos los códigos de la edición.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button v-if="!editing" type="button" class="rounded-md border border-border px-3 py-1.5 text-foreground" :aria-pressed="companyOnly" @click="companyOnly = !companyOnly; pageIndex = 0">{{ companyOnly ? 'Ver catálogo completo' : 'Ver visibles' }}</button>
+            <button v-if="customizable && canManage && !editing" type="button" class="rounded-md bg-brand px-3 py-1.5 text-on-brand" :disabled="!catalogQuery.data.value || companyQuery.isPending.value" @click="beginEditing">Elegir visibles</button>
+          </div>
+        </div>
+        <p v-if="companyQuery.isError.value" role="alert" class="text-neg">No se pudo cargar la selección de empresa. <button class="underline" type="button" @click="companyQuery.refetch()">Reintentar</button></p>
+        <p v-if="savedSelection && savedSelection.source_version !== resolvedVersion" class="text-amber-800 dark:text-amber-200">La selección se hizo con otra edición. Revise sus códigos antes de usarla.</p>
+        <p v-if="saveSuccess" role="status" class="text-emerald-700 dark:text-emerald-300">{{ saveSuccess }}</p>
+        <div v-if="editing" class="space-y-2">
+          <p class="text-xs text-muted">Marque los códigos que verá esta empresa. La búsqueda funciona en el dispositivo; las unidades con estado D, X o incierto no se pueden agregar. Una selección vacía deja la lista de visibles vacía.</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="rounded-md border border-border px-3 py-1.5" @click="selectedCodes = [...new Set([...selectedCodes, ...catalogTable.getFilteredRowModel().rows.filter(row => selectable(row.original)).map(row => row.original.code)])]">Agregar resultados ({{ catalogTable.getFilteredRowModel().rows.length }})</button>
+            <button type="button" class="rounded-md border border-border px-3 py-1.5" @click="selectedCodes = []">Vaciar</button>
+            <span class="text-xs text-muted">{{ selectedCodes.length }} seleccionados</span>
+            <button type="button" class="rounded-md bg-brand px-3 py-1.5 text-on-brand disabled:opacity-50" :disabled="saving" @click="saveSelection">{{ saving ? 'Guardando…' : 'Guardar selección' }}</button>
+            <button type="button" class="rounded-md border border-border px-3 py-1.5" :disabled="saving" @click="stopEditing">Cancelar</button>
+          </div>
+          <p v-if="saveError" role="alert" class="text-neg">{{ saveError }}</p>
+        </div>
+      </div>
       <p v-if="section === 'ubigeos' && ubigeoQuery.data.value?.meta.source_url" class="text-xs text-muted">Fuente: <a class="underline" :href="ubigeoQuery.data.value.meta.source_url" target="_blank" rel="noopener noreferrer">Descarga INEI {{ ubigeoQuery.data.value.meta.version }}</a>. La edición conserva las denominaciones publicadas por INEI; no incluye población ni coordenadas.</p>
       <p v-if="error" role="alert" class="rounded-md border border-neg/30 bg-neg/10 px-3 py-2 text-sm text-neg">{{ error }} <button type="button" class="ml-2 underline" @click="retry">Reintentar</button></p>
       <p v-if="isLoading" role="status" class="py-8 text-center text-sm text-muted">Cargando referencias…</p>
@@ -193,7 +294,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
           <colgroup><col class="w-[120px] lg:w-[140px]" /><col class="w-[360px] lg:w-[540px]" /><col class="w-[232px] lg:w-[320px]" /></colgroup>
           <thead class="border-b border-border text-xs uppercase tracking-wide text-muted"><tr><th scope="col" class="py-2 pr-4">Código</th><th scope="col" class="py-2 pr-4">Descripción</th><th scope="col" class="py-2">Información adicional</th></tr></thead>
           <tbody><tr v-for="row in catalogTable.getRowModel().rows" :key="`${catalogNumber}-${row.original.source_row}`" class="border-b border-border/60 align-top">
-            <td class="break-words py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }} <span v-if="row.original.is_ambiguous" class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">Ambiguo</span><span v-if="row.original.details['Estado fuente'] === 'X'" class="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] text-red-900">Eliminado</span><span v-else-if="row.original.details['Estado fuente'] === 'D'" class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900">Desaconsejado</span><span v-else-if="row.original.details['Estado fuente'] === '¦'" class="ml-1 rounded bg-soft px-1.5 py-0.5 text-[10px] text-muted">Estado por revisar</span></td>
+            <td class="break-words py-3 pr-4 font-mono font-semibold text-foreground"><label v-if="editing" class="inline-flex items-center gap-1.5"><input type="checkbox" :checked="selectedSet.has(row.original.code)" :disabled="!selectable(row.original)" :aria-label="`Mostrar ${row.original.code}`" @change="toggleCode(row.original.code)" />{{ row.original.code }}</label><template v-else>{{ row.original.code }}</template> <span v-if="row.original.is_ambiguous" class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">Ambiguo</span><span v-if="row.original.details['Estado fuente'] === 'X'" class="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] text-red-900">Eliminado</span><span v-else-if="row.original.details['Estado fuente'] === 'D'" class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900">Desaconsejado</span><span v-else-if="row.original.details['Estado fuente'] === '¦'" class="ml-1 rounded bg-soft px-1.5 py-0.5 text-[10px] text-muted">Estado por revisar</span></td>
             <td class="break-words py-3 pr-4 text-foreground">{{ row.original.description }}</td>
             <td class="break-words py-3 text-xs text-muted"><span v-for="(value, key) in row.original.details" :key="key" class="mr-2 inline-block">{{ key }}: {{ value }}</span></td>
           </tr></tbody>

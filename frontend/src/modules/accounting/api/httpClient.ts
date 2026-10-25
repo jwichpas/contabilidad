@@ -28,7 +28,7 @@ import type {
   NextCorrelativeResponse,
   OperationalAccount,
 } from '../types/journalEntry.types';
-import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo } from '../types/seeReferences.types';
+import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo, SeeCompanyVisibility, SeeCompanyVisibilityRevision } from '../types/seeReferences.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
@@ -382,6 +382,24 @@ export class AccountingApiClient {
       `/api/v1/catalogs/sunat-see/ubigeos?${query}`,
       { method: 'GET', signal: params.signal }, false,
     );
+  }
+
+  public async fetchCompanySeeVisibility(signal?: AbortSignal): Promise<SeeCompanyVisibility> {
+    const response = await this.request<{ data: SeeCompanyVisibility }>(
+      '/api/v1/company/see-visibility', { method: 'GET', signal }, true,
+    );
+    return response.data;
+  }
+
+  public async saveCompanySeeVisibility(
+    number: '03' | '04', visibleCodes: readonly string[], expectedRevision: number, sourceVersion: string,
+  ): Promise<SeeCompanyVisibilityRevision> {
+    const response = await this.request<{ data: SeeCompanyVisibilityRevision }>(
+      `/api/v1/company/see-visibility/${number}`,
+      { method: 'PUT', body: JSON.stringify({ visible_codes: visibleCodes, expected_revision: expectedRevision, source_version: sourceVersion }) },
+      true,
+    );
+    return response.data;
   }
 
   /**

@@ -22,6 +22,17 @@ export interface SeeCatalogItem {
   readonly is_ambiguous: boolean;
 }
 
+export interface SeeCompanyVisibilityRevision {
+  readonly revision: number;
+  readonly source_version: string;
+  readonly visible_codes: readonly string[];
+}
+
+export interface SeeCompanyVisibility {
+  readonly currencies: readonly string[];
+  readonly catalogs: Readonly<Record<'03' | '04', SeeCompanyVisibilityRevision | null>>;
+}
+
 export interface SeeUbigeo {
   readonly code: string;
   readonly district: string;

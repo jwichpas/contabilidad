@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\Catalogs\ListSunatRucReferenceController;
 use App\Http\Controllers\Api\V1\Catalogs\ListTaxCalendarDeadlinesController;
 use App\Http\Controllers\Api\V1\Company\GetCompanyExchangeRatesController;
 use App\Http\Controllers\Api\V1\Company\GetCompanySettingsController;
+use App\Http\Controllers\Api\V1\Company\CompanySeeVisibilityController;
 use App\Http\Controllers\Api\V1\Company\InitializeCompanyChartOfAccountsController;
 use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
@@ -182,6 +183,12 @@ Route::prefix('v1')->group(function (): void {
 
             // Configuración, Áreas, Centros de Costos y Terceros de la Empresa
             Route::prefix('company')->group(function (): void {
+                Route::get('/see-visibility', [CompanySeeVisibilityController::class, 'index'])
+                    ->name('api.v1.company.see-visibility.index');
+                Route::put('/see-visibility/{number}', [CompanySeeVisibilityController::class, 'update'])
+                    ->whereIn('number', ['03', '04'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->name('api.v1.company.see-visibility.update');
                 Route::get('/settings', GetCompanySettingsController::class)
                     ->name('api.v1.company.settings.show');
 

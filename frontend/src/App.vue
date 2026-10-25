@@ -240,7 +240,10 @@ watch(
         />
         <SeeReferencesView
           v-else-if="currentModule === 'see-references'"
+          :key="`see-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+          :can-manage="canDeactivateEntities"
         />
         <SunatReferencesView
           v-else-if="currentModule === 'sunat-references'"
