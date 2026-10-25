@@ -1,0 +1,187 @@
+{
+  "version": "2015-06-anexo-3",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_pdf_sha256": "05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6",
+  "table_number": "31",
+  "name": "Tipo de renta",
+  "source_note": "44 códigos 00–43 del Anexo 3 PLE de 2015. Los nombres de consulta son resúmenes de la descripción impresa, no transcripción del fundamento legal ni tasas, artículos u homologación OCDE. Consulte el anexo y normas aplicables al período. No usar para calcular renta o retenciones.",
+  "rows": [
+    [
+      "00",
+      "Bienes"
+    ],
+    [
+      "01",
+      "Arrendamiento de predios"
+    ],
+    [
+      "02",
+      "Enajenación de inmuebles y derechos sobre inmuebles"
+    ],
+    [
+      "03",
+      "Rentas de bienes situados o derechos utilizados en el país"
+    ],
+    [
+      "04",
+      "Regalías por bienes o derechos utilizados en el país"
+    ],
+    [
+      "05",
+      "Regalías pagadas por un sujeto domiciliado"
+    ],
+    [
+      "06",
+      "Rentas de capital, intereses, comisiones, primas y operaciones financieras"
+    ],
+    [
+      "07",
+      "Dividendos y otras formas de distribución de utilidades"
+    ],
+    [
+      "08",
+      "Rendimientos de ADR y GDR con acciones subyacentes emitidas por no domiciliadas"
+    ],
+    [
+      "09",
+      "Actividades civiles, comerciales o empresariales realizadas en el país"
+    ],
+    [
+      "10",
+      "Trabajo personal realizado en territorio nacional"
+    ],
+    [
+      "11",
+      "Rentas vitalicias y pensiones originadas en el trabajo personal"
+    ],
+    [
+      "12",
+      "Enajenación de acciones y participaciones de entidades establecidas en el Perú fuera de bolsa"
+    ],
+    [
+      "13",
+      "Enajenación de otros valores emitidos por fondos o patrimonios establecidos en el Perú fuera de bolsa"
+    ],
+    [
+      "14",
+      "Redención o rescate de valores emitidos por fondos o patrimonios establecidos en el Perú fuera de bolsa"
+    ],
+    [
+      "15",
+      "Enajenación de acciones, participaciones y otros valores dentro de bolsa"
+    ],
+    [
+      "16",
+      "Redención o rescate de acciones de inversión y otros valores dentro de bolsa"
+    ],
+    [
+      "17",
+      "Enajenación de ADR y GDR con acciones subyacentes emitidas por domiciliadas"
+    ],
+    [
+      "18",
+      "Servicios digitales utilizados económicamente, usados o consumidos en el país"
+    ],
+    [
+      "19",
+      "Asistencia técnica utilizada económicamente en el país"
+    ],
+    [
+      "20",
+      "Intereses de obligaciones emitidas por una entidad constituida en el país"
+    ],
+    [
+      "21",
+      "Remuneración de miembros de consejo directivo o administración y actuaciones en el extranjero"
+    ],
+    [
+      "22",
+      "Honorarios o remuneraciones del sector público por trabajos en el exterior"
+    ],
+    [
+      "23",
+      "Resultados de la contratación de instrumentos financieros derivados"
+    ],
+    [
+      "24",
+      "Resultados de derivados con cobertura destinados a generar renta de fuente peruana"
+    ],
+    [
+      "25",
+      "Resultados de derivados sin cobertura destinados a generar renta de fuente peruana"
+    ],
+    [
+      "26",
+      "Derivados con tipo de cambio de moneda extranjera como activo subyacente"
+    ],
+    [
+      "27",
+      "Enajenación indirecta de acciones y participaciones de personas jurídicas domiciliadas"
+    ],
+    [
+      "28",
+      "Enajenación de ADR con acciones subyacentes de empresas no domiciliadas"
+    ],
+    [
+      "29",
+      "Reducción de capital distribuida por un no domiciliado en los supuestos del anexo"
+    ],
+    [
+      "30",
+      "Actividades de seguros y comisiones por reaseguros"
+    ],
+    [
+      "31",
+      "Alquiler de naves"
+    ],
+    [
+      "32",
+      "Alquiler de aeronaves"
+    ],
+    [
+      "33",
+      "Transporte aéreo"
+    ],
+    [
+      "34",
+      "Otros transportes distintos del aéreo o marítimo"
+    ],
+    [
+      "35",
+      "Fletamiento o transporte marítimo"
+    ],
+    [
+      "36",
+      "Empresas de líneas extranjeras por reciprocidad"
+    ],
+    [
+      "37",
+      "Servicios de telecomunicaciones y otros servicios del anexo"
+    ],
+    [
+      "38",
+      "Suministro de noticias o material informativo o gráfico"
+    ],
+    [
+      "39",
+      "Uso de películas, grabaciones y medios similares"
+    ],
+    [
+      "40",
+      "Suministro vinculado con transporte sin prestar ese servicio"
+    ],
+    [
+      "41",
+      "Exceso de estadía de contenedores"
+    ],
+    [
+      "42",
+      "Cesión de derechos de retransmisión televisiva de eventos en vivo"
+    ],
+    [
+      "43",
+      "Extranjeros que ingresan al país para prestar servicios en las calidades indicadas en el anexo"
+    ]
+  ]
+}

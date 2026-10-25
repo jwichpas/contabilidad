@@ -540,3 +540,44 @@ it('lists the 2026 identity references and keeps the nine supplied codes histori
         ->assertOk()->assertJsonPath('meta.total', 9);
     $this->getJson('/api/v1/catalogs/sunat/02')->assertOk()->assertDontSee('CARNE PERMISO TEMP.PERMAN -CPP');
 });
+
+it('serves PLE 31 income codes without treating its labels as current tax rates', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/31')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 44)
+        ->assertJsonFragment(['code' => '18', 'name' => 'Servicios digitales utilizados económicamente, usados o consumidos en el país']);
+    $this->getJson('/api/v1/catalogs/sunat/31?version=legacy-seed')->assertNotFound();
+});
+
+it('preserves every PLE 34 rubric position and sector when codes repeat', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $response = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/34')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 1627)
+        ->assertJsonPath('meta.descriptions_verified', false)
+        ->assertJsonPath('data.0.source_row', 1)
+        ->assertJsonPath('data.0.sector_code', '01')
+        ->assertJsonPath('data.1626.sector_code', '08');
+    expect(collect($response->json('data'))->where('code', '3D0121')->count())->toBeGreaterThan(1);
+    $this->getJson('/api/v1/catalogs/sunat/34?version=legacy-seed')->assertNotFound();
+});
+
+it('serves SUNAT four-digit PLE 35 independently of SEE and SIRE country codes', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/35')->assertOk()
+        ->assertJsonPath('meta.version', '2026-10-25-sunat-portal-capture')
+        ->assertJsonPath('meta.total', 273)
+        ->assertJsonFragment(['code' => '9001', 'name' => 'BOUVET ISLAND'])
+        ->assertJsonFragment(['code' => '9897', 'name' => 'ZONA NEUTRAL (PALESTINA)']);
+    $this->getJson('/api/v1/catalogs/sunat/35?version=2015-06-anexo-3')->assertNotFound();
+});

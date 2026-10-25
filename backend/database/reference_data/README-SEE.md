@@ -229,3 +229,25 @@ separado de cualquier decisión tributaria operativa. El texto del código `6` i
 una frase irregular en el impreso oficial y se reproduce con esa advertencia, sin
 corregirla por conjetura. No asumir vigencia del artículo 19 ni conceder exoneraciones
 sin cotejar ley, condiciones, sujetos y período de la operación.
+
+La Tabla 31 PLE del mismo anexo tiene 44 códigos de tipo de renta (`00`–`43`).
+`2026_10_25_200000` guarda esa edición de 2015; los rótulos son resúmenes de búsqueda,
+no transcripciones jurídicas para determinar tasas o tratamientos tributarios actuales.
+La Tabla 34 PLE de rubros financieros ocupa ocho sectores y contiene 1.627 posiciones.
+`2026_10_25_210000` usa tablas globales versionadas propias con identificador por posición,
+sector, página y columna, pues varios códigos se repiten. Los textos son ayudas de
+búsqueda extraídas del PDF y requieren cotejo visual individual; no alimentan los EEFF
+operativos ni el PCGE. El anexo de 2015 se conserva como fuente de la edición.
+La Tabla 35 PLE consulta 273 códigos de país de cuatro dígitos capturados del portal
+SUNAT el 25/10/2026. `2026_10_25_220000` los publica con una edición que indica
+la fecha de captura, no la vigencia de cada país o territorio. Esta Tabla 35 no es
+el Catálogo SEE 04 ni la Tabla SIRE 16, y no valida residencia fiscal.
+
+Instalar las nuevas referencias en orden en el entorno con PostgreSQL:
+
+```bash
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_200000_add_ple_table_31_historical_income_types.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_210000_add_ple_table_34_financial_rubrics.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_220000_add_ple_table_35_country_codes.php --force
+php artisan test tests/Unit/SeeReferenceSourceTest.php tests/Feature/SeeReferenceCatalogTest.php
+```

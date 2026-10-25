@@ -16,6 +16,50 @@ it('ships the full supplied SEE and INEI snapshots without dropping duplicate co
         ->toBe(['5 C calorie', 'Ångstråm']);
 });
 
+it('pins PLE 31 income codes as historical search summaries', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_31_income_type_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('9b8c5d00367dc8efbe0bb0a087e8be6a215b3895f0960facb6ee95ad335885f4')
+        ->and($source['table_number'])->toBe('31')
+        ->and(array_column($source['rows'], 0))->toBe(array_map(static fn (int $i): string => sprintf('%02d', $i), range(0, 43)))
+        ->and($source['source_note'])->toContain('resúmenes');
+});
+
+it('pins all eight PLE 34 financial rubric sectors and preserves repeated code positions', function (): void {
+    $hashes = [
+        '01' => '554b8e111a79e64f2263f4aeb0441eec894e8997cacca861e93d71743de48b2c',
+        '02' => 'e3094ef87c24fb3197aeeafc46c4ace705598fa2c6fdb168d5412193d2824b3b',
+        '03' => '183b6224b7eee53745560ce5b2a41f5f88db58aab4b60e84dc06c1f7e6d60982',
+        '04' => '31a0b17f6e77b3d1a393a033dd695565358029b7d65e1e5c4629a0a1f93596c5',
+        '05' => '844398e0cb5bf0840463a514c883000d45d0cd66ecb717306a655f9eadb0a1c5',
+        '06' => 'e1b62fadd21227df30949300766679573b17e117a54294b7dcf7dbd5597a5df1',
+        '07' => '61106256730a68283579e75d4ace556831ee2b74341d5e377f350da628bf4a60',
+        '08' => '361bbc99e6d8d3ad31465c2c34be3ffea238fd90df6b5c39b29522f2374a3417',
+    ];
+    $all = [];
+    foreach ($hashes as $sector => $hash) {
+        $path = __DIR__."/../../database/reference_data/ple_table_34_sector_{$sector}_sunat_anexo_3_2015.json";
+        $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+        expect(hash_file('sha256', $path))->toBe($hash)
+            ->and($source['sector_code'])->toBe($sector)
+            ->and(array_column($source['rows'], 0))->toBe(range(1, count($source['rows'])));
+        $all = array_merge($all, $source['rows']);
+    }
+    expect($all)->toHaveCount(1627)
+        ->and(collect($all)->where(1, '3D0121')->count())->toBeGreaterThan(1);
+});
+
+it('pins the separate four-digit SUNAT PLE 35 portal snapshot', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_35_country_codes_sunat_portal_2026_10_25.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('ad22bc5e829501e37b93459695b7acd1902bdb40fe92317dab01306b03c12a24')
+        ->and($source['source_html_sha256'])->toBe('0e39943233b72e3ca3dff4e542259223e3d9cea339bc4f119afa921eea37c25b')
+        ->and($source['rows'])->toHaveCount(273)
+        ->and($source['rows'][0])->toBe(['9001', 'BOUVET ISLAND'])
+        ->and($source['rows'][272])->toBe(['9897', 'ZONA NEUTRAL (PALESTINA)'])
+        ->and(array_unique(array_column($source['rows'], 0)))->toHaveCount(273);
+});
+
 it('pins the 14 independently sourced transport motives from SUNAT annex I of 2024', function (): void {
     $path = __DIR__.'/../../database/reference_data/see_catalog_20_anexo_i_2024.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

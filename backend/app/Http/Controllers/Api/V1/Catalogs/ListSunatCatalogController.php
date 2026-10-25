@@ -25,6 +25,35 @@ final readonly class ListSunatCatalogController
     {
         $normalized = str_pad(ltrim($tableNumber, '0'), 2, '0', STR_PAD_LEFT);
 
+        if ($normalized === '34') {
+            $requested = $request->query('version', 'latest');
+            if (! is_string($requested) || ! in_array($requested, ['latest', '2015-06-anexo-3'], true)) {
+                throw new NotFoundHttpException('Edición PLE 34 no registrada.');
+            }
+            $edition = DB::table('ple_financial_rubric_versions')->where('version', '2015-06-anexo-3')->first();
+            if ($edition === null) {
+                throw new NotFoundHttpException('Edición PLE 34 no instalada.');
+            }
+            $items = DB::table('ple_financial_rubric_items')->where('version', $edition->version)
+                ->where('is_active', true)->orderBy('source_row')->get()
+                ->map(static fn (object $row): array => [
+                    'source_row' => $row->source_row, 'sector_code' => $row->sector_code,
+                    'sector_name' => $row->sector_name, 'code' => $row->code,
+                    'name' => $row->name, 'source_page' => $row->source_page,
+                    'source_column' => $row->source_column,
+                ]);
+
+            return response()->json([
+                'data' => $items,
+                'meta' => [
+                    'table_number' => '34', 'total' => $items->count(), 'version' => $edition->version,
+                    'classification' => $edition->classification, 'source_url' => $edition->source_url,
+                    'available_versions' => ['2015-06-anexo-3'],
+                    'descriptions_verified' => false,
+                ],
+            ]);
+        }
+
         $modelClass = match ($normalized) {
             '01' => SunatPaymentMethod::class,
             '02' => SunatIdentityDocumentType::class,
@@ -36,18 +65,19 @@ final readonly class ListSunatCatalogController
             '10' => SunatElectronicDocumentType::class,
             '11' => SunatCustomsDependency::class,
             '12' => SunatOperationType::class,
-            '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '32', '33' => null,
+            '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '31', '32', '33', '35' => null,
             default => throw new NotFoundHttpException("La tabla SUNAT '{$tableNumber}' no está registrada en el sistema."),
         };
 
-        if (in_array($normalized, ['01', '02', '03', '04', '05', '06', '08', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '32', '33'], true)) {
+        if (in_array($normalized, ['01', '02', '03', '04', '05', '06', '08', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '31', '32', '33', '35'], true)) {
             $latest = match ($normalized) {
                 '08' => '2008-rs239',
                 '13' => '2020-108-anexo-i',
+                '35' => '2026-10-25-sunat-portal-capture',
                 default => '2015-06-anexo-3',
             };
             $available = match ($normalized) {
-                '04', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '32', '33' => [$latest],
+                '04', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '31', '32', '33', '35' => [$latest],
                 '13' => [$latest, '2015-06-anexo-3'],
                 default => [$latest, 'legacy-seed'],
             };
@@ -67,7 +97,7 @@ final readonly class ListSunatCatalogController
                 '10' => 'ple_document_type_versions',
                 '11' => 'ple_customs_dependency_versions',
                 '12' => 'ple_inventory_operation_versions',
-                '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '32', '33' => 'ple_annex3_reference_versions',
+                '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '31', '32', '33', '35' => 'ple_annex3_reference_versions',
             };
             $versionItems = match ($normalized) {
                 '01' => 'ple_payment_method_version_items',
@@ -80,10 +110,10 @@ final readonly class ListSunatCatalogController
                 '10' => 'ple_document_type_version_items',
                 '11' => 'ple_customs_dependency_version_items',
                 '12' => 'ple_inventory_operation_version_items',
-                '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '32', '33' => 'ple_annex3_reference_items',
+                '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '31', '32', '33', '35' => 'ple_annex3_reference_items',
             };
             $editionQuery = DB::table($versions)->where('version', $resolved);
-            if (in_array($normalized, ['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '32', '33'], true)) {
+            if (in_array($normalized, ['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '31', '32', '33', '35'], true)) {
                 $editionQuery->where('table_number', $normalized);
             }
             $edition = $editionQuery->first();
@@ -91,7 +121,7 @@ final readonly class ListSunatCatalogController
                 throw new NotFoundHttpException("Edición PLE {$normalized} no instalada.");
             }
             $itemsQuery = DB::table($versionItems)->where('version', $resolved)->where('is_active', true);
-            if (in_array($normalized, ['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '32', '33'], true)) {
+            if (in_array($normalized, ['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '25', '27', '28', '30', '31', '32', '33', '35'], true)) {
                 $itemsQuery->where('table_number', $normalized);
             }
             $items = $itemsQuery->orderBy('code')->get()

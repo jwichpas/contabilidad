@@ -34,8 +34,11 @@ const pleTables = [
   { number: '27', name: 'Tipo de vinculación económica (2015)' },
   { number: '28', name: 'Patrimonio neto PLE (2015)' },
   { number: '30', name: 'Clasificación de bienes y servicios adquiridos' },
+  { number: '31', name: 'Tipo de renta (2015)' },
   { number: '32', name: 'Modalidad de servicio de no domiciliado (2015)' },
   { number: '33', name: 'Exoneraciones de no domiciliados (2015)' },
+  { number: '34', name: 'Rubros de estados financieros por sector (2015)' },
+  { number: '35', name: 'Países SUNAT (código de cuatro dígitos)' },
 ] as const;
 const rucDatasets = [
   { number: 'contributor-types', name: 'Anexo 2 · Tipos de contribuyente' },
@@ -86,7 +89,11 @@ const query = useQuery({
     if (group === 'ple') {
       const response = await client.fetchSunatTableReference(number, signal, queryKey[3] as 'latest' | 'legacy-seed' | '2015-06-anexo-3');
       return {
-        rows: response.data.map((item) => ({ code: item.code, description: number === '04' ? '—' : item.description, details: '' })),
+        rows: response.data.map((item) => ({
+          code: item.code,
+          description: number === '04' ? '—' : item.description,
+          details: number === '34' ? `${item.sector_code} · ${item.sector_name} · página ${item.source_page}, columna ${item.source_column}` : '',
+        })),
         edition: response.meta.version ?? null,
         sourceUrl: response.meta.source_url ?? null,
         amendmentUrl: response.meta.amendment_url ?? null,
@@ -132,7 +139,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <button type="button" :aria-pressed="source === 'ple'" :class="source === 'ple' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ple')">Tablas PLE</button>
       <button type="button" :aria-pressed="source === 'ruc'" :class="source === 'ruc' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ruc')">Anexos RUC y CIIU</button>
     </div>
-    <p class="text-sm text-muted">{{ source === 'ple' ? 'Veinticinco tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
+    <p class="text-sm text-muted">{{ source === 'ple' ? 'Veintiocho tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
     <div class="space-y-4 rounded-xl border border-border bg-surface p-4">
       <div class="grid gap-3 md:grid-cols-2">
         <div class="min-w-0 text-xs font-medium text-muted">
@@ -176,6 +183,9 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <p v-if="source === 'ple' && pleNumber === '30'" class="text-xs text-muted">Clasificación PLE de bienes y servicios adquiridos del anexo de 2015. Estos cinco códigos de consulta no clasifican compras automáticamente ni determinan el crédito fiscal.</p>
       <p v-if="source === 'ple' && pleNumber === '32'" class="text-xs text-muted">Modalidades de servicio de no domiciliados del Anexo 3 PLE de 2015. Son referencias históricas: no determinan retenciones ni tratamiento tributario vigente. La Tabla 20 SIRE tiene su propia edición y espacio de códigos.</p>
       <p v-if="source === 'ple' && pleNumber === '33'" class="text-xs text-muted">Exoneraciones de operaciones de no domiciliados según el Anexo 3 PLE de 2015. La redacción impresa del código 6 es irregular. Estos códigos históricos no acreditan que una exoneración esté vigente ni que corresponda a una operación; consulte la norma aplicable al período.</p>
+      <p v-if="source === 'ple' && pleNumber === '31'" class="text-xs text-muted">Los 44 tipos de renta provienen del anexo PLE de 2015. Sus nombres son resúmenes para buscar; el código no determina la tasa ni el tratamiento aplicable hoy.</p>
+      <p v-if="source === 'ple' && pleNumber === '34'" class="text-xs text-muted">Se conservan 1.627 posiciones de ocho sectores, incluso códigos repetidos en un mismo sector. Las etiquetas extraídas son ayudas de búsqueda pendientes de cotejo visual individual; consulte el anexo para interpretar un rubro. No se usan para generar estados financieros.</p>
+      <p v-if="source === 'ple' && pleNumber === '35'" class="text-xs text-muted">Captura del listado SUNAT de países de cuatro dígitos del 25/10/2026. Contiene territorios y códigos históricos; la fecha de captura no acredita vigencia individual. No comparte códigos con SEE ni SIRE.</p>
       <p v-if="source === 'ple' && pleNumber === '03' && selectedEdition === 'latest'" class="text-xs text-muted">La tabla 03 incluye entidades históricas. Sus códigos son referencia PLE; no acreditan que un banco esté operativo ni habilitan su selección para cuentas actuales.</p>
       <p v-if="source === 'ple' && pleNumber === '12' && selectedEdition === 'latest'" class="text-xs text-muted">La edición cotejada contiene 47 operaciones de inventario. La carga inicial tiene 17 y asigna otro significado al código 07; no use ambas ediciones indistintamente en el kardex.</p>
       <p v-if="source === 'ple' && pleNumber === '11' && selectedEdition === 'latest'" class="text-xs text-muted">Los 30 códigos corresponden a la Tabla 11 PLE de 2015; no acreditan qué dependencias siguen operativas ni sustituyen la Tabla 4 de SIRE.</p>
@@ -189,7 +199,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
           <table class="w-[712px] table-fixed text-left text-sm lg:w-[1000px]">
             <colgroup><col class="w-[120px] lg:w-[140px]" /><col class="w-[392px] lg:w-[560px]" /><col class="w-[200px] lg:w-[300px]" /></colgroup>
             <thead class="border-b border-border text-xs uppercase tracking-wide text-muted"><tr><th scope="col" class="py-2 pr-4">Código</th><th scope="col" class="py-2 pr-4">Descripción</th><th scope="col" class="py-2">Información adicional</th></tr></thead>
-            <tbody><tr v-for="row in table.getRowModel().rows" :key="row.original.code" class="border-b border-border/60 align-top"><td class="break-words py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }}</td><td class="break-words py-3 pr-4 text-foreground"><details v-if="pleNumber === '27' && row.original.description.length > 350"><summary class="cursor-pointer">{{ row.original.description.slice(0, 180) }}… <span class="text-brand underline">Ver texto completo</span></summary><p class="mt-2 whitespace-normal">{{ row.original.description }}</p></details><template v-else>{{ row.original.description }}</template></td><td class="break-words py-3 text-xs text-muted">{{ row.original.details }}</td></tr></tbody>
+            <tbody><tr v-for="row in table.getRowModel().rows" :key="row.id" class="border-b border-border/60 align-top"><td class="break-words py-3 pr-4 font-mono font-semibold text-foreground">{{ row.original.code }}</td><td class="break-words py-3 pr-4 text-foreground"><details v-if="pleNumber === '27' && row.original.description.length > 350"><summary class="cursor-pointer">{{ row.original.description.slice(0, 180) }}… <span class="text-brand underline">Ver texto completo</span></summary><p class="mt-2 whitespace-normal">{{ row.original.description }}</p></details><template v-else>{{ row.original.description }}</template></td><td class="break-words py-3 text-xs text-muted">{{ row.original.details }}</td></tr></tbody>
           </table>
           <p v-if="count === 0" class="py-8 text-center text-sm text-muted">No hay resultados para esta búsqueda.</p>
         </div>
