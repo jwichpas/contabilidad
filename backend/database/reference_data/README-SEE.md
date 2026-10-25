@@ -79,6 +79,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_030000_reconcile_ple_table_05_inventory_types.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_040000_version_ple_table_06_measurement_units.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_050000_version_ple_table_03_financial_institutions.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_060000_version_ple_table_12_inventory_operations.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -135,3 +136,14 @@ espacios de códigos: la migración `2026_10_25_040000` conserva las 16 filas si
 y publica la edición de 62 en tablas PLE versionadas. La API muestra el anexo por defecto y
 admite `?version=legacy-seed` para la carga numérica. Esta edición PLE es independiente del
 Catálogo SEE 03 y de la revisión UNECE 2021; no confirma vigencia normativa en 2026.
+La Tabla 12 PLE del Anexo 3 contiene 47 códigos para operaciones del inventario permanente
+(`01`–`38` y `91`–`99`), frente a 17 en la carga inicial. En particular `07` corresponde a
+BONIFICACIÓN en el anexo, mientras la carga inicial lo llama PROMOCIÓN. La migración
+`2026_10_25_060000` conserva ambas ediciones en tablas versionadas y deja intacta la tabla
+operativa para no reinterpretar movimientos del kardex. La API de consulta muestra el anexo por
+defecto y `?version=legacy-seed` permite revisar el significado original; la edición PLE 12
+es independiente de SEE 12 y de SIRE.
+La llamada tabla 08 del sistema enumera libros y registros tributarios de una carga inicial;
+no aparece como Tabla 08 en ese Anexo 3 PLE. Requiere su propia fuente y conciliación antes
+de declarar una edición normativa verificada. El nombre de la vista ya no la denomina
+«Libros y registros electrónicos».

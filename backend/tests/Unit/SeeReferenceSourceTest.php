@@ -84,6 +84,18 @@ it('pins the sixty-two PLE Annex 3 unit codes independently of the old numeric m
         ->and($codes)->not->toContain('01', '07', '99');
 });
 
+it('pins the forty-seven PLE inventory operations and the changed meaning of code 07', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_12_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('0dc1c6b2bb5f578909e9112c25b1563bc26c9ca4f4fb60763226f271d07432b7')
+        ->and($source['table_number'])->toBe('12')
+        ->and($source['rows'])->toHaveCount(47)
+        ->and(array_unique($codes))->toHaveCount(47)
+        ->and(array_column($source['rows'], 1, 0)['07'])->toBe('BONIFICACIÓN')
+        ->and($codes)->toContain('17', '28', '38', '91', '98');
+});
+
 it('pins each reconciled annex fixture and its added code', function (): void {
     foreach ([
         ['15', '2017_anexo_e', '9f96ed5017b3d7eca4fdb81b8c89ad275d68e743abe5b4c9a4357a95635d26e6', 41, '2008'],
