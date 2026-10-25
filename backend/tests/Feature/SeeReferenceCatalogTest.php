@@ -467,6 +467,21 @@ it('returns all PLE economic relationship criteria without truncating the long c
     $this->getJson('/api/v1/catalogs/sunat/27?version=legacy-seed')->assertNotFound();
 });
 
+it('shows historical PLE net equity codes independently of the operating chart of accounts', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/28')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.table_number', '28')
+        ->assertJsonPath('meta.total', 46)
+        ->assertJsonFragment(['code' => '50', 'name' => 'CAPITAL'])
+        ->assertJsonFragment(['code' => '56', 'name' => 'RESULTADOS NO REALIZADOS'])
+        ->assertJsonFragment(['code' => '5922', 'name' => 'Gastos de años anteriores']);
+    $this->getJson('/api/v1/catalogs/sunat/28?version=legacy-seed')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

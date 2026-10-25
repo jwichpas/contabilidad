@@ -186,6 +186,20 @@ it('pins all thirteen historical PLE economic relationship codes and the long co
         ->and($source['rows'][0])->toBe(['00', 'Sin vinculación']);
 });
 
+it('pins the forty-six historical PLE net equity codes without replacing the company PCGE', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_28_net_equity_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('436450eac57a7b2c20b90658306e94660bbc040315dd44d02536232285e93dcc')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and($source['table_number'])->toBe('28')
+        ->and($source['classification'])->toBe('SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE')
+        ->and($codes)->toHaveCount(46)
+        ->and(array_unique($codes))->toHaveCount(46)
+        ->and($source['rows'][16])->toBe(['56', 'RESULTADOS NO REALIZADOS'])
+        ->and($source['rows'][45])->toBe(['5922', 'Gastos de años anteriores']);
+});
+
 it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

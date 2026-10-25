@@ -89,6 +89,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_130000_add_ple_tables_21_22_reference_editions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_140000_add_ple_table_25_historical_treaty_codes.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_150000_add_ple_table_27_economic_relationship.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_160000_add_ple_table_28_historical_net_equity.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -207,3 +208,7 @@ anexo. `2026_10_25_150000` amplía a `text` la columna de descripciones de la co
 global para conservar los criterios extensos, y publica la edición histórica de 2015.
 La pantalla ofrece expansión del texto largo. Estos criterios se muestran como referencia
 de su edición; no calculan ni confirman vinculación económica vigente para una empresa.
+La Tabla 28 PLE de 2015 enumera 46 códigos de patrimonio neto de dos a cuatro dígitos.
+`2026_10_25_160000` los publica para consulta histórica con la fuente fijada. No se
+copian a las cuentas operativas ni reemplazan el PCGE de cada empresa, cuya versión
+se gestiona aparte; las denominaciones del anexo pueden diferir de ediciones posteriores.
