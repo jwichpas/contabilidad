@@ -291,6 +291,23 @@ it('keeps the initial inventory operation meaning while exposing the PLE Annex 3
         ->assertJsonPath('meta.catalog_number', '12');
 });
 
+it('serves the PLE customs edition and retains the partial initial load', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/11')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 30)
+        ->assertJsonFragment(['code' => '884', 'name' => 'DEPENDENCIA FERROVIARIA TACNA'])
+        ->assertJsonFragment(['code' => '965', 'name' => 'DEPENDENCIA POSTAL DE SALAVERRY']);
+    $this->getJson('/api/v1/catalogs/sunat/11?version=legacy-seed')->assertOk()
+        ->assertJsonPath('meta.total', 22)
+        ->assertJsonFragment(['code' => '172', 'name' => 'TACNA'])
+        ->assertDontSee('DEPENDENCIA FERROVIARIA TACNA');
+    $this->getJson('/api/v1/catalogs/sunat/11?version=other')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

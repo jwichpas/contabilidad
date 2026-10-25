@@ -1,0 +1,130 @@
+{
+  "table_number": "11",
+  "version": "2015-06-anexo-3",
+  "name": "Código de la aduana PLE",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_note": "Tabla 11 del Anexo 3 PLE, 30 códigos. Fuente histórica distinta de la Tabla 4 del Anexo 01 de SIRE 2022 y de los códigos aduaneros operativos actuales. La edición no acredita vigencia individual en 2026.",
+  "rows": [
+    [
+      "019",
+      "TUMBES"
+    ],
+    [
+      "028",
+      "TALARA"
+    ],
+    [
+      "046",
+      "PAITA"
+    ],
+    [
+      "055",
+      "CHICLAYO"
+    ],
+    [
+      "082",
+      "SALAVERRY"
+    ],
+    [
+      "091",
+      "CHIMBOTE"
+    ],
+    [
+      "118",
+      "MARÍTIMA DEL CALLAO"
+    ],
+    [
+      "127",
+      "PISCO"
+    ],
+    [
+      "145",
+      "MOLLENDO MATARANI"
+    ],
+    [
+      "154",
+      "AREQUIPA"
+    ],
+    [
+      "163",
+      "ILO"
+    ],
+    [
+      "172",
+      "TACNA"
+    ],
+    [
+      "181",
+      "PUNO"
+    ],
+    [
+      "190",
+      "CUZCO"
+    ],
+    [
+      "217",
+      "PUCALLPA"
+    ],
+    [
+      "226",
+      "IQUITOS"
+    ],
+    [
+      "235",
+      "AÉREA DEL CALLAO"
+    ],
+    [
+      "244",
+      "POSTAL DE LIMA"
+    ],
+    [
+      "262",
+      "DESAGUADERO"
+    ],
+    [
+      "271",
+      "TARAPOTO"
+    ],
+    [
+      "280",
+      "PUERTO MALDONADO"
+    ],
+    [
+      "299",
+      "LA TINA"
+    ],
+    [
+      "884",
+      "DEPENDENCIA FERROVIARIA TACNA"
+    ],
+    [
+      "893",
+      "DEPENDENCIA POSTAL TACNA"
+    ],
+    [
+      "910",
+      "DEPENDENCIA POSTAL AREQUIPA"
+    ],
+    [
+      "929",
+      "COMPLEJO FRONTERIZO STA ROSA TACNA"
+    ],
+    [
+      "938",
+      "TERMINAL TERRESTRE TACNA"
+    ],
+    [
+      "947",
+      "AEROPUERTO TACNA"
+    ],
+    [
+      "956",
+      "CETICOS TACNA"
+    ],
+    [
+      "965",
+      "DEPENDENCIA POSTAL DE SALAVERRY"
+    ]
+  ]
+}

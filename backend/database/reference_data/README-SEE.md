@@ -80,6 +80,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_040000_version_ple_table_06_measurement_units.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_050000_version_ple_table_03_financial_institutions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_060000_version_ple_table_12_inventory_operations.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_070000_version_ple_table_11_customs_dependencies.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -147,3 +148,8 @@ La llamada tabla 08 del sistema enumera libros y registros tributarios de una ca
 no aparece como Tabla 08 en ese Anexo 3 PLE. Requiere su propia fuente y conciliación antes
 de declarar una edición normativa verificada. El nombre de la vista ya no la denomina
 «Libros y registros electrónicos».
+La Tabla 11 PLE de aduanas tiene 30 códigos en el Anexo 3 de 2015, frente a 22 en la carga
+original. La migración `2026_10_25_070000` conserva esas 22 filas como `legacy-seed` y publica
+los 30 pares del anexo para consulta, sin alterar `sunat_table_11_customs_dependencies` ni
+afirmar que las dependencias siguen operativas en 2026. Su clave `11` no corresponde a la
+Tabla 4 de códigos aduaneros del Anexo 01 SIRE de 2022, que tiene otra edición y otro ámbito.

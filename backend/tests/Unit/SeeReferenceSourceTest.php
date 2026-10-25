@@ -96,6 +96,18 @@ it('pins the forty-seven PLE inventory operations and the changed meaning of cod
         ->and($codes)->toContain('17', '28', '38', '91', '98');
 });
 
+it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('cda6985f84f93f9d5874c77307793e360da7354f0ca06c69a40d4c81b0776cbb')
+        ->and($source['table_number'])->toBe('11')
+        ->and($source['rows'])->toHaveCount(30)
+        ->and(array_unique($codes))->toHaveCount(30)
+        ->and($codes)->toContain('884', '893', '910', '965')
+        ->and($codes)->not->toContain('000', '037', '974');
+});
+
 it('pins each reconciled annex fixture and its added code', function (): void {
     foreach ([
         ['15', '2017_anexo_e', '9f96ed5017b3d7eca4fdb81b8c89ad275d68e743abe5b4c9a4357a95635d26e6', 41, '2008'],
