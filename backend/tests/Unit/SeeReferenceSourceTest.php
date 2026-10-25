@@ -108,6 +108,18 @@ it('pins all thirty PLE customs locations without borrowing the SIRE customs tab
         ->and($codes)->not->toContain('000', '037', '974');
 });
 
+it('pins sixty-one PLE Annex 3 document types independently of SEE and SIRE', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_10_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('3d06ee30c7ae9827d402ca85f66a6b72cdd618637f9a64425618cf0b6b628973')
+        ->and($source['table_number'])->toBe('10')
+        ->and($source['rows'])->toHaveCount(61)
+        ->and(array_unique($codes))->toHaveCount(61)
+        ->and($codes)->toContain('11', '40', '48', '56', '87', '89', '96')
+        ->and($codes)->not->toContain('47', '57');
+});
+
 it('pins each reconciled annex fixture and its added code', function (): void {
     foreach ([
         ['15', '2017_anexo_e', '9f96ed5017b3d7eca4fdb81b8c89ad275d68e743abe5b4c9a4357a95635d26e6', 41, '2008'],

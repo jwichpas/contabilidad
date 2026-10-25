@@ -40,7 +40,7 @@ const pageSize = 25;
 const choices = computed(() => source.value === 'ple' ? pleTables : rucDatasets);
 const selected = computed(() => source.value === 'ple' ? pleNumber.value : rucNumber.value);
 const selectedName = computed(() => choices.value.find((entry) => entry.number === selected.value)?.name ?? selected.value);
-const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '03', '05', '06', '11', '12'].includes(pleNumber.value));
+const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '03', '05', '06', '10', '11', '12'].includes(pleNumber.value));
 function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
 }
@@ -148,6 +148,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <p v-if="source === 'ple' && pleNumber === '03' && selectedEdition === 'latest'" class="text-xs text-muted">La tabla 03 incluye entidades históricas. Sus códigos son referencia PLE; no acreditan que un banco esté operativo ni habilitan su selección para cuentas actuales.</p>
       <p v-if="source === 'ple' && pleNumber === '12' && selectedEdition === 'latest'" class="text-xs text-muted">La edición cotejada contiene 47 operaciones de inventario. La carga inicial tiene 17 y asigna otro significado al código 07; no use ambas ediciones indistintamente en el kardex.</p>
       <p v-if="source === 'ple' && pleNumber === '11' && selectedEdition === 'latest'" class="text-xs text-muted">Los 30 códigos corresponden a la Tabla 11 PLE de 2015; no acreditan qué dependencias siguen operativas ni sustituyen la Tabla 4 de SIRE.</p>
+      <p v-if="source === 'ple' && pleNumber === '10' && selectedEdition === 'latest'" class="text-xs text-muted">La lista PLE de 2015 contiene 61 tipos. Cada libro y campo puede restringir los códigos admitidos; esta lista no habilita la emisión de comprobantes ni concede crédito fiscal.</p>
       <p v-if="source === 'ple' && pleNumber === '08' && !query.isPending.value && !query.isError.value" class="text-xs text-muted">Estos códigos proceden de la carga inicial de libros tributarios. La Tabla 08 no figura en el Anexo 3 PLE de 2015 y está pendiente su conciliación con una fuente propia.</p>
       <p v-else-if="source === 'ple' && query.data.value?.edition === 'legacy-seed'" class="text-xs text-muted">Carga inicial preservada como histórico, sin verificación de vigencia.</p>
       <p v-else-if="source === 'ple' && !query.isPending.value && !query.isError.value" class="text-xs text-muted">Fuente inicial pendiente de conciliación y versionado.</p>

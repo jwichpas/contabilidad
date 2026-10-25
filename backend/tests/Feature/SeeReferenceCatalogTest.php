@@ -308,6 +308,25 @@ it('serves the PLE customs edition and retains the partial initial load', functi
     $this->getJson('/api/v1/catalogs/sunat/11?version=other')->assertNotFound();
 });
 
+it('exposes the PLE document reference without authorizing issue or tax credit', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/10')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 61)
+        ->assertJsonPath('meta.document_use_verified', false)
+        ->assertJsonFragment(['code' => '11', 'allows_tax_credit' => null])
+        ->assertJsonFragment(['code' => '89', 'name' => 'NOTA DE AJUSTE DE OPERACIONES - LEY N° 29972']);
+    $this->getJson('/api/v1/catalogs/sunat/10?version=legacy-seed')->assertOk()
+        ->assertJsonPath('meta.total', 24)
+        ->assertJsonFragment(['code' => '00', 'name' => 'OTROS (ESPECIFICAR)']);
+    $this->getJson('/api/v1/catalogs/sunat/10?version=other')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat-see/01')->assertOk()
+        ->assertJsonPath('meta.catalog_number', '01');
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

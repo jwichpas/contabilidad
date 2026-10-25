@@ -81,6 +81,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_050000_version_ple_table_03_financial_institutions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_060000_version_ple_table_12_inventory_operations.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_070000_version_ple_table_11_customs_dependencies.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_080000_version_ple_table_10_document_types.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -153,3 +154,10 @@ original. La migración `2026_10_25_070000` conserva esas 22 filas como `legacy-
 los 30 pares del anexo para consulta, sin alterar `sunat_table_11_customs_dependencies` ni
 afirmar que las dependencias siguen operativas en 2026. Su clave `11` no corresponde a la
 Tabla 4 de códigos aduaneros del Anexo 01 SIRE de 2022, que tiene otra edición y otro ámbito.
+La Tabla 10 PLE del Anexo 3 de 2015 enumera 61 tipos de comprobante/documento frente a 24
+en la carga inicial. La migración `2026_10_25_080000` conserva ambas ediciones y no cambia
+`sunat_table_10_electronic_document_types`. La API de consulta ofrece los 61 por defecto con
+`document_use_verified=false`: pertenecer a esta tabla no habilita emisión, ni basta para
+deducir crédito fiscal. Los indicadores `allows_tax_credit` e `is_electronic_default` de la
+carga inicial son metadatos del aplicativo y quedan nulos en las filas de la edición oficial.
+El código 10 PLE no es el Catálogo SEE 10 ni la Tabla 11 de documentos RCE/SIRE.
