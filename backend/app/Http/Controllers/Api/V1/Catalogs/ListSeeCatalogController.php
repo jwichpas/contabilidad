@@ -29,6 +29,8 @@ final readonly class ListSeeCatalogController
         if ($version === 'latest') {
             $version = $latest->version ?? 'historical';
         }
+        abort_if($version === 'historical' && $catalog->classification === 'NO_SUPPLIED_SEE_SNAPSHOT', 404,
+            'Este catálogo no formaba parte del archivo recibido; seleccione una edición publicada.');
         $reference = $version === 'historical' ? $catalog : DB::table('see_catalog_versions')
             ->where('catalog_number', $number)->where('version', $version)->first();
         abort_if($reference === null, 404, 'Versión SEE desconocida para este catálogo.');

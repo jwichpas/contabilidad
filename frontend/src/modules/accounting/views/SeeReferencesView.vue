@@ -237,7 +237,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
           <select :value="catalogVersion" class="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand" @change="chooseVersion">
             <option value="latest">Última versión incorporada · {{ currentCatalog.item_count }} códigos</option>
             <option v-for="edition in currentCatalog.available_versions" :key="edition.version" :value="edition.version">{{ edition.classification.startsWith('ISO_') ? 'ISO 4217' : edition.classification.startsWith('UNECE_REC20_') ? 'UNECE Rec. 20' : edition.classification.startsWith('UNCEFACT_') ? 'UN/CEFACT' : 'Anexo SUNAT' }} {{ edition.version }} · {{ edition.item_count }} códigos</option>
-            <option value="historical">Archivo recibido · {{ currentCatalog.historical_item_count }} códigos</option>
+            <option v-if="currentCatalog.historical_item_count > 0" value="historical">Archivo recibido · {{ currentCatalog.historical_item_count }} códigos</option>
           </select>
         </label>
         <label v-if="section === 'ubigeos' && ubigeoQuery.data.value?.meta.available_versions?.length" class="block text-xs font-medium text-muted">Versión del ubigeo INEI

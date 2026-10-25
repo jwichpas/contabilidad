@@ -1,0 +1,27 @@
+{
+  "version": "2017-12-anexo-v",
+  "classification": "SUNAT_ANNEX_V_2017_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2017/anexosV-318-2017.pdf",
+  "source_pages": [9, 10],
+  "catalogs": [
+    {
+      "number": "26",
+      "name": "Tipo de préstamo (créditos hipotecarios)",
+      "rows": [
+        ["0", "Sin información"],
+        ["1", "Si es construcción /adquisición"],
+        ["2", "Si es para refacción, remodelación, ampliación, mejoramiento o subdivisión de vivienda propia."]
+      ]
+    },
+    {
+      "number": "27",
+      "name": "Indicador de primera vivienda",
+      "rows": [
+        ["0", "Sin indicador"],
+        ["1", "Calificado para crédito Mi Vivienda / Techo Propio"],
+        ["2", "Libre disposición de la AFP"],
+        ["3", "Calificado como primera vivienda de acuerdo a la información proporcionada por el cliente (para créditos otorgados a partir del 01.01.2013)"]
+      ]
+    }
+  ]
+}

@@ -152,3 +152,23 @@ it('shows the complete UNECE units edition with status marks while keeping ambig
     $this->getJson('/api/v1/catalogs/sunat-see/03?version=historical&q=A11')
         ->assertOk()->assertJsonPath('meta.total', 2);
 });
+
+it('serves SUNAT mortgage references 26 and 27 only from the published edition', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $index = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see')->assertOk();
+    expect(collect($index->json('data'))->firstWhere('number', '26')['historical_item_count'])->toBe(0);
+
+    foreach (['26' => [3, '2'], '27' => [4, '3']] as $number => [$count, $lastCode]) {
+        $this->getJson("/api/v1/catalogs/sunat-see/{$number}")
+            ->assertOk()->assertJsonPath('meta.version', '2017-12-anexo-v')
+            ->assertJsonPath('meta.total', $count)->assertJsonFragment(['code' => $lastCode]);
+        $this->getJson("/api/v1/catalogs/sunat-see/{$number}?version=historical")->assertNotFound();
+    }
+    $this->getJson('/api/v1/catalogs/sunat-see/27?q=primera')
+        ->assertOk()->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.code', '3');
+    $this->getJson('/api/v1/catalogs/sunat/01')->assertOk()->assertDontSee('Mi Vivienda');
+});
