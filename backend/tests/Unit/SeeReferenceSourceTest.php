@@ -133,14 +133,14 @@ it('pins distinct PLE 13 catalog origins and PLE 14 valuation methods', function
 it('pins the six distinct PLE Annex 3 tables for titles, shares, accounts and fixed assets', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_tables_15_20_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-    expect(hash_file('sha256', $path))->toBe('76b4549a083d8f7eecb5ef6836e0ac0676b384fc2bc80c94d846994d0f71a1a2')
+    expect(hash_file('sha256', $path))->toBe('711c83ad4659999e4230c18d604bc1df11711089a780d662e78eb965fc66d737')
         ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
         ->and(array_column($source['tables'], 'number'))->toBe(['15', '16', '17', '18', '19', '20'])
         ->and(array_map(static fn (array $table): int => count($table['rows']), $source['tables']))->toBe([11, 4, 8, 2, 3, 3])
         ->and($source['tables'][0]['rows'][10])->toBe(['99', 'OTROS TÍTULOS'])
         ->and($source['tables'][2]['rows'][0])->toBe(['01', 'PLAN CONTABLE GENERAL EMPRESARIAL'])
         ->and($source['tables'][5]['rows'])->toBe([
-            ['1', 'LÍNEA RECTA'], ['2', 'UNIDADES PRODUCIDAS'], ['9', 'OTROS'],
+            ['1', 'LINEA RECTA'], ['2', 'UNIDADES PRODUCIDAS'], ['9', 'OTROS'],
         ]);
     foreach ($source['tables'] as $table) {
         $codes = array_column($table['rows'], 0);

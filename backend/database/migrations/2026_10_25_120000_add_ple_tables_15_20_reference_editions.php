@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     private const FILE = 'ple_tables_15_20_sunat_anexo_3_2015.json';
-    private const SHA256 = '76b4549a083d8f7eecb5ef6836e0ac0676b384fc2bc80c94d846994d0f71a1a2';
+    private const SHA256 = '711c83ad4659999e4230c18d604bc1df11711089a780d662e78eb965fc66d737';
     private const URL = 'https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf';
 
     public function up(): void
@@ -28,7 +28,7 @@ return new class extends Migration
             || array_map(static fn (array $table): int => count($table['rows']), $tables) !== [11, 4, 8, 2, 3, 3]
             || ($tables[0]['rows'][10] ?? null) !== ['99', 'OTROS TÍTULOS']
             || ($tables[2]['rows'][0] ?? null) !== ['01', 'PLAN CONTABLE GENERAL EMPRESARIAL']
-            || ($tables[5]['rows'] ?? null) !== [['1', 'LÍNEA RECTA'], ['2', 'UNIDADES PRODUCIDAS'], ['9', 'OTROS']]) {
+            || ($tables[5]['rows'] ?? null) !== [['1', 'LINEA RECTA'], ['2', 'UNIDADES PRODUCIDAS'], ['9', 'OTROS']]) {
             throw new RuntimeException('Las Tablas 15–20 PLE no coinciden con el anexo cotejado.');
         }
 

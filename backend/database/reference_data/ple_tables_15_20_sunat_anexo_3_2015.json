@@ -67,7 +67,7 @@
       "number": "20",
       "name": "Método de depreciación",
       "rows": [
-        ["1", "LÍNEA RECTA"],
+        ["1", "LINEA RECTA"],
         ["2", "UNIDADES PRODUCIDAS"],
         ["9", "OTROS"]
       ]
