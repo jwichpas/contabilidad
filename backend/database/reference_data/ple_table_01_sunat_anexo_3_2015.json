@@ -1,0 +1,98 @@
+{
+  "table_number": "01",
+  "version": "2015-06-anexo-3",
+  "name": "Tipo de medio de pago PLE",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+  "source_note": "Tabla 1 del Anexo 3 de la R.S. 169-2015/SUNAT. Transcripción PLE independiente del catálogo SEE 59; coincidencia cotejada de sus 22 códigos.",
+  "rows": [
+    [
+      "001",
+      "DEPÓSITO EN CUENTA"
+    ],
+    [
+      "002",
+      "GIRO"
+    ],
+    [
+      "003",
+      "TRANSFERENCIA DE FONDOS"
+    ],
+    [
+      "004",
+      "ORDEN DE PAGO"
+    ],
+    [
+      "005",
+      "TARJETA DE DÉBITO"
+    ],
+    [
+      "006",
+      "TARJETA DE CRÉDITO EMITIDA EN EL PAÍS POR UNA EMPRESA DEL SISTEMA FINANCIERO"
+    ],
+    [
+      "007",
+      "CHEQUES CON LA CLÁUSULA DE \"NO NEGOCIABLE\", \"INTRANSFERIBLES\", \"NO A LA ORDEN\" U OTRA EQUIVALENTE, A QUE SE REFIERE EL INCISO G) DEL ARTICULO 5° DE LA LEY"
+    ],
+    [
+      "008",
+      "EFECTIVO, POR OPERACIONES EN LAS QUE NO EXISTE OBLIGACIÓN DE UTILIZAR MEDIO DE PAGO"
+    ],
+    [
+      "009",
+      "EFECTIVO, EN LOS DEMÁS CASOS"
+    ],
+    [
+      "010",
+      "MEDIOS DE PAGO USADOS EN COMERCIO EXTERIOR"
+    ],
+    [
+      "011",
+      "DOCUMENTOS EMITIDOS POR LAS EDPYMES Y LAS COOPERATIVAS DE AHORRO Y CRÉDITO NO AUTORIZADAS A CAPTAR DEPÓSITOS DEL PÚBLICO"
+    ],
+    [
+      "012",
+      "TARJETA DE CRÉDITO EMITIDA EN EL PAÍS O EN EL EXTERIOR POR UNA EMPRESA NO PERTENECIENTE AL SISTEMA FINANCIERO, CUYO OBJETO PRINCIPAL SEA LA EMISIÓN Y ADMINISTRACIÓN DE TARJETAS DE CRÉDITO"
+    ],
+    [
+      "013",
+      "TARJETAS DE CRÉDITO EMITIDAS EN EL EXTERIOR POR EMPRESAS BANCARIAS O FINANCIERAS NO DOMICILIADAS"
+    ],
+    [
+      "101",
+      "TRANSFERENCIAS - COMERCIO EXTERIOR"
+    ],
+    [
+      "102",
+      "CHEQUES BANCARIOS - COMERCIO EXTERIOR"
+    ],
+    [
+      "103",
+      "ORDEN DE PAGO SIMPLE - COMERCIO EXTERIOR"
+    ],
+    [
+      "104",
+      "ORDEN DE PAGO DOCUMENTARIO - COMERCIO EXTERIOR"
+    ],
+    [
+      "105",
+      "REMESA SIMPLE - COMERCIO EXTERIOR"
+    ],
+    [
+      "106",
+      "REMESA DOCUMENTARIA - COMERCIO EXTERIOR"
+    ],
+    [
+      "107",
+      "CARTA DE CRÉDITO SIMPLE - COMERCIO EXTERIOR"
+    ],
+    [
+      "108",
+      "CARTA DE CRÉDITO DOCUMENTARIO - COMERCIO EXTERIOR"
+    ],
+    [
+      "999",
+      "OTROS MEDIOS DE PAGO"
+    ]
+  ]
+}

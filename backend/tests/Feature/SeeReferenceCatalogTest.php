@@ -173,7 +173,7 @@ it('serves SUNAT mortgage references 26 and 27 only from the published edition',
     $this->getJson('/api/v1/catalogs/sunat/01')->assertOk()->assertDontSee('Mi Vivienda');
 });
 
-it('keeps SEE payment method 59 separate from PLE payment method table 01', function (): void {
+it('matches the cited PLE and SEE payment codes without mixing their editions', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],
         ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
@@ -184,8 +184,19 @@ it('keeps SEE payment method 59 separate from PLE payment method table 01', func
         ->assertJsonPath('data.0.description', 'DOCUMENTOS EMITIDOS POR LAS EDPYMES Y LAS COOPERATIVAS DE AHORRO Y CRÉDITO NO AUTORIZADAS A CAPTAR DEPÓSITOS DEL PÚBLICO');
     $this->getJson('/api/v1/catalogs/sunat-see/59')->assertOk()->assertJsonPath('meta.total', 22);
     $this->getJson('/api/v1/catalogs/sunat-see/59?version=historical')->assertNotFound();
-    $this->getJson('/api/v1/catalogs/sunat/01')->assertOk()
+    $ple = $this->getJson('/api/v1/catalogs/sunat/01')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 22)
+        ->assertJsonFragment(['code' => '011', 'name' => 'DOCUMENTOS EMITIDOS POR LAS EDPYMES Y LAS COOPERATIVAS DE AHORRO Y CRÉDITO NO AUTORIZADAS A CAPTAR DEPÓSITOS DEL PÚBLICO'])
+        ->assertJsonFragment(['code' => '012'])
+        ->assertJsonFragment(['code' => '013']);
+    $see = $this->getJson('/api/v1/catalogs/sunat-see/59?per_page=100')->assertOk();
+    expect(array_column($ple->json('data'), 'code'))->toBe(array_column($see->json('data'), 'code'));
+
+    $this->getJson('/api/v1/catalogs/sunat/01?version=legacy-seed')->assertOk()
+        ->assertJsonPath('meta.total', 20)
         ->assertJsonFragment(['code' => '011', 'name' => 'LETRAS DE CAMBIO']);
+    $this->getJson('/api/v1/catalogs/sunat/01?version=other')->assertNotFound();
 });
 
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {

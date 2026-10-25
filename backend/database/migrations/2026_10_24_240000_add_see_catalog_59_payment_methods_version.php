@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-/** SEE catalog 59 uses a different code space from PLE/SIRE payment-method table 01. */
+/** SEE 59 is sourced and versioned independently from PLE 01, even where the codes agree. */
 return new class extends Migration
 {
     private const FILE = 'see_catalog_59_sunat_anexo_v_2017.json';
@@ -30,7 +30,7 @@ return new class extends Migration
                 '101', '102', '103', '104', '105', '106', '107', '108', '999',
             ]
             || $rows[10][1] !== 'DOCUMENTOS EMITIDOS POR LAS EDPYMES Y LAS COOPERATIVAS DE AHORRO Y CRÉDITO NO AUTORIZADAS A CAPTAR DEPÓSITOS DEL PÚBLICO') {
-            throw new RuntimeException('Códigos SUNAT SEE 59 incompletos o mezclados con PLE 01.');
+            throw new RuntimeException('Códigos SUNAT SEE 59 incompletos o fuente modificada.');
         }
 
         $db = DB::connection('pgsql_migrations');

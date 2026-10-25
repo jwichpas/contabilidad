@@ -38,9 +38,12 @@ Las ediciones cotejadas son: 02 (178) de la [Lista Uno ISO 4217 de SIX, publicad
 20 (14) del [Anexo I SUNAT de 2024](https://www.sunat.gob.pe/legislacion/superin/2024/anexo1-000240-2024.pdf)
 y 55 (119) del [Anexo I SUNAT de 2026](https://www.sunat.gob.pe/legislacion/superin/2026/anexo-000108-2026.pdf).
 Los catálogos 26 (3 códigos) y 27 (4 códigos) provienen del [Anexo V SUNAT de 2017](https://www.sunat.gob.pe/legislacion/superin/2017/anexosV-318-2017.pdf).
-El catálogo SEE 59 (22 códigos) proviene del mismo anexo y permanece separado de la tabla 01
-de medios de pago PLE/SIRE (20 códigos). Por ejemplo, `011` significa documentos de EDPYMES
-en SEE 59 y letras de cambio en PLE 01. El anexo imprime «CATALOGO No. 57» en el encabezado
+El catálogo SEE 59 (22 códigos) proviene del mismo anexo y permanece separado de la Tabla 01
+PLE. La carga PLE original tenía 20 códigos y un error en `011`; la edición PLE cotejada
+con el Anexo 3 de 2015 contiene los mismos 22 códigos y significados que SEE 59 en 2017.
+`/api/v1/catalogs/sunat/01` presenta por defecto la edición `2015-06-anexo-3`, y
+`?version=legacy-seed` permite consultar la carga original. Las fuentes, tablas y rutas no se
+fusionan. El anexo SEE imprime «CATALOGO No. 57» en el encabezado
 interno de 59; el título y el índice lo identifican como 59. Se conserva esa discrepancia como
 nota de fuente, sin atribuir los códigos al catálogo 57.
 El catálogo 06 agrega una edición de 13 códigos basada en la tabla de tipos de identidad
@@ -71,6 +74,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_230000_add_see_catalogs_26_27_sunat_2017_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_240000_add_see_catalog_59_payment_methods_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_000000_add_see_catalog_06_sunat_2026_identity_version.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_010000_reconcile_ple_table_01_payment_methods.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -98,3 +102,8 @@ Revisión 4, por lo que la Rev. 17 no autoriza automáticamente un código para 
 
 Si SUNAT/INEI/ISO publican cambios, agregar un nuevo conjunto versionado y una migración correctiva
 con trazabilidad. Evitar modificar silenciosamente los códigos usados por documentos históricos.
+La edición PLE 2015 proviene de [la R.S. 169-2015/SUNAT, Anexo 3](https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf).
+La migración guarda las 20 filas anteriores bajo `legacy-seed` antes de corregir la tabla operativa;
+el instalador global congelado conserva su hash y se ejecuta antes de esta migración. Los indicadores
+auxiliares de entidad, número de operación y comercio exterior proceden del sistema, no del anexo;
+los códigos nuevos llevan los valores predeterminados y requieren evaluación antes de validarlos.

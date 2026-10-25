@@ -25,6 +25,18 @@ it('pins the 14 independently sourced transport motives from SUNAT annex I of 20
         ->and(array_column($source['rows'], 0))->toBe(['01', '02', '03', '04', '05', '06', '07', '08', '09', '13', '14', '17', '18', '19']);
 });
 
+it('pins independent PLE 01 and SEE 59 sources with matching official payment method codes', function (): void {
+    $plePath = database_path('reference_data/ple_table_01_sunat_anexo_3_2015.json');
+    $seePath = database_path('reference_data/see_catalog_59_sunat_anexo_v_2017.json');
+    $ple = json_decode((string) file_get_contents($plePath), true, 512, JSON_THROW_ON_ERROR);
+    $see = json_decode((string) file_get_contents($seePath), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $plePath))->toBe('b65eb22b6a5bcdb637e2a839a645a1a8f70274306da8b77fd91a64c3257df29c')
+        ->and($ple['source_url'])->toContain('RS-169-2015-SUNAT-PLEver5.pdf')
+        ->and($ple['rows'])->toHaveCount(22)
+        ->and($ple['rows'])->toBe($see['rows'])
+        ->and(array_column($ple['rows'], 0))->toContain('011', '012', '013');
+});
+
 it('pins each reconciled annex fixture and its added code', function (): void {
     foreach ([
         ['15', '2017_anexo_e', '9f96ed5017b3d7eca4fdb81b8c89ad275d68e743abe5b4c9a4357a95635d26e6', 41, '2008'],
