@@ -100,7 +100,7 @@ test('journal keeps exact money strings, fetches one bootstrap and exposes persi
   assert.match(view, /inputmode="decimal"/);
   assert.doesNotMatch(view, /v-model="line\.(debitLocal|creditLocal)"/);
   assert.match(view, /onAmountChange\(line, 'debit', \(\$event\.target as HTMLInputElement\)\.value\)/);
-  assert.match(view, /fetchJournalEditorBootstrap\(entryDate\.value\)/);
+  assert.match(view, /const date = entryDate\.value;[\s\S]*fetchJournalEditorBootstrap\(date\)/);
   assert.match(view, /watch\(activeTab/);
   assert.match(client, /\/editor-bootstrap\?date=/);
   assert.match(view, /v-model="subdiaryCode"/);

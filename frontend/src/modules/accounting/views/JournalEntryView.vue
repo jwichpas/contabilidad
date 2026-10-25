@@ -57,6 +57,7 @@ const isLoading = shallowRef(false);
 const isSubmitting = shallowRef(false);
 const errorMessage = shallowRef<string | null>(null);
 const successMessage = shallowRef<string | null>(null);
+const contextNotice = shallowRef<string | null>(null);
 
 // Catálogo de Cuentas Operativas (Nivel 4+)
 const operationalAccounts = shallowRef<readonly JournalEditorAccount[]>([]);
@@ -181,10 +182,17 @@ function recalculateForeignAmounts(): void {
   }
 }
 
+let rateRequestSequence = 0;
+let numberRequestSequence = 0;
+let submitSequence = 0;
+
 async function loadExchangeRatesForDate(dateStr: string): Promise<void> {
+  const sequence = ++rateRequestSequence;
+  const tenant = props.activeCompanyId;
   isLoadingRates.value = true;
   try {
     const res = await apiClient.value.fetchCompanyExchangeRates(dateStr);
+    if (sequence !== rateRequestSequence || tenant !== props.activeCompanyId || dateStr !== entryDate.value) return;
     baseCurrencyInfo.value = res.base_currency;
     requiredCurrencyRates.value = res.required_currencies.map((c) => ({
       currency_id: c.currency_id,
@@ -198,9 +206,11 @@ async function loadExchangeRatesForDate(dateStr: string): Promise<void> {
     }));
     syncActiveVoucherExchangeRate();
   } catch (err) {
-    console.error('Error al cargar tipos de cambio obligatorios:', err);
+    if (sequence === rateRequestSequence && tenant === props.activeCompanyId) {
+      console.error('Error al cargar tipos de cambio obligatorios:', err);
+    }
   } finally {
-    isLoadingRates.value = false;
+    if (sequence === rateRequestSequence) isLoadingRates.value = false;
   }
 }
 
@@ -392,7 +402,7 @@ function autoBalance(): void {
   }
 }
 
-function clearForm(): void {
+function resetDraft(): void {
   pendingJournalAttempt = null;
   subdiaryCode.value = '';
   headerDescription.value = '';
@@ -426,12 +436,21 @@ function clearForm(): void {
   ];
   errorMessage.value = null;
   successMessage.value = null;
+}
+
+function clearForm(): void {
+  resetDraft();
+  contextNotice.value = null;
   void fetchNextNumber();
 }
 
 async function fetchNextNumber(): Promise<void> {
+  const sequence = ++numberRequestSequence;
+  const tenant = props.activeCompanyId;
+  const date = entryDate.value;
   try {
-    const res = await apiClient.value.fetchNextJournalEntryNumber(entryDate.value);
+    const res = await apiClient.value.fetchNextJournalEntryNumber(date);
+    if (sequence !== numberRequestSequence || tenant !== props.activeCompanyId || date !== entryDate.value) return;
     entryNumber.value = res.next_number;
   } catch {
     // Si falla, el usuario puede continuar o el servidor lo genera
@@ -439,62 +458,77 @@ async function fetchNextNumber(): Promise<void> {
 }
 
 let loadSequence = 0;
+let historySequence = 0;
+let historyTenant: CompanyId | null = null;
 const historyLoaded = shallowRef(false);
 const isLoadingHistory = shallowRef(false);
 
 async function loadHistory(): Promise<void> {
-  if (isLoadingHistory.value) return;
   const tenant = props.activeCompanyId;
+  if (isLoadingHistory.value && historyTenant === tenant) return;
+  const sequence = ++historySequence;
+  historyTenant = tenant;
   isLoadingHistory.value = true;
   try {
     const entries = await apiClient.value.fetchJournalEntries({ limit: 50 });
-    if (tenant !== props.activeCompanyId) return;
+    if (sequence !== historySequence || tenant !== props.activeCompanyId) return;
     journalEntries.value = entries;
     historyLoaded.value = true;
   } catch (e) {
-    if (tenant === props.activeCompanyId) {
+    if (sequence === historySequence && tenant === props.activeCompanyId) {
       errorMessage.value = e instanceof Error ? e.message : 'No se pudo cargar el Libro Diario.';
     }
   } finally {
-    isLoadingHistory.value = false;
+    if (sequence === historySequence) {
+      isLoadingHistory.value = false;
+      historyTenant = null;
+    }
   }
 }
 
 async function loadCatalogsAndHistory(): Promise<void> {
   const sequence = ++loadSequence;
   const tenant = props.activeCompanyId;
+  const date = entryDate.value;
   isLoading.value = true;
   errorMessage.value = null;
   historyLoaded.value = false;
   journalEntries.value = [];
+  operationalAccounts.value = [];
+  subdiaries.value = [];
+  costCenters.value = [];
+  companyAreas.value = [];
+  cashFlowAreas.value = [];
   try {
-    const config = await apiClient.value.fetchJournalEditorBootstrap(entryDate.value);
+    const config = await apiClient.value.fetchJournalEditorBootstrap(date);
     if (sequence !== loadSequence || tenant !== props.activeCompanyId) return;
     operationalAccounts.value = config.accounts;
     subdiaries.value = config.subdiaries;
     costCenters.value = config.cost_centers;
     companyAreas.value = config.company_areas;
     cashFlowAreas.value = config.cash_flow_areas;
-    entryNumber.value = config.next_number.next_number;
-    baseCurrencyInfo.value = config.exchange_rates.base_currency;
-    requiredCurrencyRates.value = config.exchange_rates.required_currencies.map(c => ({
-      currency_id: c.currency_id,
-      code: c.code,
-      name: c.name,
-      symbol: c.symbol,
-      buy_rate: c.buy_rate,
-      sell_rate: c.sell_rate,
-      is_recorded_for_date: c.is_recorded_for_date,
-      source: c.source,
-    }));
-    syncActiveVoucherExchangeRate();
+    if (date === entryDate.value) {
+      entryNumber.value = config.next_number.next_number;
+      baseCurrencyInfo.value = config.exchange_rates.base_currency;
+      requiredCurrencyRates.value = config.exchange_rates.required_currencies.map(c => ({
+        currency_id: c.currency_id,
+        code: c.code,
+        name: c.name,
+        symbol: c.symbol,
+        buy_rate: c.buy_rate,
+        sell_rate: c.sell_rate,
+        is_recorded_for_date: c.is_recorded_for_date,
+        source: c.source,
+      }));
+      syncActiveVoucherExchangeRate();
+    }
     if (activeTab.value === 'history') void loadHistory();
   } catch (e) {
     if (sequence !== loadSequence || tenant !== props.activeCompanyId) return;
     errorMessage.value =
       e instanceof Error ? e.message : 'Error al cargar el editor de asientos.';
   } finally {
-    if (sequence === loadSequence) isLoading.value = false;
+    if (sequence === loadSequence && tenant === props.activeCompanyId) isLoading.value = false;
   }
 }
 
@@ -571,6 +605,8 @@ async function handleSubmit(): Promise<void> {
     }
   }
 
+  const tenant = props.activeCompanyId;
+  const sequence = ++submitSequence;
   isSubmitting.value = true;
   try {
     const payload = {
@@ -615,6 +651,7 @@ async function handleSubmit(): Promise<void> {
     };
 
     const savedEntry = await apiClient.value.createJournalEntry(payload, key);
+    if (sequence !== submitSequence || tenant !== props.activeCompanyId) return;
     pendingJournalAttempt = null;
 
     // Limpiar antes de mostrar el éxito: clearForm también borra las alertas.
@@ -624,11 +661,16 @@ async function handleSubmit(): Promise<void> {
     // El POST ya quedó confirmado. Si falla el GET del historial, no presentar
     // el guardado como fallido ni sugerir volver a registrar el mismo asiento.
     try {
-      journalEntries.value = await apiClient.value.fetchJournalEntries({ limit: 50 });
+      const entries = await apiClient.value.fetchJournalEntries({ limit: 50 });
+      if (sequence !== submitSequence || tenant !== props.activeCompanyId) return;
+      journalEntries.value = entries;
     } catch {
-      errorMessage.value = 'El asiento se registró, pero no se pudo actualizar el historial. Recargue la vista para consultarlo; no vuelva a registrarlo.';
+      if (sequence === submitSequence && tenant === props.activeCompanyId) {
+        errorMessage.value = 'El asiento se registró, pero no se pudo actualizar el historial. Recargue la vista para consultarlo; no vuelva a registrarlo.';
+      }
     }
   } catch (e) {
+    if (sequence !== submitSequence || tenant !== props.activeCompanyId) return;
     // Keep the key after an ambiguous network/server error, but not after
     // a conclusive client-side rejection (HTTP 400/409/422).
     if (e instanceof ApiHttpError && e.status >= 400 && e.status < 500) {
@@ -637,7 +679,7 @@ async function handleSubmit(): Promise<void> {
     errorMessage.value =
       e instanceof Error ? e.message : 'Error al registrar el asiento contable.';
   } finally {
-    isSubmitting.value = false;
+    if (sequence === submitSequence) isSubmitting.value = false;
   }
 }
 
@@ -671,7 +713,24 @@ watch(exchangeRateType, () => {
 watch(
   () => props.activeCompanyId,
   () => {
-    pendingJournalAttempt = null;
+    const wasSubmitting = isSubmitting.value;
+    const hadDraft = Boolean(subdiaryCode.value || headerDescription.value.trim() || lines.value.some(
+      (line) => line.accountId !== null || line.description.trim() || line.debitLocal || line.creditLocal,
+    ));
+    ++rateRequestSequence;
+    ++numberRequestSequence;
+    ++historySequence;
+    ++submitSequence;
+    isLoadingRates.value = false;
+    isLoadingHistory.value = false;
+    isSubmitting.value = false;
+    historyTenant = null;
+    entryNumber.value = '';
+    requiredCurrencyRates.value = [];
+    resetDraft();
+    contextNotice.value = wasSubmitting
+      ? 'Se cambió de empresa durante un envío. Revise el Libro Diario de la empresa anterior antes de intentar registrar ese asiento otra vez.'
+      : hadDraft ? 'Se descartó el borrador del asiento al cambiar de empresa.' : null;
     void loadCatalogsAndHistory();
   },
 );
@@ -743,6 +802,11 @@ onMounted(() => {
     </div>
 
     <!-- Alerta de Éxito -->
+    <div v-if="contextNotice" class="rounded-xl border border-brand/30 bg-brand/10 p-4 text-xs text-foreground" role="status">
+      {{ contextNotice }}
+      <button type="button" class="ml-2 underline" @click="contextNotice = null">Cerrar</button>
+    </div>
+
     <div
       v-if="successMessage"
       class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-between text-xs font-medium"

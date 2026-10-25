@@ -4,7 +4,7 @@
 
 # Plan maestro, hoja de ruta e hitos — Sistema Contable
 
-> **Documento rector vigente · Actualizado 25/10/2026 · Versión 2.6**  
+> **Documento rector vigente · Actualizado 25/10/2026 · Versión 2.7**  
 > Repositorio: `jwichpas/contabilidad` · Rama única: `main` · Base de desarrollo: **Neon PostgreSQL 18 / contabilidad-dev**.
 >
 > **Avance verificable: 8/32 actividades completas (25%).** El checklist de la [sección 10](#10-checklist-de-seguimiento) es la **fuente única** del conteo. Se distinguió expresamente entre una prueba/subetapa aprobada y una actividad amplia todavía pendiente.
@@ -24,7 +24,7 @@
 
 **Avance F6 de catálogos — 25/10/2026.** Las referencias globales son de solo lectura: catálogos SEE y ubigeo INEI, tablas PLE Anexo 3 y la Tabla 8 SUNAT tienen procedencia, espacio de códigos y versiones independientes; las preferencias de monedas, unidades y países por empresa no modifican la fuente global. La API y las vistas de consulta permiten elegir edición, buscar localmente en la tabla y mostrar códigos históricos con advertencias. El usuario reportó en Termux las migraciones de Tablas PLE 27, 28 y 30 como DONE y `SeeReferenceSourceTest` + `SeeReferenceCatalogTest` como **50 pruebas PASS, 618 aserciones**. Las Tablas 27, 28 y 30 corresponden a la edición histórica 2015, no acreditan aplicabilidad normativa individual en 2026. [Inventario técnico y fuente por tabla](backend/database/reference_data/README-SEE.md). Esta evidencia aporta a F6.1 pero **no la cierra**; el conteo sigue 8/32.
 
-**Avance F6 confirmado por el usuario · 25/10/2026:** las migraciones hasta `2026_10_25_190000` (Tabla 33 incluida) terminaron DONE; las pruebas PHP de fuentes/API pasaron **54/54, 646 aserciones** y el verificador documental confirmó **8/32**. Se prepararon las tablas PLE restantes del Anexo 3: 31 (44 tipos de renta), 34 (1.627 posiciones sectoriales, con repeticiones conservadas) y 35 (273 países de cuatro dígitos del portal SUNAT). Sus migraciones `200000`, `210000` y `220000`, junto con las pruebas PHP nuevas, están **pendientes de ejecución en DEV**. Frontend `pnpm build` y `pnpm test:unit` **50/50 PASS** localmente. Las descripciones resumidas de 31 y extraídas de 34 requieren cotejo individual; la fecha de captura de 35 no certifica vigencia de cada código. F6.1 sigue abierta por las validaciones operativas, generación PLE y aceptación integral.
+**Avance F6 confirmado por el usuario · 25/10/2026:** las migraciones PLE `2026_10_25_200000`, `210000` y `220000` terminaron DONE en DEV. `SeeReferenceSourceTest` y `SeeReferenceCatalogTest` pasaron **60/60 pruebas, 705 aserciones** (384,54 s). Así quedan instaladas las tablas PLE 31 (44 tipos de renta), 34 (1.627 posiciones en ocho sectores con repeticiones conservadas) y 35 (273 países SUNAT de cuatro dígitos), sin mezclarlas con SEE/SIRE. El frontend mantiene `pnpm build` y `pnpm test:unit` **50/50 PASS** localmente. Las descripciones resumidas de 31 y extraídas de 34 requieren cotejo individual; la captura de 35 no certifica vigencia por código. **F6.1 sigue abierta** por aplicabilidad normativa, reglas operativas, archivos PLE y aceptación integral. **Inicio del siguiente trabajo F4.2:** se corrigió el borrador del editor único al cambiar empresa y se ignoran respuestas tardías de consultas o envíos del tenant anterior; frontend build y 50/50 pruebas PASS localmente, aceptación funcional con sesión real pendiente. Avance global **8/32 (25%)**.
 
 ## Avance F3.2–F3.3 — 23/10/2026
 
@@ -442,7 +442,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 1. **F3.1:** alta HTTP real de empresa 4 y configuración fiscal/PCGE aprobadas funcionalmente; Vue 18/18 unitarias, typecheck y build PASS. **Último POST reversible: 17,43 s / 52 SQL, objetivo de rendimiento alcanzado en ese ensayo.** El sector almacenado fue corregido a TRANSPORTE_LOGISTICA para CIIU 4923 mediante HTTP PUT, con COMMIT y auditoría ID 83; verificado por lectura independiente en Neon DEV. **F3.1 aprobada**, no repetir el alta. [Evidencia](docs/F3-1-ACEPTACION-ALTA-REAL-NEON.md).
 2. **F3.1 sector corregido y auditado** (ID 83); no repetir el comando de aplicación. **F3.4/F3.5** ya han pasado sus pruebas; el asiento ID 52 quedó persistido en empresa 4. Continuar la corrección del CIIU, **F3.3 maestros** y **F4.2** con el editor único de asientos. Conservar los datos de la empresa ID 4 y los datos DEMO, sin reejecutar F3.4/F3.5.
 3. Completar F4 y F5: editor único, historial con partidas automáticas, Diario/Mayor/Balance, CxC/CxP y cierre.
-4. **F6 catálogos:** aplicar y probar en Neon DEV las migraciones PLE `200000`–`220000` para las tablas 31, 34 y 35; cotejar visualmente las etiquetas extraídas de 34 y verificar en fuentes oficiales las ediciones vigentes por tabla antes de usar códigos para validar operaciones. Mantener las ediciones antiguas y el aislamiento frente a SEE/SIRE. Después, integrar reglas operativas y generación/validación PLE con pruebas de punta a punta. F7 (NIIF/NPIF/activos/préstamos) sigue planificada por módulos verificables.
+4. **F6 catálogos:** migraciones PLE `200000`–`220000` y pruebas de consulta aprobadas en DEV. Cotejar visualmente las etiquetas extraídas de 34 y verificar en fuentes oficiales la edición y aplicabilidad normativa por tabla antes de validar operaciones. Mantener el aislamiento frente a SEE/SIRE. Después, integrar reglas operativas y generación/validación PLE con pruebas de punta a punta. F7 (NIIF/NPIF/activos/préstamos) sigue planificada por módulos verificables.
 5. Aplicar **pruebas manuales de regresión** con [el procedimiento aprobado](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) antes de aceptación F8; **sin GitHub Actions**.
 
 **Regla de avance:** modificar la casilla, la evidencia, el conteo y el estado de fase/hito en una misma edición del README. Ningún `--plan` ni resultado de sintaxis se considera por sí solo evidencia funcional.
@@ -489,7 +489,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ### Fase 4 — Interfaz
 - [ ] **F4.1** Separar layouts, navegación y selector global de empresa. *Implementación avanzada; revisar UX y flujos de navegación integrados.*
-- [ ] **F4.2** Sustituir formularios repetidos por editor único de asientos. *Editor único presente en Vue; pendiente aceptación visual y de edición de varias partidas.*
+- [ ] **F4.2** Sustituir formularios repetidos por editor único de asientos. *Editor único presente en Vue; se limpia el borrador al cambiar empresa y se descartan respuestas tardías del tenant anterior. Build y 50 pruebas frontend PASS localmente; pendiente [aceptación visual con sesión real](docs/F4-2-CAMBIO-DE-EMPRESA-EDITOR.md) y edición de varias partidas.*
 - [ ] **F4.3** Mejorar tablas, validaciones, accesibilidad y responsive.
 
 ### Fase 5 — Gestión contable
@@ -498,7 +498,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - [ ] **F5.3** Validar cierres, reconciliación y reportes PDF/Excel.
 
 ### Fase 6 — SUNAT
-- [ ] **F6.1** Versionar catálogos SUNAT y generar archivos PLE aplicables. *Consulta global de solo lectura para SEE/INEI y otras tablas SUNAT, con espacios de códigos y ediciones independientes para PLE, SEE y SIRE. El usuario confirmó las migraciones PLE hasta `190000` DONE y los tests de fuentes/API **54/54 PASS (646 aserciones)**; el verificador del plan también pasó. Las tablas PLE 31, 34 y 35 están preparadas en código y frontend; las migraciones `200000`–`220000` y los tests PHP ampliados esperan ejecución en DEV. Faltan cotejo individual de las etiquetas de 34, comprobación de vigencia y aplicabilidad por edición, validaciones operativas, generación/validación de archivos PLE y aceptación integral. Los PASS de catálogos no cierran F6.1.* [Inventario y procedencia](backend/database/reference_data/README-SEE.md).
+- [ ] **F6.1** Versionar catálogos SUNAT y generar archivos PLE aplicables. *Consulta global de solo lectura para SEE/INEI y otras tablas SUNAT, con espacios de códigos y ediciones independientes para PLE, SEE y SIRE. El usuario confirmó las migraciones PLE hasta `220000` DONE y las pruebas de fuentes/API **60/60 PASS (705 aserciones)** el 25/10/2026. Las tablas PLE del inventario Anexo 3 están instaladas, incluida la 34 por sector con posiciones repetidas. Faltan cotejo individual de etiquetas extraídas de 34, comprobación de vigencia y aplicabilidad por edición, validaciones operativas, generación/validación de archivos PLE y aceptación integral. Los PASS de catálogos no cierran F6.1.* [Inventario y procedencia](backend/database/reference_data/README-SEE.md).
 - [ ] **F6.2** Incorporar registros RCE/RVIE y flujos de conciliación SIRE.
 - [ ] **F6.3** Validar formatos, duplicidades, observaciones y conciliación.
 - [ ] **F6.4** Implementar y probar SFE/SFMB (exportaciones bienes/servicios y empresas mixtas): origen del crédito, aplicación a IGV local, límites/arrastres, PDB, compensación/devolución y trazabilidad. [Documento de diseño](docs/F6-IGV-SFE-SFMB-EXPORTADORES.md).
@@ -508,8 +508,9 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 - [x] Separar los espacios de claves SEE, PLE Anexo 3, SIRE y Tabla 8; exponer consulta global versionada y de solo lectura en la API y el frontend.
 - [x] Registrar y probar en DEV las ediciones históricas PLE 27, 28 y 30: migraciones `150000`, `160000` y `170000` DONE; 50 pruebas PHP PASS, 618 aserciones, según salida del usuario del 25/10/2026.
 - [x] Aplicar la migración `2026_10_25_180000_add_ple_table_32_nonresident_service.php` y ejecutar pruebas Laravel de fuentes/API; DONE, 52/52 PASS (632 aserciones) y verificador del plan PASS según salida del usuario.
-- [ ] Aplicar la migración `2026_10_25_190000_add_ple_table_33_historical_exemptions.php` y ejecutar pruebas Laravel de fuentes/API; la edición de 2015 no acredita exoneración vigente.
-- [ ] Conciliar las tablas PLE restantes con anexos oficiales y modificaciones posteriores, registrar fuente, fecha, hash y vigencia comprobada por edición; no etiquetar una edición histórica como vigente sin evidencia.
+- [x] Aplicar la migración `2026_10_25_190000_add_ple_table_33_historical_exemptions.php` y ejecutar pruebas Laravel de fuentes/API; DONE y 54/54 PASS (646 aserciones) según salida del usuario.
+- [x] Instalar las referencias PLE 31, 34 y 35: migraciones `200000`, `210000`, `220000` DONE y 60/60 pruebas PHP PASS (705 aserciones) según salida del usuario.
+- [ ] Cotejar las etiquetas de Tabla 34 y las modificaciones posteriores por tabla; registrar vigencia y aplicabilidad comprobada por edición antes de usar códigos en operaciones.
 - [ ] Incorporar reglas de uso de códigos en libros y archivos PLE por empresa/periodo, con pruebas de formatos y trazabilidad histórica; completar aceptación funcional F6.1.
 
 ### Fase 7 — NIIF, NPIF, préstamos y activos fijos
@@ -538,12 +539,12 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 | Fase de seguridad F1 | **3/3 con validación técnica en DEV** | Pendiente aprobación formal del hito H1 |
 | Fase del motor F2 | **3/3 completas**; **F2.3 aprobado** | HTTP, concurrencia Docker, RLS y apertura real con auditoría verificados |
 | Fase de empresas F3 | **2/3 completas** | F3.1 alta/corrección sector aprobada con auditoría 83 y comprobación Neon; F3.2 PCGE aprobada; F3.3 maestros pendiente; F3.4/F3.5 técnicos PASS |
-| Fase SUNAT F6 | **0/4 actividades completas; F6.1 en progreso** | Migraciones PLE 27/28/30/32 DONE y 52/52 pruebas de referencias PASS (632 aserciones), reportadas el 25/10/2026; Tabla 33 preparada con PHP pendiente, además de vigencia, integración operativa y archivos PLE |
+| Fase SUNAT F6 | **0/4 actividades completas; F6.1 en progreso** | Migraciones PLE hasta Tabla 35 DONE y 60/60 pruebas de referencias PASS (705 aserciones), reportadas el 25/10/2026; falta vigencia, integración operativa y archivos PLE |
 | Fases formalmente aprobadas | **0/9** | Hitos y aceptación explícita de sección 8 |
 | Hitos aprobados | **0/4** | H1–H4 requieren puertas completas |
-| Base de desarrollo | **Neon PG18**; 24 migraciones; 4 empresas; 9 membresías; 3 DRAFT; 0 ACTIVE; enero DEMO A OPEN, octubre empresa 4 OPEN, **asiento 52 persistido** | Evidencia F3.5 POST-COMMIT del 23/10/2026 |
+| Base de desarrollo | **Neon PG18**; migraciones PLE hasta `220000` aplicadas; 4 empresas; 9 membresías; 3 DRAFT; 0 ACTIVE; enero DEMO A OPEN, octubre empresa 4 OPEN, **asiento 52 persistido** | Evidencia F3.5 POST-COMMIT del 23/10/2026 |
 | Modalidad de pruebas | **Manual exclusivamente** | [Guía y evidencias](docs/VALIDACION-MANUAL-Y-EVIDENCIAS.md) |
-| Próximo trabajo funcional | **F3.3 aceptación integral y F6.1 Tabla 33/Anexo 3 PLE restante** | [Maestros F3.3](docs/F3-3-MAESTROS-DIAGNOSTICO-NEON.md) y [ediciones SUNAT](backend/database/reference_data/README-SEE.md); ninguna de estas actividades se declara cerrada |
+| Próximo trabajo funcional | **F3.3 aceptación integral y F4.2 editor único; F6.1 aplicabilidad y archivos PLE** | [Maestros F3.3](docs/F3-3-MAESTROS-DIAGNOSTICO-NEON.md) y [ediciones SUNAT](backend/database/reference_data/README-SEE.md); ninguna de estas actividades se declara cerrada |
 
 ### Evidencias que justifican las ocho actividades aprobadas
 
