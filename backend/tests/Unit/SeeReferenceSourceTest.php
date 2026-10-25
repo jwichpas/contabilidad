@@ -109,6 +109,27 @@ it('pins the forty-seven PLE inventory operations and the changed meaning of cod
         ->and($codes)->toContain('17', '28', '38', '91', '98');
 });
 
+it('pins distinct PLE 13 catalog origins and PLE 14 valuation methods', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_tables_13_14_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('c0ee978c7067d73296db31169eeb6c68b642488d2093d8168a3bd9a00e026160')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and(array_column($source['tables'], 'number'))->toBe(['13', '14'])
+        ->and($source['tables'][0]['rows'])->toBe([
+            ['1', 'NACIONES UNIDAS'], ['3', 'GS1 (EAN-UCC)'], ['9', 'OTROS'],
+        ])
+        ->and($source['tables'][1]['rows'])->toBe([
+            ['1', 'PROMEDIO PONDERADO'], ['2', 'PRIMERAS ENTRADAS, PRIMERAS SALIDAS'],
+            ['3', 'EXISTENCIAS BÁSICAS'], ['4', 'DETALLISTA'],
+            ['5', 'IDENTIFICACIÓN ESPECÍFICA'], ['9', 'OTROS'],
+        ])
+        ->and($source['latest_table_13']['version'])->toBe('2020-108-anexo-i')
+        ->and($source['latest_table_13']['source_pdf_sha256'])->toBe('e7f79660ea4f977926885d949321ee47cf36a59dd55771670959001cf6071d99')
+        ->and($source['latest_table_13']['rows'])->toBe([
+            ['1', 'NACIONES UNIDAS'], ['3', 'GTIN'], ['9', 'OTROS'],
+        ]);
+});
+
 it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

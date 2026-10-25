@@ -36,12 +36,21 @@ final readonly class ListSunatCatalogController
             '10' => SunatElectronicDocumentType::class,
             '11' => SunatCustomsDependency::class,
             '12' => SunatOperationType::class,
+            '13', '14' => null,
             default => throw new NotFoundHttpException("La tabla SUNAT '{$tableNumber}' no está registrada en el sistema."),
         };
 
-        if (in_array($normalized, ['01', '02', '03', '04', '05', '06', '08', '10', '11', '12'], true)) {
-            $latest = $normalized === '08' ? '2008-rs239' : '2015-06-anexo-3';
-            $available = $normalized === '04' ? [$latest] : [$latest, 'legacy-seed'];
+        if (in_array($normalized, ['01', '02', '03', '04', '05', '06', '08', '10', '11', '12', '13', '14'], true)) {
+            $latest = match ($normalized) {
+                '08' => '2008-rs239',
+                '13' => '2020-108-anexo-i',
+                default => '2015-06-anexo-3',
+            };
+            $available = match ($normalized) {
+                '04', '14' => [$latest],
+                '13' => [$latest, '2015-06-anexo-3'],
+                default => [$latest, 'legacy-seed'],
+            };
             $version = $request->query('version', 'latest');
             if (! is_string($version) || ! in_array($version, ['latest', ...$available], true)) {
                 throw new NotFoundHttpException("Edición PLE {$normalized} no registrada.");
@@ -58,6 +67,7 @@ final readonly class ListSunatCatalogController
                 '10' => 'ple_document_type_versions',
                 '11' => 'ple_customs_dependency_versions',
                 '12' => 'ple_inventory_operation_versions',
+                '13', '14' => 'ple_annex3_reference_versions',
             };
             $versionItems = match ($normalized) {
                 '01' => 'ple_payment_method_version_items',
@@ -70,15 +80,24 @@ final readonly class ListSunatCatalogController
                 '10' => 'ple_document_type_version_items',
                 '11' => 'ple_customs_dependency_version_items',
                 '12' => 'ple_inventory_operation_version_items',
+                '13', '14' => 'ple_annex3_reference_items',
             };
-            $edition = DB::table($versions)->where('version', $resolved)->first();
+            $editionQuery = DB::table($versions)->where('version', $resolved);
+            if (in_array($normalized, ['13', '14'], true)) {
+                $editionQuery->where('table_number', $normalized);
+            }
+            $edition = $editionQuery->first();
             if ($edition === null) {
                 throw new NotFoundHttpException("Edición PLE {$normalized} no instalada.");
             }
-            $items = DB::table($versionItems)->where('version', $resolved)
-                ->where('is_active', true)->orderBy('code')->get()
+            $itemsQuery = DB::table($versionItems)->where('version', $resolved)->where('is_active', true);
+            if (in_array($normalized, ['13', '14'], true)) {
+                $itemsQuery->where('table_number', $normalized);
+            }
+            $items = $itemsQuery->orderBy('code')->get()
                 ->map(static function (object $row): array {
                     unset($row->version);
+                    unset($row->table_number);
                     return (array) $row;
                 });
 

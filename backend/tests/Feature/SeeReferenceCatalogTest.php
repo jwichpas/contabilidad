@@ -369,6 +369,31 @@ it('serves SUNAT book codes separately from PLE Annex 3, SEE and SIRE', function
     $this->getJson('/api/v1/catalogs/sunat/08?version=other')->assertNotFound();
 });
 
+it('serves PLE catalog origins and valuation methods as separate read-only annex editions', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/13')->assertOk()
+        ->assertJsonPath('meta.version', '2020-108-anexo-i')
+        ->assertJsonPath('meta.total', 3)
+        ->assertJsonPath('meta.available_versions.0', '2020-108-anexo-i')
+        ->assertJsonPath('meta.available_versions.1', '2015-06-anexo-3')
+        ->assertJsonFragment(['code' => '3', 'name' => 'GTIN']);
+    $this->getJson('/api/v1/catalogs/sunat/13?version=2015-06-anexo-3')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonFragment(['code' => '3', 'name' => 'GS1 (EAN-UCC)']);
+    $this->getJson('/api/v1/catalogs/sunat/14')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 6)
+        ->assertJsonFragment(['code' => '1', 'name' => 'PROMEDIO PONDERADO'])
+        ->assertJsonFragment(['code' => '5', 'name' => 'IDENTIFICACIÓN ESPECÍFICA']);
+    $this->getJson('/api/v1/catalogs/sunat/13?version=legacy-seed')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat/14?version=other')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat/12')->assertOk()
+        ->assertJsonPath('meta.total', 47);
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

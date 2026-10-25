@@ -1,0 +1,78 @@
+{
+  "version": "2015-06-anexo-3",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_pdf_sha256": "05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6",
+  "source_note": "Tablas 13 y 14 del Anexo 3 PLE 2015. La Tabla 13 fue sustituida: la edición más reciente identificada está en el Anexo I de la R.S. 108-2020/SUNAT (efectos desde 2021), cuyo código 3 dice GTIN. La 14 se conserva como edición 2015. Pertenecer al listado no impone reglas de producto ni método de valorización por sí solo.",
+  "tables": [
+    {
+      "number": "13",
+      "name": "Catálogo de existencias",
+      "rows": [
+        [
+          "1",
+          "NACIONES UNIDAS"
+        ],
+        [
+          "3",
+          "GS1 (EAN-UCC)"
+        ],
+        [
+          "9",
+          "OTROS"
+        ]
+      ]
+    },
+    {
+      "number": "14",
+      "name": "Método de valuación",
+      "rows": [
+        [
+          "1",
+          "PROMEDIO PONDERADO"
+        ],
+        [
+          "2",
+          "PRIMERAS ENTRADAS, PRIMERAS SALIDAS"
+        ],
+        [
+          "3",
+          "EXISTENCIAS BÁSICAS"
+        ],
+        [
+          "4",
+          "DETALLISTA"
+        ],
+        [
+          "5",
+          "IDENTIFICACIÓN ESPECÍFICA"
+        ],
+        [
+          "9",
+          "OTROS"
+        ]
+      ]
+    }
+  ],
+  "latest_table_13": {
+    "version": "2020-108-anexo-i",
+    "classification": "SUNAT_PLE_2020_ANNEX_I_TABLE_13_REFERENCE",
+    "source_url": "https://www.sunat.gob.pe/legislacion/superin/2020/anexos-108-2020.pdf",
+    "source_pdf_sha256": "e7f79660ea4f977926885d949321ee47cf36a59dd55771670959001cf6071d99",
+    "effective_from": "2021-01-01",
+    "rows": [
+      [
+        "1",
+        "NACIONES UNIDAS"
+      ],
+      [
+        "3",
+        "GTIN"
+      ],
+      [
+        "9",
+        "OTROS"
+      ]
+    ]
+  }
+}

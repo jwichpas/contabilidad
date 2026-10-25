@@ -84,6 +84,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_080000_version_ple_table_10_document_types.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_090000_version_sunat_table_08_book_codes.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_100000_add_ple_table_04_currency_codes.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_110000_add_ple_tables_13_14_inventory_references.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -174,3 +175,10 @@ en la carga inicial. La migración `2026_10_25_080000` conserva ambas ediciones 
 deducir crédito fiscal. Los indicadores `allows_tax_credit` e `is_electronic_default` de la
 carga inicial son metadatos del aplicativo y quedan nulos en las filas de la edición oficial.
 El código 10 PLE no es el Catálogo SEE 10 ni la Tabla 11 de documentos RCE/SIRE.
+Las Tablas 13 y 14 del Anexo 3 contienen, respectivamente, tres orígenes del catálogo de
+existencias (`1` Naciones Unidas, `3` GTIN, `9` otros en el [Anexo I de 2020](https://www.sunat.gob.pe/legislacion/superin/2020/anexos-108-2020.pdf)) y seis métodos de valuación (`1`–`5`,
+`9`). La migración `2026_10_25_110000` publica la Tabla 13 de 2020 por defecto y conserva la
+de 2015 (`3` GS1/EAN-UCC) como edición consultable; la Tabla 14 conserva el anexo de 2015.
+Son referencias versionadas de consulta. No agrega GTIN como tipo de inventario ni cambia
+el método de costos operativo: la Tabla 13 no es la Tabla 5 y la Tabla 14 no define por sí
+misma el método permitido para cada empresa en 2026.
