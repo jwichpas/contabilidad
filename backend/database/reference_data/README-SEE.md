@@ -10,8 +10,8 @@ global previo y no modifica ninguna tabla PLE/SIRE.
 | `see_catalogs` | Los 33 catálogos recibidos, más 26, 27 y 59 de otro anexo SEE | 36 |
 | `see_catalog_items` | Códigos SEE del archivo suministrado | 1,792 |
 | `see_ubigeos` | Distritos del archivo INEI suministrado | 1,874 |
-| `see_catalog_versions` | Ediciones cotejadas de catálogos SEE, separadas por número y versión | 10 |
-| `see_catalog_version_items` | Códigos de las ediciones cotejadas | 2,770 |
+| `see_catalog_versions` | Ediciones cotejadas de catálogos SEE, separadas por número y versión | 11 |
+| `see_catalog_version_items` | Códigos de las ediciones cotejadas | 2,783 |
 | `see_ubigeo_versions` | Ediciones INEI cotejadas | 1 |
 | `see_ubigeo_version_items` | Distritos INEI publicados en la edición 2026 | 1,893 |
 
@@ -43,6 +43,11 @@ de medios de pago PLE/SIRE (20 códigos). Por ejemplo, `011` significa documento
 en SEE 59 y letras de cambio en PLE 01. El anexo imprime «CATALOGO No. 57» en el encabezado
 interno de 59; el título y el índice lo identifican como 59. Se conserva esa discrepancia como
 nota de fuente, sin atribuir los códigos al catálogo 57.
+El catálogo 06 agrega una edición de 13 códigos basada en la tabla de tipos de identidad
+del [Anexo I de la R.S. 000049-2026/SUNAT](https://www.sunat.gob.pe/legislacion/superin/2026/anexo-000049-2026.pdf).
+El anexo remite al catálogo 06 y enumera `E`, `F`, `G` y `H`, ausentes de los nueve códigos
+recibidos. Se guardan las marcas de longitud y formato tal como aparecen en esa tabla;
+son metadatos de la fuente, no reglas de validación universales para cada modalidad SEE.
 No existían en el archivo suministrado: `historical_item_count = 0` y la consulta
 `?version=historical` responde 404 para ellos. El anexo de 2017 es la edición oficial
 incorporada, sin afirmar que sea la norma más reciente para todo comprobante.
@@ -65,6 +70,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_220000_create_company_see_visibility_revisions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_230000_add_see_catalogs_26_27_sunat_2017_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_240000_add_see_catalog_59_payment_methods_version.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_000000_add_see_catalog_06_sunat_2026_identity_version.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:

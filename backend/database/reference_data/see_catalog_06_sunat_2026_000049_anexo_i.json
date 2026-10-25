@@ -1,0 +1,23 @@
+{
+  "catalog_number": "06",
+  "version": "2026-000049-anexo-i",
+  "name": "Tipos de documentos de identidad",
+  "classification": "SUNAT_ANNEX_I_2026_IDENTITY_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2026/anexo-000049-2026.pdf",
+  "source_note": "Tabla de tipos de identidad del campo 10 del resumen de comprobantes impresos; remite al catálogo 06 del Anexo 8. Referencia de ese anexo, no una certificación de todas las modalidades SEE.",
+  "rows": [
+    ["0", "Doc.trib.no.dom.sin.ruc", "15", "A", "V"],
+    ["1", "Doc. Nacional de identidad", "08", "N", "F"],
+    ["4", "Carnet de extranjería", "12", "A", "V"],
+    ["6", "Registro Único de contribuyentes", "11", "N", "F"],
+    ["7", "Pasaporte", "12", "A", "V"],
+    ["A", "Ced. Diplomática de identidad", "15", "N", "F"],
+    ["B", "Documento identidad país residencia-no.d", "15", "A", "V"],
+    ["C", "Tax Identificación Number - TIN – Doc Trib PP.NN", "15", "A", "V"],
+    ["D", "Identification Number - IN – Doc Trib PP. JJ", "15", "A", "V"],
+    ["E", "TAM- Tarjeta Andina de Migración", "15", "A", "V"],
+    ["F", "Permiso Temporal de Permanencia PTP", "15", "A", "V"],
+    ["G", "Salvoconducto", "15", "A", "V"],
+    ["H", "CARNE PERMISO TEMP.PERMAN -CPP", "15", "A", "V"]
+  ]
+}

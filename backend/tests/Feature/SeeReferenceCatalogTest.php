@@ -187,3 +187,20 @@ it('keeps SEE payment method 59 separate from PLE payment method table 01', func
     $this->getJson('/api/v1/catalogs/sunat/01')->assertOk()
         ->assertJsonFragment(['code' => '011', 'name' => 'LETRAS DE CAMBIO']);
 });
+
+it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/06')
+        ->assertOk()->assertJsonPath('meta.version', '2026-000049-anexo-i')
+        ->assertJsonPath('meta.total', 13);
+    $this->getJson('/api/v1/catalogs/sunat-see/06?q=H')
+        ->assertOk()->assertJsonFragment(['code' => 'H', 'description' => 'CARNE PERMISO TEMP.PERMAN -CPP']);
+    $this->getJson('/api/v1/catalogs/sunat-see/06?q=E')
+        ->assertOk()->assertJsonFragment(['code' => 'E', 'description' => 'TAM- Tarjeta Andina de Migración']);
+    $this->getJson('/api/v1/catalogs/sunat-see/06?version=historical')
+        ->assertOk()->assertJsonPath('meta.total', 9);
+    $this->getJson('/api/v1/catalogs/sunat/02')->assertOk()->assertDontSee('CARNE PERMISO TEMP.PERMAN -CPP');
+});
