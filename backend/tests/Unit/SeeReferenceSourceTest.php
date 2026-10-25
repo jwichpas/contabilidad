@@ -46,6 +46,19 @@ it('pins PLE Annex 3 Table 2 without borrowing the SEE identity edition', functi
         ->and(array_column($source['rows'], 0))->toBe(['0', '1', '4', '6', '7', 'A']);
 });
 
+it('pins thirty-eight historical PLE financial institutions without treating them as operating banks', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_03_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('ad413f15ef20fd7237589e9fc73a556e99093af24c17272c86b9185f206d3141')
+        ->and($source['table_number'])->toBe('03')
+        ->and($source['classification'])->toBe('SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE')
+        ->and($source['rows'])->toHaveCount(38)
+        ->and(array_unique($codes))->toHaveCount(38)
+        ->and(array_diff($codes, ['51', '54', '55', '56', '58']))->toHaveCount(33)
+        ->and($codes)->toContain('51', '54', '55', '56', '58');
+});
+
 it('pins the nineteen PLE inventory type codes and the separate legacy classification', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_05_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

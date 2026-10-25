@@ -1,0 +1,162 @@
+{
+  "table_number": "03",
+  "version": "2015-06-anexo-3",
+  "name": "Entidad financiera PLE",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_note": "Tabla 3 del Anexo 3. Transcripción normalizada de lectura/OCR; contiene entidades históricas. La pertenencia a esta tabla no implica que la entidad esté operativa en 2026 ni que su código sea un CCI o código SBS. No modifica los bancos operativos del sistema.",
+  "rows": [
+    [
+      "01",
+      "CENTRAL RESERVA DEL PERU"
+    ],
+    [
+      "02",
+      "DE CREDITO DEL PERU"
+    ],
+    [
+      "03",
+      "INTERNACIONAL DEL PERU"
+    ],
+    [
+      "05",
+      "LATINO"
+    ],
+    [
+      "07",
+      "CITIBANK DEL PERU S.A."
+    ],
+    [
+      "08",
+      "STANDARD CHARTERED"
+    ],
+    [
+      "09",
+      "SCOTIABANK PERU"
+    ],
+    [
+      "11",
+      "CONTINENTAL"
+    ],
+    [
+      "12",
+      "DE LIMA"
+    ],
+    [
+      "16",
+      "MERCANTIL"
+    ],
+    [
+      "18",
+      "NACION"
+    ],
+    [
+      "22",
+      "SANTANDER CENTRAL HISPANO"
+    ],
+    [
+      "23",
+      "DE COMERCIO"
+    ],
+    [
+      "25",
+      "REPUBLICA"
+    ],
+    [
+      "26",
+      "NBK BANK"
+    ],
+    [
+      "29",
+      "BANCOSUR"
+    ],
+    [
+      "35",
+      "FINANCIERO DEL PERU"
+    ],
+    [
+      "37",
+      "DEL PROGRESO"
+    ],
+    [
+      "38",
+      "INTERAMERICANO FINANZAS"
+    ],
+    [
+      "39",
+      "BANEX"
+    ],
+    [
+      "40",
+      "NUEVO MUNDO"
+    ],
+    [
+      "41",
+      "SUDAMERICANO"
+    ],
+    [
+      "42",
+      "DEL LIBERTADOR"
+    ],
+    [
+      "43",
+      "DEL TRABAJO"
+    ],
+    [
+      "44",
+      "SOLVENTA"
+    ],
+    [
+      "45",
+      "SERBANCO S.A."
+    ],
+    [
+      "46",
+      "BANK OF BOSTON"
+    ],
+    [
+      "47",
+      "ORION"
+    ],
+    [
+      "48",
+      "DEL PAIS"
+    ],
+    [
+      "49",
+      "MI BANCO"
+    ],
+    [
+      "50",
+      "BNP PARIBAS"
+    ],
+    [
+      "51",
+      "AGRO BANCO"
+    ],
+    [
+      "53",
+      "HSBC BANK PERU S.A."
+    ],
+    [
+      "54",
+      "BANCO FALABELLA S.A."
+    ],
+    [
+      "55",
+      "BANCO RIPLEY"
+    ],
+    [
+      "56",
+      "BANCO SANTANDER PERU S.A."
+    ],
+    [
+      "58",
+      "BANCO AZTECA DEL PERU"
+    ],
+    [
+      "99",
+      "OTROS"
+    ]
+  ]
+}

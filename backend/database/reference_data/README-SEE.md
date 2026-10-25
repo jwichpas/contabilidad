@@ -78,6 +78,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_020000_reconcile_ple_table_02_identity_documents.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_030000_reconcile_ple_table_05_inventory_types.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_040000_version_ple_table_06_measurement_units.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_050000_version_ple_table_03_financial_institutions.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -121,9 +122,13 @@ instalador original. La migración `2026_10_25_030000` conserva el grupo de seis
 incorpora `06` a `10` y `91` a `98`, y corrige las denominaciones de `01` a `05` y `99`.
 `GET /api/v1/catalogs/sunat/05?version=legacy-seed` devuelve la carga anterior. Las sugerencias
 de cuenta PCGE pertenecen al sistema y no a SUNAT; las filas nuevas no reciben una por defecto.
-La Tabla 03 PLE de entidades financieras requiere otro tratamiento: la edición 2015 tiene cinco
-códigos más que la carga, pero mezcla bancos históricos. No habilitar esas entidades como bancos
-operativos sin contrastar una fuente oficial actual y los periodos de vigencia.
+La Tabla 03 PLE de entidades financieras en el Anexo 3 de 2015 contiene 38 códigos, frente a 33
+en la carga inicial. La migración `2026_10_25_050000` publica la edición cotejada como referencia
+histórica en tablas propias, y archiva la carga anterior como `legacy-seed`. Deja intacta
+`sunat_table_03_financial_institutions`: el anexo enumera bancos históricos y no establece
+cuáles pueden elegirse como entidades operativas en 2026. El endpoint de consulta muestra 38
+por defecto, con `operational_status_verified=false` y enlace a la fuente. No confundir estos
+códigos de dos caracteres con códigos bancarios CCI de tres caracteres, ni con SIRE o SEE.
 La Tabla 06 PLE del Anexo 3 enumera 62 claves como `KGM`, `LTR` y `NIU`, mientras la carga
 original usa 16 claves numéricas (`01`–`15`, `99`) con un símbolo comercial asociado. Son dos
 espacios de códigos: la migración `2026_10_25_040000` conserva las 16 filas sin modificarlas

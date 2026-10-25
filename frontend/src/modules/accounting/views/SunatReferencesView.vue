@@ -40,7 +40,7 @@ const pageSize = 25;
 const choices = computed(() => source.value === 'ple' ? pleTables : rucDatasets);
 const selected = computed(() => source.value === 'ple' ? pleNumber.value : rucNumber.value);
 const selectedName = computed(() => choices.value.find((entry) => entry.number === selected.value)?.name ?? selected.value);
-const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '05', '06'].includes(pleNumber.value));
+const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '03', '05', '06'].includes(pleNumber.value));
 function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
 }
@@ -145,6 +145,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       </div>
       <p class="text-sm text-muted">{{ selectedName }} · {{ rows.length.toLocaleString('es-PE') }} registros disponibles.</p>
       <p v-if="source === 'ple' && query.data.value?.edition === '2015-06-anexo-3'" class="text-xs text-muted">Edición PLE de 2015 incorporada para consulta; la vigencia de cada código en 2026 requiere cotejo normativo. <a v-if="query.data.value?.sourceUrl" class="underline" :href="query.data.value.sourceUrl" target="_blank" rel="noopener noreferrer">Ver anexo SUNAT</a></p>
+      <p v-if="source === 'ple' && pleNumber === '03' && selectedEdition === 'latest'" class="text-xs text-muted">La tabla 03 incluye entidades históricas. Sus códigos son referencia PLE; no acreditan que un banco esté operativo ni habilitan su selección para cuentas actuales.</p>
       <p v-else-if="source === 'ple' && query.data.value?.edition === 'legacy-seed'" class="text-xs text-muted">Carga inicial preservada como histórico, sin verificación de vigencia.</p>
       <p v-else-if="source === 'ple' && !query.isPending.value && !query.isError.value" class="text-xs text-muted">Fuente inicial pendiente de conciliación y versionado.</p>
       <p v-if="query.isError.value" role="alert" class="rounded-md border border-neg/30 bg-neg/10 px-3 py-2 text-sm text-neg">{{ query.error.value instanceof Error ? query.error.value.message : 'No se pudo cargar la tabla.' }} <button type="button" class="ml-2 underline" @click="query.refetch()">Reintentar</button></p>

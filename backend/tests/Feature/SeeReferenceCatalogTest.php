@@ -234,6 +234,26 @@ it('archives the six seeded inventory types and returns nineteen PLE Annex 3 ent
     $this->getJson('/api/v1/catalogs/sunat/05?version=other')->assertNotFound();
 });
 
+it('shows the historical PLE financial institution list apart from the operational seed', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/03')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.classification', 'SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE')
+        ->assertJsonPath('meta.operational_status_verified', false)
+        ->assertJsonPath('meta.total', 38)
+        ->assertJsonFragment(['code' => '51', 'name' => 'AGRO BANCO'])
+        ->assertJsonFragment(['code' => '54', 'name' => 'BANCO FALABELLA S.A.'])
+        ->assertJsonFragment(['code' => '58', 'name' => 'BANCO AZTECA DEL PERU']);
+    $this->getJson('/api/v1/catalogs/sunat/03?version=legacy-seed')->assertOk()
+        ->assertJsonPath('meta.total', 33)
+        ->assertJsonFragment(['code' => '02', 'name' => 'BANCO DE CREDITO DEL PERU'])
+        ->assertDontSee('AGRO BANCO');
+    $this->getJson('/api/v1/catalogs/sunat/03?version=other')->assertNotFound();
+});
+
 it('displays PLE units as annex codes and keeps numeric legacy and SEE codes separate', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],
