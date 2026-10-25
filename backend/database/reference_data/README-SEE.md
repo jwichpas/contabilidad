@@ -10,8 +10,8 @@ global previo y no modifica ninguna tabla PLE/SIRE.
 | `see_catalogs` | Catálogos 01–25 y 51–58; 13 y 25 solo remiten a fuentes externas | 33 |
 | `see_catalog_items` | Códigos SEE del archivo suministrado | 1,792 |
 | `see_ubigeos` | Distritos del archivo INEI suministrado | 1,874 |
-| `see_catalog_versions` | Ediciones cotejadas de catálogos SEE, separadas por número y versión | 5 |
-| `see_catalog_version_items` | Códigos de las ediciones cotejadas | 356 |
+| `see_catalog_versions` | Ediciones cotejadas de catálogos SEE, separadas por número y versión | 6 |
+| `see_catalog_version_items` | Códigos de las ediciones cotejadas | 605 |
 | `see_ubigeo_versions` | Ediciones INEI cotejadas | 1 |
 | `see_ubigeo_version_items` | Distritos INEI publicados en la edición 2026 | 1,893 |
 
@@ -32,6 +32,7 @@ respuesta incluye las ediciones disponibles. La nueva edición solo proporciona 
 departamento, provincia y distrito: población, área y coordenadas se devuelven como `null`.
 
 Las ediciones cotejadas son: 02 (178) de la [Lista Uno ISO 4217 de SIX, publicada el 17/09/2026](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html),
+04 (249) de la [lista de países UN/CEFACT](https://test.uncefact.org/vocabulary/country-id) capturada el 24/10/2026,
 15 (41) y 19 (4) del [Anexo E SUNAT de 2017](https://www.sunat.gob.pe/legislacion/superin/2017/anexoE-245-2017.pdf),
 20 (14) del [Anexo I SUNAT de 2024](https://www.sunat.gob.pe/legislacion/superin/2024/anexo1-000240-2024.pdf)
 y 55 (119) del [Anexo I SUNAT de 2026](https://www.sunat.gob.pe/legislacion/superin/2026/anexo-000108-2026.pdf).
@@ -49,6 +50,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_170000_add_see_catalog_15_19_55_versions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_180000_add_see_catalog_02_iso_4217_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_190000_add_see_ubigeo_inei_2026_version.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_200000_add_see_catalog_04_uncefact_country_version.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -63,6 +65,11 @@ La edición 02 es una instantánea del listado publicado el 17/09/2026; contiene
 especiales (`XTS` para pruebas, `XXX` sin divisa). No equivale a permitir todos esos códigos para
 facturación o para configurar monedas de empresas. La fecha de publicación de la lista no es la
 fecha individual de alta o baja de cada moneda. No se sustituyen monedas en documentos históricos.
+La edición 04 registra la fecha de captura del portal UN/CEFACT, que no es una fecha de
+publicación ISO 3166 ni una declaración sobre la validez de cada país para un comprobante SUNAT.
+El catálogo 03 permanece histórico: la lista UN/CEFACT de unidades de medida publica 1,383
+códigos de su Anexo I, mientras el archivo recibido mezcla códigos de distintos anexos. No
+sustituirlo por el Anexo I parcial ni aceptar la clave duplicada `A11` como unidad inequívoca.
 
 Si SUNAT/INEI/ISO publican cambios, agregar un nuevo conjunto versionado y una migración correctiva
 con trazabilidad. Evitar modificar silenciosamente los códigos usados por documentos históricos.

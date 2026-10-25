@@ -67,3 +67,15 @@ it('pins INEI 2026 district codes separately from the supplied ubigeo snapshot',
         ->and(array_diff(array_column($old['rows'], 0), $codes))->toBe([])
         ->and(array_diff($codes, array_column($old['rows'], 0)))->toHaveCount(19);
 });
+
+it('pins the UN/CEFACT country snapshot and its source CSV', function (): void {
+    $path = database_path('reference_data/see_catalog_04_uncefact_2026_10_24.json');
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('53a93e2b6e79978dab273b628cb397f6abda16f579afcd6a911399eab2d0afea')
+        ->and($source['source_csv_sha256'])->toBe('0a6ea77aaeec295438b9cb69c6c68186b332c64e6d4a34a64d66b29f37b9f87b')
+        ->and($source['rows'])->toHaveCount(249)
+        ->and(array_unique($codes))->toHaveCount(249)
+        ->and($codes)->toContain('PE', 'AX')
+        ->and($codes)->not->toContain('AN');
+});

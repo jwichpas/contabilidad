@@ -117,3 +117,20 @@ it('returns ISO 4217 currencies by default and preserves historical PEN and obso
     $this->getJson('/api/v1/catalogs/sunat-see/02?version=historical&q=BGN')
         ->assertOk()->assertJsonPath('meta.total', 1);
 });
+
+it('returns the UN/CEFACT country edition separately from the historical country list', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/04?per_page=2000')
+        ->assertOk()->assertJsonPath('meta.version', '2026-10-24-uncefact')
+        ->assertJsonPath('meta.total', 249)
+        ->assertJsonFragment(['code' => 'AX', 'description' => 'ÅLAND ISLANDS']);
+    $this->getJson('/api/v1/catalogs/sunat-see/04?version=historical')
+        ->assertOk()->assertJsonPath('meta.total', 239);
+    $this->getJson('/api/v1/catalogs/sunat-see/04?q=ZR')
+        ->assertOk()->assertJsonPath('meta.total', 0);
+    $this->getJson('/api/v1/catalogs/sunat-see/04?version=historical&q=ZR')
+        ->assertOk()->assertJsonPath('meta.total', 1);
+});
