@@ -1,0 +1,26 @@
+{
+  "catalog_number": "19",
+  "version": "2017-anexo-e",
+  "name": "Estados de ítem del resumen diario",
+  "classification": "SUNAT_ANNEX_E_2017_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2017/anexoE-245-2017.pdf",
+  "source_pdf_sha256": "e347ac9ebb4d20606841846365cc47a6c61f0f1f741505bfe0f204b00babf5b6",
+  "rows": [
+    [
+      "1",
+      "Adicionar"
+    ],
+    [
+      "2",
+      "Modificar"
+    ],
+    [
+      "3",
+      "Anulado"
+    ],
+    [
+      "4",
+      "Anulado en el día (anulado antes de informar comprobante)"
+    ]
+  ]
+}

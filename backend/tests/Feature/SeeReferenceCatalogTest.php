@@ -70,3 +70,25 @@ it('serves SUNAT 2024 catalog 20 as a separate version without changing historic
     $this->getJson('/api/v1/catalogs/sunat-see/19?version=2024-anexo-i')->assertNotFound();
     $this->getJson('/api/v1/catalogs/sunat/03')->assertOk()->assertDontSee('Venta con entrega a terceros');
 });
+
+it('resolves the latest available SEE edition and keeps the received snapshot addressable', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see')
+        ->assertOk()->assertJsonPath('data.14.latest_version', '2017-anexo-e')
+        ->assertJsonPath('data.18.latest_version', '2017-anexo-e');
+    foreach (['15' => ['2017-anexo-e', 41, '2008', 40],
+              '19' => ['2017-anexo-e', 4, '4', 3],
+              '20' => ['2024-anexo-i', 14, '03', 9],
+              '55' => ['2026-anexo-i', 119, '7029', 30]] as $number => [$edition, $count, $code, $oldCount]) {
+        $this->getJson("/api/v1/catalogs/sunat-see/{$number}?per_page=2000")
+            ->assertOk()->assertJsonPath('meta.version', $edition)
+            ->assertJsonPath('meta.total', $count)->assertJsonFragment(['code' => $code]);
+        $this->getJson("/api/v1/catalogs/sunat-see/{$number}?version=historical")
+            ->assertOk()->assertJsonPath('meta.total', $oldCount);
+    }
+    $this->getJson('/api/v1/catalogs/sunat-see/02')->assertOk()
+        ->assertJsonPath('meta.version', 'historical');
+});

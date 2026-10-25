@@ -10,6 +10,8 @@ global previo y no modifica ninguna tabla PLE/SIRE.
 | `see_catalogs` | Catálogos 01–25 y 51–58; 13 y 25 solo remiten a fuentes externas | 33 |
 | `see_catalog_items` | Códigos SEE del archivo suministrado | 1,792 |
 | `see_ubigeos` | Distritos del archivo INEI suministrado | 1,874 |
+| `see_catalog_versions` | Ediciones cotejadas de catálogos SEE, separadas por número y versión | 4 |
+| `see_catalog_version_items` | Códigos de las ediciones cotejadas | 178 |
 
 Las referencias provienen de `tablas-sunat-fac.md` y `ubigeo.md` suministrados el 24/10/2026.
 La clasificación `SUPPLIED_*_SNAPSHOT_UNVERIFIED` expresa que **no se ha comprobado su vigencia**.
@@ -23,13 +25,20 @@ y `GET /api/v1/catalogs/sunat-see/ubigeos` (filtros `q`, `department`, `province
 `/api/v1/catalogs/sunat/{tableNumber}` sigue siendo exclusivamente el catálogo anterior PLE/SIRE.
 Para el ubigeo usar el endpoint específico: el catálogo SEE 13 es solo una referencia.
 
-El catálogo 20 dispone además de una edición atribuida al [Anexo I SUNAT de 2024](https://www.sunat.gob.pe/legislacion/superin/2024/anexo1-000240-2024.pdf):
-`GET /api/v1/catalogs/sunat-see/20?version=2024-anexo-i` (14 motivos). La versión histórica
-de nueve filas sigue disponible con `version=historical` o sin parámetro. Ambas son globales,
-de solo lectura, y no alteran PLE/SIRE. Instalar la migración posterior:
+Las ediciones cotejadas son: 15 (41) y 19 (4) del [Anexo E SUNAT de 2017](https://www.sunat.gob.pe/legislacion/superin/2017/anexoE-245-2017.pdf),
+20 (14) del [Anexo I SUNAT de 2024](https://www.sunat.gob.pe/legislacion/superin/2024/anexo1-000240-2024.pdf)
+y 55 (119) del [Anexo I SUNAT de 2026](https://www.sunat.gob.pe/legislacion/superin/2026/anexo-000108-2026.pdf).
+Son las publicaciones verificadas e incorporadas, sin afirmar vigencia normativa absoluta de las
+ediciones 2017 o 2024. La API sin `version` devuelve la edición más reciente **registrada** para
+cada catálogo; `version=latest` equivale a omitir el parámetro. `version=historical` consulta el
+archivo recibido, también cuando existe una versión cotejada. Los catálogos sin edición cotejada
+siguen mostrando el archivo recibido y su clasificación de no verificado. El índice de catálogos
+incluye `latest_version`, `historical_item_count` y `available_versions`. Todos son globales de
+solo lectura y no alteran PLE/SIRE. Instalar las migraciones en orden:
 
 ```bash
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_160000_add_see_catalog_20_sunat_2024_version.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_170000_add_see_catalog_15_19_55_versions.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:

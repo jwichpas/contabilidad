@@ -365,7 +365,7 @@ export class AccountingApiClient {
   ): Promise<SeePage<SeeCatalogItem>> {
     const query = new URLSearchParams({ page: String(params.page), per_page: '2000' });
     if (params.q.trim()) query.set('q', params.q.trim());
-    if (params.version && params.version !== 'historical') query.set('version', params.version);
+    if (params.version && params.version !== 'latest') query.set('version', params.version);
     return this.request<SeePage<SeeCatalogItem>>(
       `/api/v1/catalogs/sunat-see/${encodeURIComponent(number)}?${query}`,
       { method: 'GET', signal: params.signal }, false,

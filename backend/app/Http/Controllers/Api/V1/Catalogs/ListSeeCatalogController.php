@@ -23,7 +23,12 @@ final readonly class ListSeeCatalogController
             // La consulta global se descarga una vez y se filtra localmente en el navegador.
             'per_page' => ['sometimes', 'integer', 'between:1,2000'],
         ]);
-        $version = $validated['version'] ?? 'historical';
+        $latest = DB::table('see_catalog_versions')->where('catalog_number', $number)
+            ->orderByDesc('version')->first();
+        $version = $validated['version'] ?? 'latest';
+        if ($version === 'latest') {
+            $version = $latest->version ?? 'historical';
+        }
         $reference = $version === 'historical' ? $catalog : DB::table('see_catalog_versions')
             ->where('catalog_number', $number)->where('version', $version)->first();
         abort_if($reference === null, 404, 'Versión SEE desconocida para este catálogo.');

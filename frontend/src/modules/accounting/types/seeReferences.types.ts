@@ -3,6 +3,15 @@ export interface SeeCatalogSummary {
   readonly name: string;
   readonly item_count: number;
   readonly classification: string;
+  readonly latest_version: string;
+  readonly historical_item_count: number;
+  readonly available_versions: readonly {
+    readonly version: string;
+    readonly name: string;
+    readonly item_count: number;
+    readonly classification: string;
+    readonly source_url: string;
+  }[];
 }
 
 export interface SeeCatalogItem {
