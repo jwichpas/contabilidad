@@ -415,6 +415,25 @@ it('serves PLE tables 15 through 20 without mixing their codes with SEE or chang
     $this->getJson('/api/v1/catalogs/sunat/20?version=other')->assertNotFound();
 });
 
+it('shows PLE production grouping and financial statement codes in different versioned tables', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/21')->assertOk()
+        ->assertJsonPath('meta.table_number', '21')
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 5)
+        ->assertJsonFragment(['code' => '2', 'name' => 'LÍNEA DE PRODUCCIÓN']);
+    $this->getJson('/api/v1/catalogs/sunat/22')->assertOk()
+        ->assertJsonPath('meta.table_number', '22')
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 9)
+        ->assertJsonFragment(['code' => '02', 'name' => 'SUPERINTENDENCIA DEL MERCADO DE VALORES - SECTOR SEGUROS - INDIVIDUAL']);
+    $this->getJson('/api/v1/catalogs/sunat/21?version=legacy-seed')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat/22?version=other')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

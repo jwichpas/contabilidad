@@ -1,0 +1,35 @@
+{
+  "version": "2015-06-anexo-3",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_pdf_sha256": "05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6",
+  "source_note": "Tablas 21 y 22 del Anexo 3 PLE 2015. La 21 clasifica agrupamientos de costos de producción valorizados; la 22 enumera catálogos de presentación de estados financieros. No modifica la estructura contable o presentación operativa de una empresa.",
+  "tables": [
+    {
+      "number": "21",
+      "name": "Código de agrupamiento del costo de producción valorizado anual",
+      "rows": [
+        ["1", "PROCESO PRODUCTIVO"],
+        ["2", "LÍNEA DE PRODUCCIÓN"],
+        ["3", "PRODUCTO"],
+        ["4", "PROYECTO"],
+        ["9", "OTROS"]
+      ]
+    },
+    {
+      "number": "22",
+      "name": "Catálogo de estados financieros",
+      "rows": [
+        ["01", "SUPERINTENDENCIA DEL MERCADO DE VALORES - SECTOR DIVERSAS - INDIVIDUAL"],
+        ["02", "SUPERINTENDENCIA DEL MERCADO DE VALORES - SECTOR SEGUROS - INDIVIDUAL"],
+        ["03", "SUPERINTENDENCIA DEL MERCADO DE VALORES - SECTOR BANCOS Y FINANCIERAS - INDIVIDUAL"],
+        ["04", "SUPERINTENDENCIA DEL MERCADO DE VALORES - ADMINISTRADORAS DE FONDOS DE PENSIONES (AFP)"],
+        ["05", "SUPERINTENDENCIA DEL MERCADO DE VALORES - AGENTES DE INTERMEDIACIÓN"],
+        ["06", "SUPERINTENDENCIA DEL MERCADO DE VALORES - FONDOS DE INVERSIÓN"],
+        ["07", "SUPERINTENDENCIA DEL MERCADO DE VALORES - PATRIMONIO EN FIDEICOMISOS"],
+        ["08", "SUPERINTENDENCIA DEL MERCADO DE VALORES - ICLV"],
+        ["09", "OTROS NO CONSIDERADOS EN LOS ANTERIORES"]
+      ]
+    }
+  ]
+}

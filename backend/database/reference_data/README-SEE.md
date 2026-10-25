@@ -86,6 +86,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_100000_add_ple_table_04_currency_codes.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_110000_add_ple_tables_13_14_inventory_references.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_120000_add_ple_tables_15_20_reference_editions.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_130000_add_ple_tables_21_22_reference_editions.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -190,3 +191,7 @@ fijo y 3 métodos de depreciación. Son ediciones PLE históricas de solo lectur
 fuente fijada. El código `01` de la Tabla 17 identifica el tipo PCGE en un libro; no
 elige la versión del PCGE de una empresa. Tampoco se asignan tipos de activo o métodos
 de depreciación operativos a partir de esas referencias.
+Las Tablas 21 y 22 de ese anexo contienen cinco códigos de agrupamiento del costo de
+producción valorizado anual y nueve códigos de catálogo de estados financieros. Se
+publican con `2026_10_25_130000` como referencias PLE globales y versionadas de 2015.
+No configuran el costeo, el sector de la empresa ni sus estados financieros operativos.

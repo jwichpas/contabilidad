@@ -148,6 +148,21 @@ it('pins the six distinct PLE Annex 3 tables for titles, shares, accounts and fi
     }
 });
 
+it('pins separate PLE production cost grouping and financial statement catalog codes', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_tables_21_22_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('b47a542ef05cc9a7c202e5731a12c987790407a9b8f182436a254499183fe14e')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and(array_column($source['tables'], 'number'))->toBe(['21', '22'])
+        ->and($source['tables'][0]['rows'])->toBe([
+            ['1', 'PROCESO PRODUCTIVO'], ['2', 'LÍNEA DE PRODUCCIÓN'],
+            ['3', 'PRODUCTO'], ['4', 'PROYECTO'], ['9', 'OTROS'],
+        ])
+        ->and($source['tables'][1]['rows'])->toHaveCount(9)
+        ->and($source['tables'][1]['rows'][1])->toBe(['02', 'SUPERINTENDENCIA DEL MERCADO DE VALORES - SECTOR SEGUROS - INDIVIDUAL'])
+        ->and($source['tables'][1]['rows'][8])->toBe(['09', 'OTROS NO CONSIDERADOS EN LOS ANTERIORES']);
+});
+
 it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
