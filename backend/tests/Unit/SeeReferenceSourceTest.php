@@ -200,6 +200,17 @@ it('pins the forty-six historical PLE net equity codes without replacing the com
         ->and($source['rows'][45])->toBe(['5922', 'Gastos de años anteriores']);
 });
 
+it('pins the five distinct PLE acquisition classification codes', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_30_acquisition_class_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('240052dfc21aeb9f5889128e23310ab3a0428f71da7bf1eab63054a0cc842691')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and($source['table_number'])->toBe('30')
+        ->and(array_column($source['rows'], 0))->toBe(['1', '2', '3', '4', '5'])
+        ->and($source['rows'][1])->toBe(['2', 'ACTIVO FIJO'])
+        ->and($source['rows'][4])->toBe(['5', 'OTROS GASTOS NO INCLUIDOS EN EL NUMERAL 4']);
+});
+
 it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

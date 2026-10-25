@@ -90,6 +90,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_140000_add_ple_table_25_historical_treaty_codes.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_150000_add_ple_table_27_economic_relationship.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_160000_add_ple_table_28_historical_net_equity.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_170000_add_ple_table_30_acquisition_classification.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -212,3 +213,6 @@ La Tabla 28 PLE de 2015 enumera 46 códigos de patrimonio neto de dos a cuatro d
 `2026_10_25_160000` los publica para consulta histórica con la fuente fijada. No se
 copian a las cuentas operativas ni reemplazan el PCGE de cada empresa, cuya versión
 se gestiona aparte; las denominaciones del anexo pueden diferir de ediciones posteriores.
+La Tabla 30 del Anexo 3 PLE de 2015 clasifica cinco categorías de bienes y servicios
+adquiridos (`1`–`5`). `2026_10_25_170000` las publica solo para consulta histórica,
+sin clasificar compras de empresas ni atribuir crédito fiscal a ninguna operación.

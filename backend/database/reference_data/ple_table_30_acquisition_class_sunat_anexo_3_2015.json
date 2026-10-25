@@ -1,0 +1,16 @@
+{
+  "version": "2015-06-anexo-3",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_pdf_sha256": "05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6",
+  "table_number": "30",
+  "name": "Clasificación de los bienes y servicios adquiridos",
+  "source_note": "Cinco códigos del Anexo 3 PLE 2015 para campos de clasificación de compras. No asignan crédito fiscal ni clasifican automáticamente documentos, activos o gastos en los sistemas operativos.",
+  "rows": [
+    ["1", "MERCADERIA, MATERIA PRIMA, SUMINISTRO, ENVASES Y EMBALAJES"],
+    ["2", "ACTIVO FIJO"],
+    ["3", "OTROS ACTIVOS NO CONSIDERADOS EN LOS NUMERALES 1 Y 2"],
+    ["4", "GASTOS DE EDUCACIÓN, RECREACIÓN, SALUD, CULTURALES. REPRESENTACIÓN, CAPACITACIÓN, DE VIAJE, MANTENIMIENTO DE VEHICULO Y DE PREMIOS"],
+    ["5", "OTROS GASTOS NO INCLUIDOS EN EL NUMERAL 4"]
+  ]
+}

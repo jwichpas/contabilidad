@@ -482,6 +482,20 @@ it('shows historical PLE net equity codes independently of the operating chart o
     $this->getJson('/api/v1/catalogs/sunat/28?version=legacy-seed')->assertNotFound();
 });
 
+it('lists historical PLE acquisition classes without conflating them with operational purchases', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/30')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.table_number', '30')
+        ->assertJsonPath('meta.total', 5)
+        ->assertJsonFragment(['code' => '1', 'name' => 'MERCADERIA, MATERIA PRIMA, SUMINISTRO, ENVASES Y EMBALAJES'])
+        ->assertJsonFragment(['code' => '2', 'name' => 'ACTIVO FIJO']);
+    $this->getJson('/api/v1/catalogs/sunat/30?version=legacy-seed')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],
