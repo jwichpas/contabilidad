@@ -394,6 +394,27 @@ it('serves PLE catalog origins and valuation methods as separate read-only annex
         ->assertJsonPath('meta.total', 47);
 });
 
+it('serves PLE tables 15 through 20 without mixing their codes with SEE or changing company configuration', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user);
+    foreach (['15' => 11, '16' => 4, '17' => 8, '18' => 2, '19' => 3, '20' => 3] as $number => $count) {
+        $this->getJson('/api/v1/catalogs/sunat/'.$number)->assertOk()
+            ->assertJsonPath('meta.table_number', (string) $number)
+            ->assertJsonPath('meta.version', '2015-06-anexo-3')
+            ->assertJsonPath('meta.total', $count)
+            ->assertJsonCount($count, 'data');
+    }
+    $this->getJson('/api/v1/catalogs/sunat/17')->assertOk()
+        ->assertJsonFragment(['code' => '01', 'name' => 'PLAN CONTABLE GENERAL EMPRESARIAL']);
+    $this->getJson('/api/v1/catalogs/sunat/20')->assertOk()
+        ->assertJsonFragment(['code' => '2', 'name' => 'UNIDADES PRODUCIDAS']);
+    $this->getJson('/api/v1/catalogs/sunat/15?version=legacy-seed')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat/20?version=other')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

@@ -1,0 +1,76 @@
+{
+  "version": "2015-06-anexo-3",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_pdf_sha256": "05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6",
+  "source_note": "Tablas 15 a 20 del Anexo 3 PLE de 2015. Códigos de consulta; no establecen por sí solos vigencia tributaria, método contable, clase de acción admisible ni tratamiento de depreciación para una empresa.",
+  "tables": [
+    {
+      "number": "15",
+      "name": "Tipo de título",
+      "rows": [
+        ["01", "VALORES EMITIDOS O GARANTIZADOS POR EL ESTADO"],
+        ["02", "VALORES EMITIDOS O GARANTIZADOS POR EL SISTEMA FINANCIERO"],
+        ["03", "VALORES EMITIDOS POR LA EMPRESA"],
+        ["04", "OTROS INSTRUMENTOS FINANCIEROS REPRESENTATIVOS DE DEUDA"],
+        ["05", "CERTIFICADOS DE SUSCRIPCIÓN PREFERENTE"],
+        ["06", "ACCIONES REPRESENTATIVAS DE CAPITAL SOCIAL"],
+        ["07", "ACCIONES DE INVERSIÓN"],
+        ["08", "CERTIFICADO DE PARTICIPACIÓN DE FONDOS"],
+        ["09", "ASOCIACIONES EN PARTICIPACIÓN Y CONSORCIOS"],
+        ["10", "OTROS INSTRUMENTOS FINANCIEROS REPRESENTATIVOS DE DERECHO PATRIMONIAL"],
+        ["99", "OTROS TÍTULOS"]
+      ]
+    },
+    {
+      "number": "16",
+      "name": "Tipo de acciones o participaciones",
+      "rows": [
+        ["01", "ACCIONES CON DERECHO A VOTO"],
+        ["02", "ACCIONES SIN DERECHO A VOTO"],
+        ["03", "PARTICIPACIONES"],
+        ["04", "OTROS"]
+      ]
+    },
+    {
+      "number": "17",
+      "name": "Plan de cuentas",
+      "rows": [
+        ["01", "PLAN CONTABLE GENERAL EMPRESARIAL"],
+        ["02", "PLAN CONTABLE GENERAL REVISADO"],
+        ["03", "PLAN DE CUENTAS PARA EMPRESAS DEL SISTEMA FINANCIERO, SUPERVISADAS POR SBS"],
+        ["04", "PLAN DE CUENTAS PARA ENTIDADES PRESTADORAS DE SALUD, SUPERVISADAS POR SBS"],
+        ["05", "PLAN DE CUENTAS PARA EMPRESAS DEL SISTEMA ASEGURADOR, SUPERVISADAS POR SBS"],
+        ["06", "PLAN DE CUENTAS DE LAS ADMINISTRADORAS PRIVADAS DE FONDOS DE PENSIONES, SUPERVISADAS POR SBS"],
+        ["07", "PLAN CONTABLE GUBERNAMENTAL"],
+        ["99", "OTROS"]
+      ]
+    },
+    {
+      "number": "18",
+      "name": "Tipo de activo fijo",
+      "rows": [
+        ["1", "NO REVALUADO O REVALUADO SIN EFECTO TRIBUTARIO"],
+        ["2", "REVALUADO CON EFECTO TRIBUTARIO"]
+      ]
+    },
+    {
+      "number": "19",
+      "name": "Estado del activo fijo",
+      "rows": [
+        ["1", "ACTIVOS EN DESUSO"],
+        ["2", "ACTIVOS OBSOLETOS"],
+        ["9", "RESTO DE ACTIVOS"]
+      ]
+    },
+    {
+      "number": "20",
+      "name": "Método de depreciación",
+      "rows": [
+        ["1", "LÍNEA RECTA"],
+        ["2", "UNIDADES PRODUCIDAS"],
+        ["9", "OTROS"]
+      ]
+    }
+  ]
+}

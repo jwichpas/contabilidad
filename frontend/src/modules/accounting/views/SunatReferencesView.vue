@@ -22,6 +22,12 @@ const pleTables = [
   { number: '12', name: 'Operaciones de inventario' },
   { number: '13', name: 'Catálogo de existencias (origen)' },
   { number: '14', name: 'Método de valuación' },
+  { number: '15', name: 'Tipo de título' },
+  { number: '16', name: 'Tipo de acciones o participaciones' },
+  { number: '17', name: 'Plan de cuentas PLE' },
+  { number: '18', name: 'Tipo de activo fijo' },
+  { number: '19', name: 'Estado del activo fijo' },
+  { number: '20', name: 'Método de depreciación' },
 ] as const;
 const rucDatasets = [
   { number: 'contributor-types', name: 'Anexo 2 · Tipos de contribuyente' },
@@ -118,7 +124,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <button type="button" :aria-pressed="source === 'ple'" :class="source === 'ple' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ple')">Tablas PLE</button>
       <button type="button" :aria-pressed="source === 'ruc'" :class="source === 'ruc' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ruc')">Anexos RUC y CIIU</button>
     </div>
-    <p class="text-sm text-muted">{{ source === 'ple' ? 'Once tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
+    <p class="text-sm text-muted">{{ source === 'ple' ? 'Diecisiete tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
     <div class="space-y-4 rounded-xl border border-border bg-surface p-4">
       <div class="grid gap-3 md:grid-cols-2">
         <div class="min-w-0 text-xs font-medium text-muted">
@@ -152,6 +158,8 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <p v-if="source === 'ple' && pleNumber === '04'" class="text-xs text-muted">La Tabla 4 PLE conserva 178 códigos históricos. Las descripciones del PDF no se transcribieron por errores de extracción; consulte el anexo. Para configurar monedas de una empresa se usa el catálogo SEE/ISO con visibilidad propia, no esta lista de 2015.</p>
       <p v-if="source === 'ple' && pleNumber === '13'" class="text-xs text-muted">La Tabla 13 identifica el catálogo de códigos usado para existencias. La edición de 2020 llama GTIN al código 3; la de 2015 decía GS1 (EAN-UCC). No clasifica productos ni sustituye la Tabla 5 de tipos de existencia.</p>
       <p v-if="source === 'ple' && pleNumber === '14'" class="text-xs text-muted">Los seis métodos son una referencia PLE de 2015. Su presencia en el anexo no cambia por sí sola el método de valorización configurado en inventario.</p>
+      <p v-if="source === 'ple' && ['15', '16', '17'].includes(pleNumber)" class="text-xs text-muted">Códigos PLE del Anexo 3 de 2015 para títulos, participaciones o tipo de plan. Son referencias de libros; la Tabla 17 no selecciona ni reemplaza el plan contable de la empresa.</p>
+      <p v-if="source === 'ple' && ['18', '19', '20'].includes(pleNumber)" class="text-xs text-muted">Referencias PLE para activos fijos del Anexo 3 de 2015. La selección de un código no determina por sí sola depreciación fiscal ni política contable de la empresa.</p>
       <p v-if="source === 'ple' && pleNumber === '03' && selectedEdition === 'latest'" class="text-xs text-muted">La tabla 03 incluye entidades históricas. Sus códigos son referencia PLE; no acreditan que un banco esté operativo ni habilitan su selección para cuentas actuales.</p>
       <p v-if="source === 'ple' && pleNumber === '12' && selectedEdition === 'latest'" class="text-xs text-muted">La edición cotejada contiene 47 operaciones de inventario. La carga inicial tiene 17 y asigna otro significado al código 07; no use ambas ediciones indistintamente en el kardex.</p>
       <p v-if="source === 'ple' && pleNumber === '11' && selectedEdition === 'latest'" class="text-xs text-muted">Los 30 códigos corresponden a la Tabla 11 PLE de 2015; no acreditan qué dependencias siguen operativas ni sustituyen la Tabla 4 de SIRE.</p>

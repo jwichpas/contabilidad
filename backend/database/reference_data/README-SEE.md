@@ -85,6 +85,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_090000_version_sunat_table_08_book_codes.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_100000_add_ple_table_04_currency_codes.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_110000_add_ple_tables_13_14_inventory_references.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_120000_add_ple_tables_15_20_reference_editions.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -182,3 +183,10 @@ de 2015 (`3` GS1/EAN-UCC) como edición consultable; la Tabla 14 conserva el ane
 Son referencias versionadas de consulta. No agrega GTIN como tipo de inventario ni cambia
 el método de costos operativo: la Tabla 13 no es la Tabla 5 y la Tabla 14 no define por sí
 misma el método permitido para cada empresa en 2026.
+Las Tablas 15 a 20 del [Anexo 3 SUNAT de 2015](https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf)
+se publican con `2026_10_25_120000`: 11 tipos de título, 4 tipos de acciones o
+participaciones, 8 tipos de plan de cuentas, 2 tipos de activo fijo, 3 estados de activo
+fijo y 3 métodos de depreciación. Son ediciones PLE históricas de solo lectura y con
+fuente fijada. El código `01` de la Tabla 17 identifica el tipo PCGE en un libro; no
+elige la versión del PCGE de una empresa. Tampoco se asignan tipos de activo o métodos
+de depreciación operativos a partir de esas referencias.
