@@ -13,6 +13,7 @@ type Section = 'catalogs' | 'ubigeos';
 const section = shallowRef<Section>('catalogs');
 const catalogNumber = shallowRef('02');
 const catalogVersion = shallowRef('latest');
+const ubigeoVersion = shallowRef('latest');
 const catalogFilter = shallowRef('');
 const searchInput = shallowRef('');
 const pageIndex = shallowRef(0);
@@ -31,10 +32,10 @@ const catalogQuery = useQuery({
   staleTime: 0, gcTime: cacheTime, retry: 1, refetchOnWindowFocus: false,
 });
 const ubigeoQuery = useQuery({
-  queryKey: ['see-ubigeos'],
+  queryKey: computed(() => ['see-ubigeos', ubigeoVersion.value]),
   enabled: computed(() => section.value === 'ubigeos'),
-  queryFn: ({ signal }) => client.fetchSeeUbigeos({ q: '', page: 1, signal }),
-  staleTime: cacheTime, gcTime: cacheTime, retry: 1, refetchOnWindowFocus: false,
+  queryFn: ({ signal, queryKey }) => client.fetchSeeUbigeos({ q: '', page: 1, version: queryKey[1], signal }),
+  staleTime: 0, gcTime: cacheTime, retry: 1, refetchOnWindowFocus: false,
 });
 
 function normalize(value: string): string {
@@ -63,6 +64,10 @@ function chooseCatalog(number: string): void {
 }
 function chooseVersion(event: Event): void {
   catalogVersion.value = (event.target as HTMLSelectElement).value;
+  searchInput.value = ''; pageIndex.value = 0;
+}
+function chooseUbigeoVersion(event: Event): void {
+  ubigeoVersion.value = (event.target as HTMLSelectElement).value;
   searchInput.value = ''; pageIndex.value = 0;
 }
 function displayCatalog(value: unknown): string {
@@ -125,7 +130,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
     </div>
     <div class="flex items-start gap-2 rounded-lg border border-amber-300/50 bg-amber-50/70 p-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100" role="note">
       <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0" />
-      <p>El catálogo 02 tiene una edición ISO 4217 y los catálogos 15, 19, 20 y 55 tienen ediciones cotejadas con anexos SUNAT; se muestra por defecto la última incorporada. Los demás y el ubigeo siguen pendientes de conciliación vigente. La unidad A11 tiene dos descripciones. No use esta vista para validar comprobantes.</p>
+      <p>El catálogo 02 tiene una edición ISO 4217; los catálogos 15, 19, 20 y 55 tienen ediciones de anexos SUNAT, y el ubigeo tiene una edición INEI 2026. Se muestra la última edición incorporada. Los demás catálogos siguen pendientes de conciliación vigente; la unidad A11 tiene dos descripciones. No use esta vista para validar comprobantes.</p>
     </div>
     <div class="flex flex-wrap gap-2 border-b border-border pb-3" aria-label="Tipo de referencia">
       <button type="button" :aria-pressed="section === 'catalogs'" :class="section === 'catalogs' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium" @click="chooseSection('catalogs')"><BookOpen class="h-4 w-4" /> Catálogos SEE</button>
@@ -154,12 +159,19 @@ watch(searchInput, () => { pageIndex.value = 0; });
             </div>
           </Combobox>
         </div>
-        <div v-else class="flex items-end gap-2 text-sm text-muted"><Globe2 class="mb-1 h-5 w-5 text-brand" /> 1,874 distritos en el archivo suministrado</div>
+        <div v-else class="flex items-end gap-2 text-sm text-muted"><Globe2 class="mb-1 h-5 w-5 text-brand" /> {{ (ubigeoQuery.data.value?.meta.item_count ?? 1893).toLocaleString('es-PE') }} distritos en la edición seleccionada</div>
         <label v-if="section === 'catalogs' && currentCatalog?.available_versions.length" class="block text-xs font-medium text-muted">Versión del catálogo {{ catalogNumber }}
           <select :value="catalogVersion" class="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand" @change="chooseVersion">
             <option value="latest">Última versión incorporada · {{ currentCatalog.item_count }} códigos</option>
             <option v-for="edition in currentCatalog.available_versions" :key="edition.version" :value="edition.version">{{ edition.classification.startsWith('ISO_') ? 'ISO 4217' : 'Anexo SUNAT' }} {{ edition.version }} · {{ edition.item_count }} códigos</option>
             <option value="historical">Archivo recibido · {{ currentCatalog.historical_item_count }} códigos</option>
+          </select>
+        </label>
+        <label v-if="section === 'ubigeos' && ubigeoQuery.data.value?.meta.available_versions?.length" class="block text-xs font-medium text-muted">Versión del ubigeo INEI
+          <select :value="ubigeoVersion" class="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand" @change="chooseUbigeoVersion">
+            <option value="latest">Última edición incorporada · {{ ubigeoQuery.data.value.meta.available_versions[0]?.item_count }} distritos</option>
+            <option v-for="edition in ubigeoQuery.data.value.meta.available_versions" :key="edition.version" :value="edition.version">INEI {{ edition.version }} · {{ edition.item_count }} distritos</option>
+            <option value="historical">Archivo recibido · {{ ubigeoQuery.data.value.meta.historical_item_count }} distritos</option>
           </select>
         </label>
         <label class="block text-xs font-medium text-muted">
@@ -172,6 +184,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       </div>
       <p v-if="section === 'catalogs' && currentCatalog" class="text-sm text-muted">Catálogo {{ currentCatalog.number }} · {{ currentCatalog.name }} · {{ (catalogQuery.data.value?.meta.item_count ?? currentCatalog.item_count).toLocaleString('es-PE') }} registros · {{ resolvedVersion === 'historical' ? 'archivo recibido, sin versión vigente verificada' : `versión ${resolvedVersion}` }}.</p>
       <p v-if="section === 'catalogs' && catalogQuery.data.value?.meta.source_url" class="text-xs text-muted">Fuente: <a class="underline" :href="catalogQuery.data.value.meta.source_url" target="_blank" rel="noopener noreferrer">{{ catalogQuery.data.value.meta.classification.startsWith('ISO_') ? 'Lista ISO 4217' : 'Anexo SUNAT' }} {{ resolvedVersion }}</a>. La edición más reciente incorporada no determina por sí sola la validez de un comprobante según su fecha y modalidad.</p>
+      <p v-if="section === 'ubigeos' && ubigeoQuery.data.value?.meta.source_url" class="text-xs text-muted">Fuente: <a class="underline" :href="ubigeoQuery.data.value.meta.source_url" target="_blank" rel="noopener noreferrer">Descarga INEI {{ ubigeoQuery.data.value.meta.version }}</a>. La edición conserva las denominaciones publicadas por INEI; no incluye población ni coordenadas.</p>
       <p v-if="error" role="alert" class="rounded-md border border-neg/30 bg-neg/10 px-3 py-2 text-sm text-neg">{{ error }} <button type="button" class="ml-2 underline" @click="retry">Reintentar</button></p>
       <p v-if="isLoading" role="status" class="py-8 text-center text-sm text-muted">Cargando referencias…</p>
       <div v-else-if="section === 'catalogs' && catalogQuery.data.value" class="overflow-x-auto" role="region" aria-label="Tabla del catálogo SEE" tabindex="0">

@@ -40,11 +40,19 @@ it('lists global ubigeos and exposes no writes for company users', function (): 
         ->assertOk()->assertJsonPath('meta.total', 1)
         ->assertJsonPath('data.0.district', 'Chachapoyas');
     $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?page=1&per_page=25')
-        ->assertOk()->assertJsonPath('meta.total', 1874)->assertJsonCount(25, 'data');
+        ->assertOk()->assertJsonPath('meta.total', 1893)
+        ->assertJsonPath('meta.version', '2026-inei')->assertJsonCount(25, 'data');
     $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?q=&page=1&per_page=25')
-        ->assertOk()->assertJsonPath('meta.total', 1874);
+        ->assertOk()->assertJsonPath('meta.total', 1893);
     $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?per_page=2000')
-        ->assertOk()->assertJsonPath('meta.total', 1874)->assertJsonCount(1874, 'data');
+        ->assertOk()->assertJsonPath('meta.total', 1893)->assertJsonCount(1893, 'data');
+    $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?q=130112')
+        ->assertOk()->assertJsonPath('data.0.district', 'Alto Trujillo')
+        ->assertJsonPath('data.0.population', null);
+    $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?version=historical')
+        ->assertOk()->assertJsonPath('meta.total', 1874)
+        ->assertJsonPath('meta.version', 'historical');
+    $this->getJson('/api/v1/catalogs/sunat-see/ubigeos?version=otro')->assertNotFound();
 
     $this->postJson('/api/v1/catalogs/sunat-see/ubigeos', ['code' => '999999'])
         ->assertStatus(405);

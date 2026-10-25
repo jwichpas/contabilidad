@@ -12,6 +12,8 @@ global previo y no modifica ninguna tabla PLE/SIRE.
 | `see_ubigeos` | Distritos del archivo INEI suministrado | 1,874 |
 | `see_catalog_versions` | Ediciones cotejadas de catálogos SEE, separadas por número y versión | 5 |
 | `see_catalog_version_items` | Códigos de las ediciones cotejadas | 356 |
+| `see_ubigeo_versions` | Ediciones INEI cotejadas | 1 |
+| `see_ubigeo_version_items` | Distritos INEI publicados en la edición 2026 | 1,893 |
 
 Las referencias provienen de `tablas-sunat-fac.md` y `ubigeo.md` suministrados el 24/10/2026.
 La clasificación `SUPPLIED_*_SNAPSHOT_UNVERIFIED` expresa que **no se ha comprobado su vigencia**.
@@ -24,6 +26,10 @@ Consulta autenticada: `GET /api/v1/catalogs/sunat-see/{number}` (filtros `q`, `p
 y `GET /api/v1/catalogs/sunat-see/ubigeos` (filtros `q`, `department`, `province`, `per_page`).
 `/api/v1/catalogs/sunat/{tableNumber}` sigue siendo exclusivamente el catálogo anterior PLE/SIRE.
 Para el ubigeo usar el endpoint específico: el catálogo SEE 13 es solo una referencia.
+El endpoint de ubigeos devuelve por defecto la última edición incorporada, la descarga INEI
+2026 (`2026-inei`, 1,893 distritos); `?version=historical` conserva los 1,874 recibidos. La
+respuesta incluye las ediciones disponibles. La nueva edición solo proporciona código,
+departamento, provincia y distrito: población, área y coordenadas se devuelven como `null`.
 
 Las ediciones cotejadas son: 02 (178) de la [Lista Uno ISO 4217 de SIX, publicada el 17/09/2026](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html),
 15 (41) y 19 (4) del [Anexo E SUNAT de 2017](https://www.sunat.gob.pe/legislacion/superin/2017/anexoE-245-2017.pdf),
@@ -42,6 +48,7 @@ solo lectura y no alteran PLE/SIRE. Instalar las migraciones en orden:
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_160000_add_see_catalog_20_sunat_2024_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_170000_add_see_catalog_15_19_55_versions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_180000_add_see_catalog_02_iso_4217_version.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_190000_add_see_ubigeo_inei_2026_version.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:

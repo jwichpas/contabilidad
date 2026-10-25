@@ -373,10 +373,11 @@ export class AccountingApiClient {
   }
 
   public async fetchSeeUbigeos(
-    params: { readonly q: string; readonly page: number; readonly signal?: AbortSignal },
+    params: { readonly q: string; readonly page: number; readonly version?: string; readonly signal?: AbortSignal },
   ): Promise<SeePage<SeeUbigeo>> {
     const query = new URLSearchParams({ page: String(params.page), per_page: '2000' });
     if (params.q.trim()) query.set('q', params.q.trim());
+    if (params.version && params.version !== 'latest') query.set('version', params.version);
     return this.request<SeePage<SeeUbigeo>>(
       `/api/v1/catalogs/sunat-see/ubigeos?${query}`,
       { method: 'GET', signal: params.signal }, false,

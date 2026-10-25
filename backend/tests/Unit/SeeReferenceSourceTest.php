@@ -53,3 +53,17 @@ it('pins the official ISO 4217 List One edition while preserving the supplied cu
         ->and($codes)->toContain('ZWG')
         ->and($codes)->not->toContain('BGN');
 });
+
+it('pins INEI 2026 district codes separately from the supplied ubigeo snapshot', function (): void {
+    $path = database_path('reference_data/see_ubigeos_inei_2026.json');
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $old = json_decode((string) file_get_contents(database_path('reference_data/see_ubigeos_inei_snapshot.json')), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('0ca6032339c099be56670d8a99d14acaa413a8daa1d2ecf9135b8a456c4a9391')
+        ->and($source['source_xls_sha256'])->toBe('a62174658a2124fab1366cae40e6ca0feefcc025027b50522909838fbfaae331')
+        ->and($source['source_version_id'])->toBe('9-1')
+        ->and($source['rows'])->toHaveCount(1893)
+        ->and(array_unique($codes))->toHaveCount(1893)
+        ->and(array_diff(array_column($old['rows'], 0), $codes))->toBe([])
+        ->and(array_diff($codes, array_column($old['rows'], 0)))->toHaveCount(19);
+});

@@ -27,10 +27,10 @@ export interface SeeUbigeo {
   readonly district: string;
   readonly province: string;
   readonly department: string;
-  readonly population: number;
-  readonly area_km2: string;
-  readonly latitude: string;
-  readonly longitude: string;
+  readonly population: number | null;
+  readonly area_km2: string | null;
+  readonly latitude: string | null;
+  readonly longitude: string | null;
 }
 
 export interface SeePage<T> {
@@ -46,5 +46,11 @@ export interface SeePage<T> {
     readonly name?: string;
     readonly item_count?: number;
     readonly source_sha256?: string;
+    readonly historical_item_count?: number;
+    readonly available_versions?: readonly {
+      readonly version: string;
+      readonly item_count: number;
+      readonly source_url: string;
+    }[];
   };
 }

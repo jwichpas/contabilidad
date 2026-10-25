@@ -16,10 +16,21 @@ final readonly class ListSeeUbigeosController
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
             'department' => ['sometimes', 'string', 'max:160'],
             'province' => ['sometimes', 'string', 'max:160'],
-            // El conjunto de 1,874 distritos cabe en una carga de solo lectura.
+            'version' => ['sometimes', 'string', 'max:40', 'alpha_dash'],
+            // La edición INEI 2026 cabe en una carga de solo lectura.
             'per_page' => ['sometimes', 'integer', 'between:1,2000'],
         ]);
-        $query = DB::table('see_ubigeos');
+        $versions = DB::table('see_ubigeo_versions')->orderByDesc('version')->get();
+        $version = $validated['version'] ?? 'latest';
+        if ($version === 'latest') {
+            $version = $versions->first()->version ?? 'historical';
+        }
+        $reference = $version === 'historical' ? null : $versions->firstWhere('version', $version);
+        abort_if($version !== 'historical' && $reference === null, 404, 'Versión INEI desconocida.');
+        $query = DB::table($version === 'historical' ? 'see_ubigeos' : 'see_ubigeo_version_items');
+        if ($version !== 'historical') {
+            $query->where('version', $version);
+        }
         if (! empty($validated['department'])) {
             $query->where('department', $validated['department']);
         }
@@ -36,9 +47,26 @@ final readonly class ListSeeUbigeosController
         $page = $query->orderBy('code')->paginate((int) ($validated['per_page'] ?? 50));
 
         return response()->json([
-            'data' => $page->items(),
+            'data' => $page->getCollection()->map(static fn ($item): array => [
+                'code' => $item->code, 'district' => $item->district,
+                'province' => $item->province, 'department' => $item->department,
+                'population' => $item->population ?? null,
+                'area_km2' => $item->area_km2 ?? null,
+                'latitude' => $item->latitude ?? null,
+                'longitude' => $item->longitude ?? null,
+            ]),
             'meta' => [
-                'classification' => 'SUPPLIED_INEI_SNAPSHOT_UNVERIFIED',
+                'classification' => $reference->classification ?? 'SUPPLIED_INEI_SNAPSHOT_UNVERIFIED',
+                'version' => $version,
+                'source_url' => $reference->source_url ?? null,
+                'source_sha256' => $reference->source_sha256 ?? null,
+                'item_count' => $reference->item_count ?? 1874,
+                'historical_item_count' => 1874,
+                'available_versions' => $versions->map(static fn ($edition): array => [
+                    'version' => $edition->version,
+                    'item_count' => $edition->item_count,
+                    'source_url' => $edition->source_url,
+                ])->values(),
                 'total' => $page->total(),
                 'current_page' => $page->currentPage(),
                 'last_page' => $page->lastPage(),
