@@ -7,11 +7,11 @@ global previo y no modifica ninguna tabla PLE/SIRE.
 
 | Tabla | Contenido | Filas |
 | --- | --- | ---: |
-| `see_catalogs` | Los 33 catálogos recibidos, más 26 y 27 del anexo SUNAT posterior | 35 |
+| `see_catalogs` | Los 33 catálogos recibidos, más 26, 27 y 59 de otro anexo SEE | 36 |
 | `see_catalog_items` | Códigos SEE del archivo suministrado | 1,792 |
 | `see_ubigeos` | Distritos del archivo INEI suministrado | 1,874 |
-| `see_catalog_versions` | Ediciones cotejadas de catálogos SEE, separadas por número y versión | 9 |
-| `see_catalog_version_items` | Códigos de las ediciones cotejadas | 2,748 |
+| `see_catalog_versions` | Ediciones cotejadas de catálogos SEE, separadas por número y versión | 10 |
+| `see_catalog_version_items` | Códigos de las ediciones cotejadas | 2,770 |
 | `see_ubigeo_versions` | Ediciones INEI cotejadas | 1 |
 | `see_ubigeo_version_items` | Distritos INEI publicados en la edición 2026 | 1,893 |
 
@@ -38,6 +38,11 @@ Las ediciones cotejadas son: 02 (178) de la [Lista Uno ISO 4217 de SIX, publicad
 20 (14) del [Anexo I SUNAT de 2024](https://www.sunat.gob.pe/legislacion/superin/2024/anexo1-000240-2024.pdf)
 y 55 (119) del [Anexo I SUNAT de 2026](https://www.sunat.gob.pe/legislacion/superin/2026/anexo-000108-2026.pdf).
 Los catálogos 26 (3 códigos) y 27 (4 códigos) provienen del [Anexo V SUNAT de 2017](https://www.sunat.gob.pe/legislacion/superin/2017/anexosV-318-2017.pdf).
+El catálogo SEE 59 (22 códigos) proviene del mismo anexo y permanece separado de la tabla 01
+de medios de pago PLE/SIRE (20 códigos). Por ejemplo, `011` significa documentos de EDPYMES
+en SEE 59 y letras de cambio en PLE 01. El anexo imprime «CATALOGO No. 57» en el encabezado
+interno de 59; el título y el índice lo identifican como 59. Se conserva esa discrepancia como
+nota de fuente, sin atribuir los códigos al catálogo 57.
 No existían en el archivo suministrado: `historical_item_count = 0` y la consulta
 `?version=historical` responde 404 para ellos. El anexo de 2017 es la edición oficial
 incorporada, sin afirmar que sea la norma más reciente para todo comprobante.
@@ -59,6 +64,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_210000_add_see_catalog_03_unece_rec20_rev17_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_220000_create_company_see_visibility_revisions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_230000_add_see_catalogs_26_27_sunat_2017_version.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_240000_add_see_catalog_59_payment_methods_version.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
