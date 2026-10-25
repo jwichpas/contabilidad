@@ -342,9 +342,10 @@ it('serves the historical PLE currency code list independently from the current 
         ->assertJsonPath('meta.total', 178);
     $this->getJson('/api/v1/catalogs/sunat/04?version=legacy-seed')->assertNotFound();
     $this->getJson('/api/v1/catalogs/sunat/04?version=other')->assertNotFound();
-    $this->getJson('/api/v1/catalogs/sunat-see/02')->assertOk()
+    $this->getJson('/api/v1/catalogs/sunat-see/02?q=ZWG')->assertOk()
         ->assertJsonPath('meta.version', '2026-09-17-list-one')
-        ->assertJsonFragment(['code' => 'ZWG']);
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.code', 'ZWG');
 });
 
 it('serves SUNAT book codes separately from PLE Annex 3, SEE and SIRE', function (): void {
