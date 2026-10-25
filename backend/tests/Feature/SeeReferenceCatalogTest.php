@@ -199,6 +199,24 @@ it('matches the cited PLE and SEE payment codes without mixing their editions', 
     $this->getJson('/api/v1/catalogs/sunat/01?version=other')->assertNotFound();
 });
 
+it('preserves the five seeded PLE identity types and exposes the sixth Annex 3 code separately from SEE 06', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/02')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 6)
+        ->assertJsonFragment(['code' => 'A', 'name' => 'CÉDULA DIPLOMÁTICA DE IDENTIDAD']);
+    $this->getJson('/api/v1/catalogs/sunat/02?version=legacy-seed')->assertOk()
+        ->assertJsonPath('meta.total', 5)
+        ->assertJsonFragment(['code' => '4', 'name' => 'CARNET DE EXTRANJERÍA']);
+    $this->getJson('/api/v1/catalogs/sunat/02?version=unknown')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat-see/06')->assertOk()
+        ->assertJsonPath('meta.version', '2026-000049-anexo-i')
+        ->assertJsonPath('meta.total', 13);
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

@@ -77,7 +77,7 @@ test('las tablas oficiales de SUNAT pueden consultarse vía API REST', function 
     $res02 = $this->actingAs($this->user)->getJson('/api/v1/catalogs/sunat/02');
     $res02->assertOk()
         ->assertJsonFragment(['code' => '1', 'name' => 'DOCUMENTO NACIONAL DE IDENTIDAD (DNI)'])
-        ->assertJsonFragment(['code' => '6', 'name' => 'REGISTRO ÚNICO DE CONTRIBUYENTES (RUC)']);
+        ->assertJsonFragment(['code' => '6', 'name' => 'REGISTRO ÚNICO DE CONTRIBUYENTES']);
 });
 
 test('las normas contables vigentes en 2026 incluyen NIIF 18 y NIIF 19 con NIC 1 retirada', function (): void {

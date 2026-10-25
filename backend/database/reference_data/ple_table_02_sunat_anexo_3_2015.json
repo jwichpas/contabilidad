@@ -1,0 +1,34 @@
+{
+  "table_number": "02",
+  "version": "2015-06-anexo-3",
+  "name": "Tipo de documento de identidad PLE",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+  "source_note": "Tabla 2 del Anexo 3. Los límites de longitud y validaciones del aplicativo no provienen de esta tabla; SEE 06 y SIRE poseen referencias independientes.",
+  "rows": [
+    [
+      "0",
+      "OTROS TIPOS DE DOCUMENTOS"
+    ],
+    [
+      "1",
+      "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)"
+    ],
+    [
+      "4",
+      "CARNET DE EXTRANJERIA"
+    ],
+    [
+      "6",
+      "REGISTRO ÚNICO DE CONTRIBUYENTES"
+    ],
+    [
+      "7",
+      "PASAPORTE"
+    ],
+    [
+      "A",
+      "CÉDULA DIPLOMÁTICA DE IDENTIDAD"
+    ]
+  ]
+}

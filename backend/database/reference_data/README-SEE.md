@@ -75,6 +75,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_24_240000_add_see_catalog_59_payment_methods_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_000000_add_see_catalog_06_sunat_2026_identity_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_010000_reconcile_ple_table_01_payment_methods.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_020000_reconcile_ple_table_02_identity_documents.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -107,3 +108,9 @@ La migración guarda las 20 filas anteriores bajo `legacy-seed` antes de corregi
 el instalador global congelado conserva su hash y se ejecuta antes de esta migración. Los indicadores
 auxiliares de entidad, número de operación y comercio exterior proceden del sistema, no del anexo;
 los códigos nuevos llevan los valores predeterminados y requieren evaluación antes de validarlos.
+La Tabla 02 PLE de [ese mismo Anexo 3](https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf)
+incluye el código `A` (cédula diplomática), ausente de los cinco códigos originalmente cargados.
+La migración `2026_10_25_020000` archiva esos cinco bajo `legacy-seed`, incorpora la edición de
+seis y permite `GET /api/v1/catalogs/sunat/02?version=legacy-seed`. Longitudes, abreviaturas y
+marcas numéricas son metadatos locales: el anexo citado solo fija código y descripción. Esta
+Tabla 02 PLE no corresponde al Catálogo SEE 06 ni a la Tabla 01 de SIRE.

@@ -37,6 +37,15 @@ it('pins independent PLE 01 and SEE 59 sources with matching official payment me
         ->and(array_column($ple['rows'], 0))->toContain('011', '012', '013');
 });
 
+it('pins PLE Annex 3 Table 2 without borrowing the SEE identity edition', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_02_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('a513318955112c87220fd78905b21c4a5a8b6c4a33fbf79751ff1405f818e9ed')
+        ->and($source['table_number'])->toBe('02')
+        ->and($source['rows'])->toHaveCount(6)
+        ->and(array_column($source['rows'], 0))->toBe(['0', '1', '4', '6', '7', 'A']);
+});
+
 it('pins each reconciled annex fixture and its added code', function (): void {
     foreach ([
         ['15', '2017_anexo_e', '9f96ed5017b3d7eca4fdb81b8c89ad275d68e743abe5b4c9a4357a95635d26e6', 41, '2008'],
