@@ -38,14 +38,22 @@ final readonly class ListSunatCatalogController
             default => throw new NotFoundHttpException("La tabla SUNAT '{$tableNumber}' no está registrada en el sistema."),
         };
 
-        if (in_array($normalized, ['01', '02'], true)) {
+        if (in_array($normalized, ['01', '02', '05'], true)) {
             $version = $request->query('version', 'latest');
             if (! is_string($version) || ! in_array($version, ['latest', '2015-06-anexo-3', 'legacy-seed'], true)) {
                 throw new NotFoundHttpException("Edición PLE {$normalized} no registrada.");
             }
             $resolved = $version === 'latest' ? '2015-06-anexo-3' : $version;
-            $versions = $normalized === '01' ? 'ple_payment_method_versions' : 'ple_identity_document_versions';
-            $versionItems = $normalized === '01' ? 'ple_payment_method_version_items' : 'ple_identity_document_version_items';
+            $versions = match ($normalized) {
+                '01' => 'ple_payment_method_versions',
+                '02' => 'ple_identity_document_versions',
+                '05' => 'ple_inventory_type_versions',
+            };
+            $versionItems = match ($normalized) {
+                '01' => 'ple_payment_method_version_items',
+                '02' => 'ple_identity_document_version_items',
+                '05' => 'ple_inventory_type_version_items',
+            };
             $edition = DB::table($versions)->where('version', $resolved)->first();
             if ($edition === null) {
                 throw new NotFoundHttpException("Edición PLE {$normalized} no instalada.");

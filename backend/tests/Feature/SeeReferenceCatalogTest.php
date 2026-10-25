@@ -217,6 +217,23 @@ it('preserves the five seeded PLE identity types and exposes the sixth Annex 3 c
         ->assertJsonPath('meta.total', 13);
 });
 
+it('archives the six seeded inventory types and returns nineteen PLE Annex 3 entries', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/05')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 19)
+        ->assertJsonFragment(['code' => '05', 'name' => 'MATERIALES AUXILIARES'])
+        ->assertJsonFragment(['code' => '06', 'name' => 'SUMINISTROS'])
+        ->assertJsonFragment(['code' => '98', 'name' => 'OTROS 8']);
+    $this->getJson('/api/v1/catalogs/sunat/05?version=legacy-seed')->assertOk()
+        ->assertJsonPath('meta.total', 6)
+        ->assertJsonFragment(['code' => '05', 'name' => 'SUMINISTROS DIVERSOS']);
+    $this->getJson('/api/v1/catalogs/sunat/05?version=other')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

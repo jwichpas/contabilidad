@@ -76,6 +76,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_000000_add_see_catalog_06_sunat_2026_identity_version.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_010000_reconcile_ple_table_01_payment_methods.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_020000_reconcile_ple_table_02_identity_documents.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_030000_reconcile_ple_table_05_inventory_types.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -114,3 +115,11 @@ La migración `2026_10_25_020000` archiva esos cinco bajo `legacy-seed`, incorpo
 seis y permite `GET /api/v1/catalogs/sunat/02?version=legacy-seed`. Longitudes, abreviaturas y
 marcas numéricas son metadatos locales: el anexo citado solo fija código y descripción. Esta
 Tabla 02 PLE no corresponde al Catálogo SEE 06 ni a la Tabla 01 de SIRE.
+La Tabla 05 PLE cotejada en ese anexo incluye **19** tipos de existencia, frente a seis en el
+instalador original. La migración `2026_10_25_030000` conserva el grupo de seis como `legacy-seed`,
+incorpora `06` a `10` y `91` a `98`, y corrige las denominaciones de `01` a `05` y `99`.
+`GET /api/v1/catalogs/sunat/05?version=legacy-seed` devuelve la carga anterior. Las sugerencias
+de cuenta PCGE pertenecen al sistema y no a SUNAT; las filas nuevas no reciben una por defecto.
+La Tabla 03 PLE de entidades financieras requiere otro tratamiento: la edición 2015 tiene cinco
+códigos más que la carga, pero mezcla bancos históricos. No habilitar esas entidades como bancos
+operativos sin contrastar una fuente oficial actual y los periodos de vigencia.

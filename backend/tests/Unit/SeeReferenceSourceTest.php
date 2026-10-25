@@ -46,6 +46,19 @@ it('pins PLE Annex 3 Table 2 without borrowing the SEE identity edition', functi
         ->and(array_column($source['rows'], 0))->toBe(['0', '1', '4', '6', '7', 'A']);
 });
 
+it('pins the nineteen PLE inventory type codes and the separate legacy classification', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_05_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('379587a63a33f99f2a9d373f7113567952e613426f0d14233027e8a91e7de3c1')
+        ->and($source['table_number'])->toBe('05')
+        ->and($source['rows'])->toHaveCount(19)
+        ->and(array_column($source['rows'], 0))->toBe([
+            '01', '02', '03', '04', '05', '06', '07', '08', '09', '10',
+            '91', '92', '93', '94', '95', '96', '97', '98', '99',
+        ])
+        ->and($source['rows'][4][1])->toBe('MATERIALES AUXILIARES');
+});
+
 it('pins each reconciled annex fixture and its added code', function (): void {
     foreach ([
         ['15', '2017_anexo_e', '9f96ed5017b3d7eca4fdb81b8c89ad275d68e743abe5b4c9a4357a95635d26e6', 41, '2008'],
