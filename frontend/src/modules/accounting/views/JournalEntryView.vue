@@ -384,7 +384,7 @@ const isReadyToPost = computed(() => isBalanced.value && missingRequirements.val
 // ==========================================
 
 function addLine(): void {
-  lines.value.push({
+  const line: EditingLine = {
     id: nextLineKey++,
     accountId: null,
     costCenterId: null,
@@ -396,7 +396,9 @@ function addLine(): void {
     creditLocal: '',
     debitForeign: '',
     creditForeign: '',
-  });
+  };
+  lines.value.push(line);
+  selectLine(line);
 }
 
 function removeLine(index: number): void {
@@ -411,10 +413,10 @@ function selectLine(line: EditingLine): void {
   selectedLineId.value = line.id;
 }
 
-async function showLineDimensions(line: EditingLine): Promise<void> {
+async function showLineEditor(line: EditingLine): Promise<void> {
   selectLine(line);
   await nextTick();
-  document.getElementById('journal-line-dimensions')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('journal-line-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function changeAccount(line: EditingLine): void {
@@ -467,6 +469,7 @@ function autoBalance(): void {
     target.creditLocal = '';
     target.creditForeign = '';
   }
+  selectLine(target);
   recalculateForeignAmounts();
 }
 
@@ -1114,224 +1117,153 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Rejilla Dinámica de Líneas (Partida Doble) -->
-      <div
-        class="panel p-0 overflow-hidden"
-      >
-        <div class="p-4 border-b border-line flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs font-semibold uppercase tracking-wider text-muted">
-              Líneas del Asiento ({{ lines.length }})
-            </span>
-            <span class="text-[11px] text-muted num">
-              · Mínimo 2 líneas operativas
-            </span>
+      <!-- Una sola superficie de edición; las partidas agregadas son una lista de lectura. -->
+      <div class="panel min-w-0 p-0 overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
+          <div>
+            <h2 class="text-sm font-semibold text-foreground">Editor único de asientos</h2>
+            <p class="text-xs text-muted">{{ lines.length }} partidas · mínimo 2 para registrar</p>
           </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-surf border border-line text-foreground hover:bg-soft transition-colors cursor-pointer"
-              title="Calcula y completa la diferencia en el Debe o Haber"
-              @click="autoBalance"
-            >
-              <Sparkles class="w-3.5 h-3.5 text-accent" />
-              <span>Balancear</span>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="inline-flex items-center gap-1 rounded-md border border-line bg-surf px-3 py-2 text-xs font-semibold text-foreground"
+              title="Completa la diferencia en el Debe o Haber" @click="autoBalance">
+              <Sparkles class="h-4 w-4 text-accent" /> Balancear
             </button>
-
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-brand text-white hover:opacity-90 transition-opacity cursor-pointer"
-              @click="addLine"
-            >
-              <Plus class="w-3.5 h-3.5" />
-              <span>Agregar línea</span>
+            <button type="button" class="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white" @click="addLine">
+              <Plus class="h-4 w-4" /> Agregar partida
             </button>
           </div>
         </div>
 
-        <!-- Importe visible en fila principal; dimensiones únicamente si la cuenta las exige. -->
-        <div class="hidden w-full overflow-x-auto lg:block">
-          <table class="w-full min-w-[1040px] table-fixed border-collapse text-left text-xs">
-            <thead>
-              <tr class="border-b border-line bg-surface-muted text-[11px] font-bold uppercase text-muted">
-                <th class="w-[38px] px-2 py-3 text-center">#</th>
-                <th class="w-[312px] px-3 py-3">Cuenta contable</th>
-                <th class="w-[195px] px-3 py-3">Glosa</th>
-                <th class="w-[116px] px-2 py-3 text-right">Debe {{ baseCurrencyInfo.code }}</th>
-                <th class="w-[116px] px-2 py-3 text-right">Haber {{ baseCurrencyInfo.code }}</th>
+        <div v-if="selectedLine" id="journal-line-editor" class="min-w-0 space-y-4 border-b border-line bg-soft/30 p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-sm font-semibold text-foreground">Editar partida {{ selectedLineIndex + 1 }}</h3>
+            <span v-if="missingLineFields(selectedLine).length" class="text-xs text-warn">
+              Falta: {{ missingLineFields(selectedLine).join(', ') }}
+            </span>
+          </div>
+          <div class="grid min-w-0 gap-3 md:grid-cols-2">
+            <div class="min-w-0">
+              <label class="mb-1 block text-xs font-medium text-muted">Cuenta contable</label>
+              <JournalAccountCombobox v-model="selectedLine.accountId" :accounts="operationalAccounts"
+                :disabled="isSubmitting || isLoading" @update:model-value="changeAccount(selectedLine)" />
+            </div>
+            <label class="min-w-0 text-xs font-medium text-muted">Glosa de la partida
+              <input v-model="selectedLine.description" type="text" :placeholder="headerDescription || 'Misma glosa general'"
+                class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-3 py-2 text-sm text-foreground" />
+            </label>
+          </div>
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <label class="min-w-0 text-xs font-medium text-muted">Debe {{ baseCurrencyInfo.code }}
+              <input :value="selectedLine.debitLocal" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"
+                :aria-label="`Debe ${baseCurrencyInfo.code}, línea ${selectedLineIndex + 1}`"
+                class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-right text-sm num text-foreground"
+                @input="onAmountChange(selectedLine, 'debit', ($event.target as HTMLInputElement).value)" />
+            </label>
+            <label class="min-w-0 text-xs font-medium text-muted">Haber {{ baseCurrencyInfo.code }}
+              <input :value="selectedLine.creditLocal" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"
+                :aria-label="`Haber ${baseCurrencyInfo.code}, línea ${selectedLineIndex + 1}`"
+                class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-right text-sm num text-foreground"
+                @input="onAmountChange(selectedLine, 'credit', ($event.target as HTMLInputElement).value)" />
+            </label>
+            <div class="min-w-0 rounded-md bg-soft px-2 py-2 text-xs text-muted num">
+              Debe {{ activeForeignCurrency.code }}<br>
+              <strong class="text-foreground">{{ selectedLine.debitForeign ? activeForeignCurrency.symbol + ' ' + selectedLine.debitForeign : '—' }}</strong>
+            </div>
+            <div class="min-w-0 rounded-md bg-soft px-2 py-2 text-xs text-muted num">
+              Haber {{ activeForeignCurrency.code }}<br>
+              <strong class="text-foreground">{{ selectedLine.creditForeign ? activeForeignCurrency.symbol + ' ' + selectedLine.creditForeign : '—' }}</strong>
+            </div>
+          </div>
+
+          <div v-if="requiresDimensions(selectedLine)" class="grid min-w-0 gap-3 border-t border-line pt-4 sm:grid-cols-2">
+            <label v-if="selectedAccount?.requires_cost_center || selectedAccount?.has_automatic_destination"
+              class="min-w-0 text-xs font-medium text-muted">Centro de costo obligatorio
+              <select v-model="selectedLine.costCenterId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
+                <option :value="null">Seleccionar centro</option>
+                <option v-for="cc in costCenters.filter(cc => cc.is_active)" :key="cc.id" :value="cc.id">{{ cc.code }} · {{ cc.name }}</option>
+              </select>
+            </label>
+            <div v-if="entityRequired(selectedAccount)" class="min-w-0">
+              <div class="mb-1 text-xs font-medium text-muted">Anexo / tercero obligatorio</div>
+              <JournalEntityPicker :key="selectedLine.id + '-' + selectedLine.accountId"
+                v-model="selectedLine.entity" :api="apiClient" :account="selectedAccount" :disabled="isSubmitting" />
+            </div>
+            <label v-if="selectedAccount?.requires_company_area" class="min-w-0 text-xs font-medium text-muted">Área organizativa obligatoria
+              <select v-model="selectedLine.companyAreaId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
+                <option :value="null">Seleccionar área organizativa</option>
+                <option v-for="area in companyAreas.filter(area => area.is_active)" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
+              </select>
+            </label>
+            <label v-if="selectedAccount?.requires_cash_flow_area" class="min-w-0 text-xs font-medium text-muted">Área de flujo de efectivo obligatoria
+              <select v-model="selectedLine.cashFlowAreaId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
+                <option :value="null">Seleccionar flujo</option>
+                <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(selectedAccount, area))" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="border-b border-line p-4">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Partidas agregadas</h3>
+          <p class="mt-1 text-xs text-muted">Seleccione una partida para editarla en el formulario de arriba.</p>
+        </div>
+        <div class="hidden overflow-x-auto lg:block">
+          <table class="w-full min-w-[900px] table-fixed border-collapse text-left text-xs">
+            <thead class="bg-surface-muted text-muted">
+              <tr>
+                <th class="w-[55px] px-3 py-3">#</th>
+                <th class="w-[250px] px-3 py-3">Cuenta</th>
+                <th class="w-[190px] px-3 py-3">Glosa</th>
+                <th class="w-[100px] px-2 py-3 text-right">Debe {{ baseCurrencyInfo.code }}</th>
+                <th class="w-[100px] px-2 py-3 text-right">Haber {{ baseCurrencyInfo.code }}</th>
                 <th class="w-[100px] px-2 py-3 text-right">Debe {{ activeForeignCurrency.code }}</th>
                 <th class="w-[100px] px-2 py-3 text-right">Haber {{ activeForeignCurrency.code }}</th>
-                <th class="w-[44px] px-2 py-3"></th>
+                <th class="w-[110px] px-2 py-3">Acciones</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-line">
-              <template v-for="(line, idx) in lines" :key="line.id">
-                <tr class="bg-surf align-middle hover:bg-soft/40">
-                  <td class="px-2 py-2 text-center font-mono text-[11px] text-muted">{{ idx + 1 }}</td>
-                  <td class="px-3 py-2">
-                    <JournalAccountCombobox v-model="line.accountId"
-                      :accounts="operationalAccounts" :disabled="isSubmitting || isLoading"
-                      @update:model-value="changeAccount(line)" />
-                  </td>
-                  <td class="px-3 py-2">
-                    <input v-model="line.description" type="text" :placeholder="headerDescription || 'Misma glosa general'"
-                      class="w-full rounded-md border border-line bg-surf px-2 py-2 text-xs text-foreground placeholder-muted focus:outline-none focus:ring-1 focus:ring-brand" />
-                  </td>
-                  <td class="px-2 py-2">
-                    <input :value="line.debitLocal" type="text" inputmode="decimal" autocomplete="off"
-                      :aria-label="'Debe ' + baseCurrencyInfo.code + ', línea ' + (idx + 1)" placeholder="0.00"
-                      class="w-full rounded-md border border-line bg-surf px-2 py-2 text-right text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                      @input="onAmountChange(line, 'debit', ($event.target as HTMLInputElement).value)" />
-                  </td>
-                  <td class="px-2 py-2">
-                    <input :value="line.creditLocal" type="text" inputmode="decimal" autocomplete="off"
-                      :aria-label="'Haber ' + baseCurrencyInfo.code + ', línea ' + (idx + 1)" placeholder="0.00"
-                      class="w-full rounded-md border border-line bg-surf px-2 py-2 text-right text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                      @input="onAmountChange(line, 'credit', ($event.target as HTMLInputElement).value)" />
-                  </td>
-                  <td class="px-2 py-2 text-right text-[11px] num text-muted">
-                    {{ line.debitForeign ? activeForeignCurrency.symbol + ' ' + line.debitForeign : '—' }}
-                  </td>
-                  <td class="px-2 py-2 text-right text-[11px] num text-muted">
-                    {{ line.creditForeign ? activeForeignCurrency.symbol + ' ' + line.creditForeign : '—' }}
-                  </td>
-                  <td class="px-2 py-2 text-center">
-                    <button v-if="requiresDimensions(line)" type="button"
-                      class="mb-1 block w-full rounded border px-1 py-1 text-[10px] font-semibold"
-                      :class="missingLineFields(line).length ? 'border-warn text-warn' : 'border-line text-brand'"
-                      :aria-label="`Editar dimensiones de línea ${idx + 1}`" @click="showLineDimensions(line)">
-                      {{ missingLineFields(line).length ? 'Completar' : 'Editar' }}
-                    </button>
-                    <button type="button" :disabled="lines.length <= 2"
-                      class="rounded-md p-1 text-muted hover:bg-red-500/10 hover:text-neg disabled:opacity-20"
-                      :aria-label="'Eliminar línea ' + (idx + 1)" @click="removeLine(idx)">
-                      <Trash2 class="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              </template>
+              <tr v-for="(line, idx) in lines" :key="line.id" :class="selectedLineId === line.id ? 'bg-brand/10' : 'bg-surf'">
+                <td class="px-3 py-3 num">{{ idx + 1 }}</td>
+                <td class="truncate px-3 py-3" :title="accountFor(line)?.name || ''">{{ accountFor(line) ? `${accountFor(line)?.code} · ${accountFor(line)?.name}` : 'Seleccionar cuenta' }}</td>
+                <td class="truncate px-3 py-3" :title="line.description || headerDescription">{{ line.description || headerDescription || '—' }}</td>
+                <td class="px-2 py-3 text-right num">{{ line.debitLocal || '—' }}</td>
+                <td class="px-2 py-3 text-right num">{{ line.creditLocal || '—' }}</td>
+                <td class="px-2 py-3 text-right num">{{ line.debitForeign || '—' }}</td>
+                <td class="px-2 py-3 text-right num">{{ line.creditForeign || '—' }}</td>
+                <td class="px-2 py-3">
+                  <button type="button" class="text-brand underline" :aria-label="`Editar partida ${idx + 1}`" @click="showLineEditor(line)">Editar</button>
+                  <button type="button" :disabled="lines.length <= 2" class="ml-2 text-neg disabled:opacity-30"
+                    :aria-label="`Eliminar partida ${idx + 1}`" @click="removeLine(idx)">Quitar</button>
+                </td>
+              </tr>
             </tbody>
-            <tfoot>
-              <tr class="border-t-2 border-line bg-soft text-xs">
-                <td colspan="3" class="px-3 py-3 text-right font-semibold uppercase text-foreground">Totales asiento:</td>
-                <td class="px-2 py-3 text-right font-semibold num">{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(2) }}</td>
-                <td class="px-2 py-3 text-right font-semibold num">{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(2) }}</td>
-                <td class="px-2 py-3 text-right text-[11px] num text-muted">{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(2) }}</td>
-                <td class="px-2 py-3 text-right text-[11px] num text-muted">{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(2) }}</td>
-                <td></td>
-              </tr>
-              <tr class="bg-surf text-xs">
-                <td colspan="3" class="px-3 py-2 text-right font-semibold text-muted">Diferencia partida doble:</td>
-                <td colspan="2" class="px-2 py-2 text-center font-bold num"
-                  :class="diffLocal.isZero() ? 'text-pos' : 'text-neg'">
-                  {{ diffLocal.isZero() ? baseCurrencyInfo.symbol + ' 0.00 (Cuadrado)' : baseCurrencyInfo.symbol + ' ' + diffLocal.toDisplay(2) + ' (Descuadre)' }}
-                </td>
-                <td colspan="2" class="px-2 py-2 text-center font-bold num"
-                  :class="diffForeign.isZero() ? 'text-pos' : 'text-neg'">
-                  {{ diffForeign.isZero() ? activeForeignCurrency.symbol + ' 0.00' : activeForeignCurrency.symbol + ' ' + diffForeign.toDisplay(2) }}
-                </td>
-                <td></td>
-              </tr>
-            </tfoot>
           </table>
         </div>
-        <!-- En teléfono cada partida se lee y edita completa sin desplazar una tabla de ocho columnas. -->
-        <div class="space-y-3 p-3 lg:hidden">
-          <section v-for="(line, idx) in lines" :key="line.id"
-            class="min-w-0 space-y-3 rounded-lg border border-line bg-surf p-3"
-            :aria-label="`Partida ${idx + 1}`">
-            <div class="flex items-center justify-between gap-2">
-              <strong class="text-sm text-foreground">Partida {{ idx + 1 }}</strong>
-              <button type="button" :disabled="lines.length <= 2"
-                class="rounded-md border border-line p-2 text-muted disabled:opacity-30"
-                :aria-label="`Eliminar línea ${idx + 1}`" @click="removeLine(idx)">
-                <Trash2 class="h-4 w-4" />
-              </button>
-            </div>
-            <div class="min-w-0">
-              <label class="mb-1 block text-xs font-semibold text-muted">Cuenta contable</label>
-              <JournalAccountCombobox v-model="line.accountId" :accounts="operationalAccounts"
-                :disabled="isSubmitting || isLoading" @update:model-value="changeAccount(line)" />
-            </div>
-            <label class="block text-xs font-semibold text-muted">
-              Glosa de la partida
-              <input v-model="line.description" type="text" :placeholder="headerDescription || 'Misma glosa general'"
-                class="mt-1 w-full min-w-0 rounded-md border border-line bg-surf px-3 py-2 text-sm font-normal text-foreground" />
-            </label>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="min-w-0 text-xs font-semibold text-muted">Debe {{ baseCurrencyInfo.code }}
-                <input :value="line.debitLocal" type="text" inputmode="decimal" autocomplete="off"
-                  :aria-label="`Debe ${baseCurrencyInfo.code}, línea ${idx + 1}`" placeholder="0.00"
-                  class="mt-1 w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-right text-sm num text-foreground"
-                  @input="onAmountChange(line, 'debit', ($event.target as HTMLInputElement).value)" />
-              </label>
-              <label class="min-w-0 text-xs font-semibold text-muted">Haber {{ baseCurrencyInfo.code }}
-                <input :value="line.creditLocal" type="text" inputmode="decimal" autocomplete="off"
-                  :aria-label="`Haber ${baseCurrencyInfo.code}, línea ${idx + 1}`" placeholder="0.00"
-                  class="mt-1 w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-right text-sm num text-foreground"
-                  @input="onAmountChange(line, 'credit', ($event.target as HTMLInputElement).value)" />
-              </label>
-            </div>
-            <div class="grid grid-cols-2 gap-2 rounded-md bg-soft px-3 py-2 text-xs text-muted num">
-              <span>Debe {{ activeForeignCurrency.code }}<br><strong class="text-foreground">{{ line.debitForeign ? activeForeignCurrency.symbol + ' ' + line.debitForeign : '—' }}</strong></span>
-              <span>Haber {{ activeForeignCurrency.code }}<br><strong class="text-foreground">{{ line.creditForeign ? activeForeignCurrency.symbol + ' ' + line.creditForeign : '—' }}</strong></span>
-            </div>
-            <button v-if="requiresDimensions(line)" type="button"
-              class="w-full rounded-md border px-3 py-2 text-left text-xs font-semibold"
-              :class="missingLineFields(line).length ? 'border-warn text-warn' : 'border-line text-brand'"
-              @click="showLineDimensions(line)">
-              {{ missingLineFields(line).length ? `Completar: ${missingLineFields(line).join(', ')}` : 'Ver dimensiones de esta partida' }}
+        <div class="divide-y divide-line lg:hidden">
+          <div v-for="(line, idx) in lines" :key="line.id" class="flex min-w-0 items-center gap-2 px-4 py-3"
+            :class="selectedLineId === line.id ? 'bg-brand/10' : 'bg-surf'">
+            <button type="button" class="min-w-0 flex-1 text-left" :aria-label="`Editar partida ${idx + 1}`" @click="showLineEditor(line)">
+              <span class="block truncate text-sm font-semibold text-foreground">{{ idx + 1 }} · {{ accountFor(line) ? `${accountFor(line)?.code} · ${accountFor(line)?.name}` : 'Seleccionar cuenta' }}</span>
+              <span class="block truncate text-xs text-muted">{{ line.description || headerDescription || 'Sin glosa' }}</span>
+              <span class="block text-xs num text-foreground">Debe {{ baseCurrencyInfo.symbol }} {{ line.debitLocal || '0' }} · Haber {{ baseCurrencyInfo.symbol }} {{ line.creditLocal || '0' }}</span>
+              <span v-if="missingLineFields(line).length" class="block text-xs text-warn">Falta: {{ missingLineFields(line).join(', ') }}</span>
             </button>
-          </section>
-          <div class="rounded-lg border border-line bg-soft p-3 text-xs text-foreground">
-            <p class="mb-2 font-semibold">Totales del asiento</p>
-            <div class="grid grid-cols-2 gap-2 num">
-              <span>Debe {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(2) }}</strong></span>
-              <span>Haber {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(2) }}</strong></span>
-              <span>Debe {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(4) }}</strong></span>
-              <span>Haber {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(4) }}</strong></span>
-            </div>
-            <p class="mt-3 font-semibold" :class="diffLocal.isZero() && diffForeign.isZero() ? 'text-pos' : 'text-neg'">
-              Diferencia: {{ baseCurrencyInfo.symbol }} {{ diffLocal.toDisplay(4) }} · {{ activeForeignCurrency.symbol }} {{ diffForeign.toDisplay(4) }}
-            </p>
+            <button type="button" :disabled="lines.length <= 2" class="shrink-0 rounded border border-line p-2 text-neg disabled:opacity-30"
+              :aria-label="`Eliminar partida ${idx + 1}`" @click="removeLine(idx)"><Trash2 class="h-4 w-4" /></button>
           </div>
         </div>
-      </div>
-
-      <!-- Un solo panel de dimensiones para la partida seleccionada. -->
-      <div v-if="selectedLine && requiresDimensions(selectedLine)" class="panel min-w-0 space-y-3" id="journal-line-dimensions">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <h2 class="text-sm font-semibold text-foreground">Datos de la partida {{ selectedLineIndex + 1 }}</h2>
-          <span v-if="missingLineFields(selectedLine).length" class="text-xs text-warn">
-            Falta: {{ missingLineFields(selectedLine).join(', ') }}
-          </span>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <label v-if="accountFor(selectedLine)?.requires_cost_center || accountFor(selectedLine)?.has_automatic_destination"
-            class="min-w-0 text-xs font-medium text-muted">Centro de costo obligatorio
-            <select v-model="selectedLine.costCenterId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
-              <option :value="null">Seleccionar centro</option>
-              <option v-for="cc in costCenters.filter(cc => cc.is_active)" :key="cc.id" :value="cc.id">{{ cc.code }} · {{ cc.name }}</option>
-            </select>
-          </label>
-          <div v-if="entityRequired(accountFor(selectedLine))" class="min-w-0">
-            <div class="mb-1 text-xs font-medium text-muted">Anexo / tercero obligatorio</div>
-            <JournalEntityPicker :key="selectedLine.id + '-' + selectedLine.accountId"
-              v-model="selectedLine.entity" :api="apiClient" :account="accountFor(selectedLine)" :disabled="isSubmitting" />
+        <div class="bg-soft p-4 text-xs text-foreground">
+          <strong class="block pb-2">Totales del asiento</strong>
+          <div class="grid grid-cols-2 gap-2 num sm:grid-cols-4">
+            <span>Debe {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(4) }}</strong></span>
+            <span>Haber {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(4) }}</strong></span>
+            <span>Debe {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(4) }}</strong></span>
+            <span>Haber {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(4) }}</strong></span>
           </div>
-          <label v-if="accountFor(selectedLine)?.requires_company_area" class="min-w-0 text-xs font-medium text-muted">Área organizativa obligatoria
-            <select v-model="selectedLine.companyAreaId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
-              <option :value="null">Seleccionar área organizativa</option>
-              <option v-for="area in companyAreas.filter(area => area.is_active)" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
-            </select>
-          </label>
-          <label v-if="accountFor(selectedLine)?.requires_cash_flow_area" class="min-w-0 text-xs font-medium text-muted">Área de flujo de efectivo obligatoria
-            <select v-model="selectedLine.cashFlowAreaId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
-              <option :value="null">Seleccionar flujo</option>
-              <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(selectedAccount, area))" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
-            </select>
-          </label>
+          <p class="mt-3 font-semibold" :class="diffLocal.isZero() && diffForeign.isZero() ? 'text-pos' : 'text-neg'">
+            Diferencia: {{ baseCurrencyInfo.symbol }} {{ diffLocal.toDisplay(4) }} · {{ activeForeignCurrency.symbol }} {{ diffForeign.toDisplay(4) }}
+          </p>
         </div>
       </div>
 

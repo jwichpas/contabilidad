@@ -48,14 +48,14 @@ test('switching journal account clears all four dimensions without changing amou
 
 test('journal view wires account reset, conditional dimensions and compact exchange rates', () => {
   const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
-  assert.match(view, /@update:model-value="changeAccount\(line\)"/);
+  assert.match(view, /@update:model-value="changeAccount\(selectedLine\)"/);
   assert.match(view, /resetAccountDimensions\(line\)/);
   assert.match(view, /:disabled="isSubmitting"/);
   assert.match(view, /requires_cost_center/);
-  assert.match(view, /entityRequired\(accountFor\(selectedLine\)\)/);
+  assert.match(view, /entityRequired\(selectedAccount\)/);
   assert.match(view, /requires_company_area/);
   assert.doesNotMatch(view, /\+ Centro opcional|\+ Anexo opcional/);
-  assert.match(view, /:key="line\.id/);
+  assert.match(view, /:key="selectedLine\.id/);
   assert.match(view, /T\.C\. diario ·/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'buy_rate'/);
   assert.match(view, /updateRateForCurrency\(rateItem\.code, 'sell_rate'/);
@@ -96,11 +96,11 @@ test('account autocomplete filters without a native select with thousands of opt
 test('journal keeps exact money strings, fetches one bootstrap and exposes persisted subdiary', () => {
   const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
   const client = readFileSync(new URL('../src/modules/accounting/api/httpClient.ts', import.meta.url), 'utf8');
-  assert.match(view, /:value="line\.debitLocal"/);
-  assert.match(view, /:value="line\.creditLocal"/);
+  assert.match(view, /:value="selectedLine\.debitLocal"/);
+  assert.match(view, /:value="selectedLine\.creditLocal"/);
   assert.match(view, /inputmode="decimal"/);
   assert.doesNotMatch(view, /v-model="line\.(debitLocal|creditLocal)"/);
-  assert.match(view, /onAmountChange\(line, 'debit', \(\$event\.target as HTMLInputElement\)\.value\)/);
+  assert.match(view, /onAmountChange\(selectedLine, 'debit', \(\$event\.target as HTMLInputElement\)\.value\)/);
   assert.match(view, /const date = entryDate\.value;[\s\S]*fetchJournalEditorBootstrap\(date\)/);
   assert.match(view, /watch\(activeTab/);
   assert.match(client, /\/editor-bootstrap\?date=/);
@@ -117,7 +117,7 @@ test('floating account and entity pickers stay outside the scrollable journal gr
   assert.match(account, /zIndex: '9999'/);
   assert.match(entity, /<Teleport to="body">/);
   assert.match(entity, /role="dialog"/);
-  assert.match(view, /min-w-\[1040px\]/);
+  assert.match(view, /min-w-\[900px\]/);
   assert.match(view, /overflow-x-auto/);
 });
 
@@ -135,13 +135,17 @@ test('subdiary master is a separate company-scoped route with controlled CRUD', 
   assert.match(api, /\/api\/v1\/company\/subdiaries/);
 });
 
-test('journal editor keeps desktop amounts in columns and mobile amounts in cards with one dimensions panel', () => {
+test('journal has one editor and a read-only list of added entries on desktop and mobile', () => {
   const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
-  assert.match(view, /min-w-\[1040px\]/);
-  assert.match(view, /class="hidden w-full overflow-x-auto lg:block"/);
-  assert.match(view, /class="space-y-3 p-3 lg:hidden"/);
-  assert.match(view, /selectedLine && requiresDimensions\(selectedLine\)/);
-  assert.doesNotMatch(view, /<td colspan="7"/);
+  assert.match(view, /Editor único de asientos/);
+  assert.match(view, /Partidas agregadas/);
+  assert.match(view, /id="journal-line-editor"/);
+  assert.equal((view.match(/<JournalAccountCombobox/g) ?? []).length, 1);
+  assert.equal((view.match(/<JournalEntityPicker/g) ?? []).length, 1);
+  assert.equal((view.match(/@input="onAmountChange/g) ?? []).length, 2);
+  assert.match(view, /showLineEditor\(line\)/);
+  assert.match(view, /min-w-\[900px\]/);
+  assert.match(view, /lg:hidden/);
   assert.match(view, /isReadyToPost = computed\(\(\) => isBalanced\.value && missingRequirements\.value\.length === 0\)/);
   assert.match(view, /const missingRequirements = computed\(\(\) => \[\.\.\.missingHeaderFields\.value, \.\.\.missingDimensions\.value\]\)/);
   assert.match(view, /Centro de costo obligatorio/);
