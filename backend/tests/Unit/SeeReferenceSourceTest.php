@@ -39,3 +39,17 @@ it('pins each reconciled annex fixture and its added code', function (): void {
             ->and(array_column($source['rows'], 0))->toContain($code);
     }
 });
+
+it('pins the official ISO 4217 List One edition while preserving the supplied currency snapshot', function (): void {
+    $path = database_path('reference_data/see_catalog_02_iso_4217_2026_09_17.json');
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('206b0560785fcaf9951e78472dd63e28032e326211b9e73b1242e530944cb681')
+        ->and($source['source_xml_sha256'])->toBe('33139b438657d1cee116ba737807ea71d19d6de4b90f799a09c56f0cc6a1b0ff')
+        ->and($source['source_published_at'])->toBe('2026-09-17')
+        ->and($source['rows'])->toHaveCount(178)
+        ->and(array_unique($codes))->toHaveCount(178)
+        ->and(array_column($source['rows'], 1, 0)['PEN'])->toBe('Sol')
+        ->and($codes)->toContain('ZWG')
+        ->and($codes)->not->toContain('BGN');
+});

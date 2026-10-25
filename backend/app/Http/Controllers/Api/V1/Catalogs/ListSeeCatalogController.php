@@ -50,8 +50,8 @@ final readonly class ListSeeCatalogController
             'data' => $page->getCollection()->map(static fn ($item): array => [
                 'code' => $item->code,
                 'description' => $item->description,
-                'details' => $version === 'historical'
-                    ? json_decode($item->details, true, 512, JSON_THROW_ON_ERROR) : new \stdClass(),
+                'details' => $item->details === null
+                    ? new \stdClass() : json_decode($item->details, true, 512, JSON_THROW_ON_ERROR),
                 'source_row' => $item->source_row,
                 'is_ambiguous' => $version === 'historical'
                     && in_array($item->is_ambiguous, [true, 1, '1', 't'], true),

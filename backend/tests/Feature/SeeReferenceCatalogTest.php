@@ -92,3 +92,20 @@ it('resolves the latest available SEE edition and keeps the received snapshot ad
     $this->getJson('/api/v1/catalogs/sunat-see/02')->assertOk()
         ->assertJsonPath('meta.version', 'historical');
 });
+
+it('returns ISO 4217 currencies by default and preserves historical PEN and obsolete codes', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/02?q=PEN')
+        ->assertOk()->assertJsonPath('meta.version', '2026-09-17-list-one')
+        ->assertJsonPath('data.0.description', 'Sol')
+        ->assertJsonPath('data.0.details.Número ISO', '604');
+    $this->getJson('/api/v1/catalogs/sunat-see/02?version=historical&q=PEN')
+        ->assertOk()->assertJsonPath('data.0.description', 'Nuevo Sol');
+    $this->getJson('/api/v1/catalogs/sunat-see/02?q=BGN')
+        ->assertOk()->assertJsonPath('meta.total', 0);
+    $this->getJson('/api/v1/catalogs/sunat-see/02?version=historical&q=BGN')
+        ->assertOk()->assertJsonPath('meta.total', 1);
+});
