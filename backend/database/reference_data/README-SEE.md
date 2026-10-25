@@ -67,9 +67,10 @@ facturación o para configurar monedas de empresas. La fecha de publicación de 
 fecha individual de alta o baja de cada moneda. No se sustituyen monedas en documentos históricos.
 La edición 04 registra la fecha de captura del portal UN/CEFACT, que no es una fecha de
 publicación ISO 3166 ni una declaración sobre la validez de cada país para un comprobante SUNAT.
-El catálogo 03 permanece histórico: la lista UN/CEFACT de unidades de medida publica 1,383
-códigos de su Anexo I, mientras el archivo recibido mezcla códigos de distintos anexos. No
-sustituirlo por el Anexo I parcial ni aceptar la clave duplicada `A11` como unidad inequívoca.
+El catálogo 03 permanece histórico: UN/CEFACT publica 1,383 códigos de unidades del Anexo I
+de Rec. 20 y una lista separada de 405 tipos de envase. El archivo recibido incluye claves de
+ambos conjuntos y otras no conciliadas; 22 claves se repiten entre las dos listas con sentidos
+distintos. No fusionarlas por clave ni aceptar la clave duplicada `A11` como unidad inequívoca.
 
 Si SUNAT/INEI/ISO publican cambios, agregar un nuevo conjunto versionado y una migración correctiva
 con trazabilidad. Evitar modificar silenciosamente los códigos usados por documentos históricos.
