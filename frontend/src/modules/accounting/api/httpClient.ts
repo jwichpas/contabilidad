@@ -325,19 +325,32 @@ export class AccountingApiClient {
     tableNumber: number | string,
     signal?: AbortSignal,
   ): Promise<readonly SunatCatalogItem[]> {
+    return (await this.fetchSunatTableReference(tableNumber, signal)).data;
+  }
+
+  /** Return edition metadata alongside PLE rows for the global reference browser. */
+  public async fetchSunatTableReference(
+    tableNumber: number | string,
+    signal?: AbortSignal,
+    version: 'latest' | 'legacy-seed' = 'latest',
+  ): Promise<{ data: readonly SunatCatalogItem[]; meta: { version?: string; classification?: string; source_url?: string | null } }> {
     const num = String(tableNumber).padStart(2, '0');
-    const rawPayload = await this.request<{ data: SunatCatalogItem[] }>(
-      `/api/v1/catalogs/sunat/${num}`,
+    const suffix = version === 'legacy-seed' ? '?version=legacy-seed' : '';
+    const rawPayload = await this.request<{ data: SunatCatalogItem[]; meta: { version?: string; classification?: string; source_url?: string | null } }>(
+      `/api/v1/catalogs/sunat/${num}${suffix}`,
       { method: 'GET', signal },
       false,
     );
     // SUNAT tables expose either name or description; normalize at the API boundary.
-    return rawPayload.data.map((item) => ({
-      ...item,
-      description: typeof item.description === 'string' && item.description.trim()
-        ? item.description
-        : typeof item.name === 'string' && item.name.trim() ? item.name : item.code,
-    }));
+    return {
+      data: rawPayload.data.map((item) => ({
+        ...item,
+        description: typeof item.description === 'string' && item.description.trim()
+          ? item.description
+          : typeof item.name === 'string' && item.name.trim() ? item.name : item.code,
+      })),
+      meta: rawPayload.meta,
+    };
   }
 
   /** RUC annexes and CIIU, separate from both PLE/SIRE and SEE tables. */

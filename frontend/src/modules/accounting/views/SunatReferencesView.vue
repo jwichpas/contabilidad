@@ -28,8 +28,10 @@ const rucDatasets = [
 type RucDataset = typeof rucDatasets[number]['number'];
 type Source = 'ple' | 'ruc';
 interface ReferenceRow { code: string; description: string; details: string; }
+interface ReferenceResult { rows: ReferenceRow[]; edition: string | null; sourceUrl: string | null; }
 const source = shallowRef<Source>('ple');
 const pleNumber = shallowRef<string>('01');
+const selectedEdition = shallowRef<'latest' | 'legacy-seed'>('latest');
 const rucNumber = shallowRef<RucDataset>('contributor-types');
 const comboFilter = shallowRef('');
 const searchInput = shallowRef('');
@@ -38,17 +40,20 @@ const pageSize = 25;
 const choices = computed(() => source.value === 'ple' ? pleTables : rucDatasets);
 const selected = computed(() => source.value === 'ple' ? pleNumber.value : rucNumber.value);
 const selectedName = computed(() => choices.value.find((entry) => entry.number === selected.value)?.name ?? selected.value);
+const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '05'].includes(pleNumber.value));
 function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
 }
 const filteredChoices = computed(() => choices.value.filter((entry) => normalize(`${entry.number} ${entry.name}`).includes(normalize(comboFilter.value))));
 function chooseSource(next: Source): void {
   source.value = next;
+  selectedEdition.value = 'latest';
   comboFilter.value = ''; searchInput.value = ''; pageIndex.value = 0;
 }
 function chooseTable(number: string): void {
   if (source.value === 'ple') pleNumber.value = number;
   else rucNumber.value = number as RucDataset;
+  selectedEdition.value = 'latest';
   comboFilter.value = ''; searchInput.value = ''; pageIndex.value = 0;
 }
 function displayChoice(value: unknown): string {
@@ -57,26 +62,30 @@ function displayChoice(value: unknown): string {
   return option ? `${option.number} · ${option.name}` : number;
 }
 const query = useQuery({
-  queryKey: computed(() => ['sunat-reference', source.value, selected.value]),
-  queryFn: async ({ signal, queryKey }): Promise<ReferenceRow[]> => {
+  queryKey: computed(() => ['sunat-reference', source.value, selected.value, hasEditions.value ? selectedEdition.value : 'latest']),
+  queryFn: async ({ signal, queryKey }): Promise<ReferenceResult> => {
     const group = queryKey[1];
     const number = queryKey[2] ?? '01';
     if (group === 'ple') {
-      const items = await client.fetchSunatTable(number, signal);
-      return items.map((item) => ({ code: item.code, description: item.description, details: '' }));
+      const response = await client.fetchSunatTableReference(number, signal, queryKey[3] as 'latest' | 'legacy-seed');
+      return {
+        rows: response.data.map((item) => ({ code: item.code, description: item.description, details: '' })),
+        edition: response.meta.version ?? null,
+        sourceUrl: response.meta.source_url ?? null,
+      };
     }
     const items = await client.fetchSunatRucReference(number as RucDataset, signal);
-    return items.map((item) => {
+    return { rows: items.map((item) => {
       const additional = item as Partial<SunatCiiuClass & SunatTaxCode>;
       const details = number === 'ciiu'
         ? `División ${additional.division ?? ''} · Grupo ${additional.group_code ?? ''}`
         : number === 'tax-codes' ? (additional.short_name ?? '') : '';
       return { code: item.code, description: item.name, details };
-    });
+    }), edition: null, sourceUrl: null };
   },
   staleTime: 30 * 60 * 1000, gcTime: 30 * 60 * 1000, retry: 1, refetchOnWindowFocus: false,
 });
-const rows = computed<ReferenceRow[]>(() => query.data.value ?? []);
+const rows = computed<ReferenceRow[]>(() => query.data.value?.rows ?? []);
 const columns = createColumnHelper<ReferenceRow>();
 const table = useVueTable({
   get data() { return rows.value; },
@@ -102,14 +111,14 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <span class="rounded-full border border-border bg-soft px-3 py-1 text-xs text-muted">Solo lectura</span>
     </div>
     <div class="flex flex-wrap gap-2 border-b border-border pb-3" aria-label="Grupo de catálogos">
-      <button type="button" :aria-pressed="source === 'ple'" :class="source === 'ple' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ple')">Tablas PLE/SIRE</button>
+      <button type="button" :aria-pressed="source === 'ple'" :class="source === 'ple' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ple')">Tablas PLE</button>
       <button type="button" :aria-pressed="source === 'ruc'" :class="source === 'ruc' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ruc')">Anexos RUC y CIIU</button>
     </div>
-    <p class="text-sm text-muted">{{ source === 'ple' ? 'Nueve tablas PLE/SIRE disponibles. Sus números y códigos son independientes de los catálogos SEE.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE/SIRE.' }}</p>
+    <p class="text-sm text-muted">{{ source === 'ple' ? 'Nueve tablas PLE disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
     <div class="space-y-4 rounded-xl border border-border bg-surface p-4">
       <div class="grid gap-3 md:grid-cols-2">
         <div class="min-w-0 text-xs font-medium text-muted">
-          <span id="sunat-table-label">{{ source === 'ple' ? 'Tabla SUNAT PLE/SIRE' : 'Anexo RUC o CIIU' }}</span>
+          <span id="sunat-table-label">{{ source === 'ple' ? 'Tabla SUNAT PLE' : 'Anexo RUC o CIIU' }}</span>
           <Combobox :key="source" :model-value="selected" @update:model-value="chooseTable">
             <div class="relative mt-1.5">
               <div class="flex w-full items-center rounded-md border border-border bg-surface text-foreground focus-within:ring-2 focus-within:ring-brand">
@@ -129,7 +138,15 @@ watch(searchInput, () => { pageIndex.value = 0; });
           <span class="relative mt-1.5 block"><Search class="absolute left-3 top-3 h-4 w-4" /><input v-model="searchInput" type="search" maxlength="100" class="w-full rounded-md border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand" placeholder="Código o descripción…" /></span>
         </label>
       </div>
+      <div v-if="hasEditions" class="flex flex-wrap items-center gap-2 text-xs" aria-label="Edición PLE">
+        <span class="text-muted">Edición:</span>
+        <button type="button" :aria-pressed="selectedEdition === 'latest'" :class="selectedEdition === 'latest' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground'" class="rounded-md px-3 py-1.5" @click="selectedEdition = 'latest'; pageIndex = 0">Anexo cotejado</button>
+        <button type="button" :aria-pressed="selectedEdition === 'legacy-seed'" :class="selectedEdition === 'legacy-seed' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground'" class="rounded-md px-3 py-1.5" @click="selectedEdition = 'legacy-seed'; pageIndex = 0">Carga inicial</button>
+      </div>
       <p class="text-sm text-muted">{{ selectedName }} · {{ rows.length.toLocaleString('es-PE') }} registros disponibles.</p>
+      <p v-if="source === 'ple' && query.data.value?.edition === '2015-06-anexo-3'" class="text-xs text-muted">Edición PLE de 2015 incorporada para consulta; la vigencia de cada código en 2026 requiere cotejo normativo. <a v-if="query.data.value?.sourceUrl" class="underline" :href="query.data.value.sourceUrl" target="_blank" rel="noopener noreferrer">Ver anexo SUNAT</a></p>
+      <p v-else-if="source === 'ple' && query.data.value?.edition === 'legacy-seed'" class="text-xs text-muted">Carga inicial preservada como histórico, sin verificación de vigencia.</p>
+      <p v-else-if="source === 'ple' && !query.isPending.value && !query.isError.value" class="text-xs text-muted">Fuente inicial pendiente de conciliación y versionado.</p>
       <p v-if="query.isError.value" role="alert" class="rounded-md border border-neg/30 bg-neg/10 px-3 py-2 text-sm text-neg">{{ query.error.value instanceof Error ? query.error.value.message : 'No se pudo cargar la tabla.' }} <button type="button" class="ml-2 underline" @click="query.refetch()">Reintentar</button></p>
       <p v-else-if="query.isPending.value" role="status" class="py-8 text-center text-sm text-muted">Cargando referencias…</p>
       <template v-else>

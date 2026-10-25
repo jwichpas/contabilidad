@@ -24,7 +24,7 @@ no se concilie con la versión oficial correspondiente.
 
 Consulta autenticada: `GET /api/v1/catalogs/sunat-see/{number}` (filtros `q`, `per_page`)
 y `GET /api/v1/catalogs/sunat-see/ubigeos` (filtros `q`, `department`, `province`, `per_page`).
-`/api/v1/catalogs/sunat/{tableNumber}` sigue siendo exclusivamente el catálogo anterior PLE/SIRE.
+`/api/v1/catalogs/sunat/{tableNumber}` consulta las tablas PLE; SIRE utiliza referencias distintas.
 Para el ubigeo usar el endpoint específico: el catálogo SEE 13 es solo una referencia.
 El endpoint de ubigeos devuelve por defecto la última edición incorporada, la descarga INEI
 2026 (`2026-inei`, 1,893 distritos); `?version=historical` conserva los 1,874 recibidos. La

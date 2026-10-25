@@ -55,13 +55,16 @@ test('SUNAT PLE view renders cached rows separately from SEE with fixed-width co
   try {
     const { default: View } = await server.ssrLoadModule('/src/modules/accounting/views/SunatReferencesView.vue');
     const queryClient = new QueryClient();
-    queryClient.setQueryData(['sunat-reference', 'ple', '01'], [
-      { code: '001', description: 'Depósito en cuenta', details: '' },
-    ]);
+    queryClient.setQueryData(['sunat-reference', 'ple', '01', 'latest'], {
+      rows: [{ code: '001', description: 'Depósito en cuenta', details: '' }],
+      edition: '2015-06-anexo-3', sourceUrl: 'https://www.sunat.gob.pe/ple.pdf',
+    });
     const html = await renderToString(createSSRApp(View, { getAccessToken: () => null })
       .use(VueQueryPlugin, { queryClient }));
     assert.match(html, /Depósito en cuenta/);
-    assert.match(html, /Tablas PLE\/SIRE/);
+    assert.match(html, /Tablas PLE/);
+    assert.match(html, /Edición PLE de 2015/);
+    assert.match(html, /Carga inicial/);
     assert.match(html, /w-\[712px\] table-fixed/);
     assert.match(html, /1–1 de 1/);
     assert.doesNotMatch(html, /Catálogos SEE y Ubigeo/);

@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/** Global PLE/SIRE references; SEE catalogs have separate routes and storage. */
+/** Global PLE references; SEE and SIRE catalogs have distinct code spaces. */
 final readonly class ListSunatCatalogController
 {
     public function __invoke(Request $request, string $tableNumber): JsonResponse
