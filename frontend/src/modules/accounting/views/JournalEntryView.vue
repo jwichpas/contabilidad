@@ -26,6 +26,7 @@ import JournalAccountCombobox from '../components/JournalAccountCombobox.vue';
 import { entityMatches, entityRequired } from '../utils/journalEntity';
 import { cashFlowMatches } from '../utils/journalArea';
 import { resetAccountDimensions } from '../utils/journalLine';
+import { reconcileForeignRounding, type ForeignRoundingAdjustment } from '../utils/journalForeignRounding';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import { SystemDecimal } from '../../../shared/types/numeric.types';
 import type { CompanyId } from '../types/accountingAccount.types';
@@ -58,6 +59,7 @@ const isSubmitting = shallowRef(false);
 const errorMessage = shallowRef<string | null>(null);
 const successMessage = shallowRef<string | null>(null);
 const contextNotice = shallowRef<string | null>(null);
+const foreignRoundingAdjustment = shallowRef<ForeignRoundingAdjustment | null>(null);
 
 // Catálogo de Cuentas Operativas (Nivel 4+)
 const operationalAccounts = shallowRef<readonly JournalEditorAccount[]>([]);
@@ -180,6 +182,12 @@ function recalculateForeignAmounts(): void {
     line.debitForeign = line.debitLocal ? convertLocalToForeign(line.debitLocal) : '';
     line.creditForeign = line.creditLocal ? convertLocalToForeign(line.creditLocal) : '';
   }
+  const reconciled = reconcileForeignRounding(lines.value);
+  reconciled.values.forEach((amounts, index) => {
+    lines.value[index]!.debitForeign = amounts.debitForeign;
+    lines.value[index]!.creditForeign = amounts.creditForeign;
+  });
+  foreignRoundingAdjustment.value = reconciled.adjustment;
 }
 
 let rateRequestSequence = 0;
@@ -323,7 +331,13 @@ const isBalanced = computed(() =>
   lines.value.length >= 2 &&
   totalDebitLocal.value.isPositive() &&
   diffLocal.value.isZero() &&
-  diffForeign.value.isZero(),
+  diffForeign.value.isZero() &&
+  lines.value.every((line) => {
+    const debit = parseAmount(line.debitLocal);
+    const credit = parseAmount(line.creditLocal);
+    return (debit.isPositive() && credit.isZero() && parseAmount(line.debitForeign).isPositive() && parseAmount(line.creditForeign).isZero()) ||
+      (credit.isPositive() && debit.isZero() && parseAmount(line.creditForeign).isPositive() && parseAmount(line.debitForeign).isZero());
+  }),
 );
 
 // ==========================================
@@ -360,7 +374,6 @@ function onAmountChange(line: EditingLine, side: 'debit' | 'credit', rawValue: s
     if (line.debitLocal) {
       line.creditLocal = '';
       line.creditForeign = '';
-      line.debitForeign = convertLocalToForeign(line.debitLocal);
     } else {
       line.debitForeign = '';
     }
@@ -368,11 +381,11 @@ function onAmountChange(line: EditingLine, side: 'debit' | 'credit', rawValue: s
     if (line.creditLocal) {
       line.debitLocal = '';
       line.debitForeign = '';
-      line.creditForeign = convertLocalToForeign(line.creditLocal);
     } else {
       line.creditForeign = '';
     }
   }
+  recalculateForeignAmounts();
 }
 
 /**
@@ -391,15 +404,14 @@ function autoBalance(): void {
   const amount = diff.abs().toString();
   if (diff.isPositive()) {
     target.creditLocal = amount;
-    target.creditForeign = convertLocalToForeign(amount);
     target.debitLocal = '';
     target.debitForeign = '';
   } else {
     target.debitLocal = amount;
-    target.debitForeign = convertLocalToForeign(amount);
     target.creditLocal = '';
     target.creditForeign = '';
   }
+  recalculateForeignAmounts();
 }
 
 function resetDraft(): void {
@@ -436,12 +448,18 @@ function resetDraft(): void {
   ];
   errorMessage.value = null;
   successMessage.value = null;
+  foreignRoundingAdjustment.value = null;
 }
 
-function clearForm(): void {
+function resetAfterSave(): void {
   resetDraft();
   contextNotice.value = null;
   void fetchNextNumber();
+}
+
+function clearForm(): void {
+  if (isSubmitting.value) return;
+  resetAfterSave();
 }
 
 async function fetchNextNumber(): Promise<void> {
@@ -533,6 +551,7 @@ async function loadCatalogsAndHistory(): Promise<void> {
 }
 
 async function handleSubmit(): Promise<void> {
+  if (isSubmitting.value || isLoading.value) return;
   errorMessage.value = null;
   successMessage.value = null;
   if (!subdiaryCode.value || !subdiaries.value.some(s => s.code === subdiaryCode.value)) {
@@ -654,8 +673,8 @@ async function handleSubmit(): Promise<void> {
     if (sequence !== submitSequence || tenant !== props.activeCompanyId) return;
     pendingJournalAttempt = null;
 
-    // Limpiar antes de mostrar el éxito: clearForm también borra las alertas.
-    clearForm();
+    // Limpiar antes de mostrar el éxito; el guard de envío impide Limpiar desde la UI.
+    resetAfterSave();
     successMessage.value = `¡Asiento ${savedEntry.entry_number} asentado exitosamente en el Libro Diario!`;
 
     // El POST ya quedó confirmado. Si falla el GET del historial, no presentar
@@ -708,6 +727,10 @@ watch(currency, () => {
 
 watch(exchangeRateType, () => {
   syncActiveVoucherExchangeRate();
+});
+
+watch(exchangeRate, () => {
+  recalculateForeignAmounts();
 });
 
 watch(
@@ -847,7 +870,7 @@ onMounted(() => {
     <!-- ======================================================== -->
     <!-- PESTAÑA 1: FORMULARIO DE INGRESO DE ASIENTO (VOUCHER)    -->
     <!-- ======================================================== -->
-    <div v-if="activeTab === 'form'" class="space-y-6">
+    <fieldset v-if="activeTab === 'form'" :disabled="isSubmitting" class="min-w-0 space-y-6">
       <!-- Tarjeta de Parámetros de Cabecera -->
       <div
         class="panel space-y-4"
@@ -1224,6 +1247,9 @@ onMounted(() => {
                   : 'Para asentar, verifique que la diferencia sea S/ 0.00 y que todas las cuentas estén seleccionadas.'
               }}
             </p>
+            <p v-if="foreignRoundingAdjustment" class="mt-1 text-[11px] text-muted">
+              Ajuste de redondeo ME {{ foreignRoundingAdjustment.amount }} en la línea {{ foreignRoundingAdjustment.lineIndex + 1 }}.
+            </p>
           </div>
         </div>
 
@@ -1248,7 +1274,7 @@ onMounted(() => {
           </button>
         </div>
       </div>
-    </div>
+    </fieldset>
 
     <!-- ======================================================== -->
     <!-- PESTAÑA 2: HISTORIAL DEL LIBRO DIARIO                    -->

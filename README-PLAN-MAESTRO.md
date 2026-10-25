@@ -4,7 +4,7 @@
 
 # Plan maestro, hoja de ruta e hitos — Sistema Contable
 
-> **Documento rector vigente · Actualizado 25/10/2026 · Versión 2.7**  
+> **Documento rector vigente · Actualizado 25/10/2026 · Versión 2.8**  
 > Repositorio: `jwichpas/contabilidad` · Rama única: `main` · Base de desarrollo: **Neon PostgreSQL 18 / contabilidad-dev**.
 >
 > **Avance verificable: 8/32 actividades completas (25%).** El checklist de la [sección 10](#10-checklist-de-seguimiento) es la **fuente única** del conteo. Se distinguió expresamente entre una prueba/subetapa aprobada y una actividad amplia todavía pendiente.
@@ -24,7 +24,7 @@
 
 **Avance F6 de catálogos — 25/10/2026.** Las referencias globales son de solo lectura: catálogos SEE y ubigeo INEI, tablas PLE Anexo 3 y la Tabla 8 SUNAT tienen procedencia, espacio de códigos y versiones independientes; las preferencias de monedas, unidades y países por empresa no modifican la fuente global. La API y las vistas de consulta permiten elegir edición, buscar localmente en la tabla y mostrar códigos históricos con advertencias. El usuario reportó en Termux las migraciones de Tablas PLE 27, 28 y 30 como DONE y `SeeReferenceSourceTest` + `SeeReferenceCatalogTest` como **50 pruebas PASS, 618 aserciones**. Las Tablas 27, 28 y 30 corresponden a la edición histórica 2015, no acreditan aplicabilidad normativa individual en 2026. [Inventario técnico y fuente por tabla](backend/database/reference_data/README-SEE.md). Esta evidencia aporta a F6.1 pero **no la cierra**; el conteo sigue 8/32.
 
-**Avance F6 confirmado por el usuario · 25/10/2026:** las migraciones PLE `2026_10_25_200000`, `210000` y `220000` terminaron DONE en DEV. `SeeReferenceSourceTest` y `SeeReferenceCatalogTest` pasaron **60/60 pruebas, 705 aserciones** (384,54 s). Así quedan instaladas las tablas PLE 31 (44 tipos de renta), 34 (1.627 posiciones en ocho sectores con repeticiones conservadas) y 35 (273 países SUNAT de cuatro dígitos), sin mezclarlas con SEE/SIRE. El frontend mantiene `pnpm build` y `pnpm test:unit` **50/50 PASS** localmente. Las descripciones resumidas de 31 y extraídas de 34 requieren cotejo individual; la captura de 35 no certifica vigencia por código. **F6.1 sigue abierta** por aplicabilidad normativa, reglas operativas, archivos PLE y aceptación integral. **Inicio del siguiente trabajo F4.2:** se corrigió el borrador del editor único al cambiar empresa y se ignoran respuestas tardías de consultas o envíos del tenant anterior; frontend build y 50/50 pruebas PASS localmente, aceptación funcional con sesión real pendiente. Avance global **8/32 (25%)**.
+**Avance F6 confirmado por el usuario · 25/10/2026:** las migraciones PLE `2026_10_25_200000`, `210000` y `220000` terminaron DONE en DEV. `SeeReferenceSourceTest` y `SeeReferenceCatalogTest` pasaron **60/60 pruebas, 705 aserciones** (384,54 s). Así quedan instaladas las tablas PLE 31 (44 tipos de renta), 34 (1.627 posiciones en ocho sectores con repeticiones conservadas) y 35 (273 países SUNAT de cuatro dígitos), sin mezclarlas con SEE/SIRE. El frontend mantiene `pnpm build` y `pnpm test:unit` **53/53 PASS** localmente. Las descripciones resumidas de 31 y extraídas de 34 requieren cotejo individual; la captura de 35 no certifica vigencia por código. **F6.1 sigue abierta** por aplicabilidad normativa, reglas operativas, archivos PLE y aceptación integral. **F4.2 en progreso:** el borrador del editor único se descarta al cambiar empresa y se ignoran respuestas tardías del tenant anterior. Durante POST se bloquean las ediciones y los envíos simultáneos; la conversión bimoneda reconcilia el residuo exacto de redondeo de cuatro decimales y rechaza partidas extranjeras que redondean a cero. Frontend build y **53/53 pruebas PASS** localmente; aceptación con sesión real y registro de varias partidas pendientes. Avance global **8/32 (25%)**.
 
 ## Avance F3.2–F3.3 — 23/10/2026
 
@@ -489,7 +489,7 @@ Un cambio que afecte asientos, saldos, períodos, RLS o usuarios requiere: (1) c
 
 ### Fase 4 — Interfaz
 - [ ] **F4.1** Separar layouts, navegación y selector global de empresa. *Implementación avanzada; revisar UX y flujos de navegación integrados.*
-- [ ] **F4.2** Sustituir formularios repetidos por editor único de asientos. *Editor único presente en Vue; se limpia el borrador al cambiar empresa y se descartan respuestas tardías del tenant anterior. Build y 50 pruebas frontend PASS localmente; pendiente [aceptación visual con sesión real](docs/F4-2-CAMBIO-DE-EMPRESA-EDITOR.md) y edición de varias partidas.*
+- [ ] **F4.2** Sustituir formularios repetidos por editor único de asientos. *Editor único presente en Vue; se limpia el borrador al cambiar empresa y se descartan respuestas tardías del tenant anterior. Se bloquean ediciones durante POST y se reconcilia el redondeo bimoneda sin alterar moneda base. Build y 53 pruebas frontend PASS localmente; pendiente [aceptación visual con sesión real](docs/F4-2-CAMBIO-DE-EMPRESA-EDITOR.md), registro de varias partidas y revisión del asiento persistido.*
 - [ ] **F4.3** Mejorar tablas, validaciones, accesibilidad y responsive.
 
 ### Fase 5 — Gestión contable

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { SystemDecimal } from '../src/shared/types/numeric.types.ts';
+import { reconcileForeignRounding } from '../src/modules/accounting/utils/journalForeignRounding.ts';
 
 test('0.1 + 0.2 equals 0.3 exactly', () => {
   assert.equal(
@@ -49,4 +50,39 @@ test('checks that balances agree exactly to all four monetary decimals', () => {
   const credit = SystemDecimal.parseMonetary('0.9999');
   assert.equal(debit.subtract(credit).toString(), '0.0001');
   assert.equal(debit.subtract(credit).isZero(), false);
+});
+
+test('assigns a 0.0001 FX rounding residual to a positive line without changing local amounts', () => {
+  const lines = [
+    { debitLocal: '0.0100', creditLocal: '', debitForeign: '0.0027', creditForeign: '' },
+    { debitLocal: '0.0100', creditLocal: '', debitForeign: '0.0027', creditForeign: '' },
+    { debitLocal: '', creditLocal: '0.0200', debitForeign: '', creditForeign: '0.0053' },
+  ];
+  const result = reconcileForeignRounding(lines);
+  assert.deepEqual(result.adjustment, { lineIndex: 2, side: 'credit', amount: '0.0001' });
+  assert.equal(result.values[2].creditForeign, '0.0054');
+  assert.equal(lines[2].creditForeign, '0.0053');
+});
+
+test('does not reconcile an unbalanced local entry or invent a positive foreign amount', () => {
+  const unbalanced = [
+    { debitLocal: '0.0100', creditLocal: '', debitForeign: '0.0027', creditForeign: '' },
+    { debitLocal: '', creditLocal: '0.0200', debitForeign: '', creditForeign: '0.0053' },
+  ];
+  assert.equal(reconcileForeignRounding(unbalanced).adjustment, null);
+  const underflow = [
+    { debitLocal: '0.0001', creditLocal: '', debitForeign: '0.0000', creditForeign: '' },
+    { debitLocal: '', creditLocal: '0.0001', debitForeign: '', creditForeign: '0.0000' },
+  ];
+  assert.equal(reconcileForeignRounding(underflow).adjustment, null);
+});
+
+test('reconciles a credit-heavy rounding residual on a debit line', () => {
+  const result = reconcileForeignRounding([
+    { debitLocal: '0.0200', creditLocal: '', debitForeign: '0.0053', creditForeign: '' },
+    { debitLocal: '', creditLocal: '0.0100', debitForeign: '', creditForeign: '0.0027' },
+    { debitLocal: '', creditLocal: '0.0100', debitForeign: '', creditForeign: '0.0027' },
+  ]);
+  assert.deepEqual(result.adjustment, { lineIndex: 0, side: 'debit', amount: '0.0001' });
+  assert.equal(result.values[0].debitForeign, '0.0054');
 });
