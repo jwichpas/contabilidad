@@ -100,7 +100,7 @@ it('resolves the latest available SEE edition and keeps the received snapshot ad
             ->assertOk()->assertJsonPath('meta.total', $oldCount);
     }
     $this->getJson('/api/v1/catalogs/sunat-see/02')->assertOk()
-        ->assertJsonPath('meta.version', 'historical');
+        ->assertJsonPath('meta.version', '2026-09-17-list-one');
 });
 
 it('returns ISO 4217 currencies by default and preserves historical PEN and obsolete codes', function (): void {

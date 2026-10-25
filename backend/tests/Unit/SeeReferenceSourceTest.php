@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 it('ships the full supplied SEE and INEI snapshots without dropping duplicate codes', function (): void {
-    $catalogs = json_decode((string) file_get_contents(database_path('reference_data/see_catalogs_2017_snapshot.json')), true, 512, JSON_THROW_ON_ERROR);
-    $ubigeos = json_decode((string) file_get_contents(database_path('reference_data/see_ubigeos_inei_snapshot.json')), true, 512, JSON_THROW_ON_ERROR);
+    $catalogs = json_decode((string) file_get_contents(__DIR__.'/../../database/reference_data/see_catalogs_2017_snapshot.json'), true, 512, JSON_THROW_ON_ERROR);
+    $ubigeos = json_decode((string) file_get_contents(__DIR__.'/../../database/reference_data/see_ubigeos_inei_snapshot.json'), true, 512, JSON_THROW_ON_ERROR);
 
     expect($catalogs['classification'])->toBe('SUPPLIED_SEE_SNAPSHOT_UNVERIFIED')
         ->and($catalogs['catalogs'])->toHaveCount(33)
@@ -17,7 +17,7 @@ it('ships the full supplied SEE and INEI snapshots without dropping duplicate co
 });
 
 it('pins the 14 independently sourced transport motives from SUNAT annex I of 2024', function (): void {
-    $path = database_path('reference_data/see_catalog_20_anexo_i_2024.json');
+    $path = __DIR__.'/../../database/reference_data/see_catalog_20_anexo_i_2024.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
     expect(hash_file('sha256', $path))->toBe('86b68440dcfbb0f0be6972eef393b0fc0807f781f884f5c08575620df86b8aa8')
         ->and($source['catalog_number'])->toBe('20')
@@ -26,8 +26,8 @@ it('pins the 14 independently sourced transport motives from SUNAT annex I of 20
 });
 
 it('pins independent PLE 01 and SEE 59 sources with matching official payment method codes', function (): void {
-    $plePath = database_path('reference_data/ple_table_01_sunat_anexo_3_2015.json');
-    $seePath = database_path('reference_data/see_catalog_59_sunat_anexo_v_2017.json');
+    $plePath = __DIR__.'/../../database/reference_data/ple_table_01_sunat_anexo_3_2015.json';
+    $seePath = __DIR__.'/../../database/reference_data/see_catalog_59_sunat_anexo_v_2017.json';
     $ple = json_decode((string) file_get_contents($plePath), true, 512, JSON_THROW_ON_ERROR);
     $see = json_decode((string) file_get_contents($seePath), true, 512, JSON_THROW_ON_ERROR);
     expect(hash_file('sha256', $plePath))->toBe('b65eb22b6a5bcdb637e2a839a645a1a8f70274306da8b77fd91a64c3257df29c')
@@ -43,7 +43,7 @@ it('pins each reconciled annex fixture and its added code', function (): void {
         ['19', '2017_anexo_e', 'f68f519e0fd7a1f881d203f74cba86a9f87f2c77c5cb80331d843eb93d53e84d', 4, '4'],
         ['55', '2026_anexo_i', '217cc40eee6a0eeb58b6fa8cb4caa315011ca8a71c9e3c874c4202adb246fc35', 119, '7029'],
     ] as [$number, $suffix, $sha, $count, $code]) {
-        $path = database_path("reference_data/see_catalog_{$number}_{$suffix}.json");
+        $path = __DIR__."/../../database/reference_data/see_catalog_{$number}_{$suffix}.json";
         $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
         expect(hash_file('sha256', $path))->toBe($sha)
             ->and($source['catalog_number'])->toBe($number)
@@ -53,7 +53,7 @@ it('pins each reconciled annex fixture and its added code', function (): void {
 });
 
 it('pins the official ISO 4217 List One edition while preserving the supplied currency snapshot', function (): void {
-    $path = database_path('reference_data/see_catalog_02_iso_4217_2026_09_17.json');
+    $path = __DIR__.'/../../database/reference_data/see_catalog_02_iso_4217_2026_09_17.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
     $codes = array_column($source['rows'], 0);
     expect(hash_file('sha256', $path))->toBe('206b0560785fcaf9951e78472dd63e28032e326211b9e73b1242e530944cb681')
@@ -67,9 +67,9 @@ it('pins the official ISO 4217 List One edition while preserving the supplied cu
 });
 
 it('pins INEI 2026 district codes separately from the supplied ubigeo snapshot', function (): void {
-    $path = database_path('reference_data/see_ubigeos_inei_2026.json');
+    $path = __DIR__.'/../../database/reference_data/see_ubigeos_inei_2026.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-    $old = json_decode((string) file_get_contents(database_path('reference_data/see_ubigeos_inei_snapshot.json')), true, 512, JSON_THROW_ON_ERROR);
+    $old = json_decode((string) file_get_contents(__DIR__.'/../../database/reference_data/see_ubigeos_inei_snapshot.json'), true, 512, JSON_THROW_ON_ERROR);
     $codes = array_column($source['rows'], 0);
     expect(hash_file('sha256', $path))->toBe('0ca6032339c099be56670d8a99d14acaa413a8daa1d2ecf9135b8a456c4a9391')
         ->and($source['source_xls_sha256'])->toBe('a62174658a2124fab1366cae40e6ca0feefcc025027b50522909838fbfaae331')
@@ -81,7 +81,7 @@ it('pins INEI 2026 district codes separately from the supplied ubigeo snapshot',
 });
 
 it('pins the UN/CEFACT country snapshot and its source CSV', function (): void {
-    $path = database_path('reference_data/see_catalog_04_uncefact_2026_10_24.json');
+    $path = __DIR__.'/../../database/reference_data/see_catalog_04_uncefact_2026_10_24.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
     $codes = array_column($source['rows'], 0);
     expect(hash_file('sha256', $path))->toBe('53a93e2b6e79978dab273b628cb397f6abda16f579afcd6a911399eab2d0afea')
@@ -93,7 +93,7 @@ it('pins the UN/CEFACT country snapshot and its source CSV', function (): void {
 });
 
 it('pins the full UNECE Rec. 20 revision 17 and retains its lifecycle flags', function (): void {
-    $path = database_path('reference_data/see_catalog_03_unece_rec20_rev17_2021.json');
+    $path = __DIR__.'/../../database/reference_data/see_catalog_03_unece_rec20_rev17_2021.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
     $codes = array_column($source['rows'], 0);
     $statuses = array_count_values(array_column($source['rows'], 2));
