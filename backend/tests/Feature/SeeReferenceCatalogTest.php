@@ -451,6 +451,22 @@ it('exposes historical PLE treaty codes as a distinct read-only edition', functi
     $this->getJson('/api/v1/catalogs/sunat/25?version=other')->assertNotFound();
 });
 
+it('returns all PLE economic relationship criteria without truncating the long code 12', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $response = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/27')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.table_number', '27')
+        ->assertJsonPath('meta.total', 13)
+        ->assertJsonPath('data.0.code', '00')
+        ->assertJsonPath('data.12.code', '12');
+    expect(strlen($response->json('data.12.name')))->toBeGreaterThan(2000)
+        ->and($response->json('data.12.name'))->toContain('encubrir una transacción entre partes vinculadas');
+    $this->getJson('/api/v1/catalogs/sunat/27?version=legacy-seed')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

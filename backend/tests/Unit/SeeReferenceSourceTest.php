@@ -175,6 +175,17 @@ it('pins the historical PLE treaty code list without treating it as current elig
         ->and($source['rows'][9])->toBe(['09', 'OTROS']);
 });
 
+it('pins all thirteen historical PLE economic relationship codes and the long code 12 description', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_27_economic_relationship_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('82a580f14b449ca4220f298e6002fad3a57a9587813c37d9c78d485e9e47c09a')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and($source['table_number'])->toBe('27')
+        ->and(array_column($source['rows'], 0))->toBe(['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'])
+        ->and(strlen($source['rows'][12][1]))->toBeGreaterThan(2000)
+        ->and($source['rows'][0])->toBe(['00', 'Sin vinculación']);
+});
+
 it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

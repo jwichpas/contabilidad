@@ -88,6 +88,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_120000_add_ple_tables_15_20_reference_editions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_130000_add_ple_tables_21_22_reference_editions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_140000_add_ple_table_25_historical_treaty_codes.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_150000_add_ple_table_27_economic_relationship.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -201,3 +202,8 @@ La Tabla 25 PLE contiene diez códigos de convenios (`00`–`09`) en el Anexo 3 
 padrón de tratados vigentes ni autoriza aplicar beneficios fiscales; se debe consultar
 el instrumento y sus fechas para una operación concreta. No se fusiona con la Tabla
 18 del Anexo 1 SIRE, cuya numeración y edición son independientes.
+La Tabla 27 PLE enumera trece códigos de vinculación económica (`00`–`12`) en el mismo
+anexo. `2026_10_25_150000` amplía a `text` la columna de descripciones de la consulta
+global para conservar los criterios extensos, y publica la edición histórica de 2015.
+La pantalla ofrece expansión del texto largo. Estos criterios se muestran como referencia
+de su edición; no calculan ni confirman vinculación económica vigente para una empresa.
