@@ -29,6 +29,7 @@ final readonly class ListSunatCatalogController
             '01' => SunatPaymentMethod::class,
             '02' => SunatIdentityDocumentType::class,
             '03' => SunatFinancialInstitution::class,
+            '04' => null,
             '05' => SunatInventoryType::class,
             '06' => SunatMeasurementUnit::class,
             '08' => SunatElectronicBook::class,
@@ -38,10 +39,11 @@ final readonly class ListSunatCatalogController
             default => throw new NotFoundHttpException("La tabla SUNAT '{$tableNumber}' no está registrada en el sistema."),
         };
 
-        if (in_array($normalized, ['01', '02', '03', '05', '06', '08', '10', '11', '12'], true)) {
+        if (in_array($normalized, ['01', '02', '03', '04', '05', '06', '08', '10', '11', '12'], true)) {
             $latest = $normalized === '08' ? '2008-rs239' : '2015-06-anexo-3';
+            $available = $normalized === '04' ? [$latest] : [$latest, 'legacy-seed'];
             $version = $request->query('version', 'latest');
-            if (! is_string($version) || ! in_array($version, ['latest', $latest, 'legacy-seed'], true)) {
+            if (! is_string($version) || ! in_array($version, ['latest', ...$available], true)) {
                 throw new NotFoundHttpException("Edición PLE {$normalized} no registrada.");
             }
             $resolved = $version === 'latest' ? $latest : $version;
@@ -49,6 +51,7 @@ final readonly class ListSunatCatalogController
                 '01' => 'ple_payment_method_versions',
                 '02' => 'ple_identity_document_versions',
                 '03' => 'ple_financial_institution_versions',
+                '04' => 'ple_currency_versions',
                 '05' => 'ple_inventory_type_versions',
                 '06' => 'ple_measurement_unit_versions',
                 '08' => 'sunat_book_code_versions',
@@ -60,6 +63,7 @@ final readonly class ListSunatCatalogController
                 '01' => 'ple_payment_method_version_items',
                 '02' => 'ple_identity_document_version_items',
                 '03' => 'ple_financial_institution_version_items',
+                '04' => 'ple_currency_version_items',
                 '05' => 'ple_inventory_type_version_items',
                 '06' => 'ple_measurement_unit_version_items',
                 '08' => 'sunat_book_code_version_items',
@@ -85,7 +89,8 @@ final readonly class ListSunatCatalogController
                     'classification' => $edition->classification,
                     'source_url' => $edition->source_url,
                     'amendment_url' => $normalized === '08' ? $edition->amendment_url : null,
-                    'available_versions' => [$latest, 'legacy-seed'],
+                    'available_versions' => $available,
+                    'descriptions_verified' => $normalized === '04' ? false : null,
                     'operational_status_verified' => $normalized === '03' ? false : null,
                     'document_use_verified' => $normalized === '10' ? false : null,
                     'book_obligation_verified' => $normalized === '08' ? false : null,

@@ -13,6 +13,7 @@ const pleTables = [
   { number: '01', name: 'Medios de pago' },
   { number: '02', name: 'Tipos de documento de identidad' },
   { number: '03', name: 'Entidades financieras' },
+  { number: '04', name: 'Tipo de moneda (Anexo 3 PLE)' },
   { number: '05', name: 'Tipos de existencia' },
   { number: '06', name: 'Unidades de medida' },
   { number: '08', name: 'Libros y registros tributarios' },
@@ -69,7 +70,7 @@ const query = useQuery({
     if (group === 'ple') {
       const response = await client.fetchSunatTableReference(number, signal, queryKey[3] as 'latest' | 'legacy-seed');
       return {
-        rows: response.data.map((item) => ({ code: item.code, description: item.description, details: '' })),
+        rows: response.data.map((item) => ({ code: item.code, description: number === '04' ? '—' : item.description, details: '' })),
         edition: response.meta.version ?? null,
         sourceUrl: response.meta.source_url ?? null,
         amendmentUrl: response.meta.amendment_url ?? null,
@@ -115,7 +116,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <button type="button" :aria-pressed="source === 'ple'" :class="source === 'ple' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ple')">Tablas PLE</button>
       <button type="button" :aria-pressed="source === 'ruc'" :class="source === 'ruc' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ruc')">Anexos RUC y CIIU</button>
     </div>
-    <p class="text-sm text-muted">{{ source === 'ple' ? 'Ocho tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
+    <p class="text-sm text-muted">{{ source === 'ple' ? 'Nueve tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
     <div class="space-y-4 rounded-xl border border-border bg-surface p-4">
       <div class="grid gap-3 md:grid-cols-2">
         <div class="min-w-0 text-xs font-medium text-muted">
@@ -146,6 +147,7 @@ watch(searchInput, () => { pageIndex.value = 0; });
       </div>
       <p class="text-sm text-muted">{{ selectedName }} · {{ rows.length.toLocaleString('es-PE') }} registros disponibles.</p>
       <p v-if="source === 'ple' && query.data.value?.edition === '2015-06-anexo-3'" class="text-xs text-muted">Edición PLE de 2015 incorporada para consulta; la vigencia de cada código en 2026 requiere cotejo normativo. <a v-if="query.data.value?.sourceUrl" class="underline" :href="query.data.value.sourceUrl" target="_blank" rel="noopener noreferrer">Ver anexo SUNAT</a></p>
+      <p v-if="source === 'ple' && pleNumber === '04'" class="text-xs text-muted">La Tabla 4 PLE conserva 178 códigos históricos. Las descripciones del PDF no se transcribieron por errores de extracción; consulte el anexo. Para configurar monedas de una empresa se usa el catálogo SEE/ISO con visibilidad propia, no esta lista de 2015.</p>
       <p v-if="source === 'ple' && pleNumber === '03' && selectedEdition === 'latest'" class="text-xs text-muted">La tabla 03 incluye entidades históricas. Sus códigos son referencia PLE; no acreditan que un banco esté operativo ni habilitan su selección para cuentas actuales.</p>
       <p v-if="source === 'ple' && pleNumber === '12' && selectedEdition === 'latest'" class="text-xs text-muted">La edición cotejada contiene 47 operaciones de inventario. La carga inicial tiene 17 y asigna otro significado al código 07; no use ambas ediciones indistintamente en el kardex.</p>
       <p v-if="source === 'ple' && pleNumber === '11' && selectedEdition === 'latest'" class="text-xs text-muted">Los 30 códigos corresponden a la Tabla 11 PLE de 2015; no acreditan qué dependencias siguen operativas ni sustituyen la Tabla 4 de SIRE.</p>

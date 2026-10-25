@@ -82,6 +82,8 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_060000_version_ple_table_12_inventory_operations.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_070000_version_ple_table_11_customs_dependencies.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_080000_version_ple_table_10_document_types.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_090000_version_sunat_table_08_book_codes.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_100000_add_ple_table_04_currency_codes.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -132,6 +134,13 @@ histórica en tablas propias, y archiva la carga anterior como `legacy-seed`. De
 cuáles pueden elegirse como entidades operativas en 2026. El endpoint de consulta muestra 38
 por defecto, con `operational_status_verified=false` y enlace a la fuente. No confundir estos
 códigos de dos caracteres con códigos bancarios CCI de tres caracteres, ni con SIRE o SEE.
+La Tabla 04 del mismo Anexo 3 enumera 178 códigos de moneda. La migración
+`2026_10_25_100000` los incorpora en tablas PLE versionadas sin alterar SEE 02 ni las
+monedas habilitadas por empresa. La extracción del PDF introducía errores OCR en algunas
+descripciones, así que la edición solo conserva códigos cotejados y enlaza el PDF oficial;
+`name` es nulo y `descriptions_verified=false`. Es una referencia histórica de 2015 que
+incluye claves hoy obsoletas (por ejemplo `BGN` y `ZWL`), no una lista autorizada para
+nuevos comprobantes. El catálogo SEE/ISO de 2026 tiene su propio ciclo de vida.
 La Tabla 06 PLE del Anexo 3 enumera 62 claves como `KGM`, `LTR` y `NIU`, mientras la carga
 original usa 16 claves numéricas (`01`–`15`, `99`) con un símbolo comercial asociado. Son dos
 espacios de códigos: la migración `2026_10_25_040000` conserva las 16 filas sin modificarlas

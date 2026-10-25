@@ -59,6 +59,19 @@ it('pins thirty-eight historical PLE financial institutions without treating the
         ->and($codes)->toContain('51', '54', '55', '56', '58');
 });
 
+it('pins the separate PLE Table 4 currency codes without importing SEE labels or ISO lifecycle', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_04_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('ed87f1c2c391b7a07557152e4149c3bcd3cf28c20d0b14782ec0c3350a98959e')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and($source['table_number'])->toBe('04')
+        ->and($source['classification'])->toBe('SUNAT_PLE_2015_ANNEX_3_HISTORICAL_CODES_ONLY')
+        ->and($source['codes'])->toHaveCount(178)
+        ->and(array_unique($source['codes']))->toHaveCount(178)
+        ->and($source['codes'])->toContain('PEN', 'USD', 'CLP', 'BGN', 'ZWL')
+        ->and($source['codes'])->not->toContain('BYN', 'ZWG');
+});
+
 it('pins the nineteen PLE inventory type codes and the separate legacy classification', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_05_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

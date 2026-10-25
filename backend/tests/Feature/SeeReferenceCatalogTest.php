@@ -327,6 +327,26 @@ it('exposes the PLE document reference without authorizing issue or tax credit',
         ->assertJsonPath('meta.catalog_number', '01');
 });
 
+it('serves the historical PLE currency code list independently from the current SEE ISO edition', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/04')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 178)
+        ->assertJsonPath('meta.descriptions_verified', false)
+        ->assertJsonPath('meta.available_versions.0', '2015-06-anexo-3')
+        ->assertJsonFragment(['code' => 'PEN', 'name' => null]);
+    $this->getJson('/api/v1/catalogs/sunat/04?version=2015-06-anexo-3')->assertOk()
+        ->assertJsonPath('meta.total', 178);
+    $this->getJson('/api/v1/catalogs/sunat/04?version=legacy-seed')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat/04?version=other')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat-see/02')->assertOk()
+        ->assertJsonPath('meta.version', '2026-09-17-list-one')
+        ->assertJsonFragment(['code' => 'ZWG']);
+});
+
 it('serves SUNAT book codes separately from PLE Annex 3, SEE and SIRE', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],
