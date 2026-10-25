@@ -19,4 +19,12 @@ Desde `frontend/`: `pnpm build` y `pnpm test:unit` (53/53 PASS, incluidos tres e
 5. Con TC 3,750000, registrar en moneda base dos débitos de 0,0100 y un crédito de 0,0200 en cuentas válidas. Verificar ajuste de 0,0001 en moneda extranjera y cuadre exacto, sin alterar importes en moneda base. Repetir con los lados invertidos y revisar el asiento efectivamente registrado.
 6. Durante un POST lento, comprobar que fecha, tasa, importes, dimensiones, «Limpiar» y «Agregar Línea» no aceptan cambios. Una segunda pulsación no debe crear un segundo asiento.
 
+## Revisión móvil del editor · 25/10/2026
+
+Las capturas proporcionadas muestran que la tabla de ocho columnas divide una misma partida entre dos pantallas horizontales. También muestran un asiento con importes cuadrado en ambas monedas y anexo obligatorio sin seleccionar; el mensaje anterior lo llamaba genéricamente «descuadrado».
+
+El editor ahora presenta partidas en tarjetas de ancho móvil con cuenta, glosa, Debe/Haber base y conversión extranjera juntos. En escritorio conserva la tabla; las dimensiones obligatorias se editan en un único panel para la partida seleccionada. Cada partida señala sus datos faltantes y el estado distingue falta de anexo/cuenta del descuadre monetario. «Registrar asiento» se habilita cuando cuadran los importes y están completas las dimensiones. La selección explícita de dimensiones desplaza al panel en móvil. El envío, cálculo decimal y aislamiento por empresa siguen usando el mismo estado y payload.
+
+Compilación `pnpm build` y `pnpm test:unit` (53/53 PASS). Pendiente inspección visual en navegador móvil real: foco del selector, desplazamiento al panel, selección del anexo, regreso a las tarjetas y cambio de empresa durante la edición. Las capturas no demuestran el POST ni la persistencia del asiento.
+
 No dar por aprobada F4.2 hasta verificar también edición de varias partidas, accesibilidad y comportamiento responsive en la aplicación real.

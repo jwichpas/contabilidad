@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, shallowRef, watch } from 'vue';
 import {
   AlertTriangle,
   BookOpen,
@@ -266,6 +266,44 @@ const lines = ref<EditingLine[]>([
     creditForeign: '',
   },
 ]);
+const selectedLineId = ref<number | null>(lines.value[0]!.id);
+const selectedLine = computed(() => lines.value.find(line => line.id === selectedLineId.value) ?? null);
+const selectedLineIndex = computed(() => lines.value.findIndex(line => line.id === selectedLineId.value));
+const selectedAccount = computed(() => selectedLine.value ? accountFor(selectedLine.value) : undefined);
+
+function accountFor(line: EditingLine): JournalEditorAccount | undefined {
+  return operationalAccounts.value.find(account => account.id === line.accountId);
+}
+
+function requiresDimensions(line: EditingLine): boolean {
+  const account = accountFor(line);
+  return Boolean(account && (account.requires_cost_center || account.has_automatic_destination ||
+    entityRequired(account) || account.requires_company_area || account.requires_cash_flow_area));
+}
+
+function missingLineFields(line: EditingLine): string[] {
+  const account = accountFor(line);
+  const missing: string[] = [];
+  if (!account) return ['cuenta'];
+  if ((account.requires_cost_center || account.has_automatic_destination) && !line.costCenterId) missing.push('centro de costo');
+  if (entityRequired(account) && !entityMatches(account, line.entity)) missing.push('anexo');
+  if (account.requires_company_area && !line.companyAreaId) missing.push('área organizativa');
+  if (account.requires_cash_flow_area && !line.cashFlowAreaId) missing.push('área de flujo');
+  return missing;
+}
+
+const missingDimensions = computed(() => lines.value.flatMap((line, index) =>
+  missingLineFields(line).map(field => `Línea ${index + 1}: ${field}`),
+));
+const missingHeaderFields = computed(() => {
+  const missing: string[] = [];
+  if (!subdiaryCode.value || !subdiaries.value.some(s => s.code === subdiaryCode.value)) missing.push('subdiario');
+  if (!headerDescription.value.trim()) missing.push('glosa general');
+  if (requiredCurrencyRates.value.some(rate => !isValidPositiveExchangeRate(rate.buy_rate) ||
+    !isValidPositiveExchangeRate(rate.sell_rate))) missing.push('tipos de cambio');
+  return missing;
+});
+const missingRequirements = computed(() => [...missingHeaderFields.value, ...missingDimensions.value]);
 
 // Historial de Asientos del Periodo
 const journalEntries = shallowRef<readonly JournalEntryResponse[]>([]);
@@ -339,6 +377,7 @@ const isBalanced = computed(() =>
       (credit.isPositive() && debit.isZero() && parseAmount(line.creditForeign).isPositive() && parseAmount(line.debitForeign).isZero());
   }),
 );
+const isReadyToPost = computed(() => isBalanced.value && missingRequirements.value.length === 0);
 
 // ==========================================
 // MÉTODOS DE FORMULARIO
@@ -362,8 +401,25 @@ function addLine(): void {
 
 function removeLine(index: number): void {
   if (lines.value.length > 2) {
-    lines.value.splice(index, 1);
+    const removed = lines.value.splice(index, 1)[0];
+    if (removed?.id === selectedLineId.value) selectedLineId.value = lines.value[Math.min(index, lines.value.length - 1)]?.id ?? null;
+    recalculateForeignAmounts();
   }
+}
+
+function selectLine(line: EditingLine): void {
+  selectedLineId.value = line.id;
+}
+
+async function showLineDimensions(line: EditingLine): Promise<void> {
+  selectLine(line);
+  await nextTick();
+  document.getElementById('journal-line-dimensions')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function changeAccount(line: EditingLine): void {
+  resetAccountDimensions(line);
+  selectLine(line);
 }
 
 function onAmountChange(line: EditingLine, side: 'debit' | 'credit', rawValue: string): void {
@@ -446,6 +502,7 @@ function resetDraft(): void {
       creditForeign: '',
     },
   ];
+  selectedLineId.value = lines.value[0]!.id;
   errorMessage.value = null;
   successMessage.value = null;
   foreignRoundingAdjustment.value = null;
@@ -567,6 +624,13 @@ async function handleSubmit(): Promise<void> {
   if (!isBalanced.value) {
     errorMessage.value =
       'El asiento se encuentra descuadrado. La suma del Debe debe ser exactamente igual a la suma del Haber.';
+    return;
+  }
+
+  if (missingDimensions.value.length) {
+    const first = lines.value.find(line => missingLineFields(line).length > 0);
+    if (first) selectLine(first);
+    errorMessage.value = `Complete los datos obligatorios: ${missingDimensions.value.join('; ')}.`;
     return;
   }
 
@@ -1054,8 +1118,8 @@ onMounted(() => {
       <div
         class="panel p-0 overflow-hidden"
       >
-        <div class="p-4 border-b border-line flex items-center justify-between">
-          <div class="flex items-center gap-2">
+        <div class="p-4 border-b border-line flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs font-semibold uppercase tracking-wider text-muted">
               Líneas del Asiento ({{ lines.length }})
             </span>
@@ -1064,7 +1128,7 @@ onMounted(() => {
             </span>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
               class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-surf border border-line text-foreground hover:bg-soft transition-colors cursor-pointer"
@@ -1072,7 +1136,7 @@ onMounted(() => {
               @click="autoBalance"
             >
               <Sparkles class="w-3.5 h-3.5 text-accent" />
-              <span>Balancear Asiento</span>
+              <span>Balancear</span>
             </button>
 
             <button
@@ -1081,13 +1145,13 @@ onMounted(() => {
               @click="addLine"
             >
               <Plus class="w-3.5 h-3.5" />
-              <span>Agregar Línea</span>
+              <span>Agregar línea</span>
             </button>
           </div>
         </div>
 
         <!-- Importe visible en fila principal; dimensiones únicamente si la cuenta las exige. -->
-        <div class="w-full overflow-x-auto">
+        <div class="hidden w-full overflow-x-auto lg:block">
           <table class="w-full min-w-[1040px] table-fixed border-collapse text-left text-xs">
             <thead>
               <tr class="border-b border-line bg-surface-muted text-[11px] font-bold uppercase text-muted">
@@ -1108,7 +1172,7 @@ onMounted(() => {
                   <td class="px-3 py-2">
                     <JournalAccountCombobox v-model="line.accountId"
                       :accounts="operationalAccounts" :disabled="isSubmitting || isLoading"
-                      @update:model-value="resetAccountDimensions(line)" />
+                      @update:model-value="changeAccount(line)" />
                   </td>
                   <td class="px-3 py-2">
                     <input v-model="line.description" type="text" :placeholder="headerDescription || 'Misma glosa general'"
@@ -1133,65 +1197,17 @@ onMounted(() => {
                     {{ line.creditForeign ? activeForeignCurrency.symbol + ' ' + line.creditForeign : '—' }}
                   </td>
                   <td class="px-2 py-2 text-center">
+                    <button v-if="requiresDimensions(line)" type="button"
+                      class="mb-1 block w-full rounded border px-1 py-1 text-[10px] font-semibold"
+                      :class="missingLineFields(line).length ? 'border-warn text-warn' : 'border-line text-brand'"
+                      :aria-label="`Editar dimensiones de línea ${idx + 1}`" @click="showLineDimensions(line)">
+                      {{ missingLineFields(line).length ? 'Completar' : 'Editar' }}
+                    </button>
                     <button type="button" :disabled="lines.length <= 2"
                       class="rounded-md p-1 text-muted hover:bg-red-500/10 hover:text-neg disabled:opacity-20"
                       :aria-label="'Eliminar línea ' + (idx + 1)" @click="removeLine(idx)">
                       <Trash2 class="h-4 w-4" />
                     </button>
-                  </td>
-                </tr>
-                <tr v-if="line.accountId && (
-                  operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ||
-                  operationalAccounts.find(a => a.id === line.accountId)?.has_automatic_destination ||
-                  entityRequired(operationalAccounts.find(a => a.id === line.accountId)) ||
-                  operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area ||
-                  operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area
-                )" class="bg-soft/40">
-                  <td></td>
-                  <td colspan="7" class="px-3 pb-3 pt-1">
-                    <div class="flex flex-wrap items-end gap-3">
-                      <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cost_center ||
-                        operationalAccounts.find(a => a.id === line.accountId)?.has_automatic_destination"
-                        class="min-w-[180px] flex-1 text-[11px] font-medium text-muted">
-                        Centro de costo obligatorio
-                        <select v-model="line.costCenterId" :disabled="isSubmitting"
-                          class="mt-1 block w-full rounded-md border border-line bg-surf px-2 py-2 text-xs text-foreground">
-                          <option :value="null">Seleccionar centro</option>
-                          <option v-for="cc in costCenters.filter(cc => cc.is_active)" :key="cc.id" :value="cc.id">
-                            {{ cc.code }} · {{ cc.name }}
-                          </option>
-                        </select>
-                      </label>
-                      <div v-if="entityRequired(operationalAccounts.find(a => a.id === line.accountId))" class="min-w-[210px] flex-1">
-                        <div class="mb-1 text-[11px] font-medium text-muted">Anexo / tercero obligatorio</div>
-                        <JournalEntityPicker :key="line.id + '-' + (line.accountId ?? 'none')"
-                          v-model="line.entity" :api="apiClient"
-                          :account="operationalAccounts.find(a => a.id === line.accountId)" :disabled="isSubmitting" />
-                      </div>
-                      <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_company_area"
-                        class="min-w-[210px] flex-1 text-[11px] font-medium text-muted">
-                        Área organizativa obligatoria
-                        <select v-model="line.companyAreaId" :disabled="isSubmitting"
-                          class="mt-1 block w-full rounded-md border border-line bg-surf px-2 py-2 text-xs text-foreground">
-                          <option :value="null">Seleccionar área organizativa</option>
-                          <option v-for="area in companyAreas.filter(area => area.is_active)" :key="area.id" :value="area.id">
-                            {{ area.code }} · {{ area.name }}
-                          </option>
-                        </select>
-                      </label>
-                      <label v-if="operationalAccounts.find(a => a.id === line.accountId)?.requires_cash_flow_area"
-                        class="min-w-[220px] flex-1 text-[11px] font-medium text-muted">
-                        Área de flujo de efectivo obligatoria
-                        <select v-model="line.cashFlowAreaId" :disabled="isSubmitting"
-                          class="mt-1 block w-full rounded-md border border-line bg-surf px-2 py-2 text-xs text-foreground">
-                          <option :value="null">Seleccionar flujo</option>
-                          <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(operationalAccounts.find(a => a.id === line.accountId), area))"
-                            :key="area.id" :value="area.id">
-                            {{ area.code }} · {{ area.name }}
-                          </option>
-                        </select>
-                      </label>
-                    </div>
                   </td>
                 </tr>
               </template>
@@ -1220,31 +1236,128 @@ onMounted(() => {
             </tfoot>
           </table>
         </div>
+        <!-- En teléfono cada partida se lee y edita completa sin desplazar una tabla de ocho columnas. -->
+        <div class="space-y-3 p-3 lg:hidden">
+          <section v-for="(line, idx) in lines" :key="line.id"
+            class="min-w-0 space-y-3 rounded-lg border border-line bg-surf p-3"
+            :aria-label="`Partida ${idx + 1}`">
+            <div class="flex items-center justify-between gap-2">
+              <strong class="text-sm text-foreground">Partida {{ idx + 1 }}</strong>
+              <button type="button" :disabled="lines.length <= 2"
+                class="rounded-md border border-line p-2 text-muted disabled:opacity-30"
+                :aria-label="`Eliminar línea ${idx + 1}`" @click="removeLine(idx)">
+                <Trash2 class="h-4 w-4" />
+              </button>
+            </div>
+            <div class="min-w-0">
+              <label class="mb-1 block text-xs font-semibold text-muted">Cuenta contable</label>
+              <JournalAccountCombobox v-model="line.accountId" :accounts="operationalAccounts"
+                :disabled="isSubmitting || isLoading" @update:model-value="changeAccount(line)" />
+            </div>
+            <label class="block text-xs font-semibold text-muted">
+              Glosa de la partida
+              <input v-model="line.description" type="text" :placeholder="headerDescription || 'Misma glosa general'"
+                class="mt-1 w-full min-w-0 rounded-md border border-line bg-surf px-3 py-2 text-sm font-normal text-foreground" />
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="min-w-0 text-xs font-semibold text-muted">Debe {{ baseCurrencyInfo.code }}
+                <input :value="line.debitLocal" type="text" inputmode="decimal" autocomplete="off"
+                  :aria-label="`Debe ${baseCurrencyInfo.code}, línea ${idx + 1}`" placeholder="0.00"
+                  class="mt-1 w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-right text-sm num text-foreground"
+                  @input="onAmountChange(line, 'debit', ($event.target as HTMLInputElement).value)" />
+              </label>
+              <label class="min-w-0 text-xs font-semibold text-muted">Haber {{ baseCurrencyInfo.code }}
+                <input :value="line.creditLocal" type="text" inputmode="decimal" autocomplete="off"
+                  :aria-label="`Haber ${baseCurrencyInfo.code}, línea ${idx + 1}`" placeholder="0.00"
+                  class="mt-1 w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-right text-sm num text-foreground"
+                  @input="onAmountChange(line, 'credit', ($event.target as HTMLInputElement).value)" />
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-2 rounded-md bg-soft px-3 py-2 text-xs text-muted num">
+              <span>Debe {{ activeForeignCurrency.code }}<br><strong class="text-foreground">{{ line.debitForeign ? activeForeignCurrency.symbol + ' ' + line.debitForeign : '—' }}</strong></span>
+              <span>Haber {{ activeForeignCurrency.code }}<br><strong class="text-foreground">{{ line.creditForeign ? activeForeignCurrency.symbol + ' ' + line.creditForeign : '—' }}</strong></span>
+            </div>
+            <button v-if="requiresDimensions(line)" type="button"
+              class="w-full rounded-md border px-3 py-2 text-left text-xs font-semibold"
+              :class="missingLineFields(line).length ? 'border-warn text-warn' : 'border-line text-brand'"
+              @click="showLineDimensions(line)">
+              {{ missingLineFields(line).length ? `Completar: ${missingLineFields(line).join(', ')}` : 'Ver dimensiones de esta partida' }}
+            </button>
+          </section>
+          <div class="rounded-lg border border-line bg-soft p-3 text-xs text-foreground">
+            <p class="mb-2 font-semibold">Totales del asiento</p>
+            <div class="grid grid-cols-2 gap-2 num">
+              <span>Debe {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(2) }}</strong></span>
+              <span>Haber {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(2) }}</strong></span>
+              <span>Debe {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(4) }}</strong></span>
+              <span>Haber {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(4) }}</strong></span>
+            </div>
+            <p class="mt-3 font-semibold" :class="diffLocal.isZero() && diffForeign.isZero() ? 'text-pos' : 'text-neg'">
+              Diferencia: {{ baseCurrencyInfo.symbol }} {{ diffLocal.toDisplay(4) }} · {{ activeForeignCurrency.symbol }} {{ diffForeign.toDisplay(4) }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Un solo panel de dimensiones para la partida seleccionada. -->
+      <div v-if="selectedLine && requiresDimensions(selectedLine)" class="panel min-w-0 space-y-3" id="journal-line-dimensions">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-semibold text-foreground">Datos de la partida {{ selectedLineIndex + 1 }}</h2>
+          <span v-if="missingLineFields(selectedLine).length" class="text-xs text-warn">
+            Falta: {{ missingLineFields(selectedLine).join(', ') }}
+          </span>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label v-if="accountFor(selectedLine)?.requires_cost_center || accountFor(selectedLine)?.has_automatic_destination"
+            class="min-w-0 text-xs font-medium text-muted">Centro de costo obligatorio
+            <select v-model="selectedLine.costCenterId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
+              <option :value="null">Seleccionar centro</option>
+              <option v-for="cc in costCenters.filter(cc => cc.is_active)" :key="cc.id" :value="cc.id">{{ cc.code }} · {{ cc.name }}</option>
+            </select>
+          </label>
+          <div v-if="entityRequired(accountFor(selectedLine))" class="min-w-0">
+            <div class="mb-1 text-xs font-medium text-muted">Anexo / tercero obligatorio</div>
+            <JournalEntityPicker :key="selectedLine.id + '-' + selectedLine.accountId"
+              v-model="selectedLine.entity" :api="apiClient" :account="accountFor(selectedLine)" :disabled="isSubmitting" />
+          </div>
+          <label v-if="accountFor(selectedLine)?.requires_company_area" class="min-w-0 text-xs font-medium text-muted">Área organizativa obligatoria
+            <select v-model="selectedLine.companyAreaId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
+              <option :value="null">Seleccionar área organizativa</option>
+              <option v-for="area in companyAreas.filter(area => area.is_active)" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
+            </select>
+          </label>
+          <label v-if="accountFor(selectedLine)?.requires_cash_flow_area" class="min-w-0 text-xs font-medium text-muted">Área de flujo de efectivo obligatoria
+            <select v-model="selectedLine.cashFlowAreaId" class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-sm text-foreground">
+              <option :value="null">Seleccionar flujo</option>
+              <option v-for="area in cashFlowAreas.filter(area => cashFlowMatches(selectedAccount, area))" :key="area.id" :value="area.id">{{ area.code }} · {{ area.name }}</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <!-- Barra de Estado de Balance y Acciones Finales -->
       <div
         class="panel flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        :class="isBalanced ? 'border-pos/50 bg-pos/5' : 'border-warn/50 bg-warn/5'"
+        :class="isReadyToPost ? 'border-pos/50 bg-pos/5' : 'border-warn/50 bg-warn/5'"
       >
         <div class="flex items-center gap-3">
           <div
             class="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
-            :class="isBalanced ? 'bg-pos/20 text-pos' : 'bg-warn/20 text-warn'"
+            :class="isReadyToPost ? 'bg-pos/20 text-pos' : 'bg-warn/20 text-warn'"
           >
-            <CheckCircle2 v-if="isBalanced" class="w-5 h-5 text-pos" />
+            <CheckCircle2 v-if="isReadyToPost" class="w-5 h-5 text-pos" />
             <AlertTriangle v-else class="w-5 h-5 text-warn" />
           </div>
 
           <div>
             <p class="text-xs font-semibold text-foreground">
-              {{ isBalanced ? 'Asiento Contable Listo para Asentar' : 'Asiento Incompleto o Descuadrado' }}
+              {{ isReadyToPost ? 'Asiento listo para registrar' : isBalanced ? 'Faltan datos obligatorios' : 'Asiento incompleto o descuadrado' }}
             </p>
             <p class="text-[11px] text-muted">
               {{
-                isBalanced
-                  ? 'Cumple con los principios de Partida Doble en Soles y Dólares. Se grabará de forma inmutable.'
-                  : 'Para asentar, verifique que la diferencia sea S/ 0.00 y que todas las cuentas estén seleccionadas.'
+                isReadyToPost
+                  ? 'Las partidas cuadran y sus datos obligatorios están completos.'
+                  : isBalanced ? `Complete: ${missingRequirements.join('; ')}.` : 'Para registrar, complete las partidas y cuadre ambos importes.'
               }}
             </p>
             <p v-if="foreignRoundingAdjustment" class="mt-1 text-[11px] text-muted">
@@ -1253,7 +1366,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="flex items-center gap-2.5">
+        <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
           <button
             type="button"
             class="px-4 py-2 rounded-md border border-line text-xs font-medium text-muted hover:text-foreground bg-surf transition-colors cursor-pointer"
@@ -1264,13 +1377,13 @@ onMounted(() => {
 
           <button
             type="button"
-            :disabled="!isBalanced || isSubmitting"
-            class="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-md text-xs font-semibold text-white bg-brand hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+            :disabled="!isReadyToPost || isSubmitting || isLoading"
+            class="inline-flex min-w-0 flex-1 items-center justify-center gap-2 px-4 py-2 rounded-md text-xs font-semibold text-white bg-brand hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all sm:flex-none"
             @click="handleSubmit"
           >
             <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
             <Save v-else class="w-4 h-4 text-white" />
-            <span>{{ isSubmitting ? 'Asentando en Libro Diario...' : 'Asentar Asiento (Post Journal)' }}</span>
+            <span>{{ isSubmitting ? 'Registrando...' : 'Registrar asiento' }}</span>
           </button>
         </div>
       </div>

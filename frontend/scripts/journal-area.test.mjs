@@ -48,10 +48,11 @@ test('switching journal account clears all four dimensions without changing amou
 
 test('journal view wires account reset, conditional dimensions and compact exchange rates', () => {
   const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
-  assert.match(view, /@update:model-value="resetAccountDimensions\(line\)"/);
+  assert.match(view, /@update:model-value="changeAccount\(line\)"/);
+  assert.match(view, /resetAccountDimensions\(line\)/);
   assert.match(view, /:disabled="isSubmitting"/);
   assert.match(view, /requires_cost_center/);
-  assert.match(view, /entityRequired\(operationalAccounts\.find/);
+  assert.match(view, /entityRequired\(accountFor\(selectedLine\)\)/);
   assert.match(view, /requires_company_area/);
   assert.doesNotMatch(view, /\+ Centro opcional|\+ Anexo opcional/);
   assert.match(view, /:key="line\.id/);
@@ -134,10 +135,15 @@ test('subdiary master is a separate company-scoped route with controlled CRUD', 
   assert.match(api, /\/api\/v1\/company\/subdiaries/);
 });
 
-test('journal editor keeps bimonetary amount columns on the primary row with conditional dimensions beneath', () => {
+test('journal editor keeps desktop amounts in columns and mobile amounts in cards with one dimensions panel', () => {
   const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
   assert.match(view, /min-w-\[1040px\]/);
-  assert.match(view, /<td colspan="7"/);
+  assert.match(view, /class="hidden w-full overflow-x-auto lg:block"/);
+  assert.match(view, /class="space-y-3 p-3 lg:hidden"/);
+  assert.match(view, /selectedLine && requiresDimensions\(selectedLine\)/);
+  assert.doesNotMatch(view, /<td colspan="7"/);
+  assert.match(view, /isReadyToPost = computed\(\(\) => isBalanced\.value && missingRequirements\.value\.length === 0\)/);
+  assert.match(view, /const missingRequirements = computed\(\(\) => \[\.\.\.missingHeaderFields\.value, \.\.\.missingDimensions\.value\]\)/);
   assert.match(view, /Centro de costo obligatorio/);
   assert.match(view, /Anexo \/ tercero obligatorio/);
   assert.match(view, /Área organizativa obligatoria/);
