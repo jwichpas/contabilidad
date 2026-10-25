@@ -21,7 +21,7 @@ final readonly class ListSeeCatalogController
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
             'version' => ['sometimes', 'string', 'max:40', 'alpha_dash'],
             // La consulta global se descarga una vez y se filtra localmente en el navegador.
-            'per_page' => ['sometimes', 'integer', 'between:1,2000'],
+            'per_page' => ['sometimes', 'integer', 'between:1,3000'],
         ]);
         $latest = DB::table('see_catalog_versions')->where('catalog_number', $number)
             ->orderByDesc('version')->first();

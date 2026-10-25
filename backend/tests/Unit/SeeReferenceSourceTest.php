@@ -79,3 +79,18 @@ it('pins the UN/CEFACT country snapshot and its source CSV', function (): void {
         ->and($codes)->toContain('PE', 'AX')
         ->and($codes)->not->toContain('AN');
 });
+
+it('pins the full UNECE Rec. 20 revision 17 and retains its lifecycle flags', function (): void {
+    $path = database_path('reference_data/see_catalog_03_unece_rec20_rev17_2021.json');
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    $statuses = array_count_values(array_column($source['rows'], 2));
+    expect(hash_file('sha256', $path))->toBe('ad2796d90c3d7eaa645f2f835f61c9c858d96edad3c40e8dca34c6bbace94115')
+        ->and($source['source_xlsx_sha256'])->toBe('994a85c3682e67604d42dbda3b35d672338a45b400f5397a96a4c5467ee8056d')
+        ->and($source['rows'])->toHaveCount(2136)
+        ->and(array_unique($codes))->toHaveCount(2136)
+        ->and(array_column($source['rows'], 1, 0)['A11'])->toBe('angstrom')
+        ->and($statuses['X'])->toBe(309)
+        ->and($statuses['D'])->toBe(71)
+        ->and($statuses['¦'])->toBe(1);
+});

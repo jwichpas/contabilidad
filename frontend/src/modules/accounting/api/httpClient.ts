@@ -363,7 +363,7 @@ export class AccountingApiClient {
     number: string,
     params: { readonly q: string; readonly page: number; readonly version?: string; readonly signal?: AbortSignal },
   ): Promise<SeePage<SeeCatalogItem>> {
-    const query = new URLSearchParams({ page: String(params.page), per_page: '2000' });
+    const query = new URLSearchParams({ page: String(params.page), per_page: '3000' });
     if (params.q.trim()) query.set('q', params.q.trim());
     if (params.version && params.version !== 'latest') query.set('version', params.version);
     return this.request<SeePage<SeeCatalogItem>>(

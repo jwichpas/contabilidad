@@ -9,7 +9,7 @@ it('keeps SEE separate from PLE and preserves the source ambiguity', function ()
         ['email' => 'see-reference-test@example.test'],
         ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
     );
-    $see = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/03?q=A11');
+    $see = $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/03?version=historical&q=A11');
     $see->assertOk()->assertJsonPath('meta.catalog_number', '03')
         ->assertJsonPath('meta.total', 2)
         ->assertJsonPath('data.0.is_ambiguous', true)
@@ -26,7 +26,9 @@ it('keeps SEE separate from PLE and preserves the source ambiguity', function ()
     $this->getJson('/api/v1/catalogs/sunat-see/02?q=&page=1&per_page=25')
         ->assertOk()->assertJsonPath('meta.total', 178);
     $this->getJson('/api/v1/catalogs/sunat-see/03?per_page=2000')
-        ->assertOk()->assertJsonPath('meta.total', 1091)->assertJsonCount(1091, 'data');
+        ->assertOk()->assertJsonPath('meta.total', 2136)->assertJsonCount(2000, 'data');
+    $this->getJson('/api/v1/catalogs/sunat-see/03?per_page=3000')
+        ->assertOk()->assertJsonPath('meta.total', 2136)->assertJsonCount(2136, 'data');
     $this->getJson('/api/v1/catalogs/sunat-see/13')
         ->assertOk()->assertJsonPath('meta.item_count', 0);
 });
@@ -133,4 +135,20 @@ it('returns the UN/CEFACT country edition separately from the historical country
         ->assertOk()->assertJsonPath('meta.total', 0);
     $this->getJson('/api/v1/catalogs/sunat-see/04?version=historical&q=ZR')
         ->assertOk()->assertJsonPath('meta.total', 1);
+});
+
+it('shows the complete UNECE units edition with status marks while keeping ambiguous historical A11', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat-see/03?q=A11')
+        ->assertOk()->assertJsonPath('meta.version', '2021-rev17')
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.description', 'angstrom')
+        ->assertJsonPath('data.0.is_ambiguous', false);
+    $result = $this->getJson('/api/v1/catalogs/sunat-see/03?per_page=3000')->assertOk();
+    expect(collect($result->json('data'))->firstWhere('code', '05')['details']['Estado fuente'])->toBe('X');
+    $this->getJson('/api/v1/catalogs/sunat-see/03?version=historical&q=A11')
+        ->assertOk()->assertJsonPath('meta.total', 2);
 });
