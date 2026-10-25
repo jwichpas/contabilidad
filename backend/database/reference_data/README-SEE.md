@@ -92,6 +92,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_160000_add_ple_table_28_historical_net_equity.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_170000_add_ple_table_30_acquisition_classification.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_180000_add_ple_table_32_nonresident_service.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_190000_add_ple_table_33_historical_exemptions.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -222,3 +223,9 @@ un sujeto no domiciliado. `2026_10_25_180000` las publica como edición PLE hist
 global y de solo lectura, con hash del anexo original y del JSON fijados. No se usa
 para calcular retenciones ni rentas de fuente peruana y no se fusiona con la Tabla 20
 del Anexo 1 SIRE, que mantiene su propio espacio de claves y su propia edición.
+La Tabla 33 PLE del mismo anexo enumera seis supuestos de exoneración de operaciones
+de no domiciliados. `2026_10_25_190000` los conserva como archivo histórico de 2015,
+separado de cualquier decisión tributaria operativa. El texto del código `6` incluye
+una frase irregular en el impreso oficial y se reproduce con esa advertencia, sin
+corregirla por conjetura. No asumir vigencia del artículo 19 ni conceder exoneraciones
+sin cotejar ley, condiciones, sujetos y período de la operación.

@@ -510,6 +510,20 @@ it('lists the historical PLE service modalities independently of SIRE table 20',
     $this->getJson('/api/v1/catalogs/sunat/32?version=legacy-seed')->assertNotFound();
 });
 
+it('exposes historical PLE exemption codes without granting exemptions in operations', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/33')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.table_number', '33')
+        ->assertJsonPath('meta.total', 6)
+        ->assertJsonPath('meta.available_versions.0', '2015-06-anexo-3')
+        ->assertJsonFragment(['code' => '2', 'name' => 'Las rentas de los inmuebles de propiedad de organismos internacionales que les sirvan de sede.']);
+    $this->getJson('/api/v1/catalogs/sunat/33?version=legacy-seed')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

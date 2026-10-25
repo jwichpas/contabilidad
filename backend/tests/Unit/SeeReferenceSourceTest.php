@@ -221,6 +221,17 @@ it('pins the three PLE service modalities separately from SIRE table 20', functi
         ->and($source['rows'][1])->toBe(['2', 'SERVICIO PRESTADO PARTE EN EL PERÚ Y PARTE EN EL EXTRANJERO']);
 });
 
+it('pins the six historical PLE exemption codes without asserting present-day eligibility', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_33_nonresident_exemptions_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('5566f634e6f45c8657b7471f4fae00fc732b7af4103c58e5846bc9ca1286b783')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and($source['table_number'])->toBe('33')
+        ->and($source['classification'])->toBe('SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE')
+        ->and(array_column($source['rows'], 0))->toBe(['1', '2', '3', '4', '5', '6'])
+        ->and($source['rows'][5][1])->toContain('brutos que perciben las representaciones de países.');
+});
+
 it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
