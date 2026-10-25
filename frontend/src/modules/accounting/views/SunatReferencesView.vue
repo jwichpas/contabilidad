@@ -28,7 +28,7 @@ const rucDatasets = [
 type RucDataset = typeof rucDatasets[number]['number'];
 type Source = 'ple' | 'ruc';
 interface ReferenceRow { code: string; description: string; details: string; }
-interface ReferenceResult { rows: ReferenceRow[]; edition: string | null; sourceUrl: string | null; }
+interface ReferenceResult { rows: ReferenceRow[]; edition: string | null; sourceUrl: string | null; amendmentUrl: string | null; }
 const source = shallowRef<Source>('ple');
 const pleNumber = shallowRef<string>('01');
 const selectedEdition = shallowRef<'latest' | 'legacy-seed'>('latest');
@@ -40,7 +40,7 @@ const pageSize = 25;
 const choices = computed(() => source.value === 'ple' ? pleTables : rucDatasets);
 const selected = computed(() => source.value === 'ple' ? pleNumber.value : rucNumber.value);
 const selectedName = computed(() => choices.value.find((entry) => entry.number === selected.value)?.name ?? selected.value);
-const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '03', '05', '06', '10', '11', '12'].includes(pleNumber.value));
+const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '03', '05', '06', '08', '10', '11', '12'].includes(pleNumber.value));
 function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
 }
@@ -72,6 +72,7 @@ const query = useQuery({
         rows: response.data.map((item) => ({ code: item.code, description: item.description, details: '' })),
         edition: response.meta.version ?? null,
         sourceUrl: response.meta.source_url ?? null,
+        amendmentUrl: response.meta.amendment_url ?? null,
       };
     }
     const items = await client.fetchSunatRucReference(number as RucDataset, signal);
@@ -81,7 +82,7 @@ const query = useQuery({
         ? `División ${additional.division ?? ''} · Grupo ${additional.group_code ?? ''}`
         : number === 'tax-codes' ? (additional.short_name ?? '') : '';
       return { code: item.code, description: item.name, details };
-    }), edition: null, sourceUrl: null };
+    }), edition: null, sourceUrl: null, amendmentUrl: null };
   },
   staleTime: 30 * 60 * 1000, gcTime: 30 * 60 * 1000, retry: 1, refetchOnWindowFocus: false,
 });
@@ -114,11 +115,11 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <button type="button" :aria-pressed="source === 'ple'" :class="source === 'ple' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ple')">Tablas PLE</button>
       <button type="button" :aria-pressed="source === 'ruc'" :class="source === 'ruc' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground hover:bg-soft'" class="rounded-md px-3 py-2 text-sm font-medium" @click="chooseSource('ruc')">Anexos RUC y CIIU</button>
     </div>
-    <p class="text-sm text-muted">{{ source === 'ple' ? 'Nueve tablas PLE disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
+    <p class="text-sm text-muted">{{ source === 'ple' ? 'Ocho tablas PLE y la Tabla 8 de libros tributarios disponibles. SIRE y SEE usan referencias independientes.' : 'Anexos del RUC y clasificación CIIU; sus números no equivalen a tablas PLE.' }}</p>
     <div class="space-y-4 rounded-xl border border-border bg-surface p-4">
       <div class="grid gap-3 md:grid-cols-2">
         <div class="min-w-0 text-xs font-medium text-muted">
-          <span id="sunat-table-label">{{ source === 'ple' ? 'Tabla SUNAT PLE' : 'Anexo RUC o CIIU' }}</span>
+          <span id="sunat-table-label">{{ source === 'ple' ? 'Tabla SUNAT de libros / PLE' : 'Anexo RUC o CIIU' }}</span>
           <Combobox :key="source" :model-value="selected" @update:model-value="chooseTable">
             <div class="relative mt-1.5">
               <div class="flex w-full items-center rounded-md border border-border bg-surface text-foreground focus-within:ring-2 focus-within:ring-brand">
@@ -138,9 +139,9 @@ watch(searchInput, () => { pageIndex.value = 0; });
           <span class="relative mt-1.5 block"><Search class="absolute left-3 top-3 h-4 w-4" /><input v-model="searchInput" type="search" maxlength="100" class="w-full rounded-md border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand" placeholder="Código o descripción…" /></span>
         </label>
       </div>
-      <div v-if="hasEditions" class="flex flex-wrap items-center gap-2 text-xs" aria-label="Edición PLE">
+      <div v-if="hasEditions" class="flex flex-wrap items-center gap-2 text-xs" aria-label="Edición de la tabla">
         <span class="text-muted">Edición:</span>
-        <button type="button" :aria-pressed="selectedEdition === 'latest'" :class="selectedEdition === 'latest' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground'" class="rounded-md px-3 py-1.5" @click="selectedEdition = 'latest'; pageIndex = 0">Anexo cotejado</button>
+        <button type="button" :aria-pressed="selectedEdition === 'latest'" :class="selectedEdition === 'latest' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground'" class="rounded-md px-3 py-1.5" @click="selectedEdition = 'latest'; pageIndex = 0">{{ pleNumber === '08' ? 'Tabla cotejada' : 'Anexo cotejado' }}</button>
         <button type="button" :aria-pressed="selectedEdition === 'legacy-seed'" :class="selectedEdition === 'legacy-seed' ? 'bg-brand text-on-brand' : 'border border-border bg-surface text-foreground'" class="rounded-md px-3 py-1.5" @click="selectedEdition = 'legacy-seed'; pageIndex = 0">Carga inicial</button>
       </div>
       <p class="text-sm text-muted">{{ selectedName }} · {{ rows.length.toLocaleString('es-PE') }} registros disponibles.</p>
@@ -149,9 +150,8 @@ watch(searchInput, () => { pageIndex.value = 0; });
       <p v-if="source === 'ple' && pleNumber === '12' && selectedEdition === 'latest'" class="text-xs text-muted">La edición cotejada contiene 47 operaciones de inventario. La carga inicial tiene 17 y asigna otro significado al código 07; no use ambas ediciones indistintamente en el kardex.</p>
       <p v-if="source === 'ple' && pleNumber === '11' && selectedEdition === 'latest'" class="text-xs text-muted">Los 30 códigos corresponden a la Tabla 11 PLE de 2015; no acreditan qué dependencias siguen operativas ni sustituyen la Tabla 4 de SIRE.</p>
       <p v-if="source === 'ple' && pleNumber === '10' && selectedEdition === 'latest'" class="text-xs text-muted">La lista PLE de 2015 contiene 61 tipos. Cada libro y campo puede restringir los códigos admitidos; esta lista no habilita la emisión de comprobantes ni concede crédito fiscal.</p>
-      <p v-if="source === 'ple' && pleNumber === '08' && !query.isPending.value && !query.isError.value" class="text-xs text-muted">Estos códigos proceden de la carga inicial de libros tributarios. La Tabla 08 no figura en el Anexo 3 PLE de 2015 y está pendiente su conciliación con una fuente propia.</p>
-      <p v-else-if="source === 'ple' && query.data.value?.edition === 'legacy-seed'" class="text-xs text-muted">Carga inicial preservada como histórico, sin verificación de vigencia.</p>
-      <p v-else-if="source === 'ple' && !query.isPending.value && !query.isError.value" class="text-xs text-muted">Fuente inicial pendiente de conciliación y versionado.</p>
+      <p v-if="source === 'ple' && pleNumber === '08' && query.data.value?.edition === '2008-rs239'" class="text-xs text-muted">Tabla 8 de la R.S. 234-2006/SUNAT y código 5-A añadido por la R.S. 239-2008/SUNAT. No es la Tabla 08 del Anexo 3 PLE ni confirma obligatoriedad por régimen o vigencia individual en 2026. <a v-if="query.data.value?.sourceUrl" class="underline" :href="query.data.value.sourceUrl" target="_blank" rel="noopener noreferrer">Ver tabla SUNAT</a><template v-if="query.data.value?.amendmentUrl"> · <a class="underline" :href="query.data.value.amendmentUrl" target="_blank" rel="noopener noreferrer">Ver modificación</a></template></p>
+      <p v-if="source === 'ple' && query.data.value?.edition === 'legacy-seed'" class="text-xs text-muted">Carga inicial preservada como histórico, sin verificación de vigencia.</p>
       <p v-if="query.isError.value" role="alert" class="rounded-md border border-neg/30 bg-neg/10 px-3 py-2 text-sm text-neg">{{ query.error.value instanceof Error ? query.error.value.message : 'No se pudo cargar la tabla.' }} <button type="button" class="ml-2 underline" @click="query.refetch()">Reintentar</button></p>
       <p v-else-if="query.isPending.value" role="status" class="py-8 text-center text-sm text-muted">Cargando referencias…</p>
       <template v-else>

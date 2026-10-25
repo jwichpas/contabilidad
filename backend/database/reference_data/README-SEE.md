@@ -145,10 +145,14 @@ BONIFICACIÓN en el anexo, mientras la carga inicial lo llama PROMOCIÓN. La mig
 operativa para no reinterpretar movimientos del kardex. La API de consulta muestra el anexo por
 defecto y `?version=legacy-seed` permite revisar el significado original; la edición PLE 12
 es independiente de SEE 12 y de SIRE.
-La llamada tabla 08 del sistema enumera libros y registros tributarios de una carga inicial;
-no aparece como Tabla 08 en ese Anexo 3 PLE. Requiere su propia fuente y conciliación antes
-de declarar una edición normativa verificada. El nombre de la vista ya no la denomina
-«Libros y registros electrónicos».
+La Tabla 08 del sistema corresponde a la Tabla 8 «Código del libro o registro» de la
+R.S. 234-2006/SUNAT, no al Anexo 3 PLE de 2015. La hoja XLS oficial enumera 31 códigos
+(`1`–`31`); la R.S. 239-2008/SUNAT incorporó `5-A`, sumando 32. La migración
+`2026_10_25_090000` publica esta edición `2008-rs239` en tablas de consulta independientes
+y conserva los 20 registros de la carga original como `legacy-seed`. No cambia la tabla
+operativa ni traslada su `ple_book_code` o la marca de obligatoriedad al conjunto oficial:
+la Tabla 8 no define esas reglas. La vigencia individual en 2026 requiere cotejo normativo;
+el espacio de claves tampoco corresponde a SEE 08 o SIRE 08.
 La Tabla 11 PLE de aduanas tiene 30 códigos en el Anexo 3 de 2015, frente a 22 en la carga
 original. La migración `2026_10_25_070000` conserva esas 22 filas como `legacy-seed` y publica
 los 30 pares del anexo para consulta, sin alterar `sunat_table_11_customs_dependencies` ni

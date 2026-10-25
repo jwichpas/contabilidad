@@ -333,10 +333,10 @@ export class AccountingApiClient {
     tableNumber: number | string,
     signal?: AbortSignal,
     version: 'latest' | 'legacy-seed' = 'latest',
-  ): Promise<{ data: readonly SunatCatalogItem[]; meta: { version?: string; classification?: string; source_url?: string | null } }> {
+  ): Promise<{ data: readonly SunatCatalogItem[]; meta: { version?: string; classification?: string; source_url?: string | null; amendment_url?: string | null } }> {
     const num = String(tableNumber).padStart(2, '0');
     const suffix = version === 'legacy-seed' ? '?version=legacy-seed' : '';
-    const rawPayload = await this.request<{ data: SunatCatalogItem[]; meta: { version?: string; classification?: string; source_url?: string | null } }>(
+    const rawPayload = await this.request<{ data: SunatCatalogItem[]; meta: { version?: string; classification?: string; source_url?: string | null; amendment_url?: string | null } }>(
       `/api/v1/catalogs/sunat/${num}${suffix}`,
       { method: 'GET', signal },
       false,

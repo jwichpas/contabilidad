@@ -120,6 +120,21 @@ it('pins sixty-one PLE Annex 3 document types independently of SEE and SIRE', fu
         ->and($codes)->not->toContain('47', '57');
 });
 
+it('pins the distinct SUNAT Table 8 and the 2008 addition without inventing PLE obligations', function (): void {
+    $path = __DIR__.'/../../database/reference_data/sunat_table_08_rs234_2006_rs239_2008.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('4b715c3134df8fb22c3a5e487d9824a67e6ae16327403a39991326583654d573')
+        ->and($source['source_xls_sha256'])->toBe('e036ba3a62a2043bd6acd87776167ff72fbee77b4ce3811f29996ef41a882f68')
+        ->and($source['amendment_pdf_sha256'])->toBe('8133e965817f15130bf8dd48c9e65056058ee51bec09c8ecb2a8888c39c0cb44')
+        ->and($source['table_number'])->toBe('08')
+        ->and($source['classification'])->toBe('SUNAT_RS_234_2006_TABLE_8_WITH_RS_239_2008_AMENDMENT_REFERENCE')
+        ->and($source['rows'])->toHaveCount(32)
+        ->and(array_unique($codes))->toHaveCount(32)
+        ->and($codes)->toBe(array_merge(array_map('strval', range(1, 5)), ['5-A'], array_map('strval', range(6, 31))))
+        ->and(array_column($source['rows'], 1, 0)['5-A'])->toBe('LIBRO DIARIO DE FORMATO SIMPLIFICADO');
+});
+
 it('pins each reconciled annex fixture and its added code', function (): void {
     foreach ([
         ['15', '2017_anexo_e', '9f96ed5017b3d7eca4fdb81b8c89ad275d68e743abe5b4c9a4357a95635d26e6', 41, '2008'],

@@ -38,18 +38,20 @@ final readonly class ListSunatCatalogController
             default => throw new NotFoundHttpException("La tabla SUNAT '{$tableNumber}' no está registrada en el sistema."),
         };
 
-        if (in_array($normalized, ['01', '02', '03', '05', '06', '10', '11', '12'], true)) {
+        if (in_array($normalized, ['01', '02', '03', '05', '06', '08', '10', '11', '12'], true)) {
+            $latest = $normalized === '08' ? '2008-rs239' : '2015-06-anexo-3';
             $version = $request->query('version', 'latest');
-            if (! is_string($version) || ! in_array($version, ['latest', '2015-06-anexo-3', 'legacy-seed'], true)) {
+            if (! is_string($version) || ! in_array($version, ['latest', $latest, 'legacy-seed'], true)) {
                 throw new NotFoundHttpException("Edición PLE {$normalized} no registrada.");
             }
-            $resolved = $version === 'latest' ? '2015-06-anexo-3' : $version;
+            $resolved = $version === 'latest' ? $latest : $version;
             $versions = match ($normalized) {
                 '01' => 'ple_payment_method_versions',
                 '02' => 'ple_identity_document_versions',
                 '03' => 'ple_financial_institution_versions',
                 '05' => 'ple_inventory_type_versions',
                 '06' => 'ple_measurement_unit_versions',
+                '08' => 'sunat_book_code_versions',
                 '10' => 'ple_document_type_versions',
                 '11' => 'ple_customs_dependency_versions',
                 '12' => 'ple_inventory_operation_versions',
@@ -60,6 +62,7 @@ final readonly class ListSunatCatalogController
                 '03' => 'ple_financial_institution_version_items',
                 '05' => 'ple_inventory_type_version_items',
                 '06' => 'ple_measurement_unit_version_items',
+                '08' => 'sunat_book_code_version_items',
                 '10' => 'ple_document_type_version_items',
                 '11' => 'ple_customs_dependency_version_items',
                 '12' => 'ple_inventory_operation_version_items',
@@ -81,9 +84,11 @@ final readonly class ListSunatCatalogController
                     'table_number' => $normalized, 'total' => $items->count(), 'version' => $resolved,
                     'classification' => $edition->classification,
                     'source_url' => $edition->source_url,
-                    'available_versions' => ['2015-06-anexo-3', 'legacy-seed'],
+                    'amendment_url' => $normalized === '08' ? $edition->amendment_url : null,
+                    'available_versions' => [$latest, 'legacy-seed'],
                     'operational_status_verified' => $normalized === '03' ? false : null,
                     'document_use_verified' => $normalized === '10' ? false : null,
+                    'book_obligation_verified' => $normalized === '08' ? false : null,
                 ],
             ]);
         }

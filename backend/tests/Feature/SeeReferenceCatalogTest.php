@@ -327,6 +327,27 @@ it('exposes the PLE document reference without authorizing issue or tax credit',
         ->assertJsonPath('meta.catalog_number', '01');
 });
 
+it('serves SUNAT book codes separately from PLE Annex 3, SEE and SIRE', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/08')->assertOk()
+        ->assertJsonPath('meta.version', '2008-rs239')
+        ->assertJsonPath('meta.total', 32)
+        ->assertJsonPath('meta.book_obligation_verified', false)
+        ->assertJsonPath('meta.available_versions.0', '2008-rs239')
+        ->assertJsonFragment(['code' => '5-A', 'name' => 'LIBRO DIARIO DE FORMATO SIMPLIFICADO',
+            'ple_book_code' => null, 'is_compulsory_general_regime' => null]);
+    $this->getJson('/api/v1/catalogs/sunat/08?version=2008-rs239')->assertOk()
+        ->assertJsonPath('meta.total', 32);
+    $this->getJson('/api/v1/catalogs/sunat/08?version=legacy-seed')->assertOk()
+        ->assertJsonPath('meta.total', 20)
+        ->assertJsonFragment(['code' => '4', 'name' => 'LIBRO DE RETENCIONES INCISOS E) Y F) ART. 34 LIR']);
+    $this->getJson('/api/v1/catalogs/sunat/08?version=2015-06-anexo-3')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat/08?version=other')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],
