@@ -234,6 +234,24 @@ it('archives the six seeded inventory types and returns nineteen PLE Annex 3 ent
     $this->getJson('/api/v1/catalogs/sunat/05?version=other')->assertNotFound();
 });
 
+it('displays PLE units as annex codes and keeps numeric legacy and SEE codes separate', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/06')->assertOk()
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.total', 62)
+        ->assertJsonFragment(['code' => 'KGM', 'name' => 'KILOGRAMO'])
+        ->assertJsonFragment(['code' => 'NIU', 'name' => 'UNIDAD (BIENES)']);
+    $this->getJson('/api/v1/catalogs/sunat/06?version=legacy-seed')->assertOk()
+        ->assertJsonPath('meta.total', 16)
+        ->assertJsonFragment(['code' => '07', 'symbol' => 'NIU']);
+    $this->getJson('/api/v1/catalogs/sunat-see/03?q=KGM')->assertOk()
+        ->assertJsonPath('meta.version', '2021-rev17');
+    $this->getJson('/api/v1/catalogs/sunat/06?version=other')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

@@ -77,6 +77,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_010000_reconcile_ple_table_01_payment_methods.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_020000_reconcile_ple_table_02_identity_documents.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_030000_reconcile_ple_table_05_inventory_types.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_040000_version_ple_table_06_measurement_units.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -123,3 +124,9 @@ de cuenta PCGE pertenecen al sistema y no a SUNAT; las filas nuevas no reciben u
 La Tabla 03 PLE de entidades financieras requiere otro tratamiento: la edición 2015 tiene cinco
 códigos más que la carga, pero mezcla bancos históricos. No habilitar esas entidades como bancos
 operativos sin contrastar una fuente oficial actual y los periodos de vigencia.
+La Tabla 06 PLE del Anexo 3 enumera 62 claves como `KGM`, `LTR` y `NIU`, mientras la carga
+original usa 16 claves numéricas (`01`–`15`, `99`) con un símbolo comercial asociado. Son dos
+espacios de códigos: la migración `2026_10_25_040000` conserva las 16 filas sin modificarlas
+y publica la edición de 62 en tablas PLE versionadas. La API muestra el anexo por defecto y
+admite `?version=legacy-seed` para la carga numérica. Esta edición PLE es independiente del
+Catálogo SEE 03 y de la revisión UNECE 2021; no confirma vigencia normativa en 2026.

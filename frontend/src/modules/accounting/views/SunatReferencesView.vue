@@ -40,7 +40,7 @@ const pageSize = 25;
 const choices = computed(() => source.value === 'ple' ? pleTables : rucDatasets);
 const selected = computed(() => source.value === 'ple' ? pleNumber.value : rucNumber.value);
 const selectedName = computed(() => choices.value.find((entry) => entry.number === selected.value)?.name ?? selected.value);
-const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '05'].includes(pleNumber.value));
+const hasEditions = computed(() => source.value === 'ple' && ['01', '02', '05', '06'].includes(pleNumber.value));
 function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
 }

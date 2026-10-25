@@ -59,6 +59,18 @@ it('pins the nineteen PLE inventory type codes and the separate legacy classific
         ->and($source['rows'][4][1])->toBe('MATERIALES AUXILIARES');
 });
 
+it('pins the sixty-two PLE Annex 3 unit codes independently of the old numeric mapping', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_06_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    $codes = array_column($source['rows'], 0);
+    expect(hash_file('sha256', $path))->toBe('ead39cf383282241e6590345c1811f9a2d435690974beca479d6452ddea6c8e3')
+        ->and($source['table_number'])->toBe('06')
+        ->and($source['rows'])->toHaveCount(62)
+        ->and(array_unique($codes))->toHaveCount(62)
+        ->and($codes)->toContain('KGM', 'LTR', 'NIU', 'ZZ', '4A')
+        ->and($codes)->not->toContain('01', '07', '99');
+});
+
 it('pins each reconciled annex fixture and its added code', function (): void {
     foreach ([
         ['15', '2017_anexo_e', '9f96ed5017b3d7eca4fdb81b8c89ad275d68e743abe5b4c9a4357a95635d26e6', 41, '2008'],

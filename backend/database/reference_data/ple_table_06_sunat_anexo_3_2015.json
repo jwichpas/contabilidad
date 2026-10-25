@@ -1,0 +1,258 @@
+{
+  "table_number": "06",
+  "version": "2015-06-anexo-3",
+  "name": "Código de la unidad de medida PLE",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/orientacion/amazon/ple/RS-169-2015-SUNAT-PLEver5.pdf",
+  "source_note": "Tabla 6 del Anexo 3. Edición PLE distinta de los códigos numéricos cargados originalmente y del catálogo SEE 03/UNECE.",
+  "rows": [
+    [
+      "4A",
+      "BOBINAS"
+    ],
+    [
+      "BJ",
+      "BALDE"
+    ],
+    [
+      "BLL",
+      "BARRILES"
+    ],
+    [
+      "BG",
+      "BOLSA"
+    ],
+    [
+      "BO",
+      "BOTELLAS"
+    ],
+    [
+      "BX",
+      "CAJA"
+    ],
+    [
+      "CT",
+      "CARTONES"
+    ],
+    [
+      "CMK",
+      "CENTIMETRO CUADRADO"
+    ],
+    [
+      "CMQ",
+      "CENTIMETRO CUBICO"
+    ],
+    [
+      "CMT",
+      "CENTIMETRO LINEAL"
+    ],
+    [
+      "CEN",
+      "CIENTO DE UNIDADES"
+    ],
+    [
+      "CY",
+      "CILINDRO"
+    ],
+    [
+      "CJ",
+      "CONOS"
+    ],
+    [
+      "DZN",
+      "DOCENA"
+    ],
+    [
+      "DZP",
+      "DOCENA POR 10**6"
+    ],
+    [
+      "BE",
+      "FARDO"
+    ],
+    [
+      "GLI",
+      "GALON INGLES (4,545956L)"
+    ],
+    [
+      "GRM",
+      "GRAMO"
+    ],
+    [
+      "GRO",
+      "GRUESA"
+    ],
+    [
+      "HLT",
+      "HECTOLITRO"
+    ],
+    [
+      "LEF",
+      "HOJA"
+    ],
+    [
+      "SET",
+      "JUEGO"
+    ],
+    [
+      "KGM",
+      "KILOGRAMO"
+    ],
+    [
+      "KTM",
+      "KILOMETRO"
+    ],
+    [
+      "KWH",
+      "KILOVATIO HORA"
+    ],
+    [
+      "KT",
+      "KIT"
+    ],
+    [
+      "CA",
+      "LATAS"
+    ],
+    [
+      "LBR",
+      "LIBRAS"
+    ],
+    [
+      "LTR",
+      "LITRO"
+    ],
+    [
+      "MWH",
+      "MEGAWATT HORA"
+    ],
+    [
+      "MTR",
+      "METRO"
+    ],
+    [
+      "MTK",
+      "METRO CUADRADO"
+    ],
+    [
+      "MTQ",
+      "METRO CUBICO"
+    ],
+    [
+      "MGM",
+      "MILIGRAMOS"
+    ],
+    [
+      "MLT",
+      "MILILITRO"
+    ],
+    [
+      "MMT",
+      "MILIMETRO"
+    ],
+    [
+      "MMK",
+      "MILIMETRO CUADRADO"
+    ],
+    [
+      "MMQ",
+      "MILIMETRO CUBICO"
+    ],
+    [
+      "MLL",
+      "MILLARES"
+    ],
+    [
+      "UM",
+      "MILLON DE UNIDADES"
+    ],
+    [
+      "ONZ",
+      "ONZAS"
+    ],
+    [
+      "PF",
+      "PALETAS"
+    ],
+    [
+      "PK",
+      "PAQUETE"
+    ],
+    [
+      "PR",
+      "PAR"
+    ],
+    [
+      "FOT",
+      "PIES"
+    ],
+    [
+      "FTK",
+      "PIES CUADRADOS"
+    ],
+    [
+      "FTQ",
+      "PIES CUBICOS"
+    ],
+    [
+      "C62",
+      "PIEZAS"
+    ],
+    [
+      "PG",
+      "PLACAS"
+    ],
+    [
+      "ST",
+      "PLIEGO"
+    ],
+    [
+      "INH",
+      "PULGADAS"
+    ],
+    [
+      "RM",
+      "RESMA"
+    ],
+    [
+      "DR",
+      "TAMBOR"
+    ],
+    [
+      "STN",
+      "TONELADA CORTA"
+    ],
+    [
+      "LTN",
+      "TONELADA LARGA"
+    ],
+    [
+      "TNE",
+      "TONELADAS"
+    ],
+    [
+      "TU",
+      "TUBOS"
+    ],
+    [
+      "NIU",
+      "UNIDAD (BIENES)"
+    ],
+    [
+      "ZZ",
+      "UNIDAD (SERVICIOS)"
+    ],
+    [
+      "GLL",
+      "US GALON (3,7843 L)"
+    ],
+    [
+      "YRD",
+      "YARDA"
+    ],
+    [
+      "YDK",
+      "YARDA CUADRADA"
+    ]
+  ]
+}
