@@ -1,0 +1,21 @@
+{
+  "version": "2015-06-anexo-3",
+  "classification": "SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE",
+  "source_url": "https://www.sunat.gob.pe/legislacion/superin/2015/anexo3-rs169-2015.pdf",
+  "source_pdf_sha256": "05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6",
+  "table_number": "25",
+  "name": "Convenios para evitar la doble tributación",
+  "source_note": "Códigos de la Tabla 25 PLE de 2015. Esta instantánea no es el padrón actual de tratados vigentes ni demuestra beneficios aplicables. La tabla de convenios SIRE tiene otra numeración y versión, que no se fusiona aquí.",
+  "rows": [
+    ["00", "NINGUNO"],
+    ["01", "CANADA"],
+    ["02", "CHILE"],
+    ["03", "COMUNIDAD ANDINA DE NACIONES (CAN)"],
+    ["04", "BRASIL"],
+    ["05", "ESTADOS UNIDOS MEXICANOS"],
+    ["06", "REPUBLICA DE COREA"],
+    ["07", "CONFEDERACIÓN SUIZA"],
+    ["08", "PORTUGAL"],
+    ["09", "OTROS"]
+  ]
+}

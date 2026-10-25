@@ -163,6 +163,18 @@ it('pins separate PLE production cost grouping and financial statement catalog c
         ->and($source['tables'][1]['rows'][8])->toBe(['09', 'OTROS NO CONSIDERADOS EN LOS ANTERIORES']);
 });
 
+it('pins the historical PLE treaty code list without treating it as current eligibility', function (): void {
+    $path = __DIR__.'/../../database/reference_data/ple_table_25_treaties_sunat_anexo_3_2015.json';
+    $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    expect(hash_file('sha256', $path))->toBe('e84e81ab28b4bfeaea4e8887af7c918c9101b5173083ed334d2d5d834ddd776b')
+        ->and($source['source_pdf_sha256'])->toBe('05e7a3ddcadd09354d367b1f876f070ba70ce1da2ec0abbfbda355e5b54600d6')
+        ->and($source['table_number'])->toBe('25')
+        ->and($source['classification'])->toBe('SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE')
+        ->and(array_column($source['rows'], 0))->toBe(['00', '01', '02', '03', '04', '05', '06', '07', '08', '09'])
+        ->and($source['rows'][3])->toBe(['03', 'COMUNIDAD ANDINA DE NACIONES (CAN)'])
+        ->and($source['rows'][9])->toBe(['09', 'OTROS']);
+});
+
 it('pins all thirty PLE customs locations without borrowing the SIRE customs table', function (): void {
     $path = __DIR__.'/../../database/reference_data/ple_table_11_sunat_anexo_3_2015.json';
     $source = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);

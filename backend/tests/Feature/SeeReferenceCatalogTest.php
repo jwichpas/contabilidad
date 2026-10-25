@@ -434,6 +434,23 @@ it('shows PLE production grouping and financial statement codes in different ver
     $this->getJson('/api/v1/catalogs/sunat/22?version=other')->assertNotFound();
 });
 
+it('exposes historical PLE treaty codes as a distinct read-only edition', function (): void {
+    $user = User::query()->firstOrCreate(
+        ['email' => 'see-reference-test@example.test'],
+        ['name' => 'SEE Reference Tester', 'password' => 'Test-only-reference-password-2026!']
+    );
+    $this->actingAs($user)->getJson('/api/v1/catalogs/sunat/25')->assertOk()
+        ->assertJsonPath('meta.table_number', '25')
+        ->assertJsonPath('meta.version', '2015-06-anexo-3')
+        ->assertJsonPath('meta.classification', 'SUNAT_PLE_2015_ANNEX_3_HISTORICAL_REFERENCE')
+        ->assertJsonPath('meta.total', 10)
+        ->assertJsonFragment(['code' => '00', 'name' => 'NINGUNO'])
+        ->assertJsonFragment(['code' => '03', 'name' => 'COMUNIDAD ANDINA DE NACIONES (CAN)'])
+        ->assertJsonFragment(['code' => '09', 'name' => 'OTROS']);
+    $this->getJson('/api/v1/catalogs/sunat/25?version=legacy-seed')->assertNotFound();
+    $this->getJson('/api/v1/catalogs/sunat/25?version=other')->assertNotFound();
+});
+
 it('lists the 2026 identity references and keeps the nine supplied codes historical', function (): void {
     $user = User::query()->firstOrCreate(
         ['email' => 'see-reference-test@example.test'],

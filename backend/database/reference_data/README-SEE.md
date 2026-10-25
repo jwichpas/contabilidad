@@ -87,6 +87,7 @@ php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_110000_add_ple_tables_13_14_inventory_references.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_120000_add_ple_tables_15_20_reference_editions.php --force
 php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_130000_add_ple_tables_21_22_reference_editions.php --force
+php artisan migrate --database=pgsql_migrations --path=database/migrations/2026_10_25_140000_add_ple_table_25_historical_treaty_codes.php --force
 ```
 
 Instalación en la rama DEV actual, usando el rol propietario y conexión directa:
@@ -195,3 +196,8 @@ Las Tablas 21 y 22 de ese anexo contienen cinco códigos de agrupamiento del cos
 producción valorizado anual y nueve códigos de catálogo de estados financieros. Se
 publican con `2026_10_25_130000` como referencias PLE globales y versionadas de 2015.
 No configuran el costeo, el sector de la empresa ni sus estados financieros operativos.
+La Tabla 25 PLE contiene diez códigos de convenios (`00`–`09`) en el Anexo 3 de 2015.
+`2026_10_25_140000` la almacena como referencia histórica global. La lista no es un
+padrón de tratados vigentes ni autoriza aplicar beneficios fiscales; se debe consultar
+el instrumento y sus fechas para una operación concreta. No se fusiona con la Tabla
+18 del Anexo 1 SIRE, cuya numeración y edición son independientes.
