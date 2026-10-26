@@ -26,6 +26,10 @@ final readonly class SwitchActiveCompanyController
 
     public function __invoke(Request $request): JsonResponse
     {
+        $started = hrtime(true);
+        $membershipDurationMs = 0.0;
+        $saveDurationMs = 0.0;
+
         /** @var array{company_id: int|string} $validated */
         $validated = $request->validate([
             'company_id' => ['required', 'integer', 'min:1'],
@@ -37,7 +41,9 @@ final readonly class SwitchActiveCompanyController
         $user = $request->user();
         $previousCompanyId = $user->current_company_id;
 
-        $companyData = $this->tenantContext->run($targetCompanyId, function () use ($user, $targetCompanyId): object {
+        $transactionStarted = hrtime(true);
+        $companyData = $this->tenantContext->run($targetCompanyId, function () use ($user, $targetCompanyId, &$membershipDurationMs, &$saveDurationMs): object {
+            $membershipStarted = hrtime(true);
             $membership = DB::selectOne(
                 <<<'SQL'
                 SELECT
@@ -56,18 +62,23 @@ final readonly class SwitchActiveCompanyController
                 SQL,
                 [$targetCompanyId, $user->id]
             );
+            $membershipDurationMs = (hrtime(true) - $membershipStarted) / 1000000;
 
             if ($membership === null) {
                 throw new AccessDeniedHttpException('No pertenece a la empresa seleccionada o su acceso se encuentra inactivo.');
             }
 
+            $saveStarted = hrtime(true);
             $user->forceFill([
                 'current_company_id' => $targetCompanyId,
             ])->save();
+            $saveDurationMs = (hrtime(true) - $saveStarted) / 1000000;
 
             return $membership;
         });
+        $transactionDurationMs = (hrtime(true) - $transactionStarted) / 1000000;
 
+        $auditStarted = hrtime(true);
         $this->auditLogger->log(
             eventType: 'TENANT_SWITCH',
             companyId: $targetCompanyId,
@@ -79,6 +90,15 @@ final readonly class SwitchActiveCompanyController
             request: $request,
             severity: 'INFO',
         );
+        $auditDurationMs = (hrtime(true) - $auditStarted) / 1000000;
+
+        $timings = [
+            'switch_membership;dur='.number_format($membershipDurationMs, 1, '.', ''),
+            'switch_user_save;dur='.number_format($saveDurationMs, 1, '.', ''),
+            'switch_transaction;dur='.number_format($transactionDurationMs, 1, '.', ''),
+            'switch_audit;dur='.number_format($auditDurationMs, 1, '.', ''),
+            'switch_controller_total;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', ''),
+        ];
 
         return response()->json([
             'data' => [
@@ -89,6 +109,6 @@ final readonly class SwitchActiveCompanyController
                 'business_name' => (string) $companyData->business_name,
                 'role' => (string) $companyData->role,
             ],
-        ]);
+        ])->header('Server-Timing', implode(', ', $timings));
     }
 }
