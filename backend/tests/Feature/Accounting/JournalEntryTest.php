@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 use App\Enums\CompanyRole;
 use App\Models\AccountingAccount;
+use App\Models\AccountingAccountTemplate;
 use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\CompanyUser;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Models\User;
+use App\Services\Accounting\InitializeCompanyChartOfAccountsService;
 use App\Support\Tenant\TenantContext;
+use Database\Seeders\MasterChartOfAccountsSeeder;
 
 beforeEach(function (): void {
     $this->tenantContext = app(TenantContext::class);
@@ -50,6 +53,36 @@ beforeEach(function (): void {
 
     // El FK compuesto exige la membresía antes de establecer la empresa actual.
     $this->user->update(['current_company_id' => $this->company->id]);
+
+    // Instalar el PCGE versionado por el mismo proceso de alta que usa la aplicación.
+    // Los datos pertenecen a la transacción reversible de esta prueba.
+    if (! AccountingAccountTemplate::query()->where('plan_version', 'PCGE_2019')->exists()) {
+        app(MasterChartOfAccountsSeeder::class)->seedTemplates();
+    }
+    $hasAccounts = $this->tenantContext->run($this->company->id,
+        fn (): bool => AccountingAccount::query()->exists());
+    if (! $hasAccounts) {
+        app(InitializeCompanyChartOfAccountsService::class)
+            ->initialize((int) $this->company->id, 'PCGE_2019');
+    }
+
+    // El asiento de estas pruebas no exige dimensiones ajenas al objetivo probado.
+    $this->postingAccounts = $this->tenantContext->run($this->company->id, function (): array {
+        return AccountingAccount::query()
+            ->where('is_operational', true)
+            ->where('is_active', true)
+            ->where('entity_requirement_type', 'NONE')
+            ->where('requires_auxiliary', false)
+            ->where('requires_cost_center', false)
+            ->where('has_automatic_destination', false)
+            ->where('requires_company_area', false)
+            ->where('requires_cash_flow_area', false)
+            ->orderBy('code')
+            ->limit(2)
+            ->get()
+            ->all();
+    });
+    expect($this->postingAccounts)->toHaveCount(2);
 
     $this->token = $this->user->createToken('test-suite')->plainTextToken;
     $this->headers = [
@@ -100,14 +133,7 @@ describe('Asientos Contables / Libro Diario Bimoneda (Partida Doble)', function 
 
     test('registra un asiento contable cuadrado con partida doble exacta en bimoneda', function (): void {
         // Obtenemos 2 cuentas operativas reales de la empresa
-        $operationalAccounts = $this->tenantContext->run($this->company->id, function (): array {
-            return AccountingAccount::query()
-                ->where('is_operational', true)
-                ->where('is_active', true)
-                ->take(2)
-                ->get()
-                ->all();
-        });
+        $operationalAccounts = $this->postingAccounts;
 
         expect(count($operationalAccounts))->toBe(2);
 
@@ -159,14 +185,7 @@ describe('Asientos Contables / Libro Diario Bimoneda (Partida Doble)', function 
     });
 
     test('correlativo automático usa el mayor sufijo y preview no reserva número', function (): void {
-        $operational = $this->tenantContext->run($this->company->id, function (): array {
-            return AccountingAccount::query()
-                ->where('is_operational', true)
-                ->where('is_active', true)
-                ->take(2)
-                ->get()
-                ->all();
-        });
+        $operational = $this->postingAccounts;
         expect(count($operational))->toBe(2);
         $payload = [
             'entry_date' => '2026-10-19',
@@ -220,14 +239,7 @@ describe('Asientos Contables / Libro Diario Bimoneda (Partida Doble)', function 
     });
 
     test('rechaza asientos descuadrados que violan la partida doble (Debe != Haber)', function (): void {
-        $operationalAccounts = $this->tenantContext->run($this->company->id, function (): array {
-            return AccountingAccount::query()
-                ->where('is_operational', true)
-                ->where('is_active', true)
-                ->take(2)
-                ->get()
-                ->all();
-        });
+        $operationalAccounts = $this->postingAccounts;
 
         $accountDebit = $operationalAccounts[0];
         $accountCredit = $operationalAccounts[1];
@@ -271,11 +283,7 @@ describe('Asientos Contables / Libro Diario Bimoneda (Partida Doble)', function 
                 ->first();
         });
 
-        $operationalAccount = $this->tenantContext->run($this->company->id, function (): AccountingAccount {
-            return AccountingAccount::query()
-                ->where('is_operational', true)
-                ->first();
-        });
+        $operationalAccount = $this->postingAccounts[0];
 
         if ($parentAccount !== null) {
             $invalidPayload = [
