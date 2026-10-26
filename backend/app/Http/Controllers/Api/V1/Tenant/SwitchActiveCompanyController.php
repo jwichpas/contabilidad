@@ -29,6 +29,7 @@ final readonly class SwitchActiveCompanyController
         $started = hrtime(true);
         $membershipDurationMs = 0.0;
         $saveDurationMs = 0.0;
+        $auditDurationMs = 0.0;
 
         /** @var array{company_id: int|string} $validated */
         $validated = $request->validate([
@@ -42,7 +43,7 @@ final readonly class SwitchActiveCompanyController
         $previousCompanyId = $user->current_company_id;
 
         $transactionStarted = hrtime(true);
-        $companyData = $this->tenantContext->run($targetCompanyId, function () use ($user, $targetCompanyId, &$membershipDurationMs, &$saveDurationMs): object {
+        $companyData = $this->tenantContext->run($targetCompanyId, function () use ($request, $user, $targetCompanyId, $previousCompanyId, &$membershipDurationMs, &$saveDurationMs, &$auditDurationMs): object {
             $membershipStarted = hrtime(true);
             $membership = DB::selectOne(
                 <<<'SQL'
@@ -74,23 +75,26 @@ final readonly class SwitchActiveCompanyController
             ])->save();
             $saveDurationMs = (hrtime(true) - $saveStarted) / 1000000;
 
+            // The audit insert reuses this verified SET LOCAL tenant context.
+            // AuditLoggerService keeps a savepoint so a failed audit insert
+            // cannot abort the company switch transaction.
+            $auditStarted = hrtime(true);
+            $this->auditLogger->log(
+                eventType: 'TENANT_SWITCH',
+                companyId: $targetCompanyId,
+                userId: $user->id,
+                auditableType: Company::class,
+                auditableId: (string) $targetCompanyId,
+                oldValues: ['previous_company_id' => $previousCompanyId],
+                newValues: ['active_company_id' => $targetCompanyId],
+                request: $request,
+                severity: 'INFO',
+            );
+            $auditDurationMs = (hrtime(true) - $auditStarted) / 1000000;
+
             return $membership;
         });
         $transactionDurationMs = (hrtime(true) - $transactionStarted) / 1000000;
-
-        $auditStarted = hrtime(true);
-        $this->auditLogger->log(
-            eventType: 'TENANT_SWITCH',
-            companyId: $targetCompanyId,
-            userId: $user->id,
-            auditableType: Company::class,
-            auditableId: (string) $targetCompanyId,
-            oldValues: ['previous_company_id' => $previousCompanyId],
-            newValues: ['active_company_id' => $targetCompanyId],
-            request: $request,
-            severity: 'INFO',
-        );
-        $auditDurationMs = (hrtime(true) - $auditStarted) / 1000000;
 
         $timings = [
             'switch_membership;dur='.number_format($membershipDurationMs, 1, '.', ''),

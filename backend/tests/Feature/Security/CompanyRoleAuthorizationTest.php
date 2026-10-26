@@ -171,3 +171,33 @@ it('rejects even valid roles if the destination company is inactive', function (
         ->postJson('/api/v1/accounting/journal-entries', [])
         ->assertForbidden();
 });
+
+it('records a company switch audit under the target RLS context', function (): void {
+    $response = $this->actingAs($this->administrator)
+        ->postJson('/api/v1/tenant/switch-company', [
+            'company_id' => $this->companyB->id,
+        ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.current_company_id', $this->companyB->id);
+    expect((string) $response->headers->get('Server-Timing'))
+        ->toContain('switch_audit;dur=')
+        ->toContain('request_total;dur=');
+    expect((int) $this->administrator->fresh()->current_company_id)
+        ->toBe((int) $this->companyB->id);
+
+    $tenant = app(\App\Support\Tenant\TenantContext::class);
+    $matchingAudit = static function () use ($response): \Illuminate\Database\Query\Builder {
+        return DB::table('audit_logs')
+            ->where('event_type', 'TENANT_SWITCH')
+            ->where('user_id', $response->json('data.user_id'))
+            ->where('auditable_id', (string) $response->json('data.current_company_id'));
+    };
+
+    $audit = $tenant->run($this->companyB->id, static fn (): ?object => $matchingAudit()->first(['company_id', 'user_id']));
+    expect($audit)->not->toBeNull()
+        ->and((int) $audit->company_id)->toBe((int) $this->companyB->id);
+
+    $visibleFromA = $tenant->run($this->companyA->id, static fn (): int => $matchingAudit()->count());
+    expect($visibleFromA)->toBe(0);
+});

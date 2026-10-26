@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Security;
 
 use App\Models\AuditLog;
+use App\Support\Tenant\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +19,10 @@ use Throwable;
  */
 final readonly class AuditLoggerService
 {
+    public function __construct(
+        private TenantContext $tenantContext,
+    ) {}
+
     private const SENSITIVE_KEYS = [
         'password',
         'password_confirmation',
@@ -52,16 +57,12 @@ final readonly class AuditLoggerService
             $ip = $request?->ip() ?? '127.0.0.1';
             $userAgent = $request?->userAgent() ?? 'system';
 
-            // PostgreSQL RLS exige el tenant incluso en INSERT ... RETURNING id,
-            // pues una fila insertada debe ser visible por la politica SELECT.
-            // Antes, AUTH_LOGIN fuera de SetTenantContext fallaba con 42501 y
-            // dejaba una transaccion externa abortada aunque la excepcion fuese
-            // capturada por este servicio.
-            //
-            // DB::transaction crea un SAVEPOINT si existe transaccion previa.
-            // Si falla el INSERT, Laravel revierte hasta el SAVEPOINT y permite
-            // que el llamador siga usando su transaccion sin estado 25P02.
-            DB::transaction(function () use (
+            // Keep the insert in a savepoint when called within a larger
+            // transaction. An insert failure must not leave that transaction
+            // aborted. TenantContext::run reuses an already verified, matching
+            // SET LOCAL context; otherwise it installs one for this transaction
+            // and lets PostgreSQL restore it on commit/rollback.
+            $insert = function () use (
                 $companyId,
                 $userId,
                 $eventType,
@@ -73,21 +74,6 @@ final readonly class AuditLoggerService
                 $userAgent,
                 $severity
             ): void {
-                $previousCompanyId = null;
-                if ($companyId !== null) {
-                    // Captura y RESTAURA el contexto anterior dentro de la
-                    // misma transaccion. Nunca usar set_config(..., false):
-                    // Supavisor reutiliza conexiones entre distintas empresas.
-                    $previousCompanyId = DB::selectOne(
-                        "SELECT current_setting('app.current_company_id', true) AS value"
-                    )?->value;
-
-                    DB::selectOne(
-                        "SELECT set_config('app.current_company_id', ?, true)",
-                        [(string) $companyId]
-                    );
-                }
-
                 AuditLog::query()->create([
                     'company_id' => $companyId,
                     'user_id' => $userId,
@@ -100,14 +86,13 @@ final readonly class AuditLoggerService
                     'user_agent' => substr($userAgent, 0, 500),
                     'severity' => in_array($severity, ['INFO', 'WARNING', 'CRITICAL'], true) ? $severity : 'INFO',
                 ]);
+            };
 
-                if ($companyId !== null) {
-                    DB::selectOne(
-                        "SELECT set_config('app.current_company_id', ?, true)",
-                        [(string) ($previousCompanyId ?? '')]
-                    );
-                }
-            });
+            if ($companyId !== null) {
+                $this->tenantContext->run($companyId, $insert);
+            } else {
+                DB::transaction($insert);
+            }
         } catch (Throwable $e) {
             // No registrar $e->getMessage(): QueryException puede incluir el
             // SQL con datos del usuario (incluyendo emails u otros campos).
