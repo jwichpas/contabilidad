@@ -67,11 +67,14 @@
   /* Superficies ligadas dinámicamente a tokens */
   --color-background: var(--bg);
   --color-surface: var(--surf);
+  /* Alias usados por vistas anteriores; deben producir una superficie opaca. */
+  --color-surf: var(--surf);
   --color-surface-elevated: var(--surf);
   --color-surface-muted: var(--soft);
   --color-foreground: var(--ink);
   --color-muted: var(--mut);
   --color-border: var(--line);
+  --color-line: var(--line);
   --color-border-strong: var(--line);
 
   /* Marca */
@@ -1212,6 +1215,10 @@
     );
     background-size: 200% 100%;
     animation: var(--animate-shimmer);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-skeleton { animation: none; }
   }
 
   /* ── Alertas en línea ── */

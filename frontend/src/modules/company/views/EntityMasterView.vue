@@ -313,7 +313,10 @@ onMounted(() => {
             <tr><th class="py-2 pr-3 font-medium">Nombre / Razón social</th><th class="py-2 pr-3 font-medium">Documento</th><th class="py-2 pr-3 font-medium">Roles</th><th class="py-2 pr-3 font-medium">Contacto</th><th class="py-2 text-right font-medium">Acciones</th></tr>
           </thead>
           <tbody class="divide-y divide-line">
-            <tr v-if="isLoading"><td colspan="5" class="py-8 text-center text-muted"><Loader2 class="mr-1 inline size-4 animate-spin" /> Cargando anexos…</td></tr>
+            <tr v-if="isLoading"><td colspan="5" class="py-4" role="status" aria-label="Cargando anexos">
+              <span class="mb-3 flex items-center gap-2 text-muted"><Loader2 class="size-4 animate-spin text-brand" /> Cargando anexos…</span>
+              <span v-for="row in 3" :key="row" class="ui-skeleton mb-2 block h-10 w-full" aria-hidden="true" />
+            </td></tr>
             <tr v-else-if="listItems.length === 0"><td colspan="5" class="py-10 text-center text-muted">No hay anexos para estos filtros. {{ canWrite ? 'Puede registrar el primero.' : '' }}</td></tr>
             <tr v-for="entity in (isLoading ? [] : listItems)" :key="entity.id" class="hover:bg-surface-muted/60">
               <td class="py-3 pr-3">

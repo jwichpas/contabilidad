@@ -182,10 +182,17 @@ watch(
   <!-- No mostrar datos en caché hasta validar la sesión restaurada. -->
   <div
     v-if="!isSessionVerifiedOnLoad"
-    class="flex min-h-screen items-center justify-center bg-background p-6 text-sm text-muted"
+    class="min-h-screen bg-background p-4 text-sm text-muted sm:p-6"
     role="status"
+    aria-label="Verificando sesión segura"
   >
-    Verificando sesión segura…
+    <div class="mx-auto max-w-5xl space-y-6" aria-hidden="true">
+      <div class="ui-skeleton h-14 w-full" />
+      <div class="ui-skeleton h-8 w-2/3 sm:w-1/3" />
+      <div class="ui-skeleton h-40 w-full" />
+      <div class="ui-skeleton h-40 w-full" />
+    </div>
+    <span class="sr-only">Verificando sesión segura…</span>
   </div>
   <LoginView
     v-else-if="!isAuthenticated"

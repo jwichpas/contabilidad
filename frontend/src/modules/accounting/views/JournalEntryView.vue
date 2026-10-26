@@ -750,6 +750,7 @@ async function handleSubmit(): Promise<void> {
       const entries = await apiClient.value.fetchJournalEntries({ limit: 50 });
       if (sequence !== submitSequence || tenant !== props.activeCompanyId) return;
       journalEntries.value = entries;
+      historyLoaded.value = true;
     } catch {
       if (sequence === submitSequence && tenant === props.activeCompanyId) {
         errorMessage.value = 'El asiento se registró, pero no se pudo actualizar el historial. Recargue la vista para consultarlo; no vuelva a registrarlo.';
@@ -886,7 +887,7 @@ onMounted(() => {
           @click="activeTab = 'history'"
         >
           <History class="w-3.5 h-3.5" />
-          <span>Libro Diario ({{ journalEntries.length }})</span>
+          <span>Libro Diario ({{ historyLoaded ? journalEntries.length : '…' }})</span>
         </button>
       </div>
     </div>
@@ -937,7 +938,16 @@ onMounted(() => {
     <!-- ======================================================== -->
     <!-- PESTAÑA 1: FORMULARIO DE INGRESO DE ASIENTO (VOUCHER)    -->
     <!-- ======================================================== -->
-    <fieldset v-if="activeTab === 'form'" :disabled="isSubmitting" class="min-w-0 space-y-6">
+    <div v-if="activeTab === 'form' && isLoading" class="space-y-6" role="status" aria-label="Cargando editor de asientos">
+      <div v-for="card in 2" :key="card" class="panel space-y-4 p-5" aria-hidden="true">
+        <div class="ui-skeleton h-5 w-1/2 sm:w-1/3" />
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div v-for="field in 4" :key="field" class="ui-skeleton h-12 w-full" />
+        </div>
+      </div>
+      <span class="sr-only">Cargando editor de asientos…</span>
+    </div>
+    <fieldset v-else-if="activeTab === 'form'" :disabled="isSubmitting" class="min-w-0 space-y-6">
       <!-- Tarjeta de Parámetros de Cabecera -->
       <div
         class="panel space-y-4"
@@ -1348,9 +1358,9 @@ onMounted(() => {
           </button>
         </div>
 
-        <div v-if="isLoadingHistory" class="p-12 text-center text-sm text-muted" role="status">
-          <Loader2 class="w-5 h-5 animate-spin mx-auto mb-2 text-brand" />
-          Cargando Libro Diario…
+        <div v-if="isLoadingHistory || isLoading" class="space-y-4 p-5" role="status" aria-label="Cargando Libro Diario">
+          <p class="flex items-center gap-2 text-xs text-muted"><Loader2 class="size-4 animate-spin text-brand" /> Cargando Libro Diario…</p>
+          <div v-for="row in 4" :key="row" class="ui-skeleton h-12 w-full" aria-hidden="true" />
         </div>
         <div v-else-if="journalEntries.length === 0" class="p-12 text-center">
           <BookOpen class="w-10 h-10 text-muted mx-auto mb-3 opacity-40" />
