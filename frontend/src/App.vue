@@ -340,10 +340,24 @@ watch(
         />
       </main>
       <div v-if="isSwitchingCompany" role="status" aria-live="polite"
-        class="fixed inset-x-0 bottom-0 top-14 z-40 flex items-start justify-center bg-surface/95 p-5 text-foreground">
-        <div class="mt-12 flex items-center gap-3 rounded-lg border border-border bg-surface p-4 shadow-lg">
-          <Loader2 class="size-5 animate-spin text-brand" />
-          <span>Verificando acceso a {{ activeCompany.businessName }}…</span>
+        class="fixed inset-x-0 bottom-0 top-14 z-40 overflow-y-auto bg-background p-4 text-foreground sm:p-6">
+        <div class="mx-auto max-w-3xl space-y-5">
+          <div class="rounded-xl border border-border bg-surface p-5 shadow-card">
+            <div class="flex items-start gap-3">
+              <Loader2 class="mt-0.5 size-5 shrink-0 animate-spin text-brand" />
+              <div class="min-w-0">
+                <p class="font-semibold">Verificando acceso a {{ activeCompany.businessName }}…</p>
+                <p class="mt-1 text-sm text-muted">El editor quedará disponible cuando se confirme la empresa.</p>
+                <p v-if="companySwitchNotice" class="mt-3 text-sm text-foreground">{{ companySwitchNotice }}</p>
+              </div>
+            </div>
+          </div>
+          <div aria-hidden="true" class="space-y-4 rounded-xl border border-border bg-surface p-5">
+            <div class="ui-skeleton h-5 w-1/2" />
+            <div class="ui-skeleton h-11 w-full" />
+            <div class="ui-skeleton h-11 w-full" />
+            <div class="ui-skeleton h-11 w-3/4" />
+          </div>
         </div>
       </div>
     </div>

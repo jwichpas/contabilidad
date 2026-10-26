@@ -834,7 +834,17 @@ watch(
 onMounted(() => {
   void loadCatalogsAndHistory();
 });
-onBeforeUnmount(() => emit('posting-change', false));
+onBeforeUnmount(() => {
+  // La vista se reemplaza al cambiar tenant. El componente anterior conserva
+  // las promesas HTTP, pero ninguna respuesta tardía debe iniciar más GET ni
+  // modificar su borrador después de desmontarlo.
+  ++submitSequence;
+  ++numberRequestSequence;
+  ++rateRequestSequence;
+  ++historySequence;
+  ++loadSequence;
+  emit('posting-change', false);
+});
 </script>
 
 <template>
