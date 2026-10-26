@@ -174,11 +174,15 @@ describe('Asientos Contables / Libro Diario Bimoneda (Partida Doble)', function 
         $response->assertJsonPath('data.currency', 'PEN');
         expect(count($response->json('data.lines')))->toBe(2);
 
-        // Verifica que se haya registrado en audit_logs (ISO/IEC 27001)
-        $auditLog = AuditLog::query()
-            ->where('event_type', 'JOURNAL_ENTRY_CREATED')
-            ->latest('id')
-            ->first();
+        // La política RLS solo muestra auditoría de la empresa dentro de su contexto.
+        $auditLog = $this->tenantContext->run($this->company->id, function () use ($response): ?AuditLog {
+            return AuditLog::query()
+                ->where('company_id', $this->company->id)
+                ->where('event_type', 'JOURNAL_ENTRY_CREATED')
+                ->where('auditable_type', JournalEntry::class)
+                ->where('auditable_id', (string) $response->json('data.id'))
+                ->first();
+        });
 
         expect($auditLog)->not->toBeNull();
         expect($auditLog->severity)->toBe('INFO');
