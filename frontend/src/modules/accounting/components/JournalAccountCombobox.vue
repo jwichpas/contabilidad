@@ -11,10 +11,19 @@ const emit = defineEmits<{ 'update:modelValue': [id: number | null] }>();
 const uid = useId();
 const listboxId = `journal-accounts-${uid}`;
 const inputEl = ref<HTMLInputElement | null>(null);
+const mobileSearchEl = ref<HTMLInputElement | null>(null);
 const open = ref(false);
+const mobileDialog = ref(false);
+const mobileViewport = ref(false);
 const query = ref('');
 const activeIndex = ref(0);
 const popupStyle = ref<Record<string, string>>({});
+
+function syncViewport(): void {
+  mobileViewport.value = window.innerWidth < 768;
+  if (open.value && mobileDialog.value !== mobileViewport.value) close();
+  else reposition();
+}
 
 const selected = computed(() => props.accounts.find(a => a.id === props.modelValue));
 const selectedLabel = computed(() => selected.value ? `${selected.value.code} · ${selected.value.name}` : '');
@@ -54,21 +63,27 @@ function reposition(): void {
 }
 async function show(): Promise<void> {
   if (props.disabled) return;
+  mobileViewport.value = window.innerWidth < 768;
+  mobileDialog.value = mobileViewport.value;
   open.value = true;
   query.value = '';
   await nextTick();
-  reposition();
+  if (mobileDialog.value) mobileSearchEl.value?.focus();
+  else reposition();
+}
+function close(): void {
+  open.value = false;
+  query.value = '';
+  mobileDialog.value = false;
 }
 function choose(account: JournalEditorAccount): void {
   if (account.id !== props.modelValue) emit('update:modelValue', account.id);
-  open.value = false;
-  query.value = '';
+  close();
 }
 function handleKey(event: KeyboardEvent): void {
   if (props.disabled) return;
   if (event.key === 'Escape') {
-    open.value = false;
-    query.value = '';
+    close();
     return;
   }
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -84,11 +99,12 @@ function handleKey(event: KeyboardEvent): void {
   }
 }
 onMounted(() => {
-  window.addEventListener('resize', reposition);
+  syncViewport();
+  window.addEventListener('resize', syncViewport);
   window.addEventListener('scroll', reposition, true);
 });
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', reposition);
+  window.removeEventListener('resize', syncViewport);
   window.removeEventListener('scroll', reposition, true);
 });
 </script>
@@ -105,30 +121,58 @@ onBeforeUnmount(() => {
       :aria-activedescendant="open && matches.length ? `${listboxId}-${activeIndex}` : undefined"
       :value="open ? query : selectedLabel"
       :disabled="disabled"
+      :readonly="mobileViewport"
       placeholder="Buscar código o nombre de cuenta..."
       autocomplete="off"
-      class="w-full rounded-md border border-line bg-surf px-2.5 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50"
+      class="w-full rounded-md border border-border bg-surface px-2.5 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50"
       @focus="show"
       @input="query = ($event.target as HTMLInputElement).value; open = true; reposition()"
       @keydown="handleKey"
-      @blur="open = false; query = ''"
+      @blur="mobileDialog || close()"
     />
-    <!-- Teleport prevents the horizontal accounting table from clipping results. -->
+    <!-- Desktop popup and mobile dialog share the same local filtered results. -->
     <Teleport to="body">
-      <div v-if="open && !disabled" :id="listboxId" role="listbox"
+      <div v-if="open && mobileDialog && !disabled" role="dialog" aria-modal="true" aria-label="Buscar cuenta contable"
+        class="fixed inset-0 z-[10000] flex h-[100dvh] flex-col bg-surface text-foreground">
+        <div class="flex items-center justify-between gap-3 border-b border-border p-4">
+          <strong class="text-base">Seleccionar cuenta</strong>
+          <button type="button" class="rounded-md border border-border px-3 py-2 text-sm" @click="close">Cerrar</button>
+        </div>
+        <div class="border-b border-border p-4">
+          <input ref="mobileSearchEl" v-model="query" type="search" autocomplete="off"
+            role="combobox" aria-autocomplete="list" :aria-expanded="open"
+            :aria-activedescendant="matches.length ? `${listboxId}-${activeIndex}` : undefined"
+            aria-label="Buscar cuenta por código o nombre" :aria-controls="listboxId"
+            placeholder="Código o nombre de cuenta"
+            class="w-full rounded-md border border-border bg-surface px-3 py-3 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-brand"
+            @keydown="handleKey" />
+        </div>
+        <div :id="listboxId" role="listbox" class="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-surface">
+          <button v-for="(account, index) in matches" :id="`${listboxId}-${index}`" :key="account.id"
+            type="button" role="option" :aria-selected="account.id === modelValue"
+            class="block w-full border-b border-border px-4 py-3 text-left text-sm text-foreground"
+            :class="index === activeIndex ? 'bg-surface-muted' : 'bg-surface'"
+            @click="choose(account)">
+            <span class="font-semibold font-mono">{{ account.code }}</span> · {{ account.name }}
+          </button>
+          <p v-if="matches.length === 0" class="p-4 text-sm text-muted">No se encontraron cuentas.</p>
+          <p v-else-if="matches.length === 40" class="p-4 text-xs text-muted">Hasta 40 resultados. Escriba más para filtrar.</p>
+        </div>
+      </div>
+      <div v-else-if="open && !disabled" :id="listboxId" role="listbox"
         :style="popupStyle"
-        class="overflow-y-auto rounded-lg border border-line bg-surf shadow-xl"
+        class="overflow-y-auto rounded-lg border border-border bg-surface text-foreground shadow-xl"
       >
         <button v-for="(account, index) in matches"
           :id="`${listboxId}-${index}`" :key="account.id" type="button" role="option"
           :aria-selected="account.id === modelValue"
-          class="block w-full border-b border-line/50 px-3 py-2.5 text-left text-xs hover:bg-soft"
-          :class="index === activeIndex ? 'bg-soft text-foreground' : 'text-muted'"
+          class="block w-full border-b border-border px-3 py-2.5 text-left text-xs hover:bg-surface-muted"
+          :class="index === activeIndex ? 'bg-surface-muted text-foreground' : 'bg-surface text-foreground'"
           @mouseenter="activeIndex = index" @mousedown.prevent="choose(account)">
           <span class="font-semibold font-mono">{{ account.code }}</span> · {{ account.name }}
         </button>
         <p v-if="matches.length === 0" class="p-3 text-xs text-muted">No se encontraron cuentas.</p>
-        <p v-else-if="matches.length === 40" class="border-t border-line p-2 text-[11px] text-muted">
+        <p v-else-if="matches.length === 40" class="border-t border-border p-2 text-[11px] text-muted">
           Hasta 40 resultados. Escriba más para filtrar.
         </p>
       </div>

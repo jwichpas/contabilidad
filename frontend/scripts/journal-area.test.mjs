@@ -91,6 +91,10 @@ test('account autocomplete filters without a native select with thousands of opt
   assert.match(picker, /normalize\('NFD'\)/);
   assert.match(picker, /event\.key === 'ArrowDown'/);
   assert.match(picker, /event\.key === 'Enter'/);
+  assert.match(picker, /role="dialog" aria-modal="true" aria-label="Buscar cuenta contable"/);
+  assert.match(picker, /mobileSearchEl\.value\?\.focus\(\)/);
+  assert.match(picker, /bg-surface text-foreground/);
+  assert.doesNotMatch(picker, /bg-surf(?:\s|"|$)/);
 });
 
 test('journal keeps exact money strings, fetches one bootstrap and exposes persisted subdiary', () => {

@@ -27,4 +27,6 @@ La primera adaptación móvil puso cuenta, glosa e importes en cada tarjeta. Las
 
 Compilación `pnpm build` y `pnpm test:unit` (53/53 PASS). Pendiente inspección visual en navegador móvil real: cambiar entre partidas sin perder importes ni anexo, selección del anexo y cambio de empresa durante la edición. Las capturas no demuestran el POST ni la persistencia del asiento.
 
+La captura posterior del buscador de cuentas mostró opciones superpuestas con los importes: el selector usaba `bg-surf`, una clase sin token en el tema Tailwind actual. El selector ahora usa `bg-surface` y bordes del tema. En móvil abre un diálogo opaco con búsqueda y resultados desplazables; en escritorio conserva la lista flotante, también con fondo sólido. El filtrado sigue siendo local al catálogo cargado. Compilación y 53/53 pruebas frontend aprobadas. Queda pendiente comprobar en el teléfono el teclado, la selección y el retorno al formulario.
+
 No dar por aprobada F4.2 hasta verificar también edición de varias partidas, accesibilidad y comportamiento responsive en la aplicación real.
