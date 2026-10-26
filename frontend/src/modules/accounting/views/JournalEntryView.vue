@@ -26,7 +26,7 @@ import JournalAccountCombobox from '../components/JournalAccountCombobox.vue';
 import { entityMatches, entityRequired } from '../utils/journalEntity';
 import { cashFlowMatches } from '../utils/journalArea';
 import { resetAccountDimensions } from '../utils/journalLine';
-import { reconcileForeignRounding, type ForeignRoundingAdjustment } from '../utils/journalForeignRounding';
+import { reconcileForeignRounding, reconcileLocalRounding, type ForeignRoundingAdjustment } from '../utils/journalForeignRounding';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import { SystemDecimal } from '../../../shared/types/numeric.types';
 import type { CompanyId } from '../types/accountingAccount.types';
@@ -76,6 +76,7 @@ const entryType = ref<EntryType>('STANDARD');
 const subdiaryCode = ref('');
 const subdiaries = shallowRef<readonly { code: string; name: string }[]>([]);
 const currency = ref<CurrencyCode>('PEN');
+const isBaseVoucher = computed(() => currency.value === baseCurrencyInfo.value.code);
 const exchangeRate = ref('3.750000');
 const exchangeRateType = ref<'BUY' | 'SELL'>('SELL');
 const headerDescription = ref('');
@@ -135,7 +136,7 @@ const availableVoucherCurrencies = computed(() => {
   return list;
 });
 
-function syncActiveVoucherExchangeRate(): void {
+function syncActiveVoucherExchangeRate(recalculate = true): void {
   const target =
     currency.value === baseCurrencyInfo.value.code
       ? requiredCurrencyRates.value[0]
@@ -145,7 +146,7 @@ function syncActiveVoucherExchangeRate(): void {
     exchangeRate.value =
       exchangeRateType.value === 'BUY' ? target.buy_rate : target.sell_rate;
   }
-  recalculateForeignAmounts();
+  if (recalculate) recalculateAmounts();
 }
 
 function updateRateForCurrency(code: string, field: 'buy_rate' | 'sell_rate', value: string): void {
@@ -163,7 +164,7 @@ function updateRateForCurrency(code: string, field: 'buy_rate' | 'sell_rate', va
         exchangeRate.value = value;
       }
     }
-    recalculateForeignAmounts();
+    recalculateAmounts();
   }
 }
 
@@ -178,7 +179,30 @@ function convertLocalToForeign(raw: string): string {
   }
 }
 
-function recalculateForeignAmounts(): void {
+function convertForeignToLocal(raw: string): string {
+  try {
+    const amount = SystemDecimal.parseMonetary(raw);
+    const rate = SystemDecimal.parseExchangeRate(exchangeRate.value.trim() || '1');
+    return rate.isPositive() ? amount.multiplyBy(rate).toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function recalculateAmounts(): void {
+  if (!isBaseVoucher.value) {
+    for (const line of lines.value) {
+      line.debitLocal = line.debitForeign ? convertForeignToLocal(line.debitForeign) : '';
+      line.creditLocal = line.creditForeign ? convertForeignToLocal(line.creditForeign) : '';
+    }
+    const reconciled = reconcileLocalRounding(lines.value);
+    reconciled.values.forEach((amounts, index) => {
+      lines.value[index]!.debitLocal = amounts.debitLocal;
+      lines.value[index]!.creditLocal = amounts.creditLocal;
+    });
+    foreignRoundingAdjustment.value = reconciled.adjustment;
+    return;
+  }
   for (const line of lines.value) {
     line.debitForeign = line.debitLocal ? convertLocalToForeign(line.debitLocal) : '';
     line.creditForeign = line.creditLocal ? convertLocalToForeign(line.creditLocal) : '';
@@ -189,6 +213,18 @@ function recalculateForeignAmounts(): void {
     lines.value[index]!.creditForeign = amounts.creditForeign;
   });
   foreignRoundingAdjustment.value = reconciled.adjustment;
+}
+
+function deriveForeignFromLocal(): void {
+  for (const line of lines.value) {
+    line.debitForeign = line.debitLocal ? convertLocalToForeign(line.debitLocal) : '';
+    line.creditForeign = line.creditLocal ? convertLocalToForeign(line.creditLocal) : '';
+  }
+  const reconciled = reconcileForeignRounding(lines.value);
+  reconciled.values.forEach((amounts, index) => {
+    lines.value[index]!.debitForeign = amounts.debitForeign;
+    lines.value[index]!.creditForeign = amounts.creditForeign;
+  });
 }
 
 let rateRequestSequence = 0;
@@ -406,7 +442,7 @@ function removeLine(index: number): void {
   if (lines.value.length > 2) {
     const removed = lines.value.splice(index, 1)[0];
     if (removed?.id === selectedLineId.value) selectedLineId.value = lines.value[Math.min(index, lines.value.length - 1)]?.id ?? null;
-    recalculateForeignAmounts();
+    recalculateAmounts();
   }
 }
 
@@ -427,51 +463,34 @@ function changeAccount(line: EditingLine): void {
 
 function onAmountChange(line: EditingLine, side: 'debit' | 'credit', rawValue: string): void {
   // Mantener la entrada como texto decimal: Vue convierte v-model:number a IEEE-754.
-  if (side === 'debit') line.debitLocal = rawValue;
-  else line.creditLocal = rawValue;
-  if (side === 'debit') {
-    if (line.debitLocal) {
-      line.creditLocal = '';
-      line.creditForeign = '';
-    } else {
-      line.debitForeign = '';
-    }
-  } else {
-    if (line.creditLocal) {
-      line.debitLocal = '';
-      line.debitForeign = '';
-    } else {
-      line.creditForeign = '';
-    }
-  }
-  recalculateForeignAmounts();
+  const target = isBaseVoucher.value ? 'Local' : 'Foreign';
+  const opposite = side === 'debit' ? 'credit' : 'debit';
+  line[`${side}${target}`] = rawValue;
+  line[`${opposite}Local`] = '';
+  line[`${opposite}Foreign`] = '';
+  recalculateAmounts();
 }
 
 /**
  * Cuadre automático: calcula la diferencia y la asigna a la última línea o agrega una nueva
  */
 function autoBalance(): void {
-  const diff = totalDebitLocal.value.subtract(totalCreditLocal.value);
+  const diff = isBaseVoucher.value
+    ? totalDebitLocal.value.subtract(totalCreditLocal.value)
+    : totalDebitForeign.value.subtract(totalCreditForeign.value);
   if (diff.isZero()) return;
 
   let target = lines.value[lines.value.length - 1];
-  if (!target || target.debitLocal || target.creditLocal) {
+  if (!target || target.debitLocal || target.creditLocal || target.debitForeign || target.creditForeign) {
     addLine();
     target = lines.value[lines.value.length - 1]!;
   }
 
   const amount = diff.abs().toString();
-  if (diff.isPositive()) {
-    target.creditLocal = amount;
-    target.debitLocal = '';
-    target.debitForeign = '';
-  } else {
-    target.debitLocal = amount;
-    target.creditLocal = '';
-    target.creditForeign = '';
-  }
+  const side = diff.isPositive() ? 'credit' : 'debit';
+  target[`${side}${isBaseVoucher.value ? 'Local' : 'Foreign'}`] = amount;
   selectLine(target);
-  recalculateForeignAmounts();
+  recalculateAmounts();
 }
 
 function resetDraft(): void {
@@ -795,7 +814,11 @@ watch(activeTab, (tab) => {
 });
 
 watch(currency, () => {
-  syncActiveVoucherExchangeRate();
+  syncActiveVoucherExchangeRate(false);
+  // On currency switch, carry the draft through the base amount once, then
+  // let the new voucher currency become the editable source of truth.
+  if (!isBaseVoucher.value) deriveForeignFromLocal();
+  recalculateAmounts();
 });
 
 watch(exchangeRateType, () => {
@@ -803,7 +826,7 @@ watch(exchangeRateType, () => {
 });
 
 watch(exchangeRate, () => {
-  recalculateForeignAmounts();
+  recalculateAmounts();
 });
 
 watch(
@@ -1180,25 +1203,25 @@ onBeforeUnmount(() => {
             </label>
           </div>
           <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <label class="min-w-0 text-xs font-medium text-muted">Debe {{ baseCurrencyInfo.code }}
-              <input :value="selectedLine.debitLocal" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"
-                :aria-label="`Debe ${baseCurrencyInfo.code}, línea ${selectedLineIndex + 1}`"
+            <label class="min-w-0 text-xs font-medium text-muted">Debe {{ currency }}
+              <input :value="isBaseVoucher ? selectedLine.debitLocal : selectedLine.debitForeign" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"
+                :aria-label="`Debe ${currency}, línea ${selectedLineIndex + 1}`"
                 class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-right text-sm num text-foreground"
                 @input="onAmountChange(selectedLine, 'debit', ($event.target as HTMLInputElement).value)" />
             </label>
-            <label class="min-w-0 text-xs font-medium text-muted">Haber {{ baseCurrencyInfo.code }}
-              <input :value="selectedLine.creditLocal" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"
-                :aria-label="`Haber ${baseCurrencyInfo.code}, línea ${selectedLineIndex + 1}`"
+            <label class="min-w-0 text-xs font-medium text-muted">Haber {{ currency }}
+              <input :value="isBaseVoucher ? selectedLine.creditLocal : selectedLine.creditForeign" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"
+                :aria-label="`Haber ${currency}, línea ${selectedLineIndex + 1}`"
                 class="mt-1 block w-full min-w-0 rounded-md border border-line bg-surf px-2 py-2 text-right text-sm num text-foreground"
                 @input="onAmountChange(selectedLine, 'credit', ($event.target as HTMLInputElement).value)" />
             </label>
             <div class="min-w-0 rounded-md bg-soft px-2 py-2 text-xs text-muted num">
-              Debe {{ activeForeignCurrency.code }}<br>
-              <strong class="text-foreground">{{ selectedLine.debitForeign ? activeForeignCurrency.symbol + ' ' + selectedLine.debitForeign : '—' }}</strong>
+              Debe {{ isBaseVoucher ? activeForeignCurrency.code : baseCurrencyInfo.code }} · calculado<br>
+              <strong class="text-foreground">{{ isBaseVoucher ? (selectedLine.debitForeign ? activeForeignCurrency.symbol + ' ' + selectedLine.debitForeign : '—') : (selectedLine.debitLocal ? baseCurrencyInfo.symbol + ' ' + selectedLine.debitLocal : '—') }}</strong>
             </div>
             <div class="min-w-0 rounded-md bg-soft px-2 py-2 text-xs text-muted num">
-              Haber {{ activeForeignCurrency.code }}<br>
-              <strong class="text-foreground">{{ selectedLine.creditForeign ? activeForeignCurrency.symbol + ' ' + selectedLine.creditForeign : '—' }}</strong>
+              Haber {{ isBaseVoucher ? activeForeignCurrency.code : baseCurrencyInfo.code }} · calculado<br>
+              <strong class="text-foreground">{{ isBaseVoucher ? (selectedLine.creditForeign ? activeForeignCurrency.symbol + ' ' + selectedLine.creditForeign : '—') : (selectedLine.creditLocal ? baseCurrencyInfo.symbol + ' ' + selectedLine.creditLocal : '—') }}</strong>
             </div>
           </div>
 
@@ -1272,7 +1295,7 @@ onBeforeUnmount(() => {
             <button type="button" class="min-w-0 flex-1 text-left" :aria-label="`Editar partida ${idx + 1}`" @click="showLineEditor(line)">
               <span class="block truncate text-sm font-semibold text-foreground">{{ idx + 1 }} · {{ accountFor(line) ? `${accountFor(line)?.code} · ${accountFor(line)?.name}` : 'Seleccionar cuenta' }}</span>
               <span class="block truncate text-xs text-muted">{{ line.description || headerDescription || 'Sin glosa' }}</span>
-              <span class="block text-xs num text-foreground">Debe {{ baseCurrencyInfo.symbol }} {{ line.debitLocal || '0' }} · Haber {{ baseCurrencyInfo.symbol }} {{ line.creditLocal || '0' }}</span>
+              <span class="block text-xs num text-foreground">Debe {{ isBaseVoucher ? baseCurrencyInfo.symbol : activeForeignCurrency.symbol }} {{ (isBaseVoucher ? line.debitLocal : line.debitForeign) || '0' }} · Haber {{ isBaseVoucher ? baseCurrencyInfo.symbol : activeForeignCurrency.symbol }} {{ (isBaseVoucher ? line.creditLocal : line.creditForeign) || '0' }}</span>
               <span v-if="missingLineFields(line).length" class="block text-xs text-warn">Falta: {{ missingLineFields(line).join(', ') }}</span>
             </button>
             <button type="button" :disabled="lines.length <= 2" class="shrink-0 rounded border border-line p-2 text-neg disabled:opacity-30"
@@ -1319,7 +1342,7 @@ onBeforeUnmount(() => {
               }}
             </p>
             <p v-if="foreignRoundingAdjustment" class="mt-1 text-[11px] text-muted">
-              Ajuste de redondeo ME {{ foreignRoundingAdjustment.amount }} en la línea {{ foreignRoundingAdjustment.lineIndex + 1 }}.
+              Ajuste de redondeo {{ isBaseVoucher ? activeForeignCurrency.code : baseCurrencyInfo.code }} {{ foreignRoundingAdjustment.amount }} en la línea {{ foreignRoundingAdjustment.lineIndex + 1 }}.
             </p>
           </div>
         </div>

@@ -29,7 +29,6 @@ beforeEach(function (): void {
         [
             'name' => 'Contador General CPC',
             'password' => 'Contabilidad2026!',
-            'current_company_id' => $this->company->id,
         ]
     );
 
@@ -48,6 +47,9 @@ beforeEach(function (): void {
             ]
         );
     });
+
+    // El FK compuesto exige la membresía antes de establecer la empresa actual.
+    $this->user->update(['current_company_id' => $this->company->id]);
 
     $this->token = $this->user->createToken('test-suite')->plainTextToken;
     $this->headers = [

@@ -179,6 +179,23 @@ export class SystemDecimal {
     return new SystemDecimal(quotient, targetScale);
   }
 
+  /** Multiplicación decimal exacta, con redondeo half-up a la escala de destino. */
+  public multiplyBy(multiplier: SystemDecimal, targetScale: number = this.scale): SystemDecimal {
+    if (targetScale < 0 || targetScale > 12) {
+      throw new RangeError('Escala decimal fuera de rango.');
+    }
+    const product = this.scaledUnits * multiplier.scaledUnits;
+    const exponent = this.scale + multiplier.scale - targetScale;
+    const numerator = exponent < 0 ? product * (10n ** BigInt(-exponent)) : product;
+    const denominator = exponent < 0 ? 1n : 10n ** BigInt(exponent);
+    let quotient = numerator / denominator;
+    const remainder = numerator % denominator;
+    if ((remainder < 0n ? -remainder : remainder) * 2n >= denominator) {
+      quotient += numerator < 0n ? -1n : 1n;
+    }
+    return new SystemDecimal(quotient, targetScale);
+  }
+
   public abs(): SystemDecimal {
     return new SystemDecimal(this.scaledUnits < 0n ? -this.scaledUnits : this.scaledUnits, this.scale);
   }

@@ -100,8 +100,9 @@ test('account autocomplete filters without a native select with thousands of opt
 test('journal keeps exact money strings, fetches one bootstrap and exposes persisted subdiary', () => {
   const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
   const client = readFileSync(new URL('../src/modules/accounting/api/httpClient.ts', import.meta.url), 'utf8');
-  assert.match(view, /:value="selectedLine\.debitLocal"/);
-  assert.match(view, /:value="selectedLine\.creditLocal"/);
+  assert.match(view, /:value="isBaseVoucher \? selectedLine\.debitLocal : selectedLine\.debitForeign"/);
+  assert.match(view, /:value="isBaseVoucher \? selectedLine\.creditLocal : selectedLine\.creditForeign"/);
+  assert.match(view, /reconcileLocalRounding\(lines\.value\)/);
   assert.match(view, /inputmode="decimal"/);
   assert.doesNotMatch(view, /v-model="line\.(debitLocal|creditLocal)"/);
   assert.match(view, /onAmountChange\(selectedLine, 'debit', \(\$event\.target as HTMLInputElement\)\.value\)/);

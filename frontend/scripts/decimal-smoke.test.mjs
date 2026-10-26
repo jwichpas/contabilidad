@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { SystemDecimal } from '../src/shared/types/numeric.types.ts';
-import { reconcileForeignRounding } from '../src/modules/accounting/utils/journalForeignRounding.ts';
+import { reconcileForeignRounding, reconcileLocalRounding } from '../src/modules/accounting/utils/journalForeignRounding.ts';
 
 test('0.1 + 0.2 equals 0.3 exactly', () => {
   assert.equal(
@@ -34,6 +34,25 @@ test('half-up rounds positive and negative exchange conversions', () => {
       .divideBy(SystemDecimal.parseExchangeRate('32.000000')).toString(),
     '-0.0313',
   );
+});
+
+test('converts entered USD into PEN exactly with the selected exchange rate', () => {
+  const rate = SystemDecimal.parseExchangeRate('3.758000');
+  assert.equal(SystemDecimal.parseMonetary('100.0000').multiplyBy(rate).toString(), '375.8000');
+  assert.equal(SystemDecimal.parseMonetary('0.0001').multiplyBy(rate).toString(), '0.0004');
+  assert.equal(SystemDecimal.parseMonetary('-0.0001').multiplyBy(rate).toString(), '-0.0004');
+});
+
+test('reconciles the PEN residual without changing entered USD', () => {
+  const lines = [
+    { debitLocal: '0.0003', creditLocal: '', debitForeign: '0.0001', creditForeign: '' },
+    { debitLocal: '0.0003', creditLocal: '', debitForeign: '0.0001', creditForeign: '' },
+    { debitLocal: '', creditLocal: '0.0007', debitForeign: '', creditForeign: '0.0002' },
+  ];
+  const result = reconcileLocalRounding(lines);
+  assert.deepEqual(result.adjustment, { lineIndex: 0, side: 'debit', amount: '0.0001' });
+  assert.equal(result.values[0].debitLocal, '0.0004');
+  assert.equal(lines[0].debitLocal, '0.0003');
 });
 
 test('rejects zero exchange rates and excessive decimal places', () => {
