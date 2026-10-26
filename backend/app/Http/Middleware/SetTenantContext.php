@@ -68,7 +68,10 @@ final readonly class SetTenantContext
         $timings = ($existing !== '' ? $existing.', ' : '').'tenant_total;dur='.$elapsed;
         // This must remain a real DB check for every request, not a cached role.
         // It exposes only elapsed milliseconds, never IDs or SQL parameters.
-        if ($membershipDurationMs !== null && $request->is('api/v1/accounting/journal-entries/editor-bootstrap')) {
+        if ($membershipDurationMs !== null && (
+            $request->is('api/v1/accounting/journal-entries/editor-bootstrap')
+            || ($request->is('api/v1/accounting/journal-entries') && $request->isMethod('POST'))
+        )) {
             $timings .= ', tenant_membership;dur='.$membershipDurationMs;
         }
         $response->headers->set('Server-Timing', $timings);

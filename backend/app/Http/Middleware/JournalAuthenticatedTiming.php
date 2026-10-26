@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Sits AFTER Sanctum's auth middleware. It isolates post-authentication time
- * for journal bootstrap and company switching.
+ * for journal bootstrap, posting and company switching.
  * No credentials, query strings, token values or user identities are logged.
  */
 final class JournalAuthenticatedTiming
@@ -19,6 +19,7 @@ final class JournalAuthenticatedTiming
     public function handle(Request $request, Closure $next): Response
     {
         if (! (($request->is('api/v1/accounting/journal-entries/editor-bootstrap') && $request->isMethod('GET'))
+            || ($request->is('api/v1/accounting/journal-entries') && $request->isMethod('POST'))
             || ($request->is('api/v1/tenant/switch-company') && $request->isMethod('POST')))) {
             return $next($request);
         }

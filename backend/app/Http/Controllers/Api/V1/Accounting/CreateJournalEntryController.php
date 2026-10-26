@@ -42,6 +42,7 @@ final readonly class CreateJournalEntryController
 
     public function __invoke(Request $request): JsonResponse
     {
+        $controllerStarted = hrtime(true);
         $validated = $request->validate([
             'entry_date' => ['required', 'date_format:Y-m-d'],
             'entry_number' => ['nullable', 'string', 'max:30'],
@@ -309,6 +310,8 @@ final readonly class CreateJournalEntryController
             ];
         }, $validated['lines']);
 
+        $preflightMs = (hrtime(true) - $controllerStarted) / 1000000;
+        $writeStarted = hrtime(true);
         try {
             $journalEntry = $this->postJournalEntryService->post([
                 'fiscal_period_id' => $fiscalPeriod->id,
@@ -329,6 +332,8 @@ final readonly class CreateJournalEntryController
             ], 422);
         }
 
+        $writeMs = (hrtime(true) - $writeStarted) / 1000000;
+        $auditStarted = hrtime(true);
         $this->auditLogger->log(
             eventType: 'JOURNAL_ENTRY_CREATED',
             companyId: $companyId,
@@ -350,6 +355,9 @@ final readonly class CreateJournalEntryController
             severity: 'INFO',
         );
 
+        $auditMs = (hrtime(true) - $auditStarted) / 1000000;
+        $receiptStarted = hrtime(true);
+
         // Same outer TenantContext transaction as journal, FX and audit.
         // Failed attempts never create receipts. The advisory lock remains
         // held until middleware commits or rolls back the entire request.
@@ -359,11 +367,24 @@ final readonly class CreateJournalEntryController
             );
         }
 
+        $receiptMs = (hrtime(true) - $receiptStarted) / 1000000;
+        $responseStarted = hrtime(true);
         $journalEntry->load(['lines.account', 'lines.costCenter', 'lines.entity', 'lines.companyArea', 'lines.cashFlowArea', 'fiscalPeriod']);
 
-        return response()->json([
+        $response = response()->json([
             'message' => 'Asiento contable registrado exitosamente con Partida Doble balanceada.',
             'data' => $journalEntry,
         ], 201);
+        $responseMs = (hrtime(true) - $responseStarted) / 1000000;
+        $response->headers->set('Server-Timing', implode(', ', [
+            'journal_preflight;dur='.number_format($preflightMs, 1, '.', ''),
+            'journal_write;dur='.number_format($writeMs, 1, '.', ''),
+            'journal_audit;dur='.number_format($auditMs, 1, '.', ''),
+            'journal_receipt;dur='.number_format($receiptMs, 1, '.', ''),
+            'journal_response;dur='.number_format($responseMs, 1, '.', ''),
+            'journal_controller_total;dur='.number_format((hrtime(true) - $controllerStarted) / 1000000, 1, '.', ''),
+        ]));
+
+        return $response;
     }
 }

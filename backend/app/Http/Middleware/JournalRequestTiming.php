@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Lightweight request-level timing for journal bootstrap and company switching.
+ * Lightweight request-level timing for journal bootstrap, posting and company switching.
  * This starts before route authentication and finishes after the controller.
  * It does not expose database queries, credentials or tenant identifiers.
  */
@@ -19,6 +19,7 @@ final class JournalRequestTiming
     public function handle(Request $request, Closure $next): Response
     {
         if (! (($request->is('api/v1/accounting/journal-entries/editor-bootstrap') && $request->isMethod('GET'))
+            || ($request->is('api/v1/accounting/journal-entries') && $request->isMethod('POST'))
             || ($request->is('api/v1/tenant/switch-company') && $request->isMethod('POST')))) {
             return $next($request);
         }
