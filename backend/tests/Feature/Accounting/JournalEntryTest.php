@@ -188,6 +188,57 @@ describe('Asientos Contables / Libro Diario Bimoneda (Partida Doble)', function 
         expect($auditLog->severity)->toBe('INFO');
     });
 
+    test('registra el importe digitado en USD y su equivalente calculado en PEN', function (): void {
+        [$accountDebit, $accountCredit] = $this->postingAccounts;
+
+        $response = $this->postJson('/api/v1/accounting/journal-entries', [
+            'entry_date' => '2026-10-19',
+            'entry_type' => 'STANDARD',
+            'currency' => 'USD',
+            'exchange_rate' => '3.758000',
+            'exchange_rate_type' => 'SELL',
+            'exchange_rates' => [[
+                'currency' => 'USD',
+                'buy_rate' => '3.742000',
+                'sell_rate' => '3.758000',
+                'rate' => '3.758000',
+            ]],
+            'description' => 'Asiento USD con conversión exacta a PEN',
+            'lines' => [
+                [
+                    'accounting_account_id' => $accountDebit->id,
+                    'debit_local' => '1048.4820',
+                    'credit_local' => '0.0000',
+                    'debit_foreign' => '279.0000',
+                    'credit_foreign' => '0.0000',
+                ],
+                [
+                    'accounting_account_id' => $accountCredit->id,
+                    'debit_local' => '0.0000',
+                    'credit_local' => '1048.4820',
+                    'debit_foreign' => '0.0000',
+                    'credit_foreign' => '279.0000',
+                ],
+            ],
+        ], $this->headers);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.currency', 'USD')
+            ->assertJsonPath('data.exchange_rate', '3.758000')
+            ->assertJsonPath('data.lines.0.debit_local', '1048.4820')
+            ->assertJsonPath('data.lines.0.debit_foreign', '279.0000')
+            ->assertJsonPath('data.lines.1.credit_local', '1048.4820')
+            ->assertJsonPath('data.lines.1.credit_foreign', '279.0000');
+
+        $saved = $this->tenantContext->run($this->company->id,
+            fn (): JournalEntry => JournalEntry::query()->with('lines')->findOrFail($response->json('data.id')));
+        expect($saved->currency)->toBe('USD')
+            ->and((string) $saved->lines[0]->debit_local)->toBe('1048.4820')
+            ->and((string) $saved->lines[0]->debit_foreign)->toBe('279.0000')
+            ->and((string) $saved->lines[1]->credit_local)->toBe('1048.4820')
+            ->and((string) $saved->lines[1]->credit_foreign)->toBe('279.0000');
+    });
+
     test('correlativo automático usa el mayor sufijo y preview no reserva número', function (): void {
         $operational = $this->postingAccounts;
         expect(count($operational))->toBe(2);
