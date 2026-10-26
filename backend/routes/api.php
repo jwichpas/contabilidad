@@ -68,6 +68,7 @@ Route::prefix('v1')->group(function (): void {
             ->middleware('throttle:5,1')
             ->name('api.v1.tenant.companies.store');
         Route::post('/tenant/switch-company', SwitchActiveCompanyController::class)
+            ->middleware(JournalAuthenticatedTiming::class)
             ->name('api.v1.tenant.switch-company');
 
         // Catálogos Globales y Normativos Oficiales

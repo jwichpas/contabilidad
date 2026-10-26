@@ -182,7 +182,8 @@ it('records a company switch audit under the target RLS context', function (): v
         ->assertJsonPath('data.current_company_id', $this->companyB->id);
     expect((string) $response->headers->get('Server-Timing'))
         ->toContain('switch_audit;dur=')
-        ->toContain('request_total;dur=');
+        ->toContain('request_total;dur=')
+        ->toContain('post_auth_total;dur=');
     expect((int) $this->administrator->fresh()->current_company_id)
         ->toBe((int) $this->companyB->id);
 
