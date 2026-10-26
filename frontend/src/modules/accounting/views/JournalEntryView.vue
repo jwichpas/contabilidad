@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import {
   AlertTriangle,
   BookOpen,
@@ -41,6 +41,7 @@ const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly getAccessToken: () => string | null;
 }>();
+const emit = defineEmits<{ 'posting-change': [value: boolean] }>();
 
 const apiClient = computed(
   () =>
@@ -694,6 +695,7 @@ async function handleSubmit(): Promise<void> {
   const tenant = props.activeCompanyId;
   const sequence = ++submitSequence;
   isSubmitting.value = true;
+  emit('posting-change', true);
   try {
     const payload = {
       entry_date: entryDate.value,
@@ -766,7 +768,10 @@ async function handleSubmit(): Promise<void> {
     errorMessage.value =
       e instanceof Error ? e.message : 'Error al registrar el asiento contable.';
   } finally {
-    if (sequence === submitSequence) isSubmitting.value = false;
+    if (sequence === submitSequence) {
+      isSubmitting.value = false;
+      emit('posting-change', false);
+    }
   }
 }
 
@@ -829,6 +834,7 @@ watch(
 onMounted(() => {
   void loadCatalogsAndHistory();
 });
+onBeforeUnmount(() => emit('posting-change', false));
 </script>
 
 <template>

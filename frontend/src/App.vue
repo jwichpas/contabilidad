@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue';
+import { Loader2 } from 'lucide-vue-next';
 import AccountingCatalogView from './modules/accounting/views/AccountingCatalogView.vue';
 import SeeReferencesView from './modules/accounting/views/SeeReferencesView.vue';
 import SunatReferencesView from './modules/accounting/views/SunatReferencesView.vue';
@@ -28,6 +29,8 @@ const {
   activeCompanyId,
   isAuthenticated,
   isLiveConnected,
+  isSwitchingCompany,
+  companySwitchError,
   switchCompany,
   ensureAuthenticated,
   registerCreatedCompany,
@@ -38,6 +41,8 @@ const isDarkMode = shallowRef(false);
 const isSidebarCollapsed = shallowRef(false);
 const isMobileDrawerOpen = shallowRef(false);
 const isSessionVerifiedOnLoad = shallowRef(false);
+const isJournalSubmitting = shallowRef(false);
+const companySwitchNotice = shallowRef<string | null>(null);
 
 const activeCompany = computed<ActiveCompanyInfo>(() => {
   const found = userCompanies.value.find((c) => c.id === activeCompanyId.value);
@@ -108,6 +113,7 @@ function syncHashWithModule(): void {
 }
 
 function handleNavigate(mod: NavigationModule): void {
+  if (isSwitchingCompany.value) return;
   currentModule.value = mod;
   if (mod === 'journal') {
     window.location.hash = '#diario';
@@ -138,6 +144,10 @@ function handleNavigate(mod: NavigationModule): void {
 }
 
 function handleSwitchCompany(newCompanyId: CompanyId): void {
+  if (isSwitchingCompany.value || newCompanyId === activeCompanyId.value) return;
+  companySwitchNotice.value = isJournalSubmitting.value
+    ? 'Había un asiento enviándose en la empresa anterior. Compruebe su Libro Diario antes de volver a registrarlo.'
+    : null;
   void switchCompany(newCompanyId);
 }
 
@@ -210,6 +220,7 @@ watch(
       :user-companies="userCompanies"
       :active-company="activeCompany"
       :is-dark-mode="isDarkMode"
+      :is-switching-company="isSwitchingCompany"
       @navigate="handleNavigate"
       @switch-company="handleSwitchCompany"
       @close-mobile="isMobileDrawerOpen = false"
@@ -227,6 +238,7 @@ watch(
         :user-companies="userCompanies"
         :current-user="currentUser"
         :is-live-connected="isLiveConnected"
+        :is-switching-company="isSwitchingCompany"
         :is-sidebar-collapsed="isSidebarCollapsed"
         :sunat-buy-rate="sunatBuyRate"
         :sunat-sell-rate="sunatSellRate"
@@ -238,7 +250,14 @@ watch(
       />
 
       <!-- Contenido Principal Fluido y Responsivo -->
-      <main class="flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1680px] w-full mx-auto">
+      <main :inert="isSwitchingCompany" class="flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1680px] w-full mx-auto">
+        <div v-if="companySwitchNotice" role="status" class="mb-4 rounded-lg border border-brand bg-surface p-3 text-sm text-foreground">
+          {{ companySwitchNotice }}
+          <button type="button" class="ml-2 underline" @click="companySwitchNotice = null">Cerrar</button>
+        </div>
+        <div v-if="companySwitchError" role="alert" class="mb-4 rounded-lg border border-danger bg-surface p-3 text-sm text-danger">
+          {{ companySwitchError }} Revise el editor antes de continuar; el intento de cambio pudo descartar el borrador.
+        </div>
         <AccountingCatalogView
           v-if="currentModule === 'catalog'"
           :key="`catalog-${activeCompanyId}`"
@@ -261,6 +280,7 @@ watch(
           :key="`journal-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+          @posting-change="isJournalSubmitting = $event"
         />
         <FiscalPeriodsView
           v-else-if="currentModule === 'fiscal-periods'"
@@ -319,6 +339,13 @@ watch(
           @company-updated="ensureAuthenticated"
         />
       </main>
+      <div v-if="isSwitchingCompany" role="status" aria-live="polite"
+        class="fixed inset-x-0 bottom-0 top-14 z-40 flex items-start justify-center bg-surface/95 p-5 text-foreground">
+        <div class="mt-12 flex items-center gap-3 rounded-lg border border-border bg-surface p-4 shadow-lg">
+          <Loader2 class="size-5 animate-spin text-brand" />
+          <span>Verificando acceso a {{ activeCompany.businessName }}…</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>

@@ -30,6 +30,7 @@ const props = defineProps<{
   readonly userCompanies: readonly UserCompany[];
   readonly currentUser: AuthenticatedUser | null;
   readonly isLiveConnected: boolean;
+  readonly isSwitchingCompany: boolean;
   readonly isSidebarCollapsed: boolean;
   readonly sunatBuyRate: SystemDecimal;
   readonly sunatSellRate: SystemDecimal;
@@ -136,6 +137,7 @@ const activeCompanyIdString = computed<string>({
         <UiSelect
           v-model="activeCompanyIdString"
           :options="companyOptions"
+          :disabled="isSwitchingCompany"
           size="sm"
         />
       </div>

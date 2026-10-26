@@ -65,6 +65,9 @@ const activeCompanyId = shallowRef<CompanyId>(
 );
 
 const isLoading = shallowRef(false);
+const isSwitchingCompany = shallowRef(false);
+const companySwitchError = shallowRef<string | null>(null);
+let companySwitchSequence = 0;
 const authError = shallowRef<string | null>(null);
 const isLiveConnected = shallowRef(false);
 const lastAuditTimestamp = shallowRef<string | null>(null);
@@ -75,6 +78,9 @@ const sessionNotice = shallowRef<string | null>(null);
  * Un borrador puede conservarse solo para el mismo usuario autenticado.
  */
 function clearLocalSession(expired: boolean): void {
+  ++companySwitchSequence;
+  isSwitchingCompany.value = false;
+  companySwitchError.value = null;
   const previousUserId = currentUser.value?.id;
   if (expired && previousUserId && sessionStorage.getItem(COMPANY_ONBOARDING_DRAFT_KEY)) {
     sessionStorage.setItem(STORAGE_DRAFT_OWNER_KEY, String(previousUserId));
@@ -117,6 +123,9 @@ export function useAuthSession() {
    * Inicio de sesión seguro contra /api/v1/auth/login
    */
   async function login(email: string, password: string): Promise<boolean> {
+    ++companySwitchSequence;
+    isSwitchingCompany.value = false;
+    companySwitchError.value = null;
     isLoading.value = true;
     authError.value = null;
 
@@ -281,9 +290,21 @@ export function useAuthSession() {
    */
   async function switchCompany(newCompanyId: CompanyId): Promise<boolean> {
     const token = accessToken.value;
-    if (!token) return false;
+    if (!token || isSwitchingCompany.value) return false;
+    if (newCompanyId === activeCompanyId.value) return true;
+    if (!userCompanies.value.some(company => company.id === newCompanyId)) {
+      companySwitchError.value = 'La empresa seleccionada no está en sus membresías disponibles.';
+      return false;
+    }
 
-    isLoading.value = true;
+    const previousCompanyId = activeCompanyId.value;
+    const sequence = ++companySwitchSequence;
+    companySwitchError.value = null;
+    isSwitchingCompany.value = true;
+    // La cabecera y el editor reaccionan ahora; el contenido se bloquea hasta
+    // validar la membresía en el servidor. Las peticiones ya enviadas guardan
+    // su X-Company-Id original y no pueden mezclarse con el nuevo tenant.
+    activeCompanyId.value = newCompanyId;
     try {
       const response = await fetch('/api/v1/tenant/switch-company', {
         method: 'POST',
@@ -297,7 +318,7 @@ export function useAuthSession() {
         body: JSON.stringify({ company_id: Number(newCompanyId) }),
       });
 
-      if (accessToken.value !== token) return false;
+      if (accessToken.value !== token || sequence !== companySwitchSequence) return false;
       if (response.status === 401) {
         reportUnauthorizedBearer(token);
         return false;
@@ -306,7 +327,6 @@ export function useAuthSession() {
         throw new Error('No fue posible conmutar la empresa activa.');
       }
 
-      activeCompanyId.value = newCompanyId;
       if (currentUser.value) {
         currentUser.value = {
           ...currentUser.value,
@@ -316,10 +336,13 @@ export function useAuthSession() {
       }
       return true;
     } catch (e) {
-      authError.value = e instanceof Error ? e.message : 'Error al conmutar empresa.';
+      if (accessToken.value === token && sequence === companySwitchSequence) {
+        activeCompanyId.value = previousCompanyId;
+        companySwitchError.value = e instanceof Error ? e.message : 'Error al conmutar empresa.';
+      }
       return false;
     } finally {
-      isLoading.value = false;
+      if (sequence === companySwitchSequence) isSwitchingCompany.value = false;
     }
   }
 
@@ -346,6 +369,8 @@ export function useAuthSession() {
     activeCompanyId,
     isAuthenticated,
     isLoading,
+    isSwitchingCompany,
+    companySwitchError,
     authError,
     isLiveConnected,
     lastAuditTimestamp,

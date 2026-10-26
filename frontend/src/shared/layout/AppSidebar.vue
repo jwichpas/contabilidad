@@ -32,6 +32,7 @@ const props = defineProps<{
   readonly userCompanies: readonly UserCompany[];
   readonly activeCompany: ActiveCompanyInfo;
   readonly isDarkMode: boolean;
+  readonly isSwitchingCompany: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -143,6 +144,7 @@ const activeCompanyIdString = computed<string>({
           <UiSelect
             id="tenant-selector"
             v-model="activeCompanyIdString"
+            :disabled="isSwitchingCompany"
             :options="companyOptions"
             variant="dark"
             size="sm"
