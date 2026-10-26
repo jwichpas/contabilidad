@@ -30,3 +30,9 @@ Compilación `pnpm build` y `pnpm test:unit` (53/53 PASS). Pendiente inspección
 La captura posterior del buscador de cuentas mostró opciones superpuestas con los importes: el selector usaba `bg-surf`, una clase sin token en el tema Tailwind actual. El selector ahora usa `bg-surface` y bordes del tema. En móvil abre un diálogo opaco con búsqueda y resultados desplazables; en escritorio conserva la lista flotante, también con fondo sólido. El filtrado sigue siendo local al catálogo cargado. Compilación y 53/53 pruebas frontend aprobadas. Queda pendiente comprobar en el teléfono el teclado, la selección y el retorno al formulario.
 
 No dar por aprobada F4.2 hasta verificar también edición de varias partidas, accesibilidad y comportamiento responsive en la aplicación real.
+
+## Primer asiento registrado en DEMO A · 25/10/2026
+
+Captura del usuario: éxito de `10-00001`, historial con un asiento y siguiente correlativo `10-00002`. Consulta de solo lectura en Neon `contabilidad-dev` (26/10/2026 02:12 UTC, equivalente a 25/10/2026 21:12 en Lima): `journal_entries.id = 109`, empresa `DEMO A - Comercial Andina S.A.C.`, fecha contable 26/10/2026, estado `POSTED`, subdiario `CAJA`, moneda `PEN`, TC `3.758000`.
+
+Hay dos filas persistidas en `journal_entry_lines`, ambas en cuenta `101000` y con área de flujo `9`: la primera Debe S/ 100.0000 y USD 26.6099; la segunda Haber S/ 100.0000 y USD 26.6099. Los totales cuadran exactamente en las dos monedas. Al debitar y acreditar la misma cuenta por el mismo importe, el efecto neto de este asiento de prueba en esa cuenta es cero. Esta evidencia acredita un POST y la persistencia bimoneda, pero no acredita un caso económico con cuentas distintas, el cambio de empresa durante POST ni los escenarios de redondeo de 0.0001.
