@@ -23,7 +23,6 @@ use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 /**
@@ -70,16 +69,38 @@ final readonly class CreateJournalEntryController
             'lines.*.credit_foreign' => ['required', 'numeric', 'min:0', 'regex:/^\\d+(?:\\.\\d{1,4})?$/'],
         ]);
 
-        if (! Schema::hasTable('company_subdiaries')) {
+        // Rolling-deployment guards in a single catalog round trip. Preserve
+        // each 503 response while keeping posting safe before migrations land.
+        $schema = DB::selectOne(<<<'SQL'
+            SELECT
+                CASE WHEN to_regclass('public.company_subdiaries') IS NOT NULL THEN 1 ELSE 0 END AS has_subdiaries,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM pg_catalog.pg_attribute
+                    WHERE attrelid = to_regclass('public.journal_entries')
+                      AND attname = 'subdiary_code' AND attnum > 0 AND NOT attisdropped
+                ) THEN 1 ELSE 0 END AS has_subdiary_code,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM pg_catalog.pg_attribute
+                    WHERE attrelid = to_regclass('public.accounting_accounts')
+                      AND attname = 'requires_company_area' AND attnum > 0 AND NOT attisdropped
+                ) THEN 1 ELSE 0 END AS has_company_area,
+                CASE WHEN (
+                    SELECT count(*) FROM pg_catalog.pg_attribute
+                    WHERE attrelid = to_regclass('public.journal_entry_lines')
+                      AND attname IN ('entity_id', 'company_area_id', 'cash_flow_area_id')
+                      AND attnum > 0 AND NOT attisdropped
+                ) = 3 THEN 1 ELSE 0 END AS has_line_dimensions
+            SQL);
+        if ((int) $schema->has_subdiaries !== 1) {
             return response()->json(['message' => 'Falta migrar el maestro de subdiarios antes de asentar.'], 503);
         }
-        if (! Schema::hasColumn('journal_entries', 'subdiary_code')) {
+        if ((int) $schema->has_subdiary_code !== 1) {
             return response()->json(['message' => 'Falta aplicar la migración aditiva de subdiarios en el libro diario.'], 503);
         }
-        if (! Schema::hasColumn('accounting_accounts', 'requires_company_area')) {
+        if ((int) $schema->has_company_area !== 1) {
             return response()->json(['message' => 'Falta aplicar la migración de requisitos organizativos por cuenta.'], 503);
         }
-        if (! Schema::hasColumns('journal_entry_lines', ['entity_id', 'company_area_id', 'cash_flow_area_id'])) {
+        if ((int) $schema->has_line_dimensions !== 1) {
             return response()->json(['message' => 'Falta aplicar la migración de dimensiones (anexos y áreas) en partidas contables.'], 503);
         }
 
@@ -369,7 +390,7 @@ final readonly class CreateJournalEntryController
 
         $receiptMs = (hrtime(true) - $receiptStarted) / 1000000;
         $responseStarted = hrtime(true);
-        $journalEntry->load(['lines.account', 'lines.costCenter', 'lines.entity', 'lines.companyArea', 'lines.cashFlowArea', 'fiscalPeriod']);
+        $journalEntry->loadMissing(['lines.account', 'lines.costCenter', 'lines.entity', 'lines.companyArea', 'lines.cashFlowArea', 'fiscalPeriod']);
 
         $response = response()->json([
             'message' => 'Asiento contable registrado exitosamente con Partida Doble balanceada.',
