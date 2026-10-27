@@ -15,7 +15,7 @@ export interface FinancialSnapshotAccount {
 
 export interface FinancialSnapshot {
   readonly as_of: string;
-  readonly currency: 'PEN';
+  readonly currency: string; // ISO 4217: moneda funcional de la empresa
   readonly is_preliminary: boolean;
   readonly accounts: readonly FinancialSnapshotAccount[];
   readonly income_statement: {
