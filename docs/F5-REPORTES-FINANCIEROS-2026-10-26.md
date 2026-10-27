@@ -49,3 +49,25 @@ pnpm typecheck
 ```
 
 No se requieren migraciones F5 ni ejecutar seeds. No usar GitHub Actions.
+
+
+## Continuación F5 — auditoría de matrices para su eventual activación (26/10/2026)
+
+- Confirmación del usuario: `FinancialReportsTenantCurrencyTest` **2 PASS, 12 assertions** y `vue-tsc --noEmit` sin errores mostrados.
+- Inspección READ ONLY DEMO A: matriz ID 1, `PCGE_2019_CC_V2`, estado `DRAFT`, 227 fuentes / 454 pares, dos centros activos, 0 rutas inválidas y digest real SHA-256 `7ec6129c655bc4ebd9ad6f378d8b12352c3e097da33517e4f1f6e484d70e01f8`, idéntico al digest versionado.
+- DEMO B/C permanecen `DRAFT`; las tres empresas tienen **0 imputaciones analíticas**. DEMO A conserva siete asientos de prueba con 16 partidas; en particular `601100` registra S/ 2.050,8900 y **no lleva imputación automática**, mientras `621100` y `636100` requieren centro y regla pero aún no tienen movimientos. **No retroalimentar ni convertir asientos anteriores automáticamente**.
+- Los scripts antiguos de promoción requerían 21/22 migraciones y tres empresas, incompatible con el estado actual: **63 migraciones / cuatro empresas**. Se actualizaron `AnalyticMatrixPromotionService` y el preflight READ ONLY, conservando el mismo aislamiento del servicio, la validación SHA y la auditoría obligatoria.
+- **No se ha activado la matriz**: el intento de crear el parche automático de activación fue bloqueado por controles de la herramienta; ninguna transición o asiento nuevo fue confirmado. Se mantiene `DRAFT`. No se debe afirmar que el POST genera actualmente nuevas líneas analíticas sobre DEMO A.
+
+### Preflight de solo lectura
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l app/Services/Accounting/AnalyticMatrixPromotionService.php
+php -l scripts/phase2-neon-analytic-promotion-preflight.php
+php scripts/phase2-neon-analytic-promotion-preflight.php --preflight=20999990011
+```
+
+Este preflight no cambia datos ni activa reglas. Para el paso siguiente se necesita una transición auditada `DRAFT → ACTIVE` aprobada para DEMO A y luego un asiento **nuevo** en cuenta 6xx marcada como `has_automatic_destination`, con su centro de costos, contrastando `6xx / 94xx-95xx / 791000` y el resultado de los reportes. No asumir que las reglas crean distribución retroactiva de cuentas de compras `601100`.
