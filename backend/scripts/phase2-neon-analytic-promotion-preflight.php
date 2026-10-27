@@ -14,7 +14,7 @@ if($argc!==2||($arg!=='--plan'&&$arg!=='--verify'
     fwrite(STDERR,"[FAIL] Use --plan | --verify | --preflight=20999990011 (RUC demo).\n");exit(2);
 }
 if($arg==='--plan'){
-    echo "[PLAN] F2.3f: verificar 21/22 migraciones, empresa DEMO, SHA256 de rutas, 227 x 2.\n";
+    echo "[PLAN] F2.3f/F5: verificar 21/22 o 63 migraciones y las 3 DEMO, SHA256 de rutas 227 x 2.\n";
     echo "[PLAN] SELECT-only: sin activar matrices, sin crear asientos ni auditar cambios.\n";
     echo "[DRY-RUN] Sin conexion SQL.\n";exit(0);
 }
@@ -53,13 +53,24 @@ try{
         SQL);
     if(!$guard||$guard->actor!=='neondb_owner'||$guard->db!=='neondb'
         ||intdiv((int)$guard->version,10000)!==18
-        ||!in_array((int)$guard->migrations,[21,22],true)||(int)$guard->companies!==3
+        ||!in_array((int)$guard->migrations,[21,22,63],true)
+        ||(int)$guard->companies!==((int)$guard->migrations===63?4:3)
         ||(int)$guard->matrices!==3||(int)$guard->routes!==1362
         ||(int)$guard->active!==0){
         throw new RuntimeException('Baseline de matrices DEMO alterado o hay version ACTIVE.');
     }
-    $companies=$db->select('SELECT id,tax_id FROM public.companies ORDER BY tax_id');
-    if(array_column($companies,'tax_id')!==$taxes)throw new RuntimeException('RUC DEMO no coincide.');
+    // The 63-migration F5 baseline has one additional, independently onboarded
+    // company (ID 4). Never require that real development company to be absent
+    // or include it in the three DEMO matrix checks.
+    $companies=$db->select('SELECT id,tax_id FROM public.companies WHERE tax_id IN (?,?,?) ORDER BY tax_id',$taxes);
+    if((int)$guard->migrations===63){
+        $extra=$db->selectOne('SELECT id FROM public.companies WHERE id=4 AND tax_id NOT IN (?,?,?)',$taxes);
+        if(!$extra)throw new RuntimeException('F5: falta cuarta empresa independiente; no usar preflight antiguo.');
+    }
+    if(array_column($companies,'tax_id')!==$taxes
+       ||array_map(static fn($c)=>(int)$c->id,$companies)!==[3000000000101,3000000000102,3000000000103]){
+        throw new RuntimeException('RUC o IDs DEMO no coinciden.');
+    }
     $selected=$arg==='--verify'?$taxes:[substr($arg,12)];
     foreach($companies as $company){
         if(!in_array($company->tax_id,$selected,true))continue;
