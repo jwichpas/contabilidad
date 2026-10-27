@@ -28,6 +28,7 @@ export interface FinancialSnapshot {
   readonly as_of: string;
   readonly currency: string; // ISO 4217: moneda funcional de la empresa
   readonly is_preliminary: boolean;
+  readonly analytic_routing_status: 'ACTIVE' | 'DRAFT' | 'NOT_CONFIGURED';
   readonly accounts: readonly FinancialSnapshotAccount[];
   readonly rubrics: readonly FinancialSnapshotRubric[];
   readonly unmapped_account_ids: readonly number[];
