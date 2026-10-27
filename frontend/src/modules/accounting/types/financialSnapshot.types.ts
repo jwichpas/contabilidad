@@ -13,11 +13,24 @@ export interface FinancialSnapshotAccount {
   readonly period_amount_local: string | null;
 }
 
+export interface FinancialSnapshotRubric {
+  readonly code: string;
+  readonly name: string;
+  readonly group_name: string;
+  readonly section: FinancialSnapshotAccount['section'];
+  readonly presentation_order: number;
+  readonly amount_local: string;
+  readonly period_amount_local: string;
+  readonly account_ids: readonly number[];
+}
+
 export interface FinancialSnapshot {
   readonly as_of: string;
   readonly currency: string; // ISO 4217: moneda funcional de la empresa
   readonly is_preliminary: boolean;
   readonly accounts: readonly FinancialSnapshotAccount[];
+  readonly rubrics: readonly FinancialSnapshotRubric[];
+  readonly unmapped_account_ids: readonly number[];
   readonly income_statement: {
     readonly from: string;
     readonly to: string;
