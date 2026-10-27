@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Accounting;
 
+use App\Support\Tenant\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,19 @@ final readonly class GetFinancialSnapshotController
         ]);
         $asOf = CarbonImmutable::createFromFormat('!Y-m-d', $validated['as_of'])->format('Y-m-d');
         $yearStart = substr($asOf, 0, 4).'-01-01';
-        $companyId = (int) $request->header('X-Company-Id', $request->user()->current_company_id);
+        // Middleware SetTenantContext already checked active membership and RLS.
+        $companyId = app(TenantContext::class)->requireCompanyId(self::class);
+        $currency = DB::table('company_settings as s')
+            ->join('currencies as c', 'c.id', '=', 's.base_currency_id')
+            ->where('s.company_id', $companyId)
+            ->where('c.is_active', true)
+            ->value('c.code');
+
+        if (! is_string($currency) || $currency === '') {
+            return response()->json([
+                'message' => 'Configure la moneda funcional de la empresa antes de consultar estados financieros.',
+            ], 409);
+        }
 
         // NUMERIC sums stay strings end to end. Include original REVERSED entries
         // alongside their posted reversal so the two movements cancel each other.
@@ -105,7 +118,7 @@ final readonly class GetFinancialSnapshotController
 
         return response()->json(['data' => [
             'as_of' => $asOf,
-            'currency' => 'PEN',
+            'currency' => $currency,
             'accounts' => $accounts,
             'totals' => array_merge($totals, [
                 'liabilities_equity_result' => $right,
