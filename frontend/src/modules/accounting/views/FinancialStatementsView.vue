@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, shallowRef } from 'vue';
 import { FileBarChart2, RefreshCw } from 'lucide-vue-next';
 import { AccountingApiClient } from '../api/httpClient';
+import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { FinancialSnapshot, FinancialSnapshotAccount, GeneralLedgerPage } from '../types/financialSnapshot.types';
 
@@ -47,7 +48,7 @@ const incomeAccounts = computed(() => snapshot.value?.accounts.filter(
 ) ?? []);
 
 function money(value: string): string {
-  return `${snapshot.value?.currency ?? 'PEN'} ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
+  return formatExactLocalAmount(value, snapshot.value?.currency ?? 'PEN');
 }
 
 async function load(): Promise<void> {
