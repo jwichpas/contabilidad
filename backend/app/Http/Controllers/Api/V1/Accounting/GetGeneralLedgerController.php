@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Accounting;
 
 use App\Models\AccountingAccount;
+use App\Support\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ final readonly class GetGeneralLedgerController
             'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from', 'before_or_equal:2100-12-31'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ]);
-        $companyId = (int) $request->header('X-Company-Id', $request->user()->current_company_id);
+        $companyId = app(TenantContext::class)->requireCompanyId(self::class);
         $account = AccountingAccount::query()
             ->where('company_id', $companyId)
             ->findOrFail((int) $input['account_id'], ['id', 'code', 'name']);
