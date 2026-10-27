@@ -195,7 +195,10 @@ try {
     $payload = [
         'entry_date' => '2026-10-26', 'entry_type' => 'STANDARD',
         'subdiary_code' => 'GENERAL', 'currency' => 'USD',
-        'exchange_rate' => '3.758000', 'exchange_rate_type' => 'SELL',
+        // No exchange_rate/exchange_rates in this payload: the HTTP controller
+        // must use the already stored 2026-10-26 USD/PEN sell rate, and must
+        // NOT rewrite the original 3.742000 BUY exchange-rate record.
+        'exchange_rate_type' => 'SELL',
         'description' => $description,
         'lines' => $lines,
     ];
