@@ -268,9 +268,12 @@ try {
     [$ledgerStatus, $ledgerBody] = $request('GET',
         '/api/v1/accounting/reports/general-ledger?account_id='
         .(int)$routes[0]->source_id.'&from=2026-10-01&to=2026-10-26');
+    $ledgerRows = $ledgerBody['data']['rows'] ?? [];
+    $lastLedgerRow = $ledgerRows !== [] ? $ledgerRows[count($ledgerRows) - 1] : null;
     $check($ledgerStatus === 200
         && (int)($ledgerBody['data']['total'] ?? -1) === 2
-        && bccomp((string)end($ledgerBody['data']['rows'])['balance_local'], '375.8000', 4) === 0,
+        && is_array($lastLedgerRow)
+        && bccomp((string)($lastLedgerRow['balance_local'] ?? ''), '375.8000', 4) === 0,
         'Libro Mayor 636100 no reconcilia dos movimientos.');
     echo "[PASS] POST 201: asiento #{$entryId}, 3 originales + 4 analiticas, 2 allocations.\n";
     echo "[PASS] CC-ADM->941100; CC-VTA->951100; ambos contra 791000.\n";
