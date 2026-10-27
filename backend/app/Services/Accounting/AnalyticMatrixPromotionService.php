@@ -56,8 +56,31 @@ final readonly class AnalyticMatrixPromotionService
             if (! $environment || $environment->role_name !== 'neondb_owner'
                 || $environment->database_name !== 'neondb'
                 || intdiv((int)$environment->postgres_version, 10000) !== 18
-                || ! in_array((int)$environment->migration_count, [21, 22], true)) {
+                || ! in_array((int)$environment->migration_count, [21, 22, 63], true)) {
                 throw new RuntimeException('Rol, base de datos o migraciones no autorizados.');
+            }
+
+            // F5 development now has 63 migrations and a fourth, independently
+            // onboarded company with real development entries. Preserve strict
+            // environment checks without relying on the obsolete 3-company
+            // and empty-ledger baseline of the F2 probes.
+            if ((int) $environment->migration_count === 63) {
+                $baseline = $db->selectOne(<<<'SQL'
+                    SELECT (SELECT count(*) FROM public.companies)::int AS companies,
+                           (SELECT count(*) FROM public.accounting_destination_rule_versions)::int AS versions,
+                           (SELECT count(*) FROM public.accounting_destination_routes)::int AS routes,
+                           (SELECT count(*) FROM public.companies
+                            WHERE (id,tax_id) IN (
+                              (3000000000101,'20999990011'),
+                              (3000000000102,'20999990012'),
+                              (3000000000103,'20999990013')))::int AS demos
+                    SQL);
+                if (! $baseline || (int) $baseline->companies !== 4
+                    || (int) $baseline->versions !== 3
+                    || (int) $baseline->routes !== 1362
+                    || (int) $baseline->demos !== 3) {
+                    throw new RuntimeException('Baseline de desarrollo F5 incompatible: no promover matrices.');
+                }
             }
 
             $company = $db->table('companies')->where('tax_id', $taxId)
