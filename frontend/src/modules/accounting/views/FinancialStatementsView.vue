@@ -38,6 +38,7 @@ const sections = [
 const grouped = computed(() => sections.map((section) => ({
   ...section,
   accounts: snapshot.value?.accounts.filter((account) => account.section === section.key) ?? [],
+  rubrics: snapshot.value?.rubrics.filter((rubric) => rubric.section === section.key) ?? [],
   total: snapshot.value?.totals[section.key] ?? '0.0000',
 })));
 const unpresented = computed(() => snapshot.value?.accounts.filter(
@@ -163,6 +164,11 @@ onMounted(() => { void load(); });
       <p class="rounded-lg border border-border bg-soft p-3 text-sm text-muted">
         Vista preliminar. El resultado incluye ingresos, gastos y costos acumulados aún sin asiento de cierre. Los rubros y ajustes de presentación siguen pendientes de conciliación.
       </p>
+      <div v-if="snapshot.unmapped_account_ids.length" role="note"
+        class="rounded-xl border border-amber-500/40 bg-surface p-3 text-sm text-muted">
+        Hay {{ snapshot.unmapped_account_ids.length }} cuenta(s) con movimientos sin rubro financiero configurado.
+        Se incluyen en los totales para conservar la conciliación, pero requieren clasificación antes de emitir estados definitivos.
+      </div>
       <div v-if="snapshot.accounts.length === 0" role="status" class="rounded-xl border border-border bg-surface p-8 text-center text-sm text-muted">
         No hay partidas contabilizadas hasta {{ snapshot.as_of }} en esta empresa.
       </div>
@@ -170,10 +176,24 @@ onMounted(() => { void load(); });
         <div class="grid gap-4 lg:grid-cols-2">
           <section v-for="section in grouped" :key="section.key" class="min-w-0 rounded-xl border border-border bg-surface p-4">
             <h2 class="text-base font-semibold text-foreground">{{ section.label }}</h2>
-            <div v-if="section.accounts.length" class="mt-3 divide-y divide-border">
-              <div v-for="account in section.accounts" :key="account.id" class="flex min-w-0 flex-wrap justify-between gap-x-4 gap-y-1 py-2 text-sm">
-                <button type="button" class="min-w-0 break-words text-left text-brand underline-offset-2 hover:underline" :aria-label="`Ver Libro Mayor de ${accountLabel(account)}`" @click="openLedger(account)">{{ accountLabel(account) }}</button>
-                <span class="font-mono tabular-nums text-foreground">{{ money(account.amount_local) }}</span>
+            <div v-if="section.rubrics.length" class="mt-3 divide-y divide-border">
+              <div v-for="rubric in section.rubrics" :key="`${section.key}-${rubric.code}`" class="py-3 text-sm">
+                <div class="flex flex-wrap items-start justify-between gap-2 font-medium">
+                  <span class="min-w-0">{{ rubric.name }}</span>
+                  <span class="font-mono tabular-nums">{{ money(rubric.amount_local) }}</span>
+                </div>
+                <details class="mt-2 text-muted">
+                  <summary class="cursor-pointer text-xs text-brand">Ver {{ rubric.account_ids.length }} cuenta(s)</summary>
+                  <div class="mt-2 space-y-2 pl-3">
+                    <div v-for="account in section.accounts.filter((row) => rubric.account_ids.includes(row.id))"
+                      :key="account.id" class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                      <button type="button" class="min-w-0 break-words text-left text-brand hover:underline"
+                        :aria-label="`Ver Libro Mayor de ${accountLabel(account)}`"
+                        @click="openLedger(account)">{{ accountLabel(account) }}</button>
+                      <span class="font-mono tabular-nums">{{ money(account.amount_local) }}</span>
+                    </div>
+                  </div>
+                </details>
               </div>
             </div>
             <p v-else class="mt-3 text-sm text-muted">Sin movimientos.</p>
