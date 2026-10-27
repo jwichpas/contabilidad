@@ -71,3 +71,30 @@ php scripts/phase2-neon-analytic-promotion-preflight.php --preflight=20999990011
 ```
 
 Este preflight no cambia datos ni activa reglas. Para el paso siguiente se necesita una transición auditada `DRAFT → ACTIVE` aprobada para DEMO A y luego un asiento **nuevo** en cuenta 6xx marcada como `has_automatic_destination`, con su centro de costos, contrastando `6xx / 94xx-95xx / 791000` y el resultado de los reportes. No asumir que las reglas crean distribución retroactiva de cuentas de compras `601100`.
+
+
+## F5.1 — Comando de activación operativa de DEMO A (27/10/2026)
+
+El usuario ejecutó y confirmó:
+
+```
+[PASS] 20999990011: 227 fuentes, CC-ADM/CC-VTA, 454 rutas, SHA256 valido, DRAFT.
+[PASS] F2.3f: preflight READ ONLY, ninguna matriz activada.
+```
+
+Se añadió `backend/scripts/phase5-demo-a-analytic-activate.php`, un **comando operativo CLI**, no una migración, que por defecto solo imprime el plan y no se conecta a Neon. Con la opción explícita `--activate-demo-a=<sha256>` invoca el servicio de promoción existente, con verificaciones del host de desarrollo, rol propietario, 63 migraciones, empresa DEMO, membresía ADMIN, rutas 227×2 y huella SHA-256. La transacción agrupa la transición DRAFT→ACTIVE y el registro obligatorio en `audit_logs`. No altera DEMO B/C ni asientos anteriores.
+
+**Ejecución explícita, una sola vez, por el operador sobre Neon `contabilidad-dev`:**
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase5-demo-a-analytic-activate.php
+php scripts/phase5-demo-a-analytic-activate.php --plan
+php scripts/phase5-demo-a-analytic-activate.php --activate-demo-a=7ec6129c655bc4ebd9ad6f378d8b12352c3e097da33517e4f1f6e484d70e01f8
+```
+
+La última línea **modifica intencionadamente** el estado analítico de DEMO A y crea un registro de auditoría si pasa todos los controles. La operación no es idempotente: un segundo intento se rechaza porque el estado ya no será DRAFT. **No confundir comando preparado con comando ejecutado**: por ahora no existe constancia de activación; el último SELECT de Neon seguía mostrando tres matrices DRAFT, cero asignaciones analíticas.
+
+Tras ver el comprobante de activación, probar desde el editor de asientos un movimiento **nuevo** en cuenta 6xx que exija centro y destino (p. ej. `621100` si sus otras dimensiones están completas), seleccionando CC-ADM o CC-VTA. Se deben registrar 4 líneas para el voucher básico (2 manuales + 2 de destino); verificar `journal_analytic_allocations`, balances en Libro Mayor y exclusión de 94/95 y 79 del resultado ERN para evitar duplicaciones. NO reimputar los tres movimientos anteriores de compras `601100`.
