@@ -10,10 +10,11 @@ export function formatExactLocalAmount(value: string, currencyCode: string): str
   const code = currencyCode.trim().toUpperCase();
   if (!match) return `${code} ${value}`;
 
-  const sign = match[1] === '-' && !/^0+$/.test(match[2] + (match[3] ?? '')) ? '−' : '';
-  const whole = match[2].replace(/^0+(?=\d)/, '');
+  const [, signRaw = '', integerRaw = '0', fractionalRaw = ''] = match;
+  const sign = signRaw === '-' && !/^0+$/.test(integerRaw + fractionalRaw) ? '−' : '';
+  const whole = integerRaw.replace(/^0+(?=\d)/, '');
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  const decimals = (match[3] ?? '').padEnd(4, '0');
+  const decimals = fractionalRaw.padEnd(4, '0');
 
   return `${sign}${code} ${grouped},${decimals}`;
 }
