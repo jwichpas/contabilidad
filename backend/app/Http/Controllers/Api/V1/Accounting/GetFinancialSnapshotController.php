@@ -113,6 +113,60 @@ final readonly class GetFinancialSnapshotController
             ];
         }
 
+        // Presentation rubrics are global, versioned reference metadata; amounts
+        // continue to come exclusively from this tenant's posted journal lines.
+        // Keep account-level detail for the Libro Mayor drill-down.
+        $rubricDefinitions = DB::table('financial_statement_rubrics')
+            ->where('is_active', true)
+            ->get(['code', 'name', 'group_name', 'presentation_order'])
+            ->keyBy('code');
+        $rubricTotals = [];
+        $unmappedAccountIds = [];
+        foreach ($accounts as $account) {
+            if (! in_array($account['section'], ['assets', 'liabilities', 'equity', 'result'], true)) {
+                continue;
+            }
+
+            $rubricCode = $account['rubric'];
+            $definition = $rubricDefinitions->get($rubricCode);
+            if ($rubricCode === 'NONE' || $definition === null) {
+                $unmappedAccountIds[] = $account['id'];
+            }
+
+            $key = $account['section'].'|'.$rubricCode;
+            if (! isset($rubricTotals[$key])) {
+                $rubricTotals[$key] = [
+                    'code' => $rubricCode,
+                    'name' => $definition === null ? 'Sin rubro configurado' : (string) $definition->name,
+                    'group_name' => $definition === null ? 'SIN_CLASIFICAR' : (string) $definition->group_name,
+                    'section' => $account['section'],
+                    'presentation_order' => $definition === null ? 32767 : (int) $definition->presentation_order,
+                    'amount_local' => '0.0000',
+                    'period_amount_local' => '0.0000',
+                    'account_ids' => [],
+                ];
+            }
+
+            $rubricTotals[$key]['amount_local'] = bcadd(
+                $rubricTotals[$key]['amount_local'], $account['amount_local'], 4
+            );
+            if ($account['period_amount_local'] !== null) {
+                // period_amount_local is debit-positive for expenses and
+                // credit-positive for revenue; it is not the ESF signed result.
+                $rubricTotals[$key]['period_amount_local'] = bcadd(
+                    $rubricTotals[$key]['period_amount_local'], $account['period_amount_local'], 4
+                );
+            }
+            $rubricTotals[$key]['account_ids'][] = $account['id'];
+        }
+        $rubrics = array_values($rubricTotals);
+        usort($rubrics, static function (array $a, array $b): int {
+            $sections = ['assets' => 0, 'liabilities' => 1, 'equity' => 2, 'result' => 3];
+            return ($sections[$a['section']] <=> $sections[$b['section']])
+                ?: ($a['presentation_order'] <=> $b['presentation_order'])
+                ?: strcmp($a['code'], $b['code']);
+        });
+
         $right = bcadd(bcadd($totals['liabilities'], $totals['equity'], 4), $totals['result'], 4);
         $difference = bcsub($totals['assets'], $right, 4);
 
@@ -120,6 +174,8 @@ final readonly class GetFinancialSnapshotController
             'as_of' => $asOf,
             'currency' => $currency,
             'accounts' => $accounts,
+            'rubrics' => $rubrics,
+            'unmapped_account_ids' => $unmappedAccountIds,
             'totals' => array_merge($totals, [
                 'liabilities_equity_result' => $right,
                 'difference' => $difference,
