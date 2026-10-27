@@ -98,3 +98,36 @@ php scripts/phase5-demo-a-analytic-activate.php --activate-demo-a=7ec6129c655bc4
 La última línea **modifica intencionadamente** el estado analítico de DEMO A y crea un registro de auditoría si pasa todos los controles. La operación no es idempotente: un segundo intento se rechaza porque el estado ya no será DRAFT. **No confundir comando preparado con comando ejecutado**: por ahora no existe constancia de activación; el último SELECT de Neon seguía mostrando tres matrices DRAFT, cero asignaciones analíticas.
 
 Tras ver el comprobante de activación, probar desde el editor de asientos un movimiento **nuevo** en cuenta 6xx que exija centro y destino (p. ej. `621100` si sus otras dimensiones están completas), seleccionando CC-ADM o CC-VTA. Se deben registrar 4 líneas para el voucher básico (2 manuales + 2 de destino); verificar `journal_analytic_allocations`, balances en Libro Mayor y exclusión de 94/95 y 79 del resultado ERN para evitar duplicaciones. NO reimputar los tres movimientos anteriores de compras `601100`.
+
+## F5.2 — DEMO A ACTIVE y primer POST analítico por HTTP (27/10/2026)
+
+El operador confirmó transición DRAFT → ACTIVE de DEMO A, versión 1, auditoría #257, con SHA256 7ec6129c655bc4ebd9ad6f378d8b12352c3e097da33517e4f1f6e484d70e01f8. El estado ACTIVE y la auditoría fueron confirmados por SELECT en Neon. DEMO B/C permanecen DRAFT.
+
+Nuevo script: backend/scripts/phase5-demo-a-analytic-journal.php. Usa Laravel HTTP/Sanctum y rol app_backend, nunca SQL manual para asentar.
+
+El asiento de ensayo registra dos gastos 636100: CC-ADM PEN 150.3200 / USD 40.0000; CC-VTA PEN 225.4800 / USD 60.0000; contra Haber 421200 y proveedor ficticio entity 28 por PEN 375.8000 / USD 100.0000.
+
+El servicio debe derivar Debe 941100 contra Haber 791000 por 150.3200 y Debe 951100 contra Haber 791000 por 225.4800: 7 partidas totales, 2 journal_analytic_allocations y cuadratura en PEN/USD.
+
+Validación integrada: Libro Mayor 636100 = PEN 375.8000, diferencia Debe/Haber y ESF = 0.0000, resultado ERN disminuye exactamente PEN 375.8000 (sin contabilizar dos veces 94/95/79).
+
+El script NO envía exchange_rate ni exchange_rates: recupera USD/PEN venta 3.758000 ya guardado en la fecha, preservando tasa de compra 3.742000. Requiere Neon contabilidad-dev, PG18, 63 migraciones, 4 empresas, matriz ACTIVE, 7 asientos existentes en DEMO A y cero imputaciones previas.
+
+Para ensayar sin conservar registros:
+
+```bash
+cd ~/contabilidad
+git pull --ff-only origin main
+cd backend
+php -l scripts/phase5-demo-a-analytic-journal.php
+php scripts/phase5-demo-a-analytic-journal.php --plan
+php scripts/phase5-demo-a-analytic-journal.php --probe=contabilidad-dev
+```
+
+Si el probe pasa y se quiere persistir el asiento de demostración, ejecutar UNA SOLA VEZ:
+
+```bash
+php scripts/phase5-demo-a-analytic-journal.php --apply=contabilidad-dev
+```
+
+El script fue publicado, pero aún no se han recibido resultados de probe ni apply. No afirmar que el comprobante haya sido asentado antes de un COMMIT confirmado.
