@@ -56,6 +56,7 @@ it('reports an empty company in its configured USD functional currency, not assu
         ->assertJsonPath('data.totals.assets', '0.0000')
         ->assertJsonPath('data.totals.trial_difference', '0.0000')
         ->assertJsonPath('data.income_statement.net', '0.0000')
+        ->assertJsonPath('data.analytic_routing_status', 'NOT_CONFIGURED')
         ->assertJsonCount(0, 'data.accounts')
         ->assertJsonCount(0, 'data.rubrics')
         ->assertJsonCount(0, 'data.unmapped_account_ids');
