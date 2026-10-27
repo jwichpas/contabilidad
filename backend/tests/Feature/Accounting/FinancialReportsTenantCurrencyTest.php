@@ -37,12 +37,12 @@ beforeEach(function (): void {
     Sanctum::actingAs($this->user, ['*']);
 });
 
-it('reports an empty company in its configured CLP functional currency, not assumed PEN', function (): void {
-    $clp = Currency::query()->where('code', 'CLP')->firstOrFail();
-    app(TenantContext::class)->run($this->company->id, function () use ($clp): void {
+it('reports an empty company in its configured USD functional currency, not assumed PEN', function (): void {
+    $usd = Currency::query()->where('code', 'USD')->where('is_active', true)->firstOrFail();
+    app(TenantContext::class)->run($this->company->id, function () use ($usd): void {
         DB::table('company_settings')->insert([
             'company_id' => $this->company->id,
-            'base_currency_id' => $clp->id,
+            'base_currency_id' => $usd->id,
             'tax_regime' => 'GENERAL',
             'default_vat_rate' => '18.00',
         ]);
@@ -52,7 +52,7 @@ it('reports an empty company in its configured CLP functional currency, not assu
         '/api/v1/accounting/reports/financial-snapshot?as_of=2026-10-26',
         ['X-Company-Id' => (string) $this->company->id]
     )->assertOk()
-        ->assertJsonPath('data.currency', 'CLP')
+        ->assertJsonPath('data.currency', 'USD')
         ->assertJsonPath('data.totals.assets', '0.0000')
         ->assertJsonPath('data.totals.trial_difference', '0.0000')
         ->assertJsonPath('data.income_statement.net', '0.0000')
