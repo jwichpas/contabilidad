@@ -30,7 +30,7 @@ import type {
 } from '../types/journalEntry.types';
 import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo, SeeCompanyVisibility, SeeCompanyVisibilityRevision } from '../types/seeReferences.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
-import type { FinancialSnapshot } from '../types/financialSnapshot.types';
+import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
   SunatContributorType, SunatCiiuClass, SunatTaxCode,
@@ -504,6 +504,14 @@ export class AccountingApiClient {
     const result = await this.request<{ data: FinancialSnapshot }>(
       `/api/v1/accounting/reports/financial-snapshot?as_of=${encodeURIComponent(asOf)}`,
       { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
+  public async fetchGeneralLedger(accountId: number, from: string, to: string, page: number): Promise<GeneralLedgerPage> {
+    const query = new URLSearchParams({ account_id: String(accountId), from, to, page: String(page) });
+    const result = await this.request<{ data: GeneralLedgerPage }>(
+      `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
     );
     return result.data;
   }

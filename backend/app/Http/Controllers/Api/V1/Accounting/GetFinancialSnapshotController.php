@@ -18,6 +18,7 @@ final readonly class GetFinancialSnapshotController
             'as_of' => ['required', 'date_format:Y-m-d', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
         ]);
         $asOf = CarbonImmutable::createFromFormat('!Y-m-d', $validated['as_of'])->format('Y-m-d');
+        $yearStart = substr($asOf, 0, 4).'-01-01';
         $companyId = (int) $request->header('X-Company-Id', $request->user()->current_company_id);
 
         // NUMERIC sums stay strings end to end. Include original REVERSED entries
@@ -38,10 +39,13 @@ final readonly class GetFinancialSnapshotController
             ->select('a.id', 'a.code', 'a.name', 'a.account_type', 'a.financial_statement_rubric')
             ->selectRaw('SUM(l.debit_local) AS debit_local, SUM(l.credit_local) AS credit_local')
             ->selectRaw('SUM(l.debit_foreign) AS debit_foreign, SUM(l.credit_foreign) AS credit_foreign')
+            ->selectRaw('SUM(CASE WHEN j.entry_date >= ? THEN l.debit_local ELSE 0 END) AS period_debit_local', [$yearStart])
+            ->selectRaw('SUM(CASE WHEN j.entry_date >= ? THEN l.credit_local ELSE 0 END) AS period_credit_local', [$yearStart])
             ->get();
 
         $totals = array_fill_keys(['assets', 'liabilities', 'equity', 'result', 'unclassified', 'excluded', 'debit_local', 'credit_local'], '0.0000');
         $accounts = [];
+        $income = ['revenue' => '0.0000', 'expenses' => '0.0000'];
         foreach ($rows as $row) {
             $debit = (string) $row->debit_local;
             $credit = (string) $row->credit_local;
@@ -71,6 +75,15 @@ final readonly class GetFinancialSnapshotController
                 $amount = bcsub($credit, $debit, 4);
             }
             $totals[$section] = bcadd($totals[$section], $amount, 4);
+            $periodAmount = null;
+            if ($section === 'result') {
+                $periodAmount = $row->account_type === 'REVENUE'
+                    ? bcsub((string) $row->period_credit_local, (string) $row->period_debit_local, 4)
+                    : bcsub((string) $row->period_debit_local, (string) $row->period_credit_local, 4);
+                $income[$row->account_type === 'REVENUE' ? 'revenue' : 'expenses'] = bcadd(
+                    $income[$row->account_type === 'REVENUE' ? 'revenue' : 'expenses'], $periodAmount, 4
+                );
+            }
             $accounts[] = [
                 'id' => (int) $row->id,
                 'code' => (string) $row->code,
@@ -83,6 +96,7 @@ final readonly class GetFinancialSnapshotController
                 'debit_foreign' => bcadd($debitForeign, '0', 4),
                 'credit_foreign' => bcadd($creditForeign, '0', 4),
                 'amount_local' => $amount,
+                'period_amount_local' => $periodAmount,
             ];
         }
 
@@ -98,6 +112,13 @@ final readonly class GetFinancialSnapshotController
                 'difference' => $difference,
                 'trial_difference' => bcsub($totals['debit_local'], $totals['credit_local'], 4),
             ]),
+            'income_statement' => [
+                'from' => $yearStart,
+                'to' => $asOf,
+                'revenue' => $income['revenue'],
+                'expenses' => $income['expenses'],
+                'net' => bcsub($income['revenue'], $income['expenses'], 4),
+            ],
             'is_preliminary' => true,
         ]]);
     }
