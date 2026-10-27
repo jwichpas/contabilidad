@@ -30,6 +30,7 @@ import type {
 } from '../types/journalEntry.types';
 import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo, SeeCompanyVisibility, SeeCompanyVisibilityRevision } from '../types/seeReferences.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
+import type { FinancialSnapshot } from '../types/financialSnapshot.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
   SunatContributorType, SunatCiiuClass, SunatTaxCode,
@@ -499,6 +500,14 @@ export class AccountingApiClient {
   /**
    * Lista los asientos contables registrados en el libro diario.
    */
+  public async fetchFinancialSnapshot(asOf: string): Promise<FinancialSnapshot> {
+    const result = await this.request<{ data: FinancialSnapshot }>(
+      `/api/v1/accounting/reports/financial-snapshot?as_of=${encodeURIComponent(asOf)}`,
+      { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
   public async fetchJournalEntries(params?: {
     readonly year?: number;
     readonly month?: number;

@@ -112,6 +112,8 @@ const activeCompanyIdString = computed<string>({
               ? 'Libro Diario Bimoneda (Vouchers Contables)'
               : currentModule === 'fiscal-periods'
                 ? 'Períodos contables · Cierre y auditoría'
+              : currentModule === 'financial-statements'
+                ? 'Estado de situación financiera · Preliminar'
               : currentModule === 'cost-centers'
               ? 'Centros de costo'
               : currentModule === 'fiscal-history'

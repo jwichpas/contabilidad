@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Accounting\ListFiscalPeriodsController;
 use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
 use App\Http\Controllers\Api\V1\Accounting\CreateJournalEntryController;
 use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController;
+use App\Http\Controllers\Api\V1\Accounting\GetFinancialSnapshotController;
 use App\Http\Controllers\Api\V1\Accounting\GetNextJournalEntryNumberController;
 use App\Http\Controllers\Api\V1\Accounting\GetJournalEditorBootstrapController;
 use App\Http\Controllers\Api\V1\Accounting\ListAccountingAccountTreeController;
@@ -148,6 +149,9 @@ Route::prefix('v1')->group(function (): void {
                 ->whereNumber('periodId')
                 ->whereIn('action',['close','lock','reopen'])
                 ->name('api.v1.accounting.fiscal-periods.transition');
+
+            Route::get('/accounting/reports/financial-snapshot', GetFinancialSnapshotController::class)
+                ->name('api.v1.accounting.reports.financial-snapshot');
 
             // Asientos Contables / Libro Diario Bimoneda (Voucher)
             Route::prefix('accounting/journal-entries')->group(function (): void {

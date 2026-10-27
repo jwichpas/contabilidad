@@ -329,23 +329,26 @@ const activeCompanyIdString = computed<string>({
               </span>
             </div>
 
-            <div
-              class="flex items-center justify-between px-3 py-2 rounded-md text-white/70 hover:bg-white/5 hover:text-white text-xs transition-colors cursor-default"
-              title="Estado de Situación Financiera y Estado de Resultados"
+            <button
+              type="button"
+              :class="['flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs transition-colors',
+                currentModule === 'financial-statements' ? 'bg-white/15 font-semibold text-white shadow-[inset_3px_0_0_var(--accent)]' : 'text-white/80 hover:bg-white/10 hover:text-white']"
+              title="Estado de situación financiera preliminar y balance de comprobación"
+              @click="emit('navigate', 'financial-statements')"
             >
               <span class="flex items-center gap-2.5 truncate">
                 <FileBarChart2 class="w-4 h-4 shrink-0 text-white/50" />
                 <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                  Estados Financieros EEFF
+                  Estados financieros
                 </span>
               </span>
               <span
                 v-if="!isCollapsed || isOpenMobile"
                 class="tag font-mono text-[10px] px-1.5 py-0 border-white/30 text-white/80"
               >
-                NIIF
+                Ver
               </span>
-            </div>
+            </button>
           </div>
 
           <!-- Referencias normativas globales, sin edición por empresa -->

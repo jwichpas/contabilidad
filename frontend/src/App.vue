@@ -8,6 +8,7 @@ import JournalEntryView from './modules/accounting/views/JournalEntryView.vue';
 import CompanySubdiariesView from './modules/accounting/views/CompanySubdiariesView.vue';
 import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue';
 import FiscalPeriodsView from './modules/accounting/views/FiscalPeriodsView.vue';
+import FinancialStatementsView from './modules/accounting/views/FinancialStatementsView.vue';
 import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
 import EntityMasterView from './modules/company/views/EntityMasterView.vue';
 import CompanyFiscalHistoryView from './modules/company/views/CompanyFiscalHistoryView.vue';
@@ -91,6 +92,7 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('centros-costo') || hash.includes('cost-centers')) return 'cost-centers';
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
+  if (hash.includes('estados-financieros') || hash.includes('financial-statements')) return 'financial-statements';
   if (hash.includes('historial-fiscal') || hash.includes('fiscal-history')) return 'fiscal-history';
   if (hash.includes('anexos') || hash.includes('terceros') || hash.includes('entities')) return 'entities';
   if (hash.includes('diario') || hash.includes('asiento') || hash.includes('voucher')) {
@@ -125,6 +127,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#catalogos-sunat';
   } else if (mod === 'fiscal-periods') {
     window.location.hash = '#periodos';
+  } else if (mod === 'financial-statements') {
+    window.location.hash = '#estados-financieros';
   } else if (mod === 'exchange-rates') {
     window.location.hash = '#tipo-cambio';
   } else if (mod === 'fiscal-history') {
@@ -288,6 +292,12 @@ watch(
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
           :can-manage-periods="canManagePeriods"
+        />
+        <FinancialStatementsView
+          v-else-if="currentModule === 'financial-statements'"
+          :key="`financial-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
         />
         <ExchangeRatesView
           v-else-if="currentModule === 'exchange-rates'"
