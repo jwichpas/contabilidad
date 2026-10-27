@@ -47,7 +47,7 @@ const incomeAccounts = computed(() => snapshot.value?.accounts.filter(
 ) ?? []);
 
 function money(value: string): string {
-  return `S/ ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
+  return `${snapshot.value?.currency ?? 'PEN'} ${Number(value).toLocaleString('es-PE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
 }
 
 async function load(): Promise<void> {
@@ -116,7 +116,7 @@ onMounted(() => { void load(); });
         <div class="rounded-xl bg-brand/10 p-3 text-brand"><FileBarChart2 class="h-5 w-5" /></div>
         <div>
           <h1 class="text-xl font-semibold text-foreground">Estado de situación financiera preliminar</h1>
-          <p class="mt-1 max-w-3xl text-sm text-muted">Saldos de los asientos contabilizados de esta empresa hasta la fecha elegida. Cifras en soles con cuatro decimales.</p>
+          <p class="mt-1 max-w-3xl text-sm text-muted">Saldos de los asientos contabilizados de esta empresa hasta la fecha elegida. Cifras en moneda funcional de la empresa con cuatro decimales.</p>
         </div>
       </div>
       <form class="flex flex-wrap items-end gap-2" @submit.prevent="load">
@@ -147,7 +147,7 @@ onMounted(() => { void load(); });
             <div v-if="ledger.total === 0" class="mt-4 text-sm text-muted">Sin movimientos en este período.</div>
             <div v-else class="mt-4 overflow-x-auto">
               <table class="w-full min-w-[720px] table-fixed text-left text-xs sm:text-sm">
-                <thead class="bg-soft text-muted"><tr><th scope="col" class="w-[14%] p-2">Fecha</th><th scope="col" class="w-[14%] p-2">Asiento</th><th scope="col" class="w-[30%] p-2">Glosa</th><th scope="col" class="w-[14%] p-2 text-right">Debe PEN</th><th scope="col" class="w-[14%] p-2 text-right">Haber PEN</th><th scope="col" class="w-[14%] p-2 text-right">Saldo PEN</th></tr></thead>
+                <thead class="bg-soft text-muted"><tr><th scope="col" class="w-[14%] p-2">Fecha</th><th scope="col" class="w-[14%] p-2">Asiento</th><th scope="col" class="w-[30%] p-2">Glosa</th><th scope="col" class="w-[14%] p-2 text-right">Debe {{ snapshot.currency }}</th><th scope="col" class="w-[14%] p-2 text-right">Haber {{ snapshot.currency }}</th><th scope="col" class="w-[14%] p-2 text-right">Saldo {{ snapshot.currency }}</th></tr></thead>
                 <tbody><tr v-for="row in ledger.rows" :key="row.id" class="border-t border-border"><td class="p-2">{{ row.entry_date }}</td><td class="break-words p-2 font-mono">{{ row.entry_number }}</td><td class="break-words p-2">{{ row.description }}</td><td class="p-2 text-right font-mono">{{ money(row.debit_local) }}</td><td class="p-2 text-right font-mono">{{ money(row.credit_local) }}</td><td class="p-2 text-right font-mono font-semibold">{{ money(row.balance_local) }}</td></tr></tbody>
               </table>
             </div>
@@ -202,7 +202,7 @@ onMounted(() => { void load(); });
           <button type="button" class="mt-3 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-brand" :aria-expanded="showTrialBalance" @click="showTrialBalance = !showTrialBalance">{{ showTrialBalance ? 'Ocultar' : 'Ver' }} detalle por cuenta</button>
           <div v-if="showTrialBalance" class="mt-3 overflow-x-auto">
             <table class="w-full min-w-[560px] table-fixed text-left text-sm">
-              <thead class="bg-soft text-muted"><tr><th scope="col" class="w-1/2 p-2">Cuenta</th><th scope="col" class="w-1/4 p-2 text-right">Debe PEN</th><th scope="col" class="w-1/4 p-2 text-right">Haber PEN</th></tr></thead>
+              <thead class="bg-soft text-muted"><tr><th scope="col" class="w-1/2 p-2">Cuenta</th><th scope="col" class="w-1/4 p-2 text-right">Debe {{ snapshot.currency }}</th><th scope="col" class="w-1/4 p-2 text-right">Haber {{ snapshot.currency }}</th></tr></thead>
               <tbody><tr v-for="account in snapshot.accounts" :key="account.id" class="border-t border-border"><td class="break-words p-2"><button type="button" class="text-left text-brand hover:underline" @click="openLedger(account)">{{ accountLabel(account) }}</button></td><td class="p-2 text-right font-mono tabular-nums">{{ money(account.debit_local) }}</td><td class="p-2 text-right font-mono tabular-nums">{{ money(account.credit_local) }}</td></tr></tbody>
               <tfoot><tr class="border-t border-border font-semibold"><th scope="row" class="p-2">Totales</th><td class="p-2 text-right font-mono">{{ money(snapshot.totals.debit_local) }}</td><td class="p-2 text-right font-mono">{{ money(snapshot.totals.credit_local) }}</td></tr></tfoot>
             </table>
