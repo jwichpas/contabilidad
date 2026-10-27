@@ -162,7 +162,14 @@ onMounted(() => { void load(); });
       </section>
       <template v-else>
       <p class="rounded-lg border border-border bg-soft p-3 text-sm text-muted">
-        Vista preliminar. El resultado incluye ingresos, gastos y costos acumulados aún sin asiento de cierre. Los rubros y ajustes de presentación siguen pendientes de conciliación.
+        Vista preliminar. El resultado incluye ingresos, gastos y costos acumulados aún sin asiento de cierre.
+        Los ajustes y las notas de presentación siguen pendientes de conciliación.
+      </p>
+      <p v-if="snapshot.analytic_routing_status !== 'ACTIVE'"
+        class="rounded-lg border border-amber-500/40 bg-surface p-3 text-sm text-muted" role="note">
+        Las reglas de destino analítico 94/95 contra 79
+        {{ snapshot.analytic_routing_status === 'DRAFT' ? 'están en borrador y aún no generan imputaciones automáticas' : 'aún no están configuradas para esta empresa' }}.
+        Los estados financieros muestran solo los asientos efectivamente registrados.
       </p>
       <div v-if="snapshot.unmapped_account_ids.length" role="note"
         class="rounded-xl border border-amber-500/40 bg-surface p-3 text-sm text-muted">
