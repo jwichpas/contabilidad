@@ -116,6 +116,12 @@ final readonly class GetFinancialSnapshotController
         // Presentation rubrics are global, versioned reference metadata; amounts
         // continue to come exclusively from this tenant's posted journal lines.
         // Keep account-level detail for the Libro Mayor drill-down.
+        $analyticStatuses = DB::table('accounting_destination_rule_versions')
+            ->where('company_id', $companyId)->pluck('status')->all();
+        $analyticRoutingStatus = in_array('ACTIVE', $analyticStatuses, true)
+            ? 'ACTIVE'
+            : (in_array('DRAFT', $analyticStatuses, true) ? 'DRAFT' : 'NOT_CONFIGURED');
+
         $rubricDefinitions = DB::table('financial_statement_rubrics')
             ->where('is_active', true)
             ->get(['code', 'name', 'group_name', 'presentation_order'])
@@ -176,6 +182,7 @@ final readonly class GetFinancialSnapshotController
             'accounts' => $accounts,
             'rubrics' => $rubrics,
             'unmapped_account_ids' => $unmappedAccountIds,
+            'analytic_routing_status' => $analyticRoutingStatus,
             'totals' => array_merge($totals, [
                 'liabilities_equity_result' => $right,
                 'difference' => $difference,
