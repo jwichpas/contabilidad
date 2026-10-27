@@ -131,3 +131,9 @@ php scripts/phase5-demo-a-analytic-journal.php --apply=contabilidad-dev
 ```
 
 El script fue publicado, pero aún no se han recibido resultados de probe ni apply. No afirmar que el comprobante haya sido asentado antes de un COMMIT confirmado.
+
+## Balance de comprobación con saldos (27/10/2026)
+
+La consulta ahora expone por cuenta el movimiento Debe/Haber y el saldo deudor o acreedor, todos con escala exacta de cuatro decimales. La vista muestra las cuatro columnas y sus totales con diferencia de saldos, manteniendo el acceso al Libro Mayor. No se añade migración.
+
+Contraste de solo lectura en Neon DEV, DEMO A al 27/10/2026: 9 cuentas con movimientos; Debe y Haber acumulados **21.989,3900** cada uno; saldos deudores y acreedores **21.889,3900** cada uno. El `pnpm build` del frontend pasó. La ruta PHP actualizada aún no se ha ejecutado por HTTP con esta forma de respuesta; por ello F5.1 permanece abierta para la aceptación integrada y el cierre contable.

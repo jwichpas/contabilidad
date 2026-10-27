@@ -243,13 +243,37 @@ onMounted(() => { void load(); });
           <p class="mt-1 text-sm text-muted">Incluye también cuentas analíticas y de orden. Los originales extornados se compensan con sus asientos de reversión.</p>
           <button type="button" class="mt-3 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-brand" :aria-expanded="showTrialBalance" @click="showTrialBalance = !showTrialBalance">{{ showTrialBalance ? 'Ocultar' : 'Ver' }} detalle por cuenta</button>
           <div v-if="showTrialBalance" class="mt-3 overflow-x-auto">
-            <table class="w-full min-w-[560px] table-fixed text-left text-sm">
-              <thead class="bg-soft text-muted"><tr><th scope="col" class="w-1/2 p-2">Cuenta</th><th scope="col" class="w-1/4 p-2 text-right">Debe {{ snapshot.currency }}</th><th scope="col" class="w-1/4 p-2 text-right">Haber {{ snapshot.currency }}</th></tr></thead>
-              <tbody><tr v-for="account in snapshot.accounts" :key="account.id" class="border-t border-border"><td class="break-words p-2"><button type="button" class="text-left text-brand hover:underline" @click="openLedger(account)">{{ accountLabel(account) }}</button></td><td class="p-2 text-right font-mono tabular-nums">{{ money(account.debit_local) }}</td><td class="p-2 text-right font-mono tabular-nums">{{ money(account.credit_local) }}</td></tr></tbody>
-              <tfoot><tr class="border-t border-border font-semibold"><th scope="row" class="p-2">Totales</th><td class="p-2 text-right font-mono">{{ money(snapshot.totals.debit_local) }}</td><td class="p-2 text-right font-mono">{{ money(snapshot.totals.credit_local) }}</td></tr></tfoot>
+            <table class="w-full min-w-[900px] table-fixed text-left text-sm">
+              <thead class="bg-soft text-muted">
+                <tr>
+                  <th scope="col" class="w-[28%] p-2">Cuenta</th>
+                  <th scope="col" class="w-[18%] p-2 text-right">Debe {{ snapshot.currency }}</th>
+                  <th scope="col" class="w-[18%] p-2 text-right">Haber {{ snapshot.currency }}</th>
+                  <th scope="col" class="w-[18%] p-2 text-right">Saldo deudor</th>
+                  <th scope="col" class="w-[18%] p-2 text-right">Saldo acreedor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="account in snapshot.accounts" :key="account.id" class="border-t border-border">
+                  <td class="break-words p-2"><button type="button" class="text-left text-brand hover:underline" @click="openLedger(account)">{{ accountLabel(account) }}</button></td>
+                  <td class="p-2 text-right font-mono tabular-nums">{{ money(account.debit_local) }}</td>
+                  <td class="p-2 text-right font-mono tabular-nums">{{ money(account.credit_local) }}</td>
+                  <td class="p-2 text-right font-mono tabular-nums">{{ money(account.balance_debit_local) }}</td>
+                  <td class="p-2 text-right font-mono tabular-nums">{{ money(account.balance_credit_local) }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="border-t border-border font-semibold">
+                  <th scope="row" class="p-2">Totales</th>
+                  <td class="p-2 text-right font-mono">{{ money(snapshot.totals.debit_local) }}</td>
+                  <td class="p-2 text-right font-mono">{{ money(snapshot.totals.credit_local) }}</td>
+                  <td class="p-2 text-right font-mono">{{ money(snapshot.totals.trial_debit_balance) }}</td>
+                  <td class="p-2 text-right font-mono">{{ money(snapshot.totals.trial_credit_balance) }}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
-          <p class="mt-3 text-sm">Diferencia Debe − Haber: <strong class="font-mono">{{ money(snapshot.totals.trial_difference) }}</strong></p>
+          <p class="mt-3 text-sm">Diferencia Debe − Haber: <strong class="font-mono">{{ money(snapshot.totals.trial_difference) }}</strong> · Diferencia de saldos: <strong class="font-mono">{{ money(snapshot.totals.trial_balance_difference) }}</strong></p>
         </section>
         <section v-if="unpresented.length" class="rounded-xl border border-amber-500/30 bg-surface p-4 text-sm">
           <h2 class="font-semibold">Cuentas fuera de la presentación</h2>

@@ -7,6 +7,8 @@ export interface FinancialSnapshotAccount {
   readonly section: 'assets' | 'liabilities' | 'equity' | 'result' | 'unclassified' | 'excluded';
   readonly debit_local: string;
   readonly credit_local: string;
+  readonly balance_debit_local: string;
+  readonly balance_credit_local: string;
   readonly debit_foreign: string;
   readonly credit_foreign: string;
   readonly amount_local: string;
@@ -39,7 +41,7 @@ export interface FinancialSnapshot {
     readonly expenses: string;
     readonly net: string;
   };
-  readonly totals: Readonly<Record<'assets' | 'liabilities' | 'equity' | 'result' | 'unclassified' | 'excluded' | 'debit_local' | 'credit_local' | 'liabilities_equity_result' | 'difference' | 'trial_difference', string>>;
+  readonly totals: Readonly<Record<'assets' | 'liabilities' | 'equity' | 'result' | 'unclassified' | 'excluded' | 'debit_local' | 'credit_local' | 'trial_debit_balance' | 'trial_credit_balance' | 'trial_balance_difference' | 'liabilities_equity_result' | 'difference' | 'trial_difference', string>>;
 }
 
 export interface GeneralLedgerPage {

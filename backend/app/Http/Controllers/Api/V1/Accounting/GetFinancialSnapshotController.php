@@ -56,7 +56,7 @@ final readonly class GetFinancialSnapshotController
             ->selectRaw('SUM(CASE WHEN j.entry_date >= ? THEN l.credit_local ELSE 0 END) AS period_credit_local', [$yearStart])
             ->get();
 
-        $totals = array_fill_keys(['assets', 'liabilities', 'equity', 'result', 'unclassified', 'excluded', 'debit_local', 'credit_local'], '0.0000');
+        $totals = array_fill_keys(['assets', 'liabilities', 'equity', 'result', 'unclassified', 'excluded', 'debit_local', 'credit_local', 'trial_debit_balance', 'trial_credit_balance'], '0.0000');
         $accounts = [];
         $income = ['revenue' => '0.0000', 'expenses' => '0.0000'];
         foreach ($rows as $row) {
@@ -66,6 +66,11 @@ final readonly class GetFinancialSnapshotController
             $creditForeign = (string) $row->credit_foreign;
             $totals['debit_local'] = bcadd($totals['debit_local'], $debit, 4);
             $totals['credit_local'] = bcadd($totals['credit_local'], $credit, 4);
+            $netBalance = bcsub($debit, $credit, 4);
+            $debitBalance = bccomp($netBalance, '0', 4) > 0 ? $netBalance : '0.0000';
+            $creditBalance = bccomp($netBalance, '0', 4) < 0 ? bcsub('0', $netBalance, 4) : '0.0000';
+            $totals['trial_debit_balance'] = bcadd($totals['trial_debit_balance'], $debitBalance, 4);
+            $totals['trial_credit_balance'] = bcadd($totals['trial_credit_balance'], $creditBalance, 4);
 
             $section = match (true) {
                 str_starts_with((string) $row->code, '9'),
@@ -106,6 +111,8 @@ final readonly class GetFinancialSnapshotController
                 'section' => $section,
                 'debit_local' => bcadd($debit, '0', 4),
                 'credit_local' => bcadd($credit, '0', 4),
+                'balance_debit_local' => $debitBalance,
+                'balance_credit_local' => $creditBalance,
                 'debit_foreign' => bcadd($debitForeign, '0', 4),
                 'credit_foreign' => bcadd($creditForeign, '0', 4),
                 'amount_local' => $amount,
@@ -187,6 +194,7 @@ final readonly class GetFinancialSnapshotController
                 'liabilities_equity_result' => $right,
                 'difference' => $difference,
                 'trial_difference' => bcsub($totals['debit_local'], $totals['credit_local'], 4),
+                'trial_balance_difference' => bcsub($totals['trial_debit_balance'], $totals['trial_credit_balance'], 4),
             ]),
             'income_statement' => [
                 'from' => $yearStart,
