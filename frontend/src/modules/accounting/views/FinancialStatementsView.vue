@@ -44,8 +44,8 @@ const grouped = computed(() => sections.map((section) => ({
 const unpresented = computed(() => snapshot.value?.accounts.filter(
   (account) => account.section === 'unclassified' || account.section === 'excluded',
 ) ?? []);
-const incomeAccounts = computed(() => snapshot.value?.accounts.filter(
-  (account) => account.section === 'result' && account.period_amount_local !== '0.0000',
+const incomeRubrics = computed(() => snapshot.value?.rubrics.filter(
+  (rubric) => rubric.section === 'result' && rubric.period_amount_local !== '0.0000',
 ) ?? []);
 
 function money(value: string): string {
@@ -210,9 +210,23 @@ onMounted(() => { void load(); });
         <section class="rounded-xl border border-border bg-surface p-4">
           <h2 class="text-base font-semibold">Estado de Resultados por naturaleza · {{ snapshot.income_statement.from }} al {{ snapshot.income_statement.to }}</h2>
           <p class="mt-1 text-sm text-muted">Movimientos del ejercicio en cuentas de ingresos, gastos y costos; no equivale al resultado acumulado mostrado en patrimonio.</p>
-          <div v-for="account in incomeAccounts" :key="account.id" class="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 border-b border-border py-2 text-sm">
-            <button type="button" class="break-words text-left text-brand hover:underline" @click="openLedger(account)">{{ accountLabel(account) }}</button>
-            <span class="font-mono tabular-nums">{{ money(account.period_amount_local ?? '0.0000') }}</span>
+          <div v-for="rubric in incomeRubrics" :key="rubric.code"
+            class="mt-2 border-b border-border py-2 text-sm">
+            <div class="flex flex-wrap justify-between gap-x-4 gap-y-1 font-medium">
+              <span>{{ rubric.name }}</span>
+              <span class="font-mono tabular-nums">{{ money(rubric.period_amount_local) }}</span>
+            </div>
+            <details class="mt-2 text-muted">
+              <summary class="cursor-pointer text-xs text-brand">Ver {{ rubric.account_ids.length }} cuenta(s)</summary>
+              <div class="mt-2 space-y-2 pl-3">
+                <div v-for="account in snapshot.accounts.filter((row) => rubric.account_ids.includes(row.id))"
+                  :key="account.id" class="flex flex-wrap justify-between gap-x-3 gap-y-1">
+                  <button type="button" class="min-w-0 break-words text-left text-brand hover:underline"
+                    @click="openLedger(account)">{{ accountLabel(account) }}</button>
+                  <span class="font-mono tabular-nums">{{ money(account.period_amount_local ?? '0.0000') }}</span>
+                </div>
+              </div>
+            </details>
           </div>
           <div class="mt-3 space-y-2 text-sm"><div class="flex justify-between gap-2"><span>Ingresos</span><strong class="font-mono">{{ money(snapshot.income_statement.revenue) }}</strong></div><div class="flex justify-between gap-2"><span>Gastos y costos</span><strong class="font-mono">{{ money(snapshot.income_statement.expenses) }}</strong></div><div class="flex justify-between gap-2 border-t border-border pt-3"><strong>Resultado del ejercicio</strong><strong class="font-mono">{{ money(snapshot.income_statement.net) }}</strong></div></div>
         </section>
