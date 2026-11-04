@@ -1327,7 +1327,6 @@
 .app-content { max-width: none; }
 
 aside[aria-label="Menú principal del ERP Contable"] {
-  width: 224px;
   padding: 10px 8px;
   color: var(--ink) !important;
   background: var(--side) !important;
