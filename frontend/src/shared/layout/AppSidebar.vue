@@ -85,7 +85,7 @@ const activeCompanyIdString = computed<string>({
         isOpenMobile
           ? 'fixed inset-y-0 left-0 w-72 shadow-2xl'
           : 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen',
-        !isOpenMobile && (isCollapsed ? 'lg:w-[74px]' : 'lg:w-[272px]'),
+        !isOpenMobile && (isCollapsed ? 'lg:w-16' : 'lg:w-56'),
       ]"
       aria-label="Menú principal del ERP Contable"
     >
@@ -146,7 +146,7 @@ const activeCompanyIdString = computed<string>({
             v-model="activeCompanyIdString"
             :disabled="isSwitchingCompany"
             :options="companyOptions"
-            variant="dark"
+            variant="default"
             size="sm"
           />
 
