@@ -214,7 +214,7 @@ watch(
     @toggle-dark="isDarkMode = !isDarkMode"
   />
 
-  <div v-else class="min-h-screen flex bg-background text-foreground">
+  <div v-else class="app-shell min-h-screen flex text-foreground">
     <!-- Componente Modular: Barra Lateral (Sidebar) -->
     <AppSidebar
       :current-module="currentModule"
@@ -233,7 +233,7 @@ watch(
     />
 
     <!-- Contenedor Principal (Header Superior + Área de Trabajo Modular) -->
-    <div class="flex-1 flex flex-col min-w-0">
+    <div class="app-panel flex-1 flex flex-col min-w-0">
       <!-- Componente Modular: Cabecera Superior (Header) -->
       <AppHeader
         :current-module="currentModule"
@@ -254,7 +254,7 @@ watch(
       />
 
       <!-- Contenido Principal Fluido y Responsivo -->
-      <main :inert="isSwitchingCompany" class="flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1680px] w-full mx-auto">
+      <main :inert="isSwitchingCompany" class="app-content flex-1 p-3.5 sm:p-5 lg:p-6 w-full mx-auto">
         <div v-if="companySwitchNotice" role="status" class="mb-4 rounded-lg border border-brand bg-surface p-3 text-sm text-foreground">
           {{ companySwitchNotice }}
           <button type="button" class="ml-2 underline" @click="companySwitchNotice = null">Cerrar</button>
