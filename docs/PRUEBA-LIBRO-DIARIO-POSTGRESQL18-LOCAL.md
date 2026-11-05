@@ -209,3 +209,81 @@ en puerto separado y medir cinco `editor-bootstrap` desde el navegador.
 
 Nunca ejecutar `php artisan migrate` general ni `migrate:fresh`
 contra `backend/.env` (base remota).
+
+## Esquema persistente PG18: instalación controlada
+
+**Instalación Docker verificada por el usuario:** PostgreSQL **18.6** local,
+contenedor `contabilidad-pg18-local`, volumen persistente
+`contabilidad-pg18-local-data`, puerto `127.0.0.1:55433`.
+Se creó `backend/.env.pg18.local` con la contraseña administrativa,
+sin cambiar `backend/.env`. Al finalizar esa etapa el esquema estaba vacío.
+
+### Instalador seguro publicado en main
+
+Se añade `backend/scripts/instalar-esquema-pg18-local.ps1`.
+
+```powershell
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+.\scripts\instalar-esquema-pg18-local.ps1 -Accion Plan
+```
+
+Si se ve `[ESTADO] ... = 0|0|0` y
+`[PLAN] Base vacía: lista para 25 migraciones revisadas.`,
+ejecutar la instalación **expresamente**:
+
+```powershell
+.\scripts\instalar-esquema-pg18-local.ps1 -Accion Instalar
+.\scripts\instalar-esquema-pg18-local.ps1 -Accion Verificar
+```
+
+El script exige todos estos controles:
+
+- Etiqueta Docker `contabilidad.local=pg18-dev`, nombre
+  `contabilidad-pg18-local`, montaje del volumen esperado, puerto
+  `127.0.0.1:55433`, identidad `contabilidad_local/postgres/PG18`.
+- Archivo privado con conexión administrativa **exclusivamente local**.
+- Base vacía y rol `app_backend` aún inexistente, sin
+  `bootstrap/cache/config.php`.
+- Antes de migrar, crea una tabla de guardia en el Docker
+  previamente verificado y una marca aleatoria de 32 dígitos.
+- Con la configuración de proceso temporal obliga **tanto** a
+  `pgsql` como a `pgsql_migrations` a localhost; desactiva las URL
+  de conexión heredadas de `.env`; comprueba el destino real desde PHP.
+- Dos migraciones de endurecimiento de 2026-10-21 mantienen las guardas
+  originales de Neon/Supabase/CI y admiten el caso **adicional** de la
+  base local solo si el token de instalación coincide en PostgreSQL,
+  el rol es `postgres`, el motor es PG18 y las configuraciones resueltas
+  apuntan a `127.0.0.1:55433/contabilidad_local`.
+- Ejecuta las 25 migraciones revisadas **una a una con `--path`**.
+  Después de cada una comprueba la fila exacta en `public.migrations`.
+  Oculta el texto SQL bruto ante errores para evitar exponer contraseñas.
+- Instala PEN, USD y EUR como propietario y comprueba que
+  `app_backend` conserva únicamente permisos de lectura en
+  `currencies` y no tiene `BYPASSRLS`.
+- Agrega las credenciales `app_backend` solo a
+  `backend/.env.pg18.local`, protegido por `.gitignore`.
+  **No copiar ese archivo al chat ni a GitHub.**
+- Recupera las variables de entorno anteriores en un bloque `finally`.
+  Una instalación parcial de una base persistente **no se borra ni
+  se reintenta automáticamente**; si falla, investigar el punto exacto
+  sin ejecutar `migrate:fresh` ni migraciones generales.
+
+`Plan` y `Verificar` no ejecutan escrituras.
+
+**Estado de ejecución:** código y validaciones sintácticas preparados.
+La instalación real en el Windows del usuario es la próxima prueba.
+Ni el repositorio GitHub ni sus acciones CI tienen acceso a Docker
+local ni pueden comprobar los datos hasta esa ejecución.
+
+### Etapa siguiente
+
+Tras verificar las 25 migraciones y RLS en la base persistente,
+crear datos **sintéticos** suficientes para el editor del Libro Diario:
+un usuario de prueba con Sanctum real, empresa, membresía,
+monedas PEN/USD, tasas de cambio, subdiarios y plan de cuentas.
+Preparar un backend Laravel de medición aislado en otro puerto,
+sin cambiar el servicio actual contra Neon. Comparar medianas de
+al menos cinco solicitudes HTTP `editor-bootstrap`.
