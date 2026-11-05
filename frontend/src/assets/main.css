@@ -1265,7 +1265,7 @@
 .app-sidebar-nav button { min-height: 2.25rem; color: var(--mut); }
 .app-sidebar-nav button[aria-current="page"] {
   background: var(--soft);
-  color: var(--brand);
+  color: var(--nav-active);
   box-shadow: inset 3px 0 0 var(--brand);
   font-weight: 650;
 }
