@@ -150,6 +150,27 @@ try{
     Invoke-F23h -Program 'docker' -Arguments @('exec',$containerName,'psql','-U','postgres','-d','contabilidad_ci',
         '-X','-v','ON_ERROR_STOP=1','-c','GRANT SELECT ON public.f23h_guard TO app_backend')
     if($JournalAreaDimensionTest){
+        # Validate the *running* server, restricted role and tenant RLS
+        # before starting Pest. These checks query only Docker's disposable DB.
+        $pgVersion=(& docker exec $containerName psql -U postgres -d contabilidad_ci -X -A -t -v ON_ERROR_STOP=1 -c 'SHOW server_version' 2>&1 | Out-String).Trim()
+        if($LASTEXITCODE -ne 0 -or $pgVersion -notmatch '^18\.[0-9]+'){
+            throw ('El contenedor no ejecuta PostgreSQL 18: '+$pgVersion)
+        }
+        $securitySql=@'
+SELECT
+ (SELECT CASE WHEN NOT rolsuper AND NOT rolbypassrls AND rolcanlogin THEN 1 ELSE 0 END
+  FROM pg_catalog.pg_roles WHERE rolname='app_backend')::integer,
+ (SELECT count(*) FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  WHERE n.nspname='public'
+    AND c.relname IN ('company_user','journal_entries','journal_entry_lines','company_subdiaries','journal_post_idempotency')
+    AND c.relrowsecurity AND c.relforcerowsecurity)::integer
+'@
+        $securityProof=(& docker exec $containerName psql -U postgres -d contabilidad_ci -X -A -t -F '|' -v ON_ERROR_STOP=1 -c $securitySql 2>&1 | Out-String).Trim()
+        if($LASTEXITCODE -ne 0 -or $securityProof -ne '1|5'){
+            throw 'No se verificaron app_backend restringido y 5 tablas FORCE RLS en Docker.'
+        }
+        Write-Host ('[PASS] PostgreSQL '+$pgVersion+'; app_backend sin BYPASSRLS; 5 tablas FORCE RLS.')
         # Pest runs against this disposable container as the *restricted*
         # application role, not the owner used only for schema migrations.
         Set-F23hEnv @{
