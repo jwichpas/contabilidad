@@ -1071,9 +1071,23 @@ onBeforeUnmount(() => {
             </select>
           </div>
 
+        </div>
+
+        <!-- Tipos de cambio: criterio y tasas del día en una superficie común.
+             Los controles y sus eventos permanecen intactos. -->
+        <section class="journal-fx-panel rounded-lg border border-line bg-soft/50 p-3 sm:p-4"
+          aria-labelledby="journal-fx-heading">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 id="journal-fx-heading" class="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Coins class="h-4 w-4 text-brand" aria-hidden="true" />
+              Tipos de cambio · {{ entryDate }}
+            </h3>
+            <span class="text-xs text-muted">Moneda base: {{ baseCurrencyInfo.code }}</span>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)]">
           <!-- Tipo de Cambio Efectivo (14,6) -->
-          <div>
-            <div class="flex items-center justify-between mb-1">
+            <div>
+              <div class="flex items-center justify-between mb-1">
               <label for="journal-exchange-rate" class="text-xs font-semibold text-muted">T.C. Efectivo</label>
               <span class="text-[10px] text-brand font-mono font-medium">
                 {{ activeForeignCurrency.code }}/{{ baseCurrencyInfo.code }}
@@ -1089,7 +1103,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Criterio TC SUNAT -->
-          <div>
+            <div>
             <label for="journal-fx-criterion" class="block text-xs font-semibold text-muted mb-1">
               Criterio TC SUNAT
             </label>
@@ -1099,48 +1113,45 @@ onBeforeUnmount(() => {
               <option value="SELL">SUNAT Venta (Pasivo/Gasto)</option>
               <option value="BUY">SUNAT Compra (Activo/Ingreso)</option>
             </select>
+  
           </div>
-        </div>
 
-        <!-- Franja compacta de tipos de cambio por moneda secundaria.
-             Mantener ambos valores editables: el POST sigue exigiendo compra y venta. -->
-        <div v-if="requiredCurrencyRates.length > 0"
-          class="rounded-md border border-line bg-soft/50 px-3 py-2">
-          <div class="flex flex-wrap items-center gap-2.5">
-            <div class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-              title="Compra y venta son obligatorias para cada moneda secundaria configurada">
-              <Coins class="h-4 w-4 text-brand shrink-0" />
+          <!-- Tasas de compra y venta obligatorias para cada moneda secundaria. -->
+          <div v-if="requiredCurrencyRates.length > 0" class="journal-daily-rates mt-3 border-t border-line pt-3">
+            <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-foreground">
               <span>T.C. diario · {{ entryDate }}</span>
-              <span class="text-[10px] font-normal text-muted">(base {{ baseCurrencyInfo.code }})</span>
-              <Loader2 v-if="isLoadingRates" class="h-3 w-3 animate-spin text-brand" />
+              <span class="font-normal text-muted">(base {{ baseCurrencyInfo.code }})</span>
+              <Loader2 v-if="isLoadingRates" class="h-3.5 w-3.5 animate-spin text-brand" aria-hidden="true" />
             </div>
-            <div v-for="rateItem in requiredCurrencyRates" :key="rateItem.currency_id"
-              class="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-surf px-2 py-1"
-              :class="currency === rateItem.code ? 'border-brand/60' : 'border-line'">
-              <span class="text-xs font-semibold text-foreground">{{ rateItem.code }}</span>
-              <label class="flex items-center gap-1 text-[10px] text-muted">
-                Compra
-                <input :value="rateItem.buy_rate" type="number" step="0.000001" min="0.000001" required
-                  :aria-label="`Tipo de cambio compra ${rateItem.code}`"
-                  class="w-[104px] rounded-md border border-border-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
-                  @input="updateRateForCurrency(rateItem.code, 'buy_rate', ($event.target as HTMLInputElement).value)" />
-              </label>
-              <label class="flex items-center gap-1 text-[10px] text-muted">
-                Venta
-                <input :value="rateItem.sell_rate" type="number" step="0.000001" min="0.000001" required
-                  :aria-label="`Tipo de cambio venta ${rateItem.code}`"
-                  class="w-[104px] rounded-md border border-border-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
-                  @input="updateRateForCurrency(rateItem.code, 'sell_rate', ($event.target as HTMLInputElement).value)" />
-              </label>
-              <span class="text-[10px] font-medium"
-                :class="rateItem.is_recorded_for_date ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'">
-                {{ rateItem.is_recorded_for_date ? '✓ En BD' : 'Pendiente' }}
-              </span>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <div v-for="rateItem in requiredCurrencyRates" :key="rateItem.currency_id"
+                class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border bg-surf p-2.5"
+                :class="currency === rateItem.code ? 'border-brand/60' : 'border-line'">
+                <span class="text-xs font-semibold text-foreground">{{ rateItem.code }}</span>
+                <label class="flex items-center gap-1.5 text-xs text-muted">
+                  Compra
+                  <input :value="rateItem.buy_rate" type="number" step="0.000001" min="0.000001" required
+                    :aria-label="`Tipo de cambio compra ${rateItem.code}`"
+                    class="w-[104px] rounded-md border border-border-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    @input="updateRateForCurrency(rateItem.code, 'buy_rate', ($event.target as HTMLInputElement).value)" />
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-muted">
+                  Venta
+                  <input :value="rateItem.sell_rate" type="number" step="0.000001" min="0.000001" required
+                    :aria-label="`Tipo de cambio venta ${rateItem.code}`"
+                    class="w-[104px] rounded-md border border-border-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    @input="updateRateForCurrency(rateItem.code, 'sell_rate', ($event.target as HTMLInputElement).value)" />
+                </label>
+                <span class="text-xs font-medium"
+                  :class="rateItem.is_recorded_for_date ? 'text-pos' : 'text-warn'">
+                  {{ rateItem.is_recorded_for_date ? 'Registrado' : 'Pendiente' }}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Glosa / Descripción General -->
+                <!-- Glosa / Descripción General -->
         <div>
           <label for="journal-description" class="block text-[11px] font-semibold text-muted mb-1">
             Glosa / Explicación del Asiento
