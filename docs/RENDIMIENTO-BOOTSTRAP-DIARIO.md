@@ -69,7 +69,7 @@ comparar mediana y rango con la línea base. Revisar
 ### Interpretación de resultados
 
 - Si `pre_auth_pipeline` sigue cerca de 1.5 s, investigar la conexión
-  PostgreSQL, autenticación Sanctum y ubicación/red de Neon. No omitir
+  PostgreSQL, autenticación Sanctum y ubicación/red del PostgreSQL configurado. No omitir
   la validación de Bearer ni cachear membresías activas.
 - Si `catalogs_sql` resulta alto, ejecutar `EXPLAIN (ANALYZE, BUFFERS)`
   **solo de forma controlada** sobre una base de pruebas, sin credenciales
@@ -147,13 +147,54 @@ desactiva Sanctum, no se cachean membresías ni se alteran políticas RLS.
    de consultas por Bearer, reapertura de conexión y distancia de la BD,
    **sin cachear la validez de tokens revocados**.
 5. Si dominan `tenant_context_setup` o `tenant_context_finalize`,
-   verificar tiempos de BEGIN/SET LOCAL/COMMIT y tipo de conexión con Neon.
+   verificar tiempos de BEGIN/SET LOCAL/COMMIT y tipo de conexión con el proveedor PostgreSQL configurado.
    El contexto RLS debe seguir siendo local a la transacción.
 
 Un endpoint agrupado en Laravel PHP con una base PostgreSQL remota puede sufrir
-varios tiempos de ida y vuelta. En Neon existe un endpoint agrupado por PgBouncer
-para aplicaciones; no cambiar el host automáticamente ni usar conexiones
+varios tiempos de ida y vuelta. El proyecto incluye configuración para un pooler PostgreSQL
+(Supavisor); no cambiar el host automáticamente ni usar conexiones
 administrativas de migración en solicitudes del ERP. Comprobar compatibilidad
 con `SET LOCAL`, transacciones, conexión TLS y el entorno real antes de alterar
 el despliegue. La existencia de esa opción **no demuestra** que sea la causa
 de esta muestra de 1.57 s.
+
+## Tercera medición del usuario — 2026-11-05 21:53 (antes de corregir la prioridad)
+
+La solicitud devolvió `200 OK` y estos tiempos:
+
+| Etapa | ms |
+|---|---:|
+| `request_total` | 3653.6 |
+| `pre_auth_pipeline` | 1679.4 |
+| `pre_auth_route` | 1679.4 |
+| `auth_route_segment` | 0.0 |
+| `tenant_total` | 1973.3 |
+| `tenant_context_setup` | 434.7 |
+| `tenant_membership` | 326.3 |
+| `controller_total` | 1102.4 |
+| `catalogs_sql` | 770.1 |
+| `exchange_rates` | 328.4 |
+| `tenant_context_finalize` | 108.6 |
+
+**Interpretación:** `auth_route_segment=0.0` no prueba que el Bearer no
+requiera consultas. Laravel aplica una lista de prioridad a los middleware de
+ruta. El marcador de inicio de autenticación estaba declarado antes de
+`auth:sanctum`, pero no estaba registrado en esa lista de prioridad; su
+posición efectiva podía no corresponder a lo que asumíamos.
+
+**Corrección de instrumentación en `main`:** registrar únicamente
+`JournalAuthenticationStartTiming` *antes* de
+`AuthenticatesRequests` usando `prependToPriorityList`; no se altera
+`auth:sanctum`, sus verificaciones, los permisos, la transacción de empresa,
+el token ni los endpoints. Se agregó prueba del orden efectivo de middleware
+mediante `Router::gatherRouteMiddleware()`.
+
+Este cambio **no acelera** por sí mismo las peticiones: busca separar
+correctamente el tramo de autenticación de la preparación anterior. Deben
+compararse las métricas bajo la nueva posición del marcador antes de decidir
+si hay que optimizar las conexiones o los índices.
+
+**Proveedor de datos:** el código de `config/database.php` documenta el
+uso de Supavisor/Supabase con el rol `app_backend`. El proveedor y endpoint
+realmente utilizados se definen por variables `DB_URL`, `DB_HOST`, etc.,
+del entorno de ejecución; no se deben suponer ni divulgar sus credenciales.
