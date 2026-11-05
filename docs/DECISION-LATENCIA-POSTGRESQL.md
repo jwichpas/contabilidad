@@ -117,3 +117,65 @@ del proveedor y verificación de seguridad antes de desplegar.
 La configuración privada efectiva (`.env`) define qué base y
 modo de conexión usa la aplicación. No publicar hosts privados,
 usuarios, URLs de conexión ni secretos al comparar opciones.
+
+## Comparación verificada: PostgreSQL local en Docker
+
+El 05/11/2026 se repitió el comando de latencia usando **PHP 8.5 en
+Windows** y un contenedor temporal **PostgreSQL 17**, enlazado únicamente
+a `127.0.0.1:55432`. El comando confirmó cinco conexiones nuevas y
+dos `SELECT 1` por conexión; no ejecutó consultas contables, migraciones
+ni escrituras.
+
+| Muestra | Conexión (ms) | 1.er SELECT (ms) | 2.º SELECT (ms) |
+|---|---:|---:|---:|
+| 1 | 10.4 | 2.4 | 1.2 |
+| 2 | 7.7 | 1.2 | 1.2 |
+| 3 | 6.6 | 1.1 | 1.0 |
+| 4 | 7.1 | 1.0 | 0.9 |
+| 5 | 7.1 | 1.3 | 1.0 |
+| **Mediana** | **7.1** | **1.2** | **1.0** |
+
+### Comparación de medianas
+
+| Operación | Remota (ms) | Local (ms) | Remoto / local |
+|---|---:|---:|---:|
+| Apertura PDO | 954.2 | 7.1 | ~134× |
+| 1.er `SELECT 1` | 308.5 | 1.2 | ~257× |
+| 2.º `SELECT 1` | 306.8 | 1.0 | ~307× |
+
+**Interpretación:** hay una diferencia de órdenes de magnitud entre
+las conexiones y consultas triviales locales frente a las remotas.
+El tiempo remoto incorpora distancia de red y la configuración real
+del servicio (posibles proxy/pooler, negociación TLS, etc.).
+Los resultados no demuestran por sí solos que todos los costes sean
+puro RTT, ni equivalen a un benchmark del Libro Diario completo.
+
+### Precauciones de reproducibilidad y seguridad
+
+- La instancia local está **vacía** y no tiene tablas del ERP,
+  usuarios Sanctum, migraciones, políticas FORCE RLS ni datos de prueba.
+  Por ello **no ejecutar todavía** el editor ni pruebas funcionales del
+  sistema apuntando a esa instancia.
+- La prueba local utilizó `DB_SSLMODE=disable` y credenciales
+  temporales. No extrapolar esa configuración a un servidor remoto:
+  mantener TLS habilitado en cualquier acceso de red.
+- Las variables `DB_*` y `POSTGRES_PASSWORD` inyectadas en
+  PowerShell **siguen vigentes en esa sesión**. Antes de continuar
+  pruebas del ERP remoto, detener el contenedor temporal y cerrar esa
+  terminal, abrir una nueva terminal, y comprobar la configuración
+  efectiva sin exponer secretos.
+- El contenedor se inició con `--rm`; al ejecutar
+  `docker stop pg-latencia-local` se eliminará. No guardar allí
+  información que deba persistir.
+- Para medir el **Libro Diario entero** en local haría falta otro
+  entorno aislado con esquema, configuración RLS y datos sintéticos,
+  usando un rol sin privilegios administrativos. Esa preparación es
+  una tarea distinta, no realizada en este ensayo.
+
+### Decisión tras comparar local/remoto
+
+Se prioriza una **prueba de backend Laravel alojado cerca del PostgreSQL
+remoto** y comparación de latencia HTTP end-to-end (mediana de al menos
+cinco solicitudes). No cambiar automáticamente el host, la región ni
+el modo de pooling de la conexión que ya funciona. Mantener en todo
+momento Sanctum, expiración/revocación de tokens y RLS multiempresa.
