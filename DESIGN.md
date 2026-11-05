@@ -146,3 +146,25 @@ Validar en 375/768/1024/1440 px: menú expandido/contraído, drawer y cierre, se
 
 ### No se hizo
 - Ningún cambio en backend, RLS, autorización, POST, líneas contables, conversión exacta, reintentos ni datos persistidos.
+
+## 10. Iteración 5 — Maestros y carga diferida (05/11/2026)
+
+### Objetivo
+Completar los cuatro pendientes abiertos tras la validación de 74/74 pruebas: tipos de cambio del libro diario, PCGE, centros de costo/terceros y tamaño del JavaScript inicial.
+
+### Cambios
+1. **Libro diario:** criterio de compra/venta, tipo de cambio efectivo y tasas diarias se agrupan en `journal-fx-panel`; se conservan `v-model`, las tasas decimal exactas y los dos `updateRateForCurrency`. Las etiquetas están asociadas a sus controles.
+2. **Plan contable:** nuevo título de página, buscador accesible y superficie de filtros compartida. Se preserva `role=treegrid`, navegación por teclado y maestro-detalle.
+3. **Centros de costo:** pantalla y formulario de edición utilizan `workspace-heading`, `workspace-toolbar`, `workspace-table`, `workspace-form`/campos y `UiButton`. Las confirmaciones de desactivación mantienen mensajes de conservación histórica y permisos.
+4. **Terceros/anexos:** filtros, tabla, formulario, avisos y confirmaciones comparten tokens. Se mantienen los roles autorizados `canWrite` y `canDeactivate`, la unicidad por documento/empresa y `saveEntity`.
+5. **Rendimiento:** las trece vistas de dominio antes importadas estáticamente en `App.vue` ahora utilizan `defineAsyncComponent` y `import()`. El shell, el login y el selector de empresa siguen cargándose inicialmente. Estados comunes `UiViewLoading` y `UiViewLoadError` para carga o falla de módulo. El código por empresa sigue usando las mismas claves de remontaje.
+6. **Pruebas:** `workspace-design.test.mjs` se incorpora a `pnpm test:unit` para vigilar cargas diferidas, permisos, eventos y estructura visual.
+
+### Validación actual
+- Comprobación de anidamiento de etiquetas para ocho plantillas Vue: **sin inconsistencias**.
+- Comparación del script de cuatro vistas (Libro diario, PCGE, Centros de costo y Terceros) con `main`: **sin cambios de lógica**, salvo imports visuales.
+- Inspección estática de las 13 declaraciones de componentes cargados diferidamente.
+- **No se ha ejecutado aún `pnpm typecheck`, `pnpm test:unit` ni `pnpm build` después de esta iteración.** No afirmar que el tamaño del bundle bajó hasta obtener la salida de Vite.
+
+### Aceptación necesaria
+Repetir pruebas manuales frontend y revisar rutas tras primer inicio (incluida la latencia de la primera navegación), cambio entre empresas, editor bimoneda y tasas, PCGE, formulario de centro de costo, formulario de tercero, permisos solo lectura, modo oscuro y ancho móvil. Registrar tamaño nuevo de los chunks y comparar especialmente `index-*.js` respecto de la línea base 715,11 kB.
