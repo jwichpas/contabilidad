@@ -84,6 +84,14 @@ describe('Design tokens Fase 1', () => {
     assert.match(styles, /\.app-sidebar-nav button\[aria-current="page"\]/);
   });
 
+  it('el menú ofrece más ancho y deja visibles datos de la empresa', () => {
+    assert.match(sidebar, /lg:w-\[17\.5rem\]/);
+    assert.match(sidebar, /RUC: \{\{ activeCompany\.taxId \}\}/);
+    assert.doesNotMatch(sidebar, />\s*Vouchers\s*<\/span>/);
+    assert.doesNotMatch(sidebar, />\s*Monedas\s*<\/span>/);
+    assert.match(styles, /\.app-sidebar-nav button \{/);
+  });
+
   it('el encabezado no inventa certificación ni ejercicio fiscal activo', () => {
     assert.doesNotMatch(header, /ISO\s*27001|SGSI Activo|2026-10/);
     assert.match(header, /API verificada/);
