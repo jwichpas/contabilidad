@@ -273,9 +273,9 @@ export class AccountingApiClient {
     return rawPayload.data;
   }
 
-  public async fetchCostCenterMaster(params: { search: string; status: CostCenterStatus; page: number }): Promise<CostCenterPage> {
+  public async fetchCostCenterMaster(params: { search: string; status: CostCenterStatus; page: number; signal?: AbortSignal }): Promise<CostCenterPage> {
     const query = new URLSearchParams({ search: params.search, status: params.status, page: String(params.page), per_page: '25' });
-    return this.request<CostCenterPage>(`/api/v1/company/cost-centers/manage?${query}`, { method: 'GET' }, true);
+    return this.request<CostCenterPage>(`/api/v1/company/cost-centers/manage?${query}`, { method: 'GET', signal: params.signal }, true);
   }
 
   public async createCostCenter(payload: CostCenterInput): Promise<CostCenterMaster> {
@@ -444,9 +444,9 @@ export class AccountingApiClient {
     return result.data;
   }
 
-  public async fetchCompanySubdiaries(activeOnly = false): Promise<readonly CompanySubdiaryItem[]> {
+  public async fetchCompanySubdiaries(activeOnly = false, signal?: AbortSignal): Promise<readonly CompanySubdiaryItem[]> {
     const response = await this.request<{ data: CompanySubdiaryItem[] }>(
-      `/api/v1/company/subdiaries${activeOnly ? '?active_only=1' : ''}`, { method: 'GET' }, true,
+      `/api/v1/company/subdiaries${activeOnly ? '?active_only=1' : ''}`, { method: 'GET', signal }, true,
     );
     return response.data;
   }
