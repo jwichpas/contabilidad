@@ -997,11 +997,10 @@ onBeforeUnmount(() => {
         <div class="journal-header-fields grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
           <!-- Fecha Contable -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-entry-date" class="block text-[11px] font-semibold text-muted mb-1">
               Fecha Contable
             </label>
-            <input
-              v-model="entryDate"
+            <input id="journal-entry-date" v-model="entryDate"
               type="date"
               required
               class="w-full px-3 py-1.5 text-xs font-mono rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
@@ -1010,12 +1009,11 @@ onBeforeUnmount(() => {
 
           <!-- N.° Correlativo -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-entry-number" class="block text-[11px] font-semibold text-muted mb-1">
               N.° Correlativo
             </label>
             <div class="relative">
-              <input
-                v-model="entryNumber"
+              <input id="journal-entry-number" v-model="entryNumber"
                 type="text"
                 placeholder="01-00001"
                 class="w-full pl-7 pr-3 py-1.5 text-xs num font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
@@ -1026,10 +1024,10 @@ onBeforeUnmount(() => {
 
           <!-- Subdiario: clasificación independiente del tipo de asiento. -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-subdiary" class="block text-[11px] font-semibold text-muted mb-1">
               Subdiario
             </label>
-            <select v-model="subdiaryCode" :disabled="isLoading || isSubmitting"
+            <select id="journal-subdiary" v-model="subdiaryCode" :disabled="isLoading || isSubmitting"
               class="w-full px-3 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50">
               <option value="">Seleccionar subdiario...</option>
               <option v-for="sub in subdiaries" :key="sub.code" :value="sub.code">
@@ -1040,11 +1038,10 @@ onBeforeUnmount(() => {
 
           <!-- Tipo de Asiento -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-entry-type" class="block text-[11px] font-semibold text-muted mb-1">
               Tipo de Asiento
             </label>
-            <select
-              v-model="entryType"
+            <select id="journal-entry-type" v-model="entryType"
               class="w-full px-3 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option value="STANDARD">STANDARD · Diario Normal</option>
@@ -1056,11 +1053,10 @@ onBeforeUnmount(() => {
 
           <!-- Moneda de Operación -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-entry-currency" class="block text-[11px] font-semibold text-muted mb-1">
               Moneda del Voucher
             </label>
-            <select
-              v-model="currency"
+            <select id="journal-entry-currency" v-model="currency"
               class="w-full px-3 py-1.5 text-xs font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option
@@ -1076,12 +1072,13 @@ onBeforeUnmount(() => {
           <!-- Tipo de Cambio Efectivo (14,6) -->
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-[11px] font-semibold text-muted">T.C. Efectivo</label>
+              <label for="journal-exchange-rate" class="text-[11px] font-semibold text-muted">T.C. Efectivo</label>
               <span class="text-[10px] text-brand font-mono font-medium">
                 {{ activeForeignCurrency.code }}/{{ baseCurrencyInfo.code }}
               </span>
             </div>
             <input
+              id="journal-exchange-rate"
               v-model="exchangeRate"
               type="text"
               required
@@ -1091,11 +1088,10 @@ onBeforeUnmount(() => {
 
           <!-- Criterio TC SUNAT -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-fx-criterion" class="block text-[11px] font-semibold text-muted mb-1">
               Criterio TC SUNAT
             </label>
-            <select
-              v-model="exchangeRateType"
+            <select id="journal-fx-criterion" v-model="exchangeRateType"
               class="w-full px-3 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option value="SELL">SUNAT Venta (Pasivo/Gasto)</option>
@@ -1144,11 +1140,10 @@ onBeforeUnmount(() => {
 
         <!-- Glosa / Descripción General -->
         <div>
-          <label class="block text-[11px] font-semibold text-muted mb-1">
+          <label for="journal-description" class="block text-[11px] font-semibold text-muted mb-1">
             Glosa / Explicación del Asiento
           </label>
-          <input
-            v-model="headerDescription"
+          <input id="journal-description" v-model="headerDescription"
             type="text"
             required
             placeholder="Ej: Por la provisión de servicios contables según Factura F001-000492"
