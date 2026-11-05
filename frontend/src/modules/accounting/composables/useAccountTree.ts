@@ -197,7 +197,7 @@ export function useAccountTree(options: {
     }
   }
 
-  async function refreshTreeAfterMutation(): Promise<void> {
+  async function refreshTree(): Promise<void> {
     await queryClient.invalidateQueries({
       queryKey: ['account-tree', resolveCompanyId()], refetchType: 'none',
     });
@@ -210,7 +210,7 @@ export function useAccountTree(options: {
     errorMessage.value = null;
     try {
       const created = await apiClient.createAccount(formValues);
-      await refreshTreeAfterMutation();
+      await refreshTree();
       return created;
     } catch {
       const newId = asAccountId(nextLocalId.value++);
@@ -303,7 +303,7 @@ export function useAccountTree(options: {
     errorMessage.value = null;
     try {
       await apiClient.updateAccount(accountId, payload);
-      await refreshTreeAfterMutation();
+      await refreshTree();
     } catch {
       const updateInTree = (
         nodes: readonly AccountingAccountResponse[],
@@ -363,7 +363,7 @@ export function useAccountTree(options: {
 
     try {
       await apiClient.deactivateAccount(accountId);
-      await refreshTreeAfterMutation();
+      await refreshTree();
     } catch {
       const updateStatus = (
         nodes: readonly AccountingAccountResponse[],
@@ -444,6 +444,7 @@ export function useAccountTree(options: {
     isLoading: readonly(isLoading),
     errorMessage: readonly(errorMessage),
     fetchTree,
+    refreshTree,
     expandAll,
     collapseAll,
     toggleExpand,
