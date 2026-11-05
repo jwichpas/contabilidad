@@ -1165,13 +1165,12 @@ onBeforeUnmount(() => {
             <p class="text-xs text-muted">{{ lines.length }} partidas · mínimo 2 para registrar</p>
           </div>
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="inline-flex items-center gap-1 rounded-md border border-line bg-surf px-3 py-2 text-xs font-semibold text-foreground"
-              title="Completa la diferencia en el Debe o Haber" @click="autoBalance">
-              <Sparkles class="h-4 w-4 text-accent" /> Balancear
-            </button>
-            <button type="button" class="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white" @click="addLine">
-              <Plus class="h-4 w-4" /> Agregar partida
-            </button>
+            <UiButton variant="secondary" title="Completa la diferencia en Debe o Haber" @click="autoBalance">
+              <Sparkles class="h-4 w-4 text-brand" aria-hidden="true" /> Balancear
+            </UiButton>
+            <UiButton variant="primary" @click="addLine">
+              <Plus class="h-4 w-4" aria-hidden="true" /> Agregar partida
+            </UiButton>
           </div>
         </div>
 
@@ -1339,24 +1338,18 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
-          <button
-            type="button"
-            class="px-4 py-2 rounded-md border border-line text-xs font-medium text-muted hover:text-foreground bg-surf transition-colors cursor-pointer"
-            @click="clearForm"
-          >
-            Limpiar
-          </button>
+          <UiButton variant="secondary" @click="clearForm">Limpiar</UiButton>
 
-          <button
-            type="button"
-            :disabled="!isReadyToPost || isSubmitting || isLoading"
-            class="inline-flex min-w-0 flex-1 items-center justify-center gap-2 px-4 py-2 rounded-md text-xs font-semibold text-white bg-brand hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all sm:flex-none"
+          <UiButton
+            variant="primary"
+            class="flex-1 sm:flex-none"
+            :disabled="!isReadyToPost || isLoading"
+            :loading="isSubmitting"
             @click="handleSubmit"
           >
-            <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-            <Save v-else class="w-4 h-4 text-white" />
+            <Save v-if="!isSubmitting" class="h-4 w-4" aria-hidden="true" />
             <span>{{ isSubmitting ? 'Registrando...' : 'Registrar asiento' }}</span>
-          </button>
+          </UiButton>
         </div>
       </div>
     </fieldset>
@@ -1378,14 +1371,10 @@ onBeforeUnmount(() => {
             </span>
           </div>
 
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-line bg-surf hover:bg-soft transition-colors cursor-pointer"
-            @click="loadHistory"
-          >
-            <RefreshCw class="w-3.5 h-3.5 text-muted" />
+          <UiButton variant="secondary" size="sm" :disabled="isLoadingHistory" @click="loadHistory">
+            <RefreshCw class="h-3.5 w-3.5" aria-hidden="true" />
             <span>Actualizar</span>
-          </button>
+          </UiButton>
         </div>
 
         <div v-if="isLoadingHistory || isLoading" class="space-y-4 p-5" role="status" aria-label="Cargando Libro Diario">
@@ -1398,13 +1387,9 @@ onBeforeUnmount(() => {
           <p class="text-xs text-muted mt-1">
             Utiliza la pestaña "Nuevo Asiento (Voucher)" para ingresar el primer asiento de este ejercicio.
           </p>
-          <button
-            type="button"
-            class="mt-4 px-4 py-2 rounded-md text-xs font-semibold bg-brand text-white hover:opacity-95 cursor-pointer"
-            @click="activeTab = 'form'"
-          >
-            Crear Primer Asiento
-          </button>
+          <UiButton variant="primary" class="mt-4" @click="activeTab = 'form'">
+            Crear primer asiento
+          </UiButton>
         </div>
 
         <div v-else class="overflow-x-auto">
