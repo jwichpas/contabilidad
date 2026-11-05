@@ -477,10 +477,10 @@ export class AccountingApiClient {
   /**
    * Catálogo plano de cuentas operativas para digitación en asientos contables.
    */
-  public async fetchOperationalAccounts(): Promise<readonly OperationalAccount[]> {
+  public async fetchOperationalAccounts(signal?: AbortSignal): Promise<readonly OperationalAccount[]> {
     const rawPayload = await this.request<{ data: OperationalAccount[] }>(
       '/api/v1/accounting/accounts/operational',
-      { method: 'GET' },
+      { method: 'GET', signal },
       true,
     );
     return rawPayload.data;
