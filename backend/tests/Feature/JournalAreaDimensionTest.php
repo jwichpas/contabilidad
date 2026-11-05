@@ -358,15 +358,11 @@ it('keeps five batched journal selector catalogs isolated to the current company
 });
 
 it('keeps exact, historical and default multicurrency rates with a joined currency catalog', function (): void {
-    $pen = \App\Models\Currency::query()->firstOrCreate(['code' => 'PEN'], [
-        'sunat_code' => '1', 'name' => 'Soles', 'symbol' => 'S/', 'is_base_currency' => true,
-    ]);
-    $usd = \App\Models\Currency::query()->firstOrCreate(['code' => 'USD'], [
-        'sunat_code' => '2', 'name' => 'Dólares', 'symbol' => '$',
-    ]);
-    $eur = \App\Models\Currency::query()->firstOrCreate(['code' => 'EUR'], [
-        'sunat_code' => '9', 'name' => 'Euros', 'symbol' => '€',
-    ]);
+    // Global currencies are read-only to app_backend. The test environment
+    // must install PEN/USD/EUR as reference data before running this test.
+    $pen = \App\Models\Currency::query()->where('code', 'PEN')->firstOrFail();
+    $usd = \App\Models\Currency::query()->where('code', 'USD')->firstOrFail();
+    $eur = \App\Models\Currency::query()->where('code', 'EUR')->firstOrFail();
 
     $this->tenant->run($this->company->id, function () use ($pen, $usd, $eur): void {
         foreach ([[$pen, true], [$usd, false], [$eur, false]] as [$currency, $isBase]) {
