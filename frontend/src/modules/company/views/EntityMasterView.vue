@@ -263,7 +263,7 @@ onMounted(() => {
         </div>
         <div>
           <h1 class="text-xl font-semibold tracking-tight text-foreground">Terceros y anexos</h1>
-          <p class="text-xs text-muted">Directorio compartido de clientes, proveedores y demás terceros · Empresa {{ activeCompanyId }}</p>
+          <p class="text-xs text-muted">Directorio de clientes, proveedores, instituciones financieras y demás terceros de la empresa activa</p>
         </div>
       </div>
       <UiButton v-if="canWrite" variant="primary" @click="openCreate">
@@ -284,7 +284,10 @@ onMounted(() => {
           <span class="text-xs font-medium text-foreground">Buscar por nombre o documento</span>
           <span class="flex items-center gap-2 rounded-md border border-line bg-background px-2">
             <Search class="size-4 text-muted" />
-            <input v-model="searchInput" aria-label="Buscar anexo" type="search" maxlength="100" class="w-full bg-transparent py-2 text-sm outline-none" placeholder="RUC, DNI, razón social…" @keyup.enter="applyFilters" />
+            <input v-model="searchInput" aria-label="Buscar anexo" aria-describedby="entity-search-help" type="search" maxlength="100" class="w-full bg-transparent py-2 text-sm outline-none" placeholder="RUC, DNI, razón social…" @keyup.enter="applyFilters" />
+          </span>
+          <span id="entity-search-help" class="block text-xs leading-5 text-muted" aria-live="polite">
+            {{ searchInput.trim() !== committedSearch ? 'Búsqueda sin aplicar: presiona Enter o pulsa Buscar.' : committedSearch ? 'Filtro de búsqueda aplicado.' : 'Presiona Enter o pulsa Buscar para filtrar.' }}
           </span>
         </label>
         <label class="workspace-field space-y-1">
@@ -304,7 +307,7 @@ onMounted(() => {
         </UiButton>
       </div>
       <div class="mt-3 flex items-center justify-between text-xs text-muted">
-        <span>{{ total }} anexos activos · una entidad puede tener varios roles</span>
+        <span>{{ total }} anexos en la consulta · una entidad puede tener varios roles</span>
         <span v-if="!canWrite" class="inline-flex items-center gap-1"><ShieldCheck class="size-3.5" /> Solo lectura</span>
       </div>
 
