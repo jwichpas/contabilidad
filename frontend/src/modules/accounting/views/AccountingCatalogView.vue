@@ -44,6 +44,7 @@ const {
   isLoading,
   errorMessage,
   fetchTree,
+  refreshTree,
   expandAll,
   collapseAll,
   toggleExpand,
@@ -551,7 +552,7 @@ onBeforeUnmount(() => {
             type="button"
             class="inline-flex items-center justify-center w-8 h-8 rounded-md border border-line bg-surf text-muted hover:text-foreground transition-colors cursor-pointer"
             title="Sincronizar Plan de Cuentas"
-            @click="fetchTree"
+            @click="refreshTree"
           >
             <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
           </button>
