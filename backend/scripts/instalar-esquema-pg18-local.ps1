@@ -143,7 +143,7 @@ try {
         $installToken=[Guid]::NewGuid().ToString('N')
         # Guard is created via docker exec on the identity-verified LOCAL
         # container, before any Laravel call. Remote DB is never a target.
-        $createGuard="CREATE TABLE public.local_pg18_install_guard(token text NOT NULL); INSERT INTO public.local_pg18_install_guard VALUES ('$installToken');"
+        $createGuard="CREATE TABLE public.local_pg18_install_guard(token text NOT NULL); INSERT INTO public.local_pg18_install_guard VALUES ('$installToken'); CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;"
         RunDocker @('exec',$name,'psql','-U','postgres','-d','contabilidad_local',
             '-X','-v','ON_ERROR_STOP=1','-c',$createGuard)
         SetLocalEnv @{
