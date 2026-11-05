@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { Loader2 } from 'lucide-vue-next';
 
 
@@ -132,6 +133,13 @@ const {
   registerCreatedCompany,
   logout,
 } = useAuthSession();
+
+// Accounting data is private to the active session and company. Never reuse a
+// cached directory after logging out or switching tenants, even for the same user.
+const queryClient = useQueryClient();
+watch([accessToken, activeCompanyId], ([token, company], [previousToken, previousCompany]) => {
+  if (token !== previousToken || company !== previousCompany) queryClient.clear();
+}, { flush: 'sync' });
 
 const isDarkMode = shallowRef(false);
 const isSidebarCollapsed = shallowRef(false);
