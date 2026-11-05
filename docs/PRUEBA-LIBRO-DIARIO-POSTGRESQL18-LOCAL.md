@@ -106,3 +106,45 @@ https://hub.docker.com/_/postgres
 
 Esta versión efímera no monta un volumen, y se destruye por seguridad
 al finalizar, por lo que no precisa una configuración de persistencia.
+
+## Corrección tras primera ejecución real en Windows (2026-11-05)
+
+La primera ejecución confirmó:
+
+- **PostgreSQL 18.6** y rol `app_backend` sin `BYPASSRLS`.
+- **Cinco tablas FORCE RLS** verificadas.
+- **14 de 15 pruebas** completadas, **125 aserciones**, **2.68 s** de Pest.
+- Contenedor temporal eliminado por `finally` después del error.
+
+La única prueba falló con `SQLSTATE[42501]` al ejecutar un
+`firstOrCreate` de `PEN` en la tabla global `currencies`. El rol
+de aplicación tiene únicamente `SELECT` sobre ese catálogo, conforme
+a la migración de referencia; **ese rechazo es correcto**.
+
+### Corrección aplicada, sin ampliar permisos
+
+- La prueba `keeps exact, historical and default multicurrency rates...`
+  usa ahora `where('code', ...)->firstOrFail()` para `PEN`, `USD`, `EUR`.
+  El test deja de intentar insertar datos de referencia como `app_backend`.
+- El harness `-JournalAreaDimensionTest` comprueba primero la ausencia de
+  `INSERT` sobre `public.currencies` y que `FORCE RLS` sigue activo.
+- Solo dentro del **contenedor temporal Docker** instala las tres monedas
+  oficiales usando el propietario `postgres` antes de ejecutar Pest.
+  Comprueba que estén las tres y luego ejecuta los tests con `app_backend`.
+- No cambia las migraciones del catálogo, la configuración de permisos del
+  ERP, `.env`, Neon/Supabase, credenciales ni producción.
+
+Desde una nueva terminal de PowerShell:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+.\scripts\phase2-active-rls-docker.ps1 -JournalAreaDimensionTest
+```
+
+Resultado esperado, todavía pendiente de ejecución funcional tras este cambio:
+**15 tests aprobados, 0 fallidos**, con borrado del contenedor. La
+validación CI solo comprueba sintaxis PHP y PowerShell, no sustituye
+la ejecución PostgreSQL 18 que debe hacerse en el equipo local.
