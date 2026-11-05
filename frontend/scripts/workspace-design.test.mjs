@@ -84,3 +84,15 @@ test('formularios maestros conservan validación, autorizaciones y accesibilidad
   assert.match(costCenterEditor, /:loading="saving"/);
   assert.match(css, /\.workspace-form/);
 });
+
+test('las pantallas distinguen búsquedas pendientes y totales del árbol sin mostrar ID interno', () => {
+  assert.match(entity, /id="entity-search-help"/);
+  assert.match(entity, /aria-describedby="entity-search-help"/);
+  assert.match(entity, /searchInput\.trim\(\) !== committedSearch/);
+  assert.match(entity, /presiona Enter o pulsa Buscar/);
+  assert.match(entity, /anexos en la consulta/);
+  assert.doesNotMatch(entity, /Directorio compartido[^\n]*Empresa \{\{ activeCompanyId \}\}/);
+  assert.doesNotMatch(costCenter, /<p>Empresa \{\{ activeCompanyId \}\}/);
+  assert.match(catalog, /filas visibles/);
+  assert.match(catalog, /cuentas en el plan/);
+});
