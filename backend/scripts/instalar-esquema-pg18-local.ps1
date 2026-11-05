@@ -222,9 +222,9 @@ echo "[PASS] Laravel solo puede usar PostgreSQL 18 local autorizado\n";
             Write-Host ('[MIGRACION] '+$m)
             # Capture and suppress raw output: errors may include credentials
             # embedded in SQL. Only the migration name is safe to share.
-            $args=@('artisan','migrate','--database=pgsql_migrations',
+            $migrationArguments=@('artisan','migrate','--database=pgsql_migrations',
                 ('--path='+$path),'--force','--no-interaction')
-            $stdout=(& php @args 2>&1 | Out-String)
+            $stdout=(& php @migrationArguments 2>&1 | Out-String)
             if($LASTEXITCODE -ne 0 -or $stdout -match '(?im)\bFAIL\b'){
                 throw ('Migración detenida: '+$m+'. No repetir sobre base parcial.')
             }
