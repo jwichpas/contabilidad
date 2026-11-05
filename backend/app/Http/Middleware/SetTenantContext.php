@@ -39,6 +39,8 @@ final readonly class SetTenantContext
 
         $middlewareStarted = hrtime(true);
         $membershipDurationMs = null;
+        $contextSetupMs = null;
+        $callbackFinishedAt = null;
         $resolvedCompanyId = $this->resolveTargetCompanyId($request, $user);
 
         // La validación de membresía también requiere el RLS de company_user.
@@ -46,7 +48,9 @@ final readonly class SetTenantContext
         // de contexto local evita fugas de tenant por el pool Supavisor.
         $response = $this->tenantContext->run(
             $resolvedCompanyId,
-            function () use ($request, $next, $user, $resolvedCompanyId, &$membershipDurationMs): Response {
+            function () use ($request, $next, $user, $resolvedCompanyId, &$membershipDurationMs, &$contextSetupMs, &$callbackFinishedAt, $middlewareStarted): Response {
+                // Covers transaction start + SET LOCAL, without exposing tenant IDs.
+                $contextSetupMs = number_format((hrtime(true) - $middlewareStarted) / 1000000, 1, '.', '');
                 $membershipStarted = hrtime(true);
                 $hasMembership = $this->userHasActiveMembership($user->id, $resolvedCompanyId);
                 $membershipDurationMs = number_format((hrtime(true) - $membershipStarted) / 1000000, 1, '.', '');
@@ -56,7 +60,12 @@ final readonly class SetTenantContext
                     );
                 }
 
-                return $next($request);
+                try {
+                    return $next($request);
+                } finally {
+                    // The enclosing tenant transaction has not committed yet.
+                    $callbackFinishedAt = hrtime(true);
+                }
             }
         );
 
@@ -66,6 +75,17 @@ final readonly class SetTenantContext
         $elapsed = number_format((hrtime(true) - $middlewareStarted) / 1000000, 1, '.', '');
         $existing = (string) $response->headers->get('Server-Timing', '');
         $timings = ($existing !== '' ? $existing.', ' : '').'tenant_total;dur='.$elapsed;
+        if ($request->is('api/v1/accounting/journal-entries/editor-bootstrap') && $request->isMethod('GET')) {
+            // Setup includes BEGIN and SET LOCAL. Finalize includes COMMIT and
+            // cleanup after the controller response. Both retain FORCE RLS.
+            if ($contextSetupMs !== null) {
+                $timings .= ', tenant_context_setup;dur='.$contextSetupMs;
+            }
+            if (is_int($callbackFinishedAt) && $callbackFinishedAt <= hrtime(true)) {
+                $timings .= ', tenant_context_finalize;dur='
+                    .number_format((hrtime(true) - $callbackFinishedAt) / 1000000, 1, '.', '');
+            }
+        }
         // This must remain a real DB check for every request, not a cached role.
         // It exposes only elapsed milliseconds, never IDs or SQL parameters.
         if ($membershipDurationMs !== null && (
