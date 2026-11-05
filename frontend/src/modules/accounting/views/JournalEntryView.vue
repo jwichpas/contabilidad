@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Clock,
   Coins,
   Hash,
   History,
@@ -15,13 +14,13 @@ import {
   Plus,
   RefreshCw,
   Save,
-  ShieldCheck,
   Sparkles,
   Trash2,
 } from 'lucide-vue-next';
 import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { EntityMaster } from '../../company/types/entityMaster.types';
 import JournalEntityPicker from '../components/JournalEntityPicker.vue';
+import UiButton from '@/shared/ui/UiButton.vue';
 import JournalAccountCombobox from '../components/JournalAccountCombobox.vue';
 import { entityMatches, entityRequired } from '../utils/journalEntity';
 import { cashFlowMatches } from '../utils/journalArea';
@@ -871,10 +870,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="journal-page space-y-5 sm:space-y-6">
     <!-- Encabezado de Sección y Conmutador de Pestañas -->
     <div
-      class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border"
+      class="journal-heading flex flex-col gap-4 border-b border-line pb-5 lg:flex-row lg:items-center lg:justify-between"
     >
       <div>
         <div class="flex items-center gap-2">
@@ -883,27 +882,21 @@ onBeforeUnmount(() => {
           >
             <BookOpen class="w-4 h-4 text-brand" />
           </span>
-          <h1 class="text-xl font-semibold tracking-tight text-foreground">
-            Libro Diario · Voucher Contable Bimoneda
+          <h1 class="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+            Libro diario <span class="font-normal text-muted">· Asientos bimoneda</span>
           </h1>
-          <span
-            class="tag ok font-mono text-[11px]"
-          >
-            <ShieldCheck class="w-3 h-3 inline mr-1" />
-            ISO 27001 Inmutable
-          </span>
         </div>
         <p class="text-xs text-muted mt-1">
-          Registro transaccional de alta velocidad con partida doble en tiempo real (PEN / USD) y
-          cuadre de 4 decimales.
+          Registra y consulta asientos con partida doble, importes exactos y validaciones antes del registro.
         </p>
       </div>
 
       <!-- Conmutador de Pestañas -->
-      <div class="inline-flex p-1 bg-surface-muted rounded-md border border-line">
+      <div class="journal-tabs inline-flex max-w-full gap-1 rounded-lg border border-line bg-soft p-1">
         <button
           type="button"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+          :aria-pressed="activeTab === 'form'"
           :class="
             activeTab === 'form'
               ? 'bg-brand text-white shadow-xs font-semibold'
@@ -912,12 +905,13 @@ onBeforeUnmount(() => {
           @click="activeTab = 'form'"
         >
           <Plus class="w-3.5 h-3.5" />
-          <span>Nuevo Asiento (Voucher)</span>
+          <span>Nuevo asiento</span>
         </button>
 
         <button
           type="button"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+          :aria-pressed="activeTab === 'history'"
           :class="
             activeTab === 'history'
               ? 'bg-brand text-white shadow-xs font-semibold'
@@ -926,7 +920,7 @@ onBeforeUnmount(() => {
           @click="activeTab = 'history'"
         >
           <History class="w-3.5 h-3.5" />
-          <span>Libro Diario ({{ historyLoaded ? journalEntries.length : '…' }})</span>
+          <span>Libro diario ({{ historyLoaded ? journalEntries.length : '…' }})</span>
         </button>
       </div>
     </div>
@@ -989,7 +983,7 @@ onBeforeUnmount(() => {
     <fieldset v-else-if="activeTab === 'form'" :disabled="isSubmitting" class="min-w-0 space-y-6">
       <!-- Tarjeta de Parámetros de Cabecera -->
       <div
-        class="panel space-y-4"
+        class="panel journal-section space-y-4"
       >
         <div class="flex items-center justify-between border-b border-line pb-3">
           <span class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
@@ -997,13 +991,10 @@ onBeforeUnmount(() => {
             Datos Generales del Asiento
           </span>
 
-          <span class="tag ok font-mono text-[11px] flex items-center gap-1">
-            <Clock class="w-3 h-3 text-pos" />
-            Periodo Abierto
-          </span>
+          <span class="text-[11px] font-medium text-muted">Período sujeto a validación al registrar</span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7 gap-3.5">
+        <div class="journal-header-fields grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
           <!-- Fecha Contable -->
           <div>
             <label class="block text-[11px] font-semibold text-muted mb-1">
@@ -1167,10 +1158,10 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Una sola superficie de edición; las partidas agregadas son una lista de lectura. -->
-      <div class="panel min-w-0 p-0 overflow-hidden">
+      <div class="panel journal-section min-w-0 overflow-hidden p-0">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
           <div>
-            <h2 class="text-sm font-semibold text-foreground">Editor único de asientos</h2>
+            <h2 class="text-base font-semibold tracking-tight text-foreground">Editor único de asientos</h2>
             <p class="text-xs text-muted">{{ lines.length }} partidas · mínimo 2 para registrar</p>
           </div>
           <div class="flex flex-wrap gap-2">
@@ -1184,7 +1175,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div v-if="selectedLine" id="journal-line-editor" class="min-w-0 space-y-4 border-b border-line bg-soft/30 p-4">
+        <div v-if="selectedLine" id="journal-line-editor" class="journal-line-editor min-w-0 space-y-4 border-b border-line bg-soft/30 p-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h3 class="text-sm font-semibold text-foreground">Editar partida {{ selectedLineIndex + 1 }}</h3>
             <span v-if="missingLineFields(selectedLine).length" class="text-xs text-warn">
@@ -1254,11 +1245,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="border-b border-line p-4">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Partidas agregadas</h3>
+          <h3 class="text-sm font-semibold text-foreground">Partidas agregadas <span class="num font-normal text-muted">({{ lines.length }})</span></h3>
           <p class="mt-1 text-xs text-muted">Seleccione una partida para editarla en el formulario de arriba.</p>
         </div>
         <div class="hidden overflow-x-auto lg:block">
-          <table class="w-full min-w-[900px] table-fixed border-collapse text-left text-xs">
+          <table class="journal-lines-table w-full min-w-[900px] table-fixed border-collapse text-left text-xs">
             <thead class="bg-surface-muted text-muted">
               <tr>
                 <th class="w-[55px] px-3 py-3">#</th>
@@ -1383,7 +1374,7 @@ onBeforeUnmount(() => {
               Asientos Registrados en el Periodo ({{ journalEntries.length }})
             </span>
             <span class="text-[11px] text-muted font-mono">
-              · Trazabilidad Inmutable ISO/IEC 27001
+              · Registro contable trazable
             </span>
           </div>
 
