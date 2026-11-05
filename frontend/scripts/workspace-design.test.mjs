@@ -9,6 +9,7 @@ const catalog = read('../src/modules/accounting/views/AccountingCatalogView.vue'
 const costCenter = read('../src/modules/company/views/CostCenterMasterView.vue');
 const entity = read('../src/modules/company/views/EntityMasterView.vue');
 const css = read('../src/assets/main.css');
+const costCenterEditor = read('../src/modules/company/components/CostCenterEditor.vue');
 
 test('trece pantallas se cargan solo cuando se visitan', () => {
   const views = [
@@ -70,4 +71,16 @@ test('los maestros comparten títulos, filtros y tablas sin alterar los eventos 
   for (const selector of ['.workspace-heading', '.workspace-toolbar', '.workspace-table', '.workspace-field']) {
     assert.ok(css.includes(selector), selector);
   }
+});
+
+test('formularios maestros conservan validación, autorizaciones y accesibilidad', () => {
+  assert.match(entity, /workspace-form/);
+  assert.match(entity, /:loading="isSaving"/);
+  assert.match(entity, /v-if="showForm && canWrite"/);
+  assert.match(entity, /v-if="pendingDeactivate && canDeactivate"/);
+  assert.match(costCenterEditor, /workspace-field/);
+  assert.match(costCenterEditor, /costCenterPayload\(draft\)/);
+  assert.match(costCenterEditor, /@submit\.prevent="submit"/);
+  assert.match(costCenterEditor, /:loading="saving"/);
+  assert.match(css, /\.workspace-form/);
 });
