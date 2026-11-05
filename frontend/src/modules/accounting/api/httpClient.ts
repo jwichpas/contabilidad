@@ -161,6 +161,7 @@ export class AccountingApiClient {
   public async fetchAccountTree(params?: {
     readonly onlyActive?: boolean;
     readonly codePrefix?: string;
+    readonly signal?: AbortSignal;
   }): Promise<readonly AccountingAccountResponse[]> {
     const searchParams = new URLSearchParams();
     if (params?.onlyActive !== undefined) {
@@ -173,7 +174,7 @@ export class AccountingApiClient {
     const queryString = searchParams.toString();
     const url = `/api/v1/accounting/accounts/tree${queryString ? `?${queryString}` : ''}`;
 
-    const rawPayload = await this.request<unknown>(url, { method: 'GET' });
+    const rawPayload = await this.request<unknown>(url, { method: 'GET', signal: params?.signal });
     const parsed = accountingAccountTreeApiResponseSchema.parse(rawPayload);
 
     return parsed.data;
