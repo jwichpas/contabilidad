@@ -178,7 +178,7 @@ if (!app()->environment("testing") || config("database.default")!=="pgsql"
 echo "[PASS] Laravel solo puede usar PostgreSQL 18 local autorizado\n";
 '@
         $result=(& php -r $phpCheck 2>&1 | Out-String).Trim()
-        if($LASTEXITCODE -ne 0 -or $result -notmatch '[PASS]'){
+        if($LASTEXITCODE -ne 0 -or $result -notmatch '^[PASS] Laravel solo puede usar PostgreSQL 18 local autorizado'){
             throw 'Laravel no superó el preflight de identidad local; no se migró.'
         }
         Write-Host '[PASS] Preflight Laravel local confirmado.'
@@ -222,8 +222,9 @@ echo "[PASS] Laravel solo puede usar PostgreSQL 18 local autorizado\n";
             Write-Host ('[MIGRACION] '+$m)
             # Capture and suppress raw output: errors may include credentials
             # embedded in SQL. Only the migration name is safe to share.
-            $stdout=(& php artisan migrate --database=pgsql_migrations
-                ('--path='+$path) --force --no-interaction 2>&1 | Out-String)
+            $args=@('artisan','migrate','--database=pgsql_migrations',
+                ('--path='+$path),'--force','--no-interaction')
+            $stdout=(& php @args 2>&1 | Out-String)
             if($LASTEXITCODE -ne 0 -or $stdout -match '(?im)\bFAIL\b'){
                 throw ('Migración detenida: '+$m+'. No repetir sobre base parcial.')
             }
