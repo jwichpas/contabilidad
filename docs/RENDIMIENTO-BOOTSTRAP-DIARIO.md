@@ -86,3 +86,13 @@ La comprobación sintáctica PHP se ejecuta automáticamente en GitHub Actions
 al modificar `backend/**`. Las pruebas funcionales de Laravel que necesitan
 la base PostgreSQL de desarrollo deben ejecutarse en el entorno autorizado;
 no se reemplazan por lint ni por una prueba estática.
+
+## Validación funcional del 05/11/2026
+
+Evidencia de ejecución local aportada por el usuario, sobre `main` después de la corrección de importación `Illuminate\\Support\\Facades\\Schema`:
+
+- Prueba de regresión del registro idempotente: **1 aprobada / 10 aserciones**, duración 33.92 s.
+- `php artisan test tests/Feature/JournalAreaDimensionTest.php`: **14 aprobadas / 132 aserciones**, duración 276.21 s y 0 fallidas.
+- Cubrió la equivalencia del correlativo de bootstrap con el endpoint independiente, dos lecturas contables agregadas, tipos de cambio exactos/históricos/predeterminados, aislamiento del tenant, reglas de dimensiones, subdiarios e idempotencia.
+- El tiempo de toda la suite **no representa latencia HTTP** del editor. La mejora del bootstrap necesita volver a medirse con `Server-Timing` desde DevTools después de esta validación.
+
