@@ -26,6 +26,7 @@ final class JournalAuthenticatedTiming
 
         $started = hrtime(true);
         $origin = $request->attributes->get('journal_request_timing_start_ns');
+        $routeAuthStarted = $request->attributes->get('journal_route_auth_start_ns');
         $response = $next($request);
         $duration = number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
         $earlier = (string) $response->headers->get('Server-Timing', '');
@@ -34,9 +35,22 @@ final class JournalAuthenticatedTiming
         $preAuth = is_int($origin) && $origin <= $started
             ? 'pre_auth_pipeline;dur='.number_format(($started - $origin) / 1000000, 1, '.', '').', '
             : '';
+
+        // Break down the pre-auth duration without claiming that every
+        // millisecond in the route segment is a Sanctum database query.
+        // Invariant: pre_auth_route + auth_route_segment = pre_auth_pipeline.
+        $authSegments = '';
+        if (is_int($origin) && is_int($routeAuthStarted)
+            && $origin <= $routeAuthStarted && $routeAuthStarted <= $started) {
+            $authSegments = 'pre_auth_route;dur='
+                .number_format(($routeAuthStarted - $origin) / 1000000, 1, '.', '')
+                .', auth_route_segment;dur='
+                .number_format(($started - $routeAuthStarted) / 1000000, 1, '.', '')
+                .', ';
+        }
         $response->headers->set(
             'Server-Timing',
-            ($earlier !== '' ? $earlier.', ' : '').$preAuth.'post_auth_total;dur='.$duration
+            ($earlier !== '' ? $earlier.', ' : '').$preAuth.$authSegments.'post_auth_total;dur='.$duration
         );
 
         return $response;
