@@ -25,12 +25,18 @@ final class JournalAuthenticatedTiming
         }
 
         $started = hrtime(true);
+        $origin = $request->attributes->get('journal_request_timing_start_ns');
         $response = $next($request);
         $duration = number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
         $earlier = (string) $response->headers->get('Server-Timing', '');
+        // This spans route setup and authentication, not only Sanctum SQL.
+        // Do not expose token contents, IDs or connection details.
+        $preAuth = is_int($origin) && $origin <= $started
+            ? 'pre_auth_pipeline;dur='.number_format(($started - $origin) / 1000000, 1, '.', '').', '
+            : '';
         $response->headers->set(
             'Server-Timing',
-            ($earlier !== '' ? $earlier.', ' : '').'post_auth_total;dur='.$duration
+            ($earlier !== '' ? $earlier.', ' : '').$preAuth.'post_auth_total;dur='.$duration
         );
 
         return $response;
