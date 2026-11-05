@@ -57,7 +57,7 @@ final class MeasurePostgresLatency extends Command
                 DB::purge('pgsql');
                 $started = hrtime(true);
                 $db = DB::connection('pgsql');
-                if (! $db->getPdo() instanceof \PDO) {
+                if (! ($db->getPdo() instanceof \PDO)) {
                     throw new \RuntimeException('PDO no disponible.');
                 }
                 $connectMs = self::elapsedMs($started);
