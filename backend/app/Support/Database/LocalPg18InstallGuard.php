@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Support\Database;
 
-use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -28,7 +27,7 @@ final class LocalPg18InstallGuard
         $mark = env('LOCAL_PG18_INSTALL_TOKEN');
 
         if (! is_string($mark) || preg_match('/^[a-f0-9]{32}$/D', $mark) !== 1
-            || config('database.default') !== 'pgsql'
+            || ! in_array((string) config('database.default'), ['pgsql', 'pgsql_migrations'], true)
             || (string) ($config['host'] ?? '') !== '127.0.0.1'
             || (string) ($traffic['host'] ?? '') !== '127.0.0.1'
             || (string) ($config['port'] ?? '') !== '55433'
