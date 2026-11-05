@@ -1,20 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue';
 import { Loader2 } from 'lucide-vue-next';
-import AccountingCatalogView from './modules/accounting/views/AccountingCatalogView.vue';
-import SeeReferencesView from './modules/accounting/views/SeeReferencesView.vue';
-import SunatReferencesView from './modules/accounting/views/SunatReferencesView.vue';
-import JournalEntryView from './modules/accounting/views/JournalEntryView.vue';
-import CompanySubdiariesView from './modules/accounting/views/CompanySubdiariesView.vue';
-import ExchangeRatesView from './modules/accounting/views/ExchangeRatesView.vue';
-import FiscalPeriodsView from './modules/accounting/views/FiscalPeriodsView.vue';
-import FinancialStatementsView from './modules/accounting/views/FinancialStatementsView.vue';
-import CompanySettingsView from './modules/company/views/CompanySettingsView.vue';
-import EntityMasterView from './modules/company/views/EntityMasterView.vue';
-import CompanyFiscalHistoryView from './modules/company/views/CompanyFiscalHistoryView.vue';
-import CostCenterMasterView from './modules/company/views/CostCenterMasterView.vue';
-import CompanyOnboardingWizard from './modules/company/views/CompanyOnboardingWizard.vue';
+
+
+
+
+
+
+
+
+
+
+
+
+
 import type { CompanyOnboardingResult } from './modules/company/types/companyOnboarding.types';
+import UiViewLoading from './shared/ui/UiViewLoading.vue';
+import UiViewLoadError from './shared/ui/UiViewLoadError.vue';
 import LoginView from './shared/auth/LoginView.vue';
 import AppSidebar from './shared/layout/AppSidebar.vue';
 import AppHeader from './shared/layout/AppHeader.vue';
@@ -22,6 +24,99 @@ import type { ActiveCompanyInfo, NavigationModule } from './shared/layout/naviga
 import { asCompanyId, type CompanyId } from './modules/accounting/types/accountingAccount.types';
 import { useAuthSession } from './shared/auth/useAuthSession';
 import { SystemDecimal } from './shared/types/numeric.types';
+
+// Pantallas cargadas por módulo, conservando la clave por empresa y los eventos.
+ // Vista y autenticación globales permanecen síncronas para evitar un shell vacío.
+const AccountingCatalogView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/AccountingCatalogView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const SeeReferencesView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/SeeReferencesView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const SunatReferencesView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/SunatReferencesView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const JournalEntryView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/JournalEntryView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const CompanySubdiariesView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/CompanySubdiariesView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const ExchangeRatesView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/ExchangeRatesView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const FiscalPeriodsView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/FiscalPeriodsView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const FinancialStatementsView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/FinancialStatementsView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const CompanySettingsView = defineAsyncComponent({
+  loader: () => import('./modules/company/views/CompanySettingsView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const EntityMasterView = defineAsyncComponent({
+  loader: () => import('./modules/company/views/EntityMasterView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const CompanyFiscalHistoryView = defineAsyncComponent({
+  loader: () => import('./modules/company/views/CompanyFiscalHistoryView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const CostCenterMasterView = defineAsyncComponent({
+  loader: () => import('./modules/company/views/CostCenterMasterView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const CompanyOnboardingWizard = defineAsyncComponent({
+  loader: () => import('./modules/company/views/CompanyOnboardingWizard.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
 
 const {
   accessToken,
