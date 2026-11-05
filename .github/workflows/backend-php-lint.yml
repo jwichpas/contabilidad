@@ -51,3 +51,18 @@ jobs:
             $errors | ForEach-Object { Write-Error $_.Message }
             exit 1
           }
+
+      - name: Verificar sintaxis PowerShell del instalador PostgreSQL 18 local
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/backend/scripts/iniciar-postgres18-local.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
