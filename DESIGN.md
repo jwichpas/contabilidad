@@ -168,3 +168,18 @@ Completar los cuatro pendientes abiertos tras la validación de 74/74 pruebas: t
 
 ### Aceptación necesaria
 Repetir pruebas manuales frontend y revisar rutas tras primer inicio (incluida la latencia de la primera navegación), cambio entre empresas, editor bimoneda y tasas, PCGE, formulario de centro de costo, formulario de tercero, permisos solo lectura, modo oscuro y ancho móvil. Registrar tamaño nuevo de los chunks y comparar especialmente `index-*.js` respecto de la línea base 715,11 kB.
+
+## 11. Iteración 6 — Revisión de capturas de los tres maestros
+
+**Origen:** tres capturas de escritorio facilitadas por el usuario con PCGE, centros de costo y terceros/anexos sobre la rama de diseño. No se atribuye a las capturas la validación de cambios de datos, permisos, teclado ni móvil.
+
+### Hallazgos y decisiones
+- **PCGE:** los nueve renglones visibles son nodos del árbol, no el número total de cuentas. El pie ahora distingue `filas visibles` de `cuentas en el plan`, evitando la lectura equivocada de `9 de 2966 cuentas`. Se mantiene el árbol y su inspector lateral.
+- **Centros de costo:** la cabecera mostraba el ID interno de la empresa, que no es el RUC. Se sustituyó por una explicación del propósito del módulo; la empresa activa sigue identificada en el selector global.
+- **Terceros/anexos:** escribir en el buscador no dispara la consulta automáticamente; el cambio se aplica con Enter o Buscar. El campo ahora informa explícitamente cuándo hay un término sin aplicar y cuándo el filtro está activo. El contador usa `anexos en la consulta`, no `anexos activos` cuando existen filtros. Se retiró el ID de empresa interno del subtítulo.
+- No se modificaron métodos de búsqueda, consultas HTTP, cálculo de estadísticas, paginación, permisos, estado del tenant ni lógica de dominio.
+
+### Verificación y aceptación
+- Inspección estática en GitHub: 10/10 comprobaciones sobre plantilla, enlaces del texto de ayuda, eventos de filtrado y scripts de dominio conservados respecto de `main`.
+- Nuevo test de regresión agregado a `workspace-design.test.mjs`.
+- **Pendiente:** volver a ejecutar `pnpm typecheck`, `pnpm test:unit` y `pnpm build` en Windows y verificar visualmente los tres cambios. Las 79 pruebas aprobadas anteriormente corresponden al commit previo a esta iteración.
