@@ -25,6 +25,8 @@ final class JournalAuthenticatedTiming
         }
 
         $started = hrtime(true);
+        // Stop collecting before tenant membership and controller SQL begin.
+        $request->attributes->set('journal_auth_sql_active', false);
         $origin = $request->attributes->get('journal_request_timing_start_ns');
         $routeAuthStarted = $request->attributes->get('journal_route_auth_start_ns');
         $response = $next($request);
@@ -48,9 +50,32 @@ final class JournalAuthenticatedTiming
                 .number_format(($started - $routeAuthStarted) / 1000000, 1, '.', '')
                 .', ';
         }
+        // QueryExecuted::time is milliseconds and does not disclose SQL.
+        // Distinguish remote query time from the complete auth stage.
+        $authQueryMetrics = '';
+        $queryCount = $request->attributes->get('journal_auth_sql_count');
+        if (is_int($queryCount)) {
+            $formatMs = static fn (float $value): string => number_format($value, 1, '.', '');
+            $authQueryMetrics = 'auth_sql_total;dur='
+                .$formatMs((float) $request->attributes->get('journal_auth_sql_total_ms', 0.0))
+                .', auth_sql_queries;desc="'.$queryCount.'"';
+
+            if ($queryCount > 0) {
+                $authQueryMetrics .= ', auth_sql_first;dur='
+                    .$formatMs((float) $request->attributes->get('journal_auth_sql_first_ms', 0.0))
+                    .', auth_sql_max;dur='
+                    .$formatMs((float) $request->attributes->get('journal_auth_sql_max_ms', 0.0))
+                    .', auth_sql_token;dur='
+                    .$formatMs((float) $request->attributes->get('journal_auth_sql_token_ms', 0.0))
+                    .', auth_sql_user;dur='
+                    .$formatMs((float) $request->attributes->get('journal_auth_sql_user_ms', 0.0));
+            }
+            $authQueryMetrics .= ', ';
+        }
         $response->headers->set(
             'Server-Timing',
-            ($earlier !== '' ? $earlier.', ' : '').$preAuth.$authSegments.'post_auth_total;dur='.$duration
+            ($earlier !== '' ? $earlier.', ' : '')
+                .$preAuth.$authSegments.$authQueryMetrics.'post_auth_total;dur='.$duration
         );
 
         return $response;
