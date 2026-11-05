@@ -1262,7 +1262,19 @@
 }
 .app-content { max-width: none; }
 .app-sidebar { background: var(--side); color: var(--ink); border-color: var(--line); }
-.app-sidebar-nav button { min-height: 2.25rem; color: var(--mut); }
+.app-sidebar-nav button {
+  min-height: 2.35rem;
+  color: var(--mut);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+.app-sidebar-nav p {
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+.app-sidebar-nav .truncate {
+  min-width: 0;
+}
 .app-sidebar-nav button[aria-current="page"] {
   background: var(--soft);
   color: var(--nav-active);
@@ -1288,8 +1300,29 @@
 /* ═══════════ LIBRO DIARIO · COMPONENTES OPERATIVOS ═══════════ */
 @layer components {
   .journal-heading h1 {
+    font-size: 1.375rem;
     line-height: 1.3;
     overflow-wrap: anywhere;
+  }
+
+  .journal-heading p {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .journal-header-fields label {
+    font-size: 0.75rem;
+  }
+
+  .journal-line-editor label {
+    font-size: 0.8125rem;
+  }
+
+  .journal-quick-status {
+    flex: 1 1 16rem;
+    max-width: 36rem;
+    min-width: 0;
+    line-height: 1.5;
   }
 
   .journal-tabs {
@@ -1312,6 +1345,7 @@
     width: 100%;
     min-width: 0;
     min-height: 2.5rem;
+    font-size: 0.8125rem;
   }
 
   .journal-line-editor {
@@ -1321,6 +1355,11 @@
   .journal-lines-table th {
     font-variant-numeric: tabular-nums;
     vertical-align: bottom;
+    font-size: 0.75rem;
+  }
+
+  .journal-lines-table td {
+    font-size: 0.8125rem;
   }
 
   .journal-lines-table tbody tr[data-current="true"] td:first-child {
