@@ -183,3 +183,33 @@ Repetir pruebas manuales frontend y revisar rutas tras primer inicio (incluida l
 - Inspección estática en GitHub: 10/10 comprobaciones sobre plantilla, enlaces del texto de ayuda, eventos de filtrado y scripts de dominio conservados respecto de `main`.
 - Nuevo test de regresión agregado a `workspace-design.test.mjs`.
 - **Pendiente:** volver a ejecutar `pnpm typecheck`, `pnpm test:unit` y `pnpm build` en Windows y verificar visualmente los tres cambios. Las 79 pruebas aprobadas anteriormente corresponden al commit previo a esta iteración.
+
+## 12. Iteración 7 — Búsqueda local y caché TanStack Query
+
+### Decisión: no consultar la base de datos para filtrar un listado completo
+
+- El frontend ya incluía `@tanstack/vue-query@5` y `VueQueryPlugin`; no se agregaron dependencias.
+- `EntityMasterView.vue` consulta inicialmente la primera página de 20 terceros, según la API existente.
+- Si esa **página sin filtros** confirma `current_page = 1`, `last_page = 1` y `data.length === total`, se utiliza `filterEntitiesLocally`: al escribir cualquier término o cambiar el rol, se filtran **todos los terceros de la empresa activa en memoria**, sin HTTP y sin necesidad de Enter/Buscar.
+- Cuando el servidor informa más de una página, no se interpreta la página cargada como directorio completo: se conserva la búsqueda paginada por servidor con Enter/Buscar, evitando búsquedas incompletas y descargas excesivas de datos sensibles.
+- La API usa `fetchEntities({ signal })` para poder cancelar peticiones al limpiar caché.
+- `queryClient.fetchQuery` almacena respuestas por `['entity-directory', companyId, search, role, page]` (frescura 120 s, recolección 300 s), por lo que repetir un filtro ya consultado mientras esté fresco no repite HTTP.
+- El botón Actualizar fuerza invalidación, y guardar/desactivar invalida la caché y vuelve a consultar la página pertinente.
+- El contexto de petición fija el Bearer y empresa al comienzo, y rechaza respuestas tardías de otra sesión. `App.vue` limpia la caché en memoria cuando cambia el Bearer o la empresa; no se persiste el directorio en almacenamiento del navegador.
+
+### Comportamiento esperado
+
+- Empresa demo con siete anexos: al escribir `credi` debe aparecer inmediatamente **Banco de Crédito del Perú**, sin peticiones GET adicionales por cada tecla; puede haber una consulta inicial.
+- Empresas con más de 20 registros: el botón Buscar sigue disponible, la búsqueda es global y paginada; los resultados ya consultados se recuperan de caché mientras sigan frescos.
+- No se modificaron reglas de consulta o permisos del backend, ni se filtró por empresa con un identificador controlado por cliente.
+
+### Criterios de validación
+
+1. Ejecutar `pnpm typecheck`, `pnpm test:unit`, `pnpm build`.
+2. Abrir la pestaña Red (Network) del navegador y verificar que teclear en el directorio completo no dispara nuevas llamadas a `/api/v1/company/entities`.
+3. Pulsar Actualizar y comprobar una nueva consulta; crear/editar/desactivar un anexo y comprobar invalidación.
+4. Con más de 20 anexos, comprobar la búsqueda paginada y que un resultado de otra página no desaparezca por filtrado local incompleto.
+5. Cambiar de empresa o cerrar sesión: no deben aparecer terceros de una sesión anterior.
+6. Verificar pantalla móvil y mensajes accesibles del buscador.
+
+**Pendiente:** compilación local y pruebas con los datos reales sobre este commit; las 79 pruebas PASS reportadas antes pertenecen a la iteración anterior.
