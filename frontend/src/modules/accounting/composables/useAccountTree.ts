@@ -1,4 +1,5 @@
 import { computed, readonly, shallowRef } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { AccountingApiClient } from '../api/httpClient';
 import {
   ACCOUNT_CURRENCY_MODE_LABELS,
@@ -32,7 +33,9 @@ export function useAccountTree(options: {
   const resolveCompanyId = (): CompanyId =>
     options.getActiveCompanyId ? options.getActiveCompanyId() : options.activeCompanyId!();
 
+  const queryClient = useQueryClient();
   const treeRoots = shallowRef<readonly AccountingAccountResponse[]>([]);
+  let treeLoadVersion = 0;
   const expandedIds = shallowRef<Set<AccountId>>(new Set());
 
   const searchQuery = shallowRef('');
@@ -157,25 +160,48 @@ export function useAccountTree(options: {
   }
 
   async function fetchTree(): Promise<void> {
+    const version = ++treeLoadVersion;
+    const companyId = resolveCompanyId();
+    const token = options.getAccessToken();
+    const onlyActive = !includeInactive.value;
     isLoading.value = true;
     errorMessage.value = null;
     try {
-      const remoteTree = await apiClient.fetchAccountTree({
-        onlyActive: !includeInactive.value,
+      const readApi = new AccountingApiClient('', {
+        getAccessToken: () => token,
+        getActiveCompanyId: () => companyId,
       });
+      const remoteTree = await queryClient.fetchQuery({
+        queryKey: ['account-tree', companyId, onlyActive],
+        queryFn: ({ signal }) => readApi.fetchAccountTree({ onlyActive, signal }),
+        staleTime: 30_000,
+        gcTime: 300_000,
+        retry: false,
+      });
+      if (version !== treeLoadVersion || companyId !== resolveCompanyId()
+        || token !== options.getAccessToken()) return;
       treeRoots.value = remoteTree;
       if (expandedIds.value.size === 0 && remoteTree.length > 0) {
         // Expandir por defecto los Elementos principales del PCGE (Nivel 1)
         expandedIds.value = new Set(remoteTree.map((r) => r.id));
       }
     } catch (e) {
+      if (version !== treeLoadVersion || companyId !== resolveCompanyId()
+        || token !== options.getAccessToken()) return;
       errorMessage.value =
         e instanceof Error
           ? e.message
           : 'Error al conectar con la API de cuentas contables del backend.';
     } finally {
-      isLoading.value = false;
+      if (version === treeLoadVersion) isLoading.value = false;
     }
+  }
+
+  async function refreshTreeAfterMutation(): Promise<void> {
+    await queryClient.invalidateQueries({
+      queryKey: ['account-tree', resolveCompanyId()], refetchType: 'none',
+    });
+    await fetchTree();
   }
 
   async function createAccount(
@@ -184,7 +210,7 @@ export function useAccountTree(options: {
     errorMessage.value = null;
     try {
       const created = await apiClient.createAccount(formValues);
-      await fetchTree();
+      await refreshTreeAfterMutation();
       return created;
     } catch {
       const newId = asAccountId(nextLocalId.value++);
@@ -277,7 +303,7 @@ export function useAccountTree(options: {
     errorMessage.value = null;
     try {
       await apiClient.updateAccount(accountId, payload);
-      await fetchTree();
+      await refreshTreeAfterMutation();
     } catch {
       const updateInTree = (
         nodes: readonly AccountingAccountResponse[],
@@ -337,7 +363,7 @@ export function useAccountTree(options: {
 
     try {
       await apiClient.deactivateAccount(accountId);
-      await fetchTree();
+      await refreshTreeAfterMutation();
     } catch {
       const updateStatus = (
         nodes: readonly AccountingAccountResponse[],
