@@ -1389,10 +1389,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[800px]">
+          <table class="journal-history-table w-full text-left border-collapse min-w-[800px]">
+            <caption class="sr-only">Asientos registrados del libro diario</caption>
             <thead>
               <tr class="bg-surface-muted border-b border-border text-[11px] font-bold text-muted uppercase">
-                <th class="py-2.5 px-3 w-10"></th>
+                <th scope="col" class="py-2.5 px-3 w-10">Detalle</th>
                 <th class="py-2.5 px-3 w-28">N.° Asiento</th>
                 <th class="py-2.5 px-3 w-24">Fecha</th>
                 <th class="py-2.5 px-3 w-24">Tipo</th>
@@ -1410,11 +1411,16 @@ onBeforeUnmount(() => {
                   @click="toggleExpandEntry(entry.id)"
                 >
                   <td class="py-2.5 px-3 text-center">
-                    <ChevronDown
-                      v-if="expandedEntryIds.has(entry.id)"
-                      class="w-4 h-4 text-brand"
-                    />
-                    <ChevronUp v-else class="w-4 h-4 text-muted" />
+                    <button
+                      type="button"
+                      class="journal-history-toggle inline-flex size-8 items-center justify-center rounded-md text-brand hover:bg-soft"
+                      :aria-label="`${expandedEntryIds.has(entry.id) ? 'Contraer' : 'Expandir'} asiento ${entry.entry_number}`"
+                      :aria-expanded="expandedEntryIds.has(entry.id)"
+                      @click.stop="toggleExpandEntry(entry.id)"
+                    >
+                      <ChevronUp v-if="expandedEntryIds.has(entry.id)" class="h-4 w-4" aria-hidden="true" />
+                      <ChevronDown v-else class="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </td>
 
                   <td class="py-2.5 px-3 num font-semibold text-foreground">
@@ -1462,7 +1468,9 @@ onBeforeUnmount(() => {
                       <div class="px-3 py-2 bg-soft border-b border-line text-[11px] font-semibold text-muted uppercase">
                         Detalle de Cuentas Imputadas ({{ entry.lines.length }} Líneas)
                       </div>
-                      <table class="w-full text-left text-xs">
+                      <div class="overflow-x-auto">
+                      <table class="min-w-[1120px] w-full text-left text-xs">
+                        <caption class="sr-only">Detalle de partidas del asiento {{ entry.entry_number }}</caption>
                         <thead>
                           <tr class="border-b border-line text-[10px] text-muted uppercase font-mono">
                             <th class="py-1.5 px-3 w-10 text-center">#</th>
@@ -1505,6 +1513,7 @@ onBeforeUnmount(() => {
                           </tr>
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   </td>
                 </tr>
