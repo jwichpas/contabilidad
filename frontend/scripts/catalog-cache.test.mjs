@@ -25,6 +25,7 @@ test('centros de costo: consulta por empresa, filtros y página con invalidació
   assert.match(costs, /\['operational-accounts', companyId\]/);
   assert.match(costs, /requestApi\.fetchOperationalAccounts\(signal\)/);
   assert.equal((costs.match(/await refresh\(\)/g) ?? []).length, 2);
+  assert.match(costs, /@click="refresh"/);
 });
 
 test('subdiarios: filtra localmente y cachea por empresa, invalidando tras mutaciones', () => {
