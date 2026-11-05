@@ -1476,6 +1476,24 @@
     color: var(--ink);
   }
 
+  .workspace-form > label {
+    font-size: 0.8125rem;
+    font-weight: 550;
+    color: var(--mut);
+  }
+
+  .workspace-form :is(input:not([type="checkbox"]), select) {
+    min-height: 2.5rem;
+    min-width: 0;
+    background: var(--surf);
+    color: var(--ink);
+  }
+
+  .workspace-form :is(input, select):focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+  }
+
   .workspace-table {
     width: 100%;
     border-collapse: collapse;
