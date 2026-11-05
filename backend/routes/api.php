@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\V1\Tenant\CompanyOnboardingCapabilityController;
 use App\Http\Controllers\Api\V1\Tenant\CreateCompanyFromWizardController;
 use App\Http\Controllers\Api\V1\Tenant\SwitchActiveCompanyController;
 use App\Http\Middleware\JournalAuthenticatedTiming;
+use App\Http\Middleware\JournalAuthenticationStartTiming;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\RequireCompanyRole;
 use Illuminate\Support\Facades\Route;
@@ -58,7 +59,7 @@ Route::prefix('v1')->group(function (): void {
         ->middleware('throttle:10,1')
         ->name('login');
 
-    Route::middleware(['auth:sanctum'])->group(function (): void {
+    Route::middleware([JournalAuthenticationStartTiming::class, 'auth:sanctum'])->group(function (): void {
         Route::post('/auth/logout', LogoutController::class)
             ->name('api.v1.auth.logout');
 
