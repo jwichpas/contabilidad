@@ -84,7 +84,7 @@ const activeCompanyIdString = computed<string>({
         isOpenMobile
           ? 'fixed inset-y-0 left-0 w-72 shadow-2xl'
           : 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen',
-        !isOpenMobile && (isCollapsed ? 'lg:w-16' : 'lg:w-64'),
+        !isOpenMobile && (isCollapsed ? 'lg:w-16' : 'lg:w-[17.5rem]'),
       ]"
       aria-label="Menú principal del ERP Contable"
     >
@@ -99,17 +99,12 @@ const activeCompanyIdString = computed<string>({
             </div>
             <div v-if="!isCollapsed || isOpenMobile" class="min-w-0">
               <div class="flex items-center gap-1.5">
-                <h1 class="text-sm font-semibold tracking-tight text-foreground truncate">
+                <h1 class="text-sm font-semibold tracking-tight text-foreground">
                   Libro Mayor Perú
                 </h1>
-                <span
-                  class="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium bg-soft text-foreground"
-                >
-                  v2026
-                </span>
               </div>
-              <p class="text-[11px] text-muted truncate">
-                ERP Financiero Bimoneda · NIIF
+              <p class="mt-0.5 text-xs leading-4 text-muted">
+                ERP financiero bimoneda
               </p>
             </div>
           </div>
@@ -146,9 +141,9 @@ const activeCompanyIdString = computed<string>({
             size="sm"
           />
 
-          <div class="flex items-center justify-between text-[11px] text-muted font-mono pt-0.5">
-            <span>ID: {{ activeCompany.id }}</span>
-            <span>{{ activeCompany.fiscalRegime }}</span>
+          <div class="space-y-0.5 pt-1 text-[11px] leading-4 text-muted">
+            <p class="font-mono" :title="`RUC: ${activeCompany.taxId}`">RUC: {{ activeCompany.taxId }}</p>
+            <p class="break-words" :title="activeCompany.fiscalRegime">{{ activeCompany.fiscalRegime }}</p>
           </div>
         </div>
 
@@ -258,12 +253,6 @@ const activeCompanyIdString = computed<string>({
                   Libro Diario Bimoneda
                 </span>
               </span>
-              <span
-                v-if="!isCollapsed || isOpenMobile"
-                class="tag tag-ok font-mono text-[10px] px-1.5 py-0 bg-soft text-foreground border-line"
-              >
-                Vouchers
-              </span>
             </button>
 
             <!-- Gestión de períodos contables (F2.3) -->
@@ -304,12 +293,6 @@ const activeCompanyIdString = computed<string>({
                   Tipos de Cambio Diarios
                 </span>
               </span>
-              <span
-                v-if="!isCollapsed || isOpenMobile"
-                class="tag font-mono text-[10px] px-1.5 py-0 bg-soft text-foreground border-line"
-              >
-                SUNAT
-              </span>
             </button>
 
 
@@ -320,24 +303,18 @@ const activeCompanyIdString = computed<string>({
               v-if="!isCollapsed || isOpenMobile"
               class="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
             >
-              Tesorería & Estados Financieros
+              Tesorería y reportes
             </p>
 
             <div
-              class="flex items-center justify-between px-3 py-2 rounded-md text-muted hover:bg-hover hover:text-foreground text-xs transition-colors cursor-default"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-md text-muted text-xs cursor-default"
               title="Áreas de Flujo de Efectivo Cuenta 10 (NIC 7)"
             >
-              <span class="flex items-center gap-2.5 truncate">
+              <span class="flex min-w-0 items-center gap-2.5">
                 <Wallet class="w-4 h-4 shrink-0 text-muted" />
                 <span v-if="!isCollapsed || isOpenMobile" class="truncate">
                   Flujo de Efectivo (Cta. 10)
                 </span>
-              </span>
-              <span
-                v-if="!isCollapsed || isOpenMobile"
-                class="tag font-mono text-[10px] px-1.5 py-0 border-line text-muted"
-              >
-                NIC 7
               </span>
             </div>
 
@@ -355,12 +332,6 @@ const activeCompanyIdString = computed<string>({
                 <span v-if="!isCollapsed || isOpenMobile" class="truncate">
                   Estados financieros
                 </span>
-              </span>
-              <span
-                v-if="!isCollapsed || isOpenMobile"
-                class="tag font-mono text-[10px] px-1.5 py-0 border-line text-muted"
-              >
-                Ver
               </span>
             </button>
           </div>
@@ -396,7 +367,7 @@ const activeCompanyIdString = computed<string>({
               v-if="!isCollapsed || isOpenMobile"
               class="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
             >
-              Configuración & Empresa
+              Configuración
             </p>
 
             <button
@@ -434,12 +405,6 @@ const activeCompanyIdString = computed<string>({
                 <span v-if="!isCollapsed || isOpenMobile" class="truncate">
                   Datos de Empresa
                 </span>
-              </span>
-              <span
-                v-if="!isCollapsed || isOpenMobile"
-                class="tag font-mono text-[10px] px-1.5 py-0 bg-soft text-foreground border-line"
-              >
-                Monedas
               </span>
             </button>
           </div>
