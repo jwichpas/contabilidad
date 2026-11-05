@@ -271,10 +271,10 @@ onMounted(() => {
       </UiButton>
     </header>
 
-    <div v-if="successMessage" role="status" class="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+    <div v-if="successMessage" role="status" class="rounded-md border border-pos/30 bg-pos/5 px-3 py-2 text-sm text-pos">
       {{ successMessage }}
     </div>
-    <div v-if="loadError" role="alert" class="rounded-md border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs text-red-600 dark:text-red-300">
+    <div v-if="loadError" role="alert" class="rounded-md border border-neg/30 bg-neg/5 px-3 py-2 text-sm text-neg">
       {{ loadError }}
     </div>
 
@@ -337,7 +337,7 @@ onMounted(() => {
           </tbody>
         </table>
       </div>
-      <div class="mt-3 flex items-center justify-between border-t border-line pt-3 text-xs">
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-sm">
         <span class="text-muted">Página {{ list?.current_page ?? 1 }} / {{ list?.last_page ?? 1 }}</span>
         <div class="flex gap-2">
           <button type="button" class="rounded border border-line px-3 py-1.5 disabled:opacity-40" :disabled="!canPrevious || isLoading" @click="changePage(page - 1)">Anterior</button>
@@ -356,7 +356,7 @@ onMounted(() => {
       </div>
 
       <div v-if="formError" role="alert" class="mb-4 rounded-md border border-neg/30 bg-neg/5 px-3 py-2 text-xs text-neg">{{ formError }}</div>
-      <form class="grid grid-cols-1 gap-3 sm:grid-cols-2" @submit.prevent="saveEntity">
+      <form class="workspace-form grid grid-cols-1 gap-3 sm:grid-cols-2" @submit.prevent="saveEntity">
         <label class="space-y-1 text-xs">
           <span class="font-medium">Tipo de documento SUNAT *</span>
           <select v-model="form.identity_document_type_code" required class="w-full rounded-md border border-line bg-background px-3 py-2 text-sm">
@@ -396,7 +396,7 @@ onMounted(() => {
           <p class="mb-2 text-xs text-muted">Puede seleccionar varios roles para un mismo documento.</p>
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <label v-for="flag in flags" :key="flag.key" class="flex items-center gap-2 text-xs">
-              <input v-model="form[flag.key]" type="checkbox" class="accent-emerald-600" />
+              <input v-model="form[flag.key]" type="checkbox" class="accent-brand" />
               {{ flag.label }}
             </label>
           </div>
