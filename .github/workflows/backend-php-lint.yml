@@ -52,6 +52,12 @@ jobs:
             exit 1
           }
 
+      - name: Verificar sintaxis de las migraciones PostgreSQL 18 con guardia local
+        run: |
+          php -l backend/app/Support/Database/LocalPg18InstallGuard.php
+          php -l backend/database/migrations/2026_10_21_010000_harden_postgres_function_search_path.php
+          php -l backend/database/migrations/2026_10_21_020000_close_global_audit_log_read_leak.php
+
       - name: Verificar sintaxis PowerShell del instalador PostgreSQL 18 local
         shell: pwsh
         run: |
@@ -59,6 +65,21 @@ jobs:
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile(
             "$PWD/backend/scripts/iniciar-postgres18-local.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
+      - name: Verificar sintaxis PowerShell del instalador de esquema PG18
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/backend/scripts/instalar-esquema-pg18-local.ps1",
             [ref]$tokens,
             [ref]$errors
           ) | Out-Null
