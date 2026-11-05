@@ -198,9 +198,15 @@ export function useAccountTree(options: {
   }
 
   async function refreshTree(): Promise<void> {
-    await queryClient.invalidateQueries({
-      queryKey: ['account-tree', resolveCompanyId()], refetchType: 'none',
-    });
+    const companyId = resolveCompanyId();
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ['account-tree', companyId], refetchType: 'none',
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['operational-accounts', companyId], refetchType: 'none',
+      }),
+    ]);
     await fetchTree();
   }
 
