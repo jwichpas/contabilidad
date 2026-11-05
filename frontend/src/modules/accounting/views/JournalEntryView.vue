@@ -1257,7 +1257,7 @@ onBeforeUnmount(() => {
               </tr>
             </thead>
             <tbody class="divide-y divide-line">
-              <tr v-for="(line, idx) in lines" :key="line.id" :class="selectedLineId === line.id ? 'bg-brand/10' : 'bg-surf'">
+              <tr v-for="(line, idx) in lines" :key="line.id" :class="selectedLineId === line.id ? 'bg-brand/10' : 'bg-surf'" :data-current="selectedLineId === line.id ? 'true' : undefined">
                 <td class="px-3 py-3 num">{{ idx + 1 }}</td>
                 <td class="truncate px-3 py-3" :title="accountFor(line)?.name || ''">{{ accountFor(line) ? `${accountFor(line)?.code} · ${accountFor(line)?.name}` : 'Seleccionar cuenta' }}</td>
                 <td class="truncate px-3 py-3" :title="line.description || headerDescription">{{ line.description || headerDescription || '—' }}</td>
@@ -1266,8 +1266,8 @@ onBeforeUnmount(() => {
                 <td class="px-2 py-3 text-right num">{{ line.debitForeign || '—' }}</td>
                 <td class="px-2 py-3 text-right num">{{ line.creditForeign || '—' }}</td>
                 <td class="px-2 py-3">
-                  <button type="button" class="text-brand underline" :aria-label="`Editar partida ${idx + 1}`" @click="showLineEditor(line)">Editar</button>
-                  <button type="button" :disabled="lines.length <= 2" class="ml-2 text-neg disabled:opacity-30"
+                  <button type="button" class="rounded px-2 py-1 font-semibold text-brand hover:bg-soft" :aria-label="`Editar partida ${idx + 1}`" :aria-pressed="selectedLineId === line.id" @click="showLineEditor(line)">Editar</button>
+                  <button type="button" :disabled="lines.length <= 2" class="ml-1 rounded px-2 py-1 font-semibold text-neg hover:bg-neg/10 disabled:opacity-30"
                     :aria-label="`Eliminar partida ${idx + 1}`" @click="removeLine(idx)">Quitar</button>
                 </td>
               </tr>
@@ -1277,7 +1277,7 @@ onBeforeUnmount(() => {
         <div class="divide-y divide-line lg:hidden">
           <div v-for="(line, idx) in lines" :key="line.id" class="flex min-w-0 items-center gap-2 px-4 py-3"
             :class="selectedLineId === line.id ? 'bg-brand/10' : 'bg-surf'">
-            <button type="button" class="min-w-0 flex-1 text-left" :aria-label="`Editar partida ${idx + 1}`" @click="showLineEditor(line)">
+            <button type="button" class="min-w-0 flex-1 rounded-md p-1 text-left" :aria-label="`Editar partida ${idx + 1}`" :aria-pressed="selectedLineId === line.id" @click="showLineEditor(line)">
               <span class="block truncate text-sm font-semibold text-foreground">{{ idx + 1 }} · {{ accountFor(line) ? `${accountFor(line)?.code} · ${accountFor(line)?.name}` : 'Seleccionar cuenta' }}</span>
               <span class="block truncate text-xs text-muted">{{ line.description || headerDescription || 'Sin glosa' }}</span>
               <span class="block text-xs num text-foreground">Debe {{ isBaseVoucher ? baseCurrencyInfo.symbol : activeForeignCurrency.symbol }} {{ (isBaseVoucher ? line.debitLocal : line.debitForeign) || '0' }} · Haber {{ isBaseVoucher ? baseCurrencyInfo.symbol : activeForeignCurrency.symbol }} {{ (isBaseVoucher ? line.creditLocal : line.creditForeign) || '0' }}</span>
@@ -1287,24 +1287,25 @@ onBeforeUnmount(() => {
               :aria-label="`Eliminar partida ${idx + 1}`" @click="removeLine(idx)"><Trash2 class="h-4 w-4" /></button>
           </div>
         </div>
-        <div class="bg-soft p-4 text-xs text-foreground">
-          <strong class="block pb-2">Totales del asiento</strong>
-          <div class="grid grid-cols-2 gap-2 num sm:grid-cols-4">
-            <span>Debe {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(4) }}</strong></span>
-            <span>Haber {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(4) }}</strong></span>
-            <span>Debe {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(4) }}</strong></span>
-            <span>Haber {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(4) }}</strong></span>
-          </div>
-          <p class="mt-3 font-semibold" :class="diffLocal.isZero() && diffForeign.isZero() ? 'text-pos' : 'text-neg'">
+        <section aria-labelledby="journal-totals-title" class="journal-totals bg-soft p-4">
+          <h3 id="journal-totals-title" class="mb-3 text-sm font-semibold text-foreground">Totales del asiento</h3>
+          <dl class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div class="journal-total"><dt>Debe {{ baseCurrencyInfo.code }}</dt><dd class="num">{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(4) }}</dd></div>
+            <div class="journal-total"><dt>Haber {{ baseCurrencyInfo.code }}</dt><dd class="num">{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(4) }}</dd></div>
+            <div class="journal-total"><dt>Debe {{ activeForeignCurrency.code }}</dt><dd class="num">{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(4) }}</dd></div>
+            <div class="journal-total"><dt>Haber {{ activeForeignCurrency.code }}</dt><dd class="num">{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(4) }}</dd></div>
+          </dl>
+          <p class="mt-3 text-xs font-semibold" :class="diffLocal.isZero() && diffForeign.isZero() ? 'text-pos' : 'text-neg'">
             Diferencia: {{ baseCurrencyInfo.symbol }} {{ diffLocal.toDisplay(4) }} · {{ activeForeignCurrency.symbol }} {{ diffForeign.toDisplay(4) }}
           </p>
-        </div>
+        </section>
       </div>
 
       <!-- Barra de Estado de Balance y Acciones Finales -->
       <div
-        class="panel flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        class="panel journal-post-bar flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         :class="isReadyToPost ? 'border-pos/50 bg-pos/5' : 'border-warn/50 bg-warn/5'"
+        :data-ready="isReadyToPost ? 'true' : 'false'"
       >
         <div class="flex items-center gap-3">
           <div
