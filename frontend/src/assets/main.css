@@ -24,6 +24,7 @@
   --color-border: var(--line);
   --color-line: var(--line);
   --color-border-strong: var(--line-strong);
+  --color-hover: var(--hover);
 
   /* Marca */
   --color-brand: var(--brand);
@@ -1245,65 +1246,41 @@
 }
 
 
-/* Shell y paleta del diseño adjunto */
+/* Navegación ERP: colores semánticos y un único origen de tema. */
 @layer base {
-  :root { color-scheme: light; }
-  html.dark { color-scheme: dark; }
   body { background: var(--side); color: var(--ink); }
 }
-
-.app-shell {
-  min-height: 100vh;
-  background: var(--side);
-}
-
+.app-shell { min-height: 100vh; background: var(--side); }
 .app-panel {
   min-width: 0;
   margin: 8px 8px 8px 0;
   overflow: hidden;
   background: var(--surf);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
+  box-shadow: 0 2px 12px rgb(11 27 63 / 0.035);
 }
-
 .app-content { max-width: none; }
-
-aside[aria-label="Menú principal del ERP Contable"] {
-  padding: 10px 8px;
-  color: var(--ink) !important;
-  background: var(--side) !important;
-  border-color: var(--line) !important;
+.app-sidebar { background: var(--side); color: var(--ink); border-color: var(--line); }
+.app-sidebar-nav button { min-height: 2.25rem; color: var(--mut); }
+.app-sidebar-nav button[aria-current="page"] {
+  background: var(--soft);
+  color: var(--brand);
+  box-shadow: inset 3px 0 0 var(--brand);
+  font-weight: 650;
 }
-
-aside[aria-label="Menú principal del ERP Contable"] .text-white:not(.bg-accent) {
-  color: var(--ink) !important;
+.app-sidebar-nav button:not([aria-current="page"]):hover {
+  background: var(--hover);
+  color: var(--ink);
 }
-
-aside[aria-label="Menú principal del ERP Contable"] .text-white\/75,
-aside[aria-label="Menú principal del ERP Contable"] .text-white\/80,
-aside[aria-label="Menú principal del ERP Contable"] .text-white\/70,
-aside[aria-label="Menú principal del ERP Contable"] .text-white\/60 {
-  color: var(--mut) !important;
+.app-sidebar button:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
 }
-
-aside[aria-label="Menú principal del ERP Contable"] .bg-white\/10,
-aside[aria-label="Menú principal del ERP Contable"] .bg-white\/15,
-aside[aria-label="Menú principal del ERP Contable"] .bg-white\/20 {
-  background-color: var(--hover) !important;
-}
-
-aside[aria-label="Menú principal del ERP Contable"] .border-white\/15 {
-  border-color: var(--line) !important;
-}
-
-aside[aria-label="Menú principal del ERP Contable"] .bg-brand {
-  background-color: var(--side) !important;
-}
-
+.app-header { background: var(--surf); border-color: var(--line); }
 @media (max-width: 1023px) {
-  .app-panel {
-    margin: 0;
-    border: 0;
-    border-radius: 0;
-  }
+  .app-panel { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar { transition-duration: 0.01ms !important; }
 }
