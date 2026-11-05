@@ -1,0 +1,108 @@
+# Prueba segura del Libro Diario con PostgreSQL 18 local
+
+**Objetivo:** comprobar el esquema contable actual, Sanctum en pruebas,
+multiempresa, las políticas `FORCE ROW LEVEL SECURITY`, áreas, subdiarios,
+correlativo e idempotencia usando un **PostgreSQL 18 exclusivo de Docker**,
+sin conectar con Neon, Supabase ni la base remota configurada en `.env`.
+
+**Estado:** herramienta de ensayo preparada; falta ejecutarla en el
+Windows del usuario para validar su funcionamiento completo.
+
+## Antes de iniciar
+
+- Docker Desktop 29+ activo en modo **contenedores Linux**.
+- PHP 8.5 y dependencias Composer disponibles en `backend/vendor`.
+- Abrir **una nueva sesión de PowerShell**: en la sesión del benchmark
+  anterior quedaron variables `DB_*` para PostgreSQL 17.
+- No debe existir `backend/bootstrap/cache/config.php`.
+- El Docker anterior `pg-latencia-local` fue creado con `--rm`,
+  sin volumen, solo para medir `SELECT 1`; se puede detener si sigue
+  encendido sin afectar las bases remotas.
+
+```powershell
+# Opcional: detener el contenedor de la prueba anterior si todavía existe.
+docker ps --filter "name=pg-latencia-local"
+# Solo si aparece pg-latencia-local:
+docker stop pg-latencia-local
+
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+Test-Path .\bootstrap\cache\config.php
+```
+
+El último comando debe imprimir `False`. **No ejecutar `migrate:fresh`,
+`php artisan migrate` general ni `db:seed`**. Algunas migraciones del
+repositorio son exclusivamente de una rama Neon/Supabase y otras contienen
+guardas para un estado concreto de la base remota.
+
+## Ejecutar suite funcional completa en un PostgreSQL 18 efímero
+
+```powershell
+cd C:\Proyectos\contabilidad\backend
+.\scripts\phase2-active-rls-docker.ps1 -JournalAreaDimensionTest
+```
+
+Esta modalidad es nueva en el script existente. No sustituye ni altera
+`-PeriodConcurrency` ni el ensayo normal de `phase2-active-rls-docker.ps1`.
+
+El script:
+
+1. Crea `postgres:18-alpine` con **puerto aleatorio enlazado a
+   `127.0.0.1`** y contraseñas efímeras aleatorias.
+2. Comprueba que el destino es exclusivamente `contabilidad_ci`
+   dentro del nuevo contenedor. Las conexiones de administración y
+   aplicación se fijan únicamente a ese contenedor.
+3. Aplica **20 migraciones base/portables** ya usadas en el ensayo
+   F2.3h, además de **5 migraciones** de entidades, áreas y subdiarios
+   utilizadas por el Libro Diario actual, siempre con `--path`.
+4. Ejecuta Pest sobre `JournalAreaDimensionTest.php` usando el rol
+   limitado `app_backend`, con `FORCE RLS` vigente. El escenario
+   actual contiene **15 pruebas**.
+5. Comprueba el reporte JUnit: 15 casos, ninguno fallido u omitido.
+   Una ejecución incompleta no se marca como aprobada.
+6. Restaura las variables de entorno y **elimina** el contenedor
+   temporal y el reporte JUnit, incluso cuando falla la prueba.
+
+Los registros generados son exclusivamente ficticios. El comando no
+crea un usuario ni una sesión Bearer reales y no habilita un entorno
+persistente para abrir el editor en el navegador; esa es una etapa
+posterior independiente.
+
+## Qué resultado enviar
+
+- Las líneas `[MIGRACIONES]`, `[DIARIO]` y el resumen final de Pest.
+- Si aparece `[FAIL]`, el nombre de la migración o el test fallido.
+  No copiar contraseñas ni cadenas `DB_URL`.
+- **No repetir** un `migrate` general para subsanar un error.
+  Revertir y corregir primero el harness o las migraciones específicas.
+
+### Comparación de tiempos
+
+La latencia de dos `SELECT 1` del PostgreSQL local anterior era ~1 ms
+y abrir conexión ~7 ms, pero ese contenedor era PostgreSQL 17 vacío.
+La prueba aquí utiliza la versión **18**, tablas reales y políticas RLS,
+y puede mostrar tiempos de pruebas más próximos al flujo del Libro Diario.
+**El tiempo total de Pest no es una métrica de petición HTTP**:
+incluye preparación de fixtures y varias peticiones por prueba.
+
+Para la siguiente etapa, una vez aprobadas las 15 pruebas, configurar
+un entorno **persistente PostgreSQL 18** con rol `app_backend`, datos
+sintéticos, y un backend PHP separado apuntando solo a ese contenedor.
+Comparar entonces al menos cinco tiempos reales `Server-Timing` del
+`editor-bootstrap` con el entorno remoto (referencia 3522 ms).
+
+## Consideración Docker/PostgreSQL 18
+
+En la imagen oficial de PostgreSQL 18, el almacenamiento persistente
+cambió a `/var/lib/postgresql/18/docker` bajo
+`/var/lib/postgresql`. Para el **futuro** contenedor persistente se
+debe montar un volumen en `/var/lib/postgresql`, no reutilizar el
+punto de montaje de PostgreSQL 17 (`/var/lib/postgresql/data`).
+
+Referencia oficial:
+https://hub.docker.com/_/postgres
+
+Esta versión efímera no monta un volumen, y se destruye por seguridad
+al finalizar, por lo que no precisa una configuración de persistencia.
