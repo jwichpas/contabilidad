@@ -4,6 +4,7 @@ import { Building2, CirclePlus, Loader2, Pencil, RefreshCcw, Search, ShieldCheck
 import { AccountingApiClient, ApiHttpError } from '@/modules/accounting/api/httpClient';
 import type { CompanyId } from '@/modules/accounting/types/accountingAccount.types';
 import type { SunatCatalogItem } from '@/modules/accounting/types/catalogs.types';
+import UiButton from '@/shared/ui/UiButton.vue';
 import type { EntityMaster, EntityMasterInput, EntityMasterPage } from '../types/entityMaster.types';
 
 const props = defineProps<{
@@ -254,8 +255,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="space-y-5" aria-label="Directorio de terceros y anexos">
-    <div class="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+  <section class="workspace-page space-y-5" aria-label="Directorio de terceros y anexos">
+    <header class="workspace-heading">
       <div class="flex items-center gap-3">
         <div class="grid size-9 place-items-center rounded-lg bg-brand/10 text-brand">
           <Users class="size-5" />
@@ -265,10 +266,10 @@ onMounted(() => {
           <p class="text-xs text-muted">Directorio compartido de clientes, proveedores y demás terceros · Empresa {{ activeCompanyId }}</p>
         </div>
       </div>
-      <button v-if="canWrite" type="button" class="inline-flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white hover:opacity-90" @click="openCreate">
-        <CirclePlus class="size-4" /> Nuevo anexo
-      </button>
-    </div>
+      <UiButton v-if="canWrite" variant="primary" @click="openCreate">
+        <CirclePlus class="size-4" aria-hidden="true" /> Nuevo anexo
+      </UiButton>
+    </header>
 
     <div v-if="successMessage" role="status" class="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
       {{ successMessage }}
@@ -277,16 +278,16 @@ onMounted(() => {
       {{ loadError }}
     </div>
 
-    <div class="rounded-lg border border-line bg-surface p-3 sm:p-4">
-      <div class="flex flex-wrap gap-2 items-end">
-        <label class="min-w-[200px] flex-1 space-y-1">
+    <div class="workspace-section p-3 sm:p-4">
+      <div class="workspace-toolbar flex flex-wrap items-end gap-2 border-0 p-0">
+        <label class="workspace-field min-w-[200px] flex-1 space-y-1">
           <span class="text-xs font-medium text-foreground">Buscar por nombre o documento</span>
           <span class="flex items-center gap-2 rounded-md border border-line bg-background px-2">
             <Search class="size-4 text-muted" />
             <input v-model="searchInput" aria-label="Buscar anexo" type="search" maxlength="100" class="w-full bg-transparent py-2 text-sm outline-none" placeholder="RUC, DNI, razón social…" @keyup.enter="applyFilters" />
           </span>
         </label>
-        <label class="space-y-1">
+        <label class="workspace-field space-y-1">
           <span class="block text-xs font-medium text-foreground">Tipo</span>
           <select v-model="roleFilter" class="rounded-md border border-line bg-background px-3 py-2 text-sm" @change="applyFilters">
             <option value="all">Todos</option>
@@ -295,12 +296,12 @@ onMounted(() => {
             <option value="is_employee">Trabajadores</option>
           </select>
         </label>
-        <button type="button" class="inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-xs font-semibold hover:bg-surface-muted" @click="applyFilters">
-          <Search class="size-4" /> Buscar
-        </button>
-        <button type="button" aria-label="Actualizar directorio" class="rounded-md border border-line p-2 hover:bg-surface-muted" @click="loadEntities">
-          <RefreshCcw class="size-4" :class="{ 'animate-spin': isLoading }" />
-        </button>
+        <UiButton variant="secondary" @click="applyFilters">
+          <Search class="size-4" aria-hidden="true" /> Buscar
+        </UiButton>
+        <UiButton variant="secondary" size="icon" aria-label="Actualizar directorio" :disabled="isLoading" @click="loadEntities">
+          <RefreshCcw class="size-4" :class="{ 'animate-spin': isLoading }" aria-hidden="true" />
+        </UiButton>
       </div>
       <div class="mt-3 flex items-center justify-between text-xs text-muted">
         <span>{{ total }} anexos activos · una entidad puede tener varios roles</span>
@@ -308,9 +309,10 @@ onMounted(() => {
       </div>
 
       <div class="mt-3 overflow-x-auto">
-        <table class="w-full min-w-[620px] text-left text-xs">
+        <table class="workspace-table min-w-[680px]">
+          <caption class="sr-only">Terceros y anexos registrados para la empresa</caption>
           <thead class="border-b border-line text-muted">
-            <tr><th class="py-2 pr-3 font-medium">Nombre / Razón social</th><th class="py-2 pr-3 font-medium">Documento</th><th class="py-2 pr-3 font-medium">Roles</th><th class="py-2 pr-3 font-medium">Contacto</th><th class="py-2 text-right font-medium">Acciones</th></tr>
+            <tr><th scope="col">Nombre / Razón social</th><th scope="col">Documento</th><th scope="col">Roles</th><th scope="col">Contacto</th><th scope="col" class="text-right">Acciones</th></tr>
           </thead>
           <tbody class="divide-y divide-line">
             <tr v-if="isLoading"><td colspan="5" class="py-4" role="status" aria-label="Cargando anexos">
@@ -344,7 +346,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="showForm && canWrite" class="rounded-lg border border-line bg-surface p-4 sm:p-5">
+    <div v-if="showForm && canWrite" class="workspace-section p-4 sm:p-5">
       <div class="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 class="text-base font-semibold">{{ editingId === null ? 'Registrar anexo' : 'Editar anexo' }}</h2>
@@ -353,7 +355,7 @@ onMounted(() => {
         <button type="button" aria-label="Cerrar formulario" class="rounded-md p-1 hover:bg-surface-muted" :disabled="isSaving" @click="closeForm"><X class="size-4" /></button>
       </div>
 
-      <div v-if="formError" role="alert" class="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-300">{{ formError }}</div>
+      <div v-if="formError" role="alert" class="mb-4 rounded-md border border-neg/30 bg-neg/5 px-3 py-2 text-xs text-neg">{{ formError }}</div>
       <form class="grid grid-cols-1 gap-3 sm:grid-cols-2" @submit.prevent="saveEntity">
         <label class="space-y-1 text-xs">
           <span class="font-medium">Tipo de documento SUNAT *</span>
@@ -408,23 +410,22 @@ onMounted(() => {
           </div>
         </fieldset>
         <div class="flex flex-wrap items-center justify-end gap-2 sm:col-span-2">
-          <button type="button" class="rounded-md border border-line px-4 py-2 text-xs" :disabled="isSaving" @click="closeForm">Cancelar</button>
-          <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-xs font-semibold text-white disabled:opacity-60" :disabled="isSaving">
-            <Loader2 v-if="isSaving" class="size-4 animate-spin" />
-            <Building2 v-else class="size-4" />
+          <UiButton variant="secondary" :disabled="isSaving" @click="closeForm">Cancelar</UiButton>
+          <UiButton type="submit" variant="primary" :loading="isSaving">
+            <Building2 v-if="!isSaving" class="size-4" aria-hidden="true" />
             {{ editingId === null ? 'Crear anexo' : 'Guardar cambios' }}
-          </button>
+          </UiButton>
         </div>
       </form>
       <p class="mt-3 text-[11px] text-muted">Los datos bancarios y detracciones se administrarán por un flujo especializado; aquí no pueden modificarse.</p>
     </div>
 
-    <div v-if="pendingDeactivate && canDeactivate" class="rounded-lg border border-red-500/30 bg-red-500/5 p-4" role="group" aria-label="Confirmación de desactivación">
+    <div v-if="pendingDeactivate && canDeactivate" class="workspace-section border-neg/30 bg-neg/5 p-4" role="group" aria-label="Confirmación de desactivación">
       <p class="text-sm font-semibold">¿Desactivar {{ pendingDeactivate.legal_name }}?</p>
       <p class="mt-1 text-xs text-muted">El registro se conserva para trazabilidad contable. No se elimina físicamente.</p>
       <div class="mt-3 flex gap-2">
-        <button type="button" class="rounded border border-line px-3 py-2 text-xs" :disabled="isSaving" @click="pendingDeactivate = null">Cancelar</button>
-        <button type="button" class="rounded bg-red-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60" :disabled="isSaving" @click="deactivate">Confirmar desactivación</button>
+        <UiButton variant="secondary" :disabled="isSaving" @click="pendingDeactivate = null">Cancelar</UiButton>
+        <UiButton variant="danger" :disabled="isSaving" @click="deactivate">Confirmar desactivación</UiButton>
       </div>
     </div>
   </section>
