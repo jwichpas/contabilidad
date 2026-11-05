@@ -87,7 +87,7 @@ onBeforeUnmount(() => { alive = false; ++sequence; });
     <header class="workspace-heading">
       <div>
         <h1>Centros de costo</h1>
-        <p>Empresa {{ activeCompanyId }} · Destinos contables y trazabilidad.</p>
+        <p>Define los destinos contables de Debe y Haber de cada centro y consulta su estado.</p>
       </div>
       <UiButton v-if="canWrite" variant="primary" :disabled="loading || saving" @click="start(null)">
         Nuevo centro
