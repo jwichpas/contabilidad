@@ -22,6 +22,8 @@ test('centros de costo: consulta por empresa, filtros y página con invalidació
   assert.match(costs, /token !== props\.getAccessToken\(\)/);
   assert.match(costs, /queryClient\.invalidateQueries/);
   assert.match(costs, /\['company-catalog', companyId, 'cost-centers'\]/);
+  assert.match(costs, /\['operational-accounts', companyId\]/);
+  assert.match(costs, /requestApi\.fetchOperationalAccounts\(signal\)/);
   assert.equal((costs.match(/await refresh\(\)/g) ?? []).length, 2);
 });
 
@@ -51,7 +53,8 @@ test('árbol de cuentas PCGE: cacheada lectura y reconsulta tras crear, editar y
   assert.match(accounts, /queryFn: \(\{ signal \}\) => readApi\.fetchAccountTree\(\{ onlyActive, signal \}\)/);
   assert.match(accounts, /staleTime: 30_000/);
   assert.match(accounts, /token !== options\.getAccessToken\(\)/);
-  assert.match(accounts, /\['account-tree', resolveCompanyId\(\)\]/);
+  assert.match(accounts, /\['account-tree', companyId\]/);
+  assert.match(accounts, /\['operational-accounts', companyId\]/);
   assert.equal((accounts.match(/await refreshTree\(\)/g) ?? []).length, 3);
   const view = read('../src/modules/accounting/views/AccountingCatalogView.vue');
   assert.match(view, /@click="refreshTree"/);
@@ -61,6 +64,7 @@ test('árbol de cuentas PCGE: cacheada lectura y reconsulta tras crear, editar y
 test('API permite abortar lecturas; caché se borra al cambiar sesión o empresa', () => {
   assert.match(api, /fetchCostCenterMaster\(params: \{[^\n]*signal\?: AbortSignal/);
   assert.match(api, /fetchCompanySubdiaries\(activeOnly = false, signal\?: AbortSignal\)/);
+  assert.match(api, /fetchOperationalAccounts\(signal\?: AbortSignal\)/);
   assert.match(api, /fetchAccountTree\(params\?: \{/);
   assert.match(api, /readonly signal\?: AbortSignal/);
   assert.match(api, /method: 'GET', signal: params\?\.signal/);
