@@ -62,6 +62,8 @@ test('resumen de cuadre visible desde la cabecera del editor sin alterar cálcul
   assert.match(view, /totalDebitLocal\.isPositive\(\) \|\| totalCreditLocal\.isPositive\(\)/);
   assert.match(view, /Diferencia: \{\{ baseCurrencyInfo\.symbol \}\} \{\{ diffLocal\.toDisplay\(4\) \}\}/);
   assert.match(css, /\.journal-quick-status/);
+  assert.match(view, /2xl:grid-cols-5/);
+  assert.match(css, /\.journal-header-fields label/);
 });
 
 test('los tipos de cambio editables no tienen aspecto de campos deshabilitados', () => {
