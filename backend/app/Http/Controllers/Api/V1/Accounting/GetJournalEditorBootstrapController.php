@@ -17,10 +17,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * Read-only journal setup in one authorized tenant/RLS context.
  *
- * Five accounting dimensions arrive in ONE PostgreSQL roundtrip. Never cache
- * company account requirements: a configuration change must affect the next
- * journal draft immediately. Fiscal number and exchange rates retain their
- * existing controller contracts.
+ * Five accounting dimensions and the non-reserving correlativo preview
+ * arrive in ONE PostgreSQL roundtrip. Never cache company account requirements:
+ * a configuration change must affect the next draft. The actual POST still
+ * reserves numbers under a period lock; exchange rates are fetched separately
+ * through their authoritative daily controller.
  */
 final readonly class GetJournalEditorBootstrapController
 {
