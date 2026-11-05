@@ -162,6 +162,7 @@ export class AccountingApiClient {
   public async fetchAccountTree(params?: {
     readonly onlyActive?: boolean;
     readonly codePrefix?: string;
+    readonly signal?: AbortSignal;
   }): Promise<readonly AccountingAccountResponse[]> {
     const searchParams = new URLSearchParams();
     if (params?.onlyActive !== undefined) {
@@ -174,7 +175,7 @@ export class AccountingApiClient {
     const queryString = searchParams.toString();
     const url = `/api/v1/accounting/accounts/tree${queryString ? `?${queryString}` : ''}`;
 
-    const rawPayload = await this.request<unknown>(url, { method: 'GET' });
+    const rawPayload = await this.request<unknown>(url, { method: 'GET', signal: params?.signal });
     const parsed = accountingAccountTreeApiResponseSchema.parse(rawPayload);
 
     return parsed.data;
@@ -274,9 +275,9 @@ export class AccountingApiClient {
     return rawPayload.data;
   }
 
-  public async fetchCostCenterMaster(params: { search: string; status: CostCenterStatus; page: number }): Promise<CostCenterPage> {
+  public async fetchCostCenterMaster(params: { search: string; status: CostCenterStatus; page: number; signal?: AbortSignal }): Promise<CostCenterPage> {
     const query = new URLSearchParams({ search: params.search, status: params.status, page: String(params.page), per_page: '25' });
-    return this.request<CostCenterPage>(`/api/v1/company/cost-centers/manage?${query}`, { method: 'GET' }, true);
+    return this.request<CostCenterPage>(`/api/v1/company/cost-centers/manage?${query}`, { method: 'GET', signal: params.signal }, true);
   }
 
   public async createCostCenter(payload: CostCenterInput): Promise<CostCenterMaster> {
@@ -445,9 +446,9 @@ export class AccountingApiClient {
     return result.data;
   }
 
-  public async fetchCompanySubdiaries(activeOnly = false): Promise<readonly CompanySubdiaryItem[]> {
+  public async fetchCompanySubdiaries(activeOnly = false, signal?: AbortSignal): Promise<readonly CompanySubdiaryItem[]> {
     const response = await this.request<{ data: CompanySubdiaryItem[] }>(
-      `/api/v1/company/subdiaries${activeOnly ? '?active_only=1' : ''}`, { method: 'GET' }, true,
+      `/api/v1/company/subdiaries${activeOnly ? '?active_only=1' : ''}`, { method: 'GET', signal }, true,
     );
     return response.data;
   }
@@ -477,10 +478,10 @@ export class AccountingApiClient {
   /**
    * Catálogo plano de cuentas operativas para digitación en asientos contables.
    */
-  public async fetchOperationalAccounts(): Promise<readonly OperationalAccount[]> {
+  public async fetchOperationalAccounts(signal?: AbortSignal): Promise<readonly OperationalAccount[]> {
     const rawPayload = await this.request<{ data: OperationalAccount[] }>(
       '/api/v1/accounting/accounts/operational',
-      { method: 'GET' },
+      { method: 'GET', signal },
       true,
     );
     return rawPayload.data;
@@ -668,6 +669,7 @@ export class AccountingApiClient {
     readonly search?: string;
     readonly role?: 'all' | 'is_client' | 'is_supplier' | 'is_employee' | 'is_shareholder' | 'is_financial_institution' | 'is_tax_authority';
     readonly page?: number;
+    readonly signal?: AbortSignal;
   } = {}): Promise<EntityMasterPage> {
     const query = new URLSearchParams();
     if (params.search?.trim()) query.set('search', params.search.trim());
@@ -675,7 +677,7 @@ export class AccountingApiClient {
     query.set('per_page', '20');
     if (params.page && params.page > 1) query.set('page', String(params.page));
     return await this.request<EntityMasterPage>(
-      '/api/v1/company/entities?' + query.toString(), { method: 'GET' }, true,
+      '/api/v1/company/entities?' + query.toString(), { method: 'GET', signal: params.signal }, true,
     );
   }
 
@@ -778,4 +780,3 @@ export class AccountingApiClient {
     );
   }
 }
-

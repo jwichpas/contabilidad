@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Clock,
   Coins,
   Hash,
   History,
@@ -15,13 +14,13 @@ import {
   Plus,
   RefreshCw,
   Save,
-  ShieldCheck,
   Sparkles,
   Trash2,
 } from 'lucide-vue-next';
 import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { EntityMaster } from '../../company/types/entityMaster.types';
 import JournalEntityPicker from '../components/JournalEntityPicker.vue';
+import UiButton from '@/shared/ui/UiButton.vue';
 import JournalAccountCombobox from '../components/JournalAccountCombobox.vue';
 import { entityMatches, entityRequired } from '../utils/journalEntity';
 import { cashFlowMatches } from '../utils/journalArea';
@@ -871,10 +870,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="journal-page space-y-5 sm:space-y-6">
     <!-- Encabezado de Sección y Conmutador de Pestañas -->
     <div
-      class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border"
+      class="journal-heading flex flex-col gap-4 border-b border-line pb-5 lg:flex-row lg:items-center lg:justify-between"
     >
       <div>
         <div class="flex items-center gap-2">
@@ -883,50 +882,45 @@ onBeforeUnmount(() => {
           >
             <BookOpen class="w-4 h-4 text-brand" />
           </span>
-          <h1 class="text-xl font-semibold tracking-tight text-foreground">
-            Libro Diario · Voucher Contable Bimoneda
+          <h1 class="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+            Libro diario <span class="font-normal text-muted">· Asientos bimoneda</span>
           </h1>
-          <span
-            class="tag ok font-mono text-[11px]"
-          >
-            <ShieldCheck class="w-3 h-3 inline mr-1" />
-            ISO 27001 Inmutable
-          </span>
         </div>
         <p class="text-xs text-muted mt-1">
-          Registro transaccional de alta velocidad con partida doble en tiempo real (PEN / USD) y
-          cuadre de 4 decimales.
+          Registra y consulta asientos con partida doble, importes exactos y validaciones antes del registro.
         </p>
       </div>
 
       <!-- Conmutador de Pestañas -->
-      <div class="inline-flex p-1 bg-surface-muted rounded-md border border-line">
+      <div class="journal-tabs inline-flex max-w-full gap-1 rounded-lg border border-line bg-soft p-1">
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+          class="journal-tab inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors cursor-pointer"
+          :aria-pressed="activeTab === 'form'"
           :class="
             activeTab === 'form'
-              ? 'bg-brand text-white shadow-xs font-semibold'
-              : 'text-muted hover:text-foreground'
+              ? 'bg-surf text-foreground shadow-card font-semibold'
+              : 'text-muted hover:bg-surf/70 hover:text-foreground'
           "
           @click="activeTab = 'form'"
         >
           <Plus class="w-3.5 h-3.5" />
-          <span>Nuevo Asiento (Voucher)</span>
+          <span>Nuevo asiento</span>
         </button>
 
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+          class="journal-tab inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors cursor-pointer"
+          :aria-pressed="activeTab === 'history'"
           :class="
             activeTab === 'history'
-              ? 'bg-brand text-white shadow-xs font-semibold'
-              : 'text-muted hover:text-foreground'
+              ? 'bg-surf text-foreground shadow-card font-semibold'
+              : 'text-muted hover:bg-surf/70 hover:text-foreground'
           "
           @click="activeTab = 'history'"
         >
           <History class="w-3.5 h-3.5" />
-          <span>Libro Diario ({{ historyLoaded ? journalEntries.length : '…' }})</span>
+          <span>Libro diario ({{ historyLoaded ? journalEntries.length : '…' }})</span>
         </button>
       </div>
     </div>
@@ -939,7 +933,7 @@ onBeforeUnmount(() => {
 
     <div
       v-if="successMessage"
-      class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-between text-xs font-medium"
+      class="journal-alert flex items-center justify-between gap-3 rounded-lg border border-pos/35 bg-pos/5 p-4 text-xs font-medium text-foreground"
       role="alert"
     >
       <div class="flex items-center gap-2">
@@ -948,7 +942,8 @@ onBeforeUnmount(() => {
       </div>
       <button
         type="button"
-        class="text-emerald-600 hover:text-emerald-800 font-bold"
+        class="text-pos hover:opacity-80 font-bold"
+        aria-label="Cerrar mensaje de éxito"
         @click="successMessage = null"
       >
         ✕
@@ -958,7 +953,7 @@ onBeforeUnmount(() => {
     <!-- Alerta de Error -->
     <div
       v-if="errorMessage"
-      class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 flex items-center justify-between text-xs font-medium"
+      class="journal-alert flex items-center justify-between gap-3 rounded-lg border border-neg/35 bg-neg/5 p-4 text-xs font-medium text-foreground"
       role="alert"
     >
       <div class="flex items-center gap-2">
@@ -967,7 +962,8 @@ onBeforeUnmount(() => {
       </div>
       <button
         type="button"
-        class="text-rose-600 hover:text-rose-800 font-bold"
+        class="text-neg hover:opacity-80 font-bold"
+        aria-label="Cerrar mensaje de error"
         @click="errorMessage = null"
       >
         ✕
@@ -989,45 +985,40 @@ onBeforeUnmount(() => {
     <fieldset v-else-if="activeTab === 'form'" :disabled="isSubmitting" class="min-w-0 space-y-6">
       <!-- Tarjeta de Parámetros de Cabecera -->
       <div
-        class="panel space-y-4"
+        class="panel journal-section space-y-4"
       >
-        <div class="flex items-center justify-between border-b border-line pb-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
           <span class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
             <Layers class="w-3.5 h-3.5 text-brand" />
             Datos Generales del Asiento
           </span>
 
-          <span class="tag ok font-mono text-[11px] flex items-center gap-1">
-            <Clock class="w-3 h-3 text-pos" />
-            Periodo Abierto
-          </span>
+          <span class="text-[11px] font-medium text-muted">Período sujeto a validación al registrar</span>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7 gap-3.5">
+        <div class="journal-header-fields grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
           <!-- Fecha Contable -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-entry-date" class="block text-xs font-semibold text-muted mb-1">
               Fecha Contable
             </label>
-            <input
-              v-model="entryDate"
+            <input id="journal-entry-date" v-model="entryDate"
               type="date"
               required
-              class="w-full px-3 py-1.5 text-xs font-mono rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              class="w-full px-3 py-1.5 text-[13px] font-mono rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
 
           <!-- N.° Correlativo -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-entry-number" class="block text-xs font-semibold text-muted mb-1">
               N.° Correlativo
             </label>
             <div class="relative">
-              <input
-                v-model="entryNumber"
+              <input id="journal-entry-number" v-model="entryNumber"
                 type="text"
                 placeholder="01-00001"
-                class="w-full pl-7 pr-3 py-1.5 text-xs num font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                class="w-full pl-7 pr-3 py-1.5 text-[13px] num font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <Hash class="w-3.5 h-3.5 text-muted absolute left-2 top-2" />
             </div>
@@ -1035,11 +1026,11 @@ onBeforeUnmount(() => {
 
           <!-- Subdiario: clasificación independiente del tipo de asiento. -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-subdiary" class="block text-xs font-semibold text-muted mb-1">
               Subdiario
             </label>
-            <select v-model="subdiaryCode" :disabled="isLoading || isSubmitting"
-              class="w-full px-3 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50">
+            <select id="journal-subdiary" v-model="subdiaryCode" :disabled="isLoading || isSubmitting"
+              class="w-full px-3 py-1.5 text-[13px] rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand disabled:opacity-50">
               <option value="">Seleccionar subdiario...</option>
               <option v-for="sub in subdiaries" :key="sub.code" :value="sub.code">
                 {{ sub.name }}
@@ -1049,12 +1040,11 @@ onBeforeUnmount(() => {
 
           <!-- Tipo de Asiento -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-entry-type" class="block text-xs font-semibold text-muted mb-1">
               Tipo de Asiento
             </label>
-            <select
-              v-model="entryType"
-              class="w-full px-3 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+            <select id="journal-entry-type" v-model="entryType"
+              class="w-full px-3 py-1.5 text-[13px] rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option value="STANDARD">STANDARD · Diario Normal</option>
               <option value="OPENING">OPENING · Asiento de Apertura</option>
@@ -1065,12 +1055,11 @@ onBeforeUnmount(() => {
 
           <!-- Moneda de Operación -->
           <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <label for="journal-entry-currency" class="block text-xs font-semibold text-muted mb-1">
               Moneda del Voucher
             </label>
-            <select
-              v-model="currency"
-              class="w-full px-3 py-1.5 text-xs font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+            <select id="journal-entry-currency" v-model="currency"
+              class="w-full px-3 py-1.5 text-[13px] font-semibold rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option
                 v-for="curOption in availableVoucherCurrencies"
@@ -1082,82 +1071,92 @@ onBeforeUnmount(() => {
             </select>
           </div>
 
+        </div>
+
+        <!-- Tipos de cambio: criterio y tasas del día en una superficie común.
+             Los controles y sus eventos permanecen intactos. -->
+        <section class="journal-fx-panel rounded-lg border border-line bg-soft/50 p-3 sm:p-4"
+          aria-labelledby="journal-fx-heading">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 id="journal-fx-heading" class="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Coins class="h-4 w-4 text-brand" aria-hidden="true" />
+              Tipos de cambio · {{ entryDate }}
+            </h3>
+            <span class="text-xs text-muted">Moneda base: {{ baseCurrencyInfo.code }}</span>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)]">
           <!-- Tipo de Cambio Efectivo (14,6) -->
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="text-[11px] font-semibold text-muted">T.C. Efectivo</label>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+              <label for="journal-exchange-rate" class="text-xs font-semibold text-muted">T.C. Efectivo</label>
               <span class="text-[10px] text-brand font-mono font-medium">
                 {{ activeForeignCurrency.code }}/{{ baseCurrencyInfo.code }}
               </span>
             </div>
             <input
+              id="journal-exchange-rate"
               v-model="exchangeRate"
               type="text"
               required
-              class="w-full px-3 py-1.5 text-xs num rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+              class="w-full px-3 py-1.5 text-[13px] num rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
 
           <!-- Criterio TC SUNAT -->
-          <div>
-            <label class="block text-[11px] font-semibold text-muted mb-1">
+            <div>
+            <label for="journal-fx-criterion" class="block text-xs font-semibold text-muted mb-1">
               Criterio TC SUNAT
             </label>
-            <select
-              v-model="exchangeRateType"
-              class="w-full px-3 py-1.5 text-xs rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+            <select id="journal-fx-criterion" v-model="exchangeRateType"
+              class="w-full px-3 py-1.5 text-[13px] rounded-md bg-surf border border-line text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option value="SELL">SUNAT Venta (Pasivo/Gasto)</option>
               <option value="BUY">SUNAT Compra (Activo/Ingreso)</option>
             </select>
+            </div>
           </div>
-        </div>
 
-        <!-- Franja compacta de tipos de cambio por moneda secundaria.
-             Mantener ambos valores editables: el POST sigue exigiendo compra y venta. -->
-        <div v-if="requiredCurrencyRates.length > 0"
-          class="rounded-md border border-line bg-soft/50 px-3 py-2">
-          <div class="flex flex-wrap items-center gap-2.5">
-            <div class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-              title="Compra y venta son obligatorias para cada moneda secundaria configurada">
-              <Coins class="h-4 w-4 text-brand shrink-0" />
+          <!-- Tasas de compra y venta obligatorias para cada moneda secundaria. -->
+          <div v-if="requiredCurrencyRates.length > 0" class="journal-daily-rates mt-3 border-t border-line pt-3">
+            <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-foreground">
               <span>T.C. diario · {{ entryDate }}</span>
-              <span class="text-[10px] font-normal text-muted">(base {{ baseCurrencyInfo.code }})</span>
-              <Loader2 v-if="isLoadingRates" class="h-3 w-3 animate-spin text-brand" />
+              <span class="font-normal text-muted">(base {{ baseCurrencyInfo.code }})</span>
+              <Loader2 v-if="isLoadingRates" class="h-3.5 w-3.5 animate-spin text-brand" aria-hidden="true" />
             </div>
-            <div v-for="rateItem in requiredCurrencyRates" :key="rateItem.currency_id"
-              class="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-surf px-2 py-1"
-              :class="currency === rateItem.code ? 'border-brand/60' : 'border-line'">
-              <span class="text-xs font-semibold text-foreground">{{ rateItem.code }}</span>
-              <label class="flex items-center gap-1 text-[10px] text-muted">
-                Compra
-                <input :value="rateItem.buy_rate" type="number" step="0.000001" min="0.000001" required
-                  :aria-label="`Tipo de cambio compra ${rateItem.code}`"
-                  class="w-[92px] rounded border border-line bg-soft px-1.5 py-1 text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                  @input="updateRateForCurrency(rateItem.code, 'buy_rate', ($event.target as HTMLInputElement).value)" />
-              </label>
-              <label class="flex items-center gap-1 text-[10px] text-muted">
-                Venta
-                <input :value="rateItem.sell_rate" type="number" step="0.000001" min="0.000001" required
-                  :aria-label="`Tipo de cambio venta ${rateItem.code}`"
-                  class="w-[92px] rounded border border-line bg-soft px-1.5 py-1 text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                  @input="updateRateForCurrency(rateItem.code, 'sell_rate', ($event.target as HTMLInputElement).value)" />
-              </label>
-              <span class="text-[10px] font-medium"
-                :class="rateItem.is_recorded_for_date ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'">
-                {{ rateItem.is_recorded_for_date ? '✓ En BD' : 'Pendiente' }}
-              </span>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <div v-for="rateItem in requiredCurrencyRates" :key="rateItem.currency_id"
+                class="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border bg-surf p-2.5"
+                :class="currency === rateItem.code ? 'border-brand/60' : 'border-line'">
+                <span class="text-xs font-semibold text-foreground">{{ rateItem.code }}</span>
+                <label class="flex items-center gap-1.5 text-xs text-muted">
+                  Compra
+                  <input :value="rateItem.buy_rate" type="number" step="0.000001" min="0.000001" required
+                    :aria-label="`Tipo de cambio compra ${rateItem.code}`"
+                    class="w-[104px] rounded-md border border-border-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    @input="updateRateForCurrency(rateItem.code, 'buy_rate', ($event.target as HTMLInputElement).value)" />
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-muted">
+                  Venta
+                  <input :value="rateItem.sell_rate" type="number" step="0.000001" min="0.000001" required
+                    :aria-label="`Tipo de cambio venta ${rateItem.code}`"
+                    class="w-[104px] rounded-md border border-border-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    @input="updateRateForCurrency(rateItem.code, 'sell_rate', ($event.target as HTMLInputElement).value)" />
+                </label>
+                <span class="text-xs font-medium"
+                  :class="rateItem.is_recorded_for_date ? 'text-pos' : 'text-warn'">
+                  {{ rateItem.is_recorded_for_date ? 'Registrado' : 'Pendiente' }}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
         <!-- Glosa / Descripción General -->
         <div>
-          <label class="block text-[11px] font-semibold text-muted mb-1">
+          <label for="journal-description" class="block text-[11px] font-semibold text-muted mb-1">
             Glosa / Explicación del Asiento
           </label>
-          <input
-            v-model="headerDescription"
+          <input id="journal-description" v-model="headerDescription"
             type="text"
             required
             placeholder="Ej: Por la provisión de servicios contables según Factura F001-000492"
@@ -1167,24 +1166,31 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Una sola superficie de edición; las partidas agregadas son una lista de lectura. -->
-      <div class="panel min-w-0 p-0 overflow-hidden">
+      <div class="panel journal-section min-w-0 overflow-hidden p-0">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4">
           <div>
-            <h2 class="text-sm font-semibold text-foreground">Editor único de asientos</h2>
+            <h2 class="text-base font-semibold tracking-tight text-foreground">Editor único de asientos</h2>
             <p class="text-xs text-muted">{{ lines.length }} partidas · mínimo 2 para registrar</p>
           </div>
+          <div class="journal-quick-status flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-line bg-soft px-3 py-2 text-xs">
+            <span class="font-semibold" :class="isReadyToPost ? 'text-pos' : 'text-warn'">
+              {{ isReadyToPost ? 'Listo para registrar' : isBalanced ? 'Cuadrado · faltan datos' : 'Completar y cuadrar partidas' }}
+            </span>
+            <span v-if="totalDebitLocal.isPositive() || totalCreditLocal.isPositive()" class="num text-foreground">
+              Diferencia: {{ baseCurrencyInfo.symbol }} {{ diffLocal.toDisplay(4) }} · {{ activeForeignCurrency.symbol }} {{ diffForeign.toDisplay(4) }}
+            </span>
+          </div>
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="inline-flex items-center gap-1 rounded-md border border-line bg-surf px-3 py-2 text-xs font-semibold text-foreground"
-              title="Completa la diferencia en el Debe o Haber" @click="autoBalance">
-              <Sparkles class="h-4 w-4 text-accent" /> Balancear
-            </button>
-            <button type="button" class="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white" @click="addLine">
-              <Plus class="h-4 w-4" /> Agregar partida
-            </button>
+            <UiButton variant="secondary" title="Completa la diferencia en Debe o Haber" @click="autoBalance">
+              <Sparkles class="h-4 w-4 text-brand" aria-hidden="true" /> Balancear
+            </UiButton>
+            <UiButton variant="primary" @click="addLine">
+              <Plus class="h-4 w-4" aria-hidden="true" /> Agregar partida
+            </UiButton>
           </div>
         </div>
 
-        <div v-if="selectedLine" id="journal-line-editor" class="min-w-0 space-y-4 border-b border-line bg-soft/30 p-4">
+        <div v-if="selectedLine" id="journal-line-editor" class="journal-line-editor min-w-0 space-y-4 border-b border-line bg-soft/30 p-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h3 class="text-sm font-semibold text-foreground">Editar partida {{ selectedLineIndex + 1 }}</h3>
             <span v-if="missingLineFields(selectedLine).length" class="text-xs text-warn">
@@ -1254,11 +1260,11 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="border-b border-line p-4">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Partidas agregadas</h3>
+          <h3 class="text-sm font-semibold text-foreground">Partidas agregadas <span class="num font-normal text-muted">({{ lines.length }})</span></h3>
           <p class="mt-1 text-xs text-muted">Seleccione una partida para editarla en el formulario de arriba.</p>
         </div>
         <div class="hidden overflow-x-auto lg:block">
-          <table class="w-full min-w-[900px] table-fixed border-collapse text-left text-xs">
+          <table class="journal-lines-table w-full min-w-[900px] table-fixed border-collapse text-left text-xs">
             <thead class="bg-surface-muted text-muted">
               <tr>
                 <th class="w-[55px] px-3 py-3">#</th>
@@ -1272,7 +1278,7 @@ onBeforeUnmount(() => {
               </tr>
             </thead>
             <tbody class="divide-y divide-line">
-              <tr v-for="(line, idx) in lines" :key="line.id" :class="selectedLineId === line.id ? 'bg-brand/10' : 'bg-surf'">
+              <tr v-for="(line, idx) in lines" :key="line.id" :class="selectedLineId === line.id ? 'bg-brand/10' : 'bg-surf'" :data-current="selectedLineId === line.id ? 'true' : undefined">
                 <td class="px-3 py-3 num">{{ idx + 1 }}</td>
                 <td class="truncate px-3 py-3" :title="accountFor(line)?.name || ''">{{ accountFor(line) ? `${accountFor(line)?.code} · ${accountFor(line)?.name}` : 'Seleccionar cuenta' }}</td>
                 <td class="truncate px-3 py-3" :title="line.description || headerDescription">{{ line.description || headerDescription || '—' }}</td>
@@ -1281,8 +1287,8 @@ onBeforeUnmount(() => {
                 <td class="px-2 py-3 text-right num">{{ line.debitForeign || '—' }}</td>
                 <td class="px-2 py-3 text-right num">{{ line.creditForeign || '—' }}</td>
                 <td class="px-2 py-3">
-                  <button type="button" class="text-brand underline" :aria-label="`Editar partida ${idx + 1}`" @click="showLineEditor(line)">Editar</button>
-                  <button type="button" :disabled="lines.length <= 2" class="ml-2 text-neg disabled:opacity-30"
+                  <button type="button" class="rounded px-2 py-1 font-semibold text-brand hover:bg-soft" :aria-label="`Editar partida ${idx + 1}`" :aria-pressed="selectedLineId === line.id" @click="showLineEditor(line)">Editar</button>
+                  <button type="button" :disabled="lines.length <= 2" class="ml-1 rounded px-2 py-1 font-semibold text-neg hover:bg-neg/10 disabled:opacity-30"
                     :aria-label="`Eliminar partida ${idx + 1}`" @click="removeLine(idx)">Quitar</button>
                 </td>
               </tr>
@@ -1292,7 +1298,7 @@ onBeforeUnmount(() => {
         <div class="divide-y divide-line lg:hidden">
           <div v-for="(line, idx) in lines" :key="line.id" class="flex min-w-0 items-center gap-2 px-4 py-3"
             :class="selectedLineId === line.id ? 'bg-brand/10' : 'bg-surf'">
-            <button type="button" class="min-w-0 flex-1 text-left" :aria-label="`Editar partida ${idx + 1}`" @click="showLineEditor(line)">
+            <button type="button" class="min-w-0 flex-1 rounded-md p-1 text-left" :aria-label="`Editar partida ${idx + 1}`" :aria-pressed="selectedLineId === line.id" @click="showLineEditor(line)">
               <span class="block truncate text-sm font-semibold text-foreground">{{ idx + 1 }} · {{ accountFor(line) ? `${accountFor(line)?.code} · ${accountFor(line)?.name}` : 'Seleccionar cuenta' }}</span>
               <span class="block truncate text-xs text-muted">{{ line.description || headerDescription || 'Sin glosa' }}</span>
               <span class="block text-xs num text-foreground">Debe {{ isBaseVoucher ? baseCurrencyInfo.symbol : activeForeignCurrency.symbol }} {{ (isBaseVoucher ? line.debitLocal : line.debitForeign) || '0' }} · Haber {{ isBaseVoucher ? baseCurrencyInfo.symbol : activeForeignCurrency.symbol }} {{ (isBaseVoucher ? line.creditLocal : line.creditForeign) || '0' }}</span>
@@ -1302,24 +1308,25 @@ onBeforeUnmount(() => {
               :aria-label="`Eliminar partida ${idx + 1}`" @click="removeLine(idx)"><Trash2 class="h-4 w-4" /></button>
           </div>
         </div>
-        <div class="bg-soft p-4 text-xs text-foreground">
-          <strong class="block pb-2">Totales del asiento</strong>
-          <div class="grid grid-cols-2 gap-2 num sm:grid-cols-4">
-            <span>Debe {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(4) }}</strong></span>
-            <span>Haber {{ baseCurrencyInfo.code }}<br><strong>{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(4) }}</strong></span>
-            <span>Debe {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(4) }}</strong></span>
-            <span>Haber {{ activeForeignCurrency.code }}<br><strong>{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(4) }}</strong></span>
-          </div>
-          <p class="mt-3 font-semibold" :class="diffLocal.isZero() && diffForeign.isZero() ? 'text-pos' : 'text-neg'">
+        <section aria-labelledby="journal-totals-title" class="journal-totals bg-soft p-4">
+          <h3 id="journal-totals-title" class="mb-3 text-sm font-semibold text-foreground">Totales del asiento</h3>
+          <dl class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div class="journal-total"><dt>Debe {{ baseCurrencyInfo.code }}</dt><dd class="num">{{ baseCurrencyInfo.symbol }} {{ totalDebitLocal.toDisplay(4) }}</dd></div>
+            <div class="journal-total"><dt>Haber {{ baseCurrencyInfo.code }}</dt><dd class="num">{{ baseCurrencyInfo.symbol }} {{ totalCreditLocal.toDisplay(4) }}</dd></div>
+            <div class="journal-total"><dt>Debe {{ activeForeignCurrency.code }}</dt><dd class="num">{{ activeForeignCurrency.symbol }} {{ totalDebitForeign.toDisplay(4) }}</dd></div>
+            <div class="journal-total"><dt>Haber {{ activeForeignCurrency.code }}</dt><dd class="num">{{ activeForeignCurrency.symbol }} {{ totalCreditForeign.toDisplay(4) }}</dd></div>
+          </dl>
+          <p class="mt-3 text-xs font-semibold" :class="diffLocal.isZero() && diffForeign.isZero() ? 'text-pos' : 'text-neg'">
             Diferencia: {{ baseCurrencyInfo.symbol }} {{ diffLocal.toDisplay(4) }} · {{ activeForeignCurrency.symbol }} {{ diffForeign.toDisplay(4) }}
           </p>
-        </div>
+        </section>
       </div>
 
       <!-- Barra de Estado de Balance y Acciones Finales -->
       <div
-        class="panel flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        class="panel journal-post-bar flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         :class="isReadyToPost ? 'border-pos/50 bg-pos/5' : 'border-warn/50 bg-warn/5'"
+        :data-ready="isReadyToPost ? 'true' : 'false'"
       >
         <div class="flex items-center gap-3">
           <div
@@ -1348,24 +1355,18 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
-          <button
-            type="button"
-            class="px-4 py-2 rounded-md border border-line text-xs font-medium text-muted hover:text-foreground bg-surf transition-colors cursor-pointer"
-            @click="clearForm"
-          >
-            Limpiar
-          </button>
+          <UiButton variant="secondary" @click="clearForm">Limpiar</UiButton>
 
-          <button
-            type="button"
-            :disabled="!isReadyToPost || isSubmitting || isLoading"
-            class="inline-flex min-w-0 flex-1 items-center justify-center gap-2 px-4 py-2 rounded-md text-xs font-semibold text-white bg-brand hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all sm:flex-none"
+          <UiButton
+            variant="primary"
+            class="flex-1 sm:flex-none"
+            :disabled="!isReadyToPost || isLoading"
+            :loading="isSubmitting"
             @click="handleSubmit"
           >
-            <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-            <Save v-else class="w-4 h-4 text-white" />
+            <Save v-if="!isSubmitting" class="h-4 w-4" aria-hidden="true" />
             <span>{{ isSubmitting ? 'Registrando...' : 'Registrar asiento' }}</span>
-          </button>
+          </UiButton>
         </div>
       </div>
     </fieldset>
@@ -1383,18 +1384,14 @@ onBeforeUnmount(() => {
               Asientos Registrados en el Periodo ({{ journalEntries.length }})
             </span>
             <span class="text-[11px] text-muted font-mono">
-              · Trazabilidad Inmutable ISO/IEC 27001
+              · Registro contable trazable
             </span>
           </div>
 
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-line bg-surf hover:bg-soft transition-colors cursor-pointer"
-            @click="loadHistory"
-          >
-            <RefreshCw class="w-3.5 h-3.5 text-muted" />
+          <UiButton variant="secondary" size="sm" :disabled="isLoadingHistory" @click="loadHistory">
+            <RefreshCw class="h-3.5 w-3.5" aria-hidden="true" />
             <span>Actualizar</span>
-          </button>
+          </UiButton>
         </div>
 
         <div v-if="isLoadingHistory || isLoading" class="space-y-4 p-5" role="status" aria-label="Cargando Libro Diario">
@@ -1407,20 +1404,17 @@ onBeforeUnmount(() => {
           <p class="text-xs text-muted mt-1">
             Utiliza la pestaña "Nuevo Asiento (Voucher)" para ingresar el primer asiento de este ejercicio.
           </p>
-          <button
-            type="button"
-            class="mt-4 px-4 py-2 rounded-md text-xs font-semibold bg-brand text-white hover:opacity-95 cursor-pointer"
-            @click="activeTab = 'form'"
-          >
-            Crear Primer Asiento
-          </button>
+          <UiButton variant="primary" class="mt-4" @click="activeTab = 'form'">
+            Crear primer asiento
+          </UiButton>
         </div>
 
         <div v-else class="overflow-x-auto">
-          <table class="w-full text-left border-collapse min-w-[800px]">
+          <table class="journal-history-table w-full text-left border-collapse min-w-[800px]">
+            <caption class="sr-only">Asientos registrados del libro diario</caption>
             <thead>
               <tr class="bg-surface-muted border-b border-border text-[11px] font-bold text-muted uppercase">
-                <th class="py-2.5 px-3 w-10"></th>
+                <th scope="col" class="py-2.5 px-3 w-10">Detalle</th>
                 <th class="py-2.5 px-3 w-28">N.° Asiento</th>
                 <th class="py-2.5 px-3 w-24">Fecha</th>
                 <th class="py-2.5 px-3 w-24">Tipo</th>
@@ -1438,11 +1432,16 @@ onBeforeUnmount(() => {
                   @click="toggleExpandEntry(entry.id)"
                 >
                   <td class="py-2.5 px-3 text-center">
-                    <ChevronDown
-                      v-if="expandedEntryIds.has(entry.id)"
-                      class="w-4 h-4 text-brand"
-                    />
-                    <ChevronUp v-else class="w-4 h-4 text-muted" />
+                    <button
+                      type="button"
+                      class="journal-history-toggle inline-flex size-8 items-center justify-center rounded-md text-brand hover:bg-soft"
+                      :aria-label="`${expandedEntryIds.has(entry.id) ? 'Contraer' : 'Expandir'} asiento ${entry.entry_number}`"
+                      :aria-expanded="expandedEntryIds.has(entry.id)"
+                      @click.stop="toggleExpandEntry(entry.id)"
+                    >
+                      <ChevronUp v-if="expandedEntryIds.has(entry.id)" class="h-4 w-4" aria-hidden="true" />
+                      <ChevronDown v-else class="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </td>
 
                   <td class="py-2.5 px-3 num font-semibold text-foreground">
@@ -1490,7 +1489,9 @@ onBeforeUnmount(() => {
                       <div class="px-3 py-2 bg-soft border-b border-line text-[11px] font-semibold text-muted uppercase">
                         Detalle de Cuentas Imputadas ({{ entry.lines.length }} Líneas)
                       </div>
-                      <table class="w-full text-left text-xs">
+                      <div class="overflow-x-auto">
+                      <table class="min-w-[1120px] w-full text-left text-xs">
+                        <caption class="sr-only">Detalle de partidas del asiento {{ entry.entry_number }}</caption>
                         <thead>
                           <tr class="border-b border-line text-[10px] text-muted uppercase font-mono">
                             <th class="py-1.5 px-3 w-10 text-center">#</th>
@@ -1533,6 +1534,7 @@ onBeforeUnmount(() => {
                           </tr>
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   </td>
                 </tr>

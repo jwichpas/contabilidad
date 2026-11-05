@@ -2,68 +2,10 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
-  box-sizing: border-box;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  --bg: #fcfcfc;
-  --side: #f3f3f3;
-  --surf: #ffffff;
-  --card: #ffffff;
-  --line: #ebebeb;
-  --ink: #333333;
-  --mut: #8c8c8c;
-  --hover: #ececec;
-  --brand: #3e63dd;
-  --brandtx: #ffffff;
-  --pos: #1f8a4c;
-  --warn: #9a6200;
-  --neg: #c0392b;
-  --soft: #e6ecfb;
-  --bar2: #e08a3c;
-  --accent: #3e63dd;
-}
-
-:root[data-theme="dark"],
-.dark {
-  --bg: #171717;
-  --side: #1e1e1e;
-  --surf: #1c1c1c;
-  --card: #1c1c1c;
-  --line: #2d2d2d;
-  --ink: #e4e4e4;
-  --mut: #8a8a8a;
-  --hover: #272727;
-  --brand: #7b96f0;
-  --brandtx: #ffffff;
-  --pos: #5fd08a;
-  --warn: #e6b04d;
-  --neg: #f08a80;
-  --soft: #1d2640;
-  --bar2: #e08a3c;
-  --accent: #7b96f0;
-
-  color-scheme: dark;
-}
-
 /*
- * ════════════════════════════════════════════════════════════════════════════
- *  SISTEMA DE DISEÑO PERÚ — Libro Mayor Perú · Dashboard Contable
- * ════════════════════════════════════════════════════════════════════════════
- *  Paleta oficial Dashboard Contable Perú:
- *    --bg: #ffffff / #0a1230
- *    --surf: #ffffff / #101b42
- *    --ink: #0b1b3f / #e8edfa
- *    --mut: #5a6683 / #9aa8cf
- *    --line: #dce2ee / #223062
- *    --brand: #002a8d / #2f5fd6
- *    --brandtx: #ffffff
- *    --pos: #1f7a4d / #5fd09a
- *    --warn: #b85400 / #ffa14a
- *    --neg: #c8102e / #ff6b7f
- *    --soft: #e8edf8 / #182654
- *    --accent: #ff7800 / #ff8a1f
- * ════════════════════════════════════════════════════════════════════════════
+ * Paleta, densidad y valores de tema: assets/design-tokens.css
+ * Directrices y criterios de aceptación: /DESIGN.md
+ * Esta hoja conserva componentes y utilidades existentes.
  */
 @theme {
   --font-sans: Inter, system-ui, -apple-system, sans-serif;
@@ -81,7 +23,8 @@
   --color-muted: var(--mut);
   --color-border: var(--line);
   --color-line: var(--line);
-  --color-border-strong: var(--line);
+  --color-border-strong: var(--line-strong);
+  --color-hover: var(--hover);
 
   /* Marca */
   --color-brand: var(--brand);
@@ -92,7 +35,7 @@
 
   /* Acento */
   --color-accent: var(--accent);
-  --color-accent-ink: var(--accent);
+  --color-accent-ink: var(--accent-text);
   --color-on-accent: #ffffff;
 
   /* Semánticos */
@@ -189,7 +132,7 @@
   select:focus-visible,
   [role="tab"]:focus-visible,
   [role="treeitem"]:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus-color);
     outline-offset: 2px;
     border-radius: 6px;
   }
@@ -205,9 +148,9 @@
     color: var(--color-foreground);
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     padding: 0.5rem 0.75rem;
-    min-height: 2.25rem;
+    min-height: var(--control-height);
     transition:
       border-color 120ms ease,
       box-shadow 120ms ease,
@@ -425,7 +368,7 @@
   .panel {
     background: var(--surf);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
     padding: 16px;
     margin-bottom: 16px;
   }
@@ -548,7 +491,7 @@
   .ui-card {
     background: var(--surf);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
     box-shadow: var(--shadow-card);
   }
 
@@ -638,9 +581,9 @@
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    min-height: 2.25rem;
+    min-height: var(--control-height);
     padding: 0 0.9rem;
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     border: 1px solid var(--line);
     font-size: 0.75rem;
     font-weight: 600;
@@ -1303,65 +1246,311 @@
 }
 
 
-/* Shell y paleta del diseño adjunto */
+/* Navegación ERP: colores semánticos y un único origen de tema. */
 @layer base {
-  :root { color-scheme: light; }
-  html.dark { color-scheme: dark; }
   body { background: var(--side); color: var(--ink); }
 }
-
-.app-shell {
-  min-height: 100vh;
-  background: var(--side);
-}
-
+.app-shell { min-height: 100vh; background: var(--side); }
 .app-panel {
   min-width: 0;
   margin: 8px 8px 8px 0;
   overflow: hidden;
   background: var(--surf);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
+  box-shadow: 0 2px 12px rgb(11 27 63 / 0.035);
 }
-
 .app-content { max-width: none; }
-
-aside[aria-label="Menú principal del ERP Contable"] {
-  padding: 10px 8px;
-  color: var(--ink) !important;
-  background: var(--side) !important;
-  border-color: var(--line) !important;
+.app-sidebar { background: var(--side); color: var(--ink); border-color: var(--line); }
+.app-sidebar-nav button {
+  min-height: 2.35rem;
+  color: var(--mut);
+  font-size: 0.8125rem;
+  line-height: 1.35;
 }
-
-aside[aria-label="Menú principal del ERP Contable"] .text-white:not(.bg-accent) {
-  color: var(--ink) !important;
+.app-sidebar-nav p {
+  font-size: 0.6875rem;
+  line-height: 1.4;
 }
-
-aside[aria-label="Menú principal del ERP Contable"] .text-white\/75,
-aside[aria-label="Menú principal del ERP Contable"] .text-white\/80,
-aside[aria-label="Menú principal del ERP Contable"] .text-white\/70,
-aside[aria-label="Menú principal del ERP Contable"] .text-white\/60 {
-  color: var(--mut) !important;
+.app-sidebar-nav .truncate {
+  min-width: 0;
 }
-
-aside[aria-label="Menú principal del ERP Contable"] .bg-white\/10,
-aside[aria-label="Menú principal del ERP Contable"] .bg-white\/15,
-aside[aria-label="Menú principal del ERP Contable"] .bg-white\/20 {
-  background-color: var(--hover) !important;
+.app-sidebar-nav button[aria-current="page"] {
+  background: var(--soft);
+  color: var(--nav-active);
+  box-shadow: inset 3px 0 0 var(--brand);
+  font-weight: 650;
 }
-
-aside[aria-label="Menú principal del ERP Contable"] .border-white\/15 {
-  border-color: var(--line) !important;
+.app-sidebar-nav button:not([aria-current="page"]):hover {
+  background: var(--hover);
+  color: var(--ink);
 }
-
-aside[aria-label="Menú principal del ERP Contable"] .bg-brand {
-  background-color: var(--side) !important;
+.app-sidebar button:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
 }
-
+.app-header { background: var(--surf); border-color: var(--line); }
 @media (max-width: 1023px) {
-  .app-panel {
-    margin: 0;
-    border: 0;
-    border-radius: 0;
+  .app-panel { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar { transition-duration: 0.01ms !important; }
+}
+
+/* ═══════════ LIBRO DIARIO · COMPONENTES OPERATIVOS ═══════════ */
+@layer components {
+  .journal-heading h1 {
+    font-size: 1.375rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .journal-heading p {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .journal-header-fields label {
+    font-size: 0.75rem;
+  }
+
+  .journal-line-editor label {
+    font-size: 0.8125rem;
+  }
+
+  .journal-quick-status {
+    flex: 1 1 16rem;
+    max-width: 36rem;
+    min-width: 0;
+    line-height: 1.5;
+  }
+
+  .journal-tabs {
+    min-width: 0;
+  }
+
+  .journal-tab {
+    min-height: var(--control-height);
+    white-space: nowrap;
+  }
+
+  .journal-section {
+    background: var(--surf);
+    border-color: var(--line);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-card);
+  }
+
+  .journal-header-fields :is(input, select) {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .journal-line-editor {
+    scroll-margin-top: 5rem;
+  }
+
+  .journal-lines-table th {
+    font-variant-numeric: tabular-nums;
+    vertical-align: bottom;
+    font-size: 0.75rem;
+  }
+
+  .journal-lines-table td {
+    font-size: 0.8125rem;
+  }
+
+  .journal-lines-table tbody tr[data-current="true"] td:first-child {
+    box-shadow: inset 3px 0 0 var(--brand);
+  }
+
+  .journal-total {
+    min-width: 0;
+    padding: 0.75rem;
+    background: var(--surf);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+  }
+
+  .journal-total dt {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--mut);
+  }
+
+  .journal-total dd {
+    margin-top: 0.3rem;
+    color: var(--ink);
+    font-size: clamp(0.75rem, 1.1vw, 0.98rem);
+    font-weight: 650;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .journal-post-bar[data-ready="true"] {
+    border-left: 3px solid var(--pos);
+  }
+
+  .journal-post-bar[data-ready="false"] {
+    border-left: 3px solid var(--warn);
+  }
+
+  .journal-history-toggle:focus-visible,
+  .journal-tab:focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 639px) {
+    .journal-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+    }
+    .journal-tab {
+      min-width: 0;
+    }
+    .journal-total dd {
+      font-size: 0.78rem;
+    }
+  }
+}
+
+/* ═══════ MAESTROS DEL ERP: PCGE, CENTROS DE COSTO Y ANEXOS ═══════ */
+@layer components {
+  .workspace-page {
+    min-width: 0;
+  }
+
+  .workspace-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 1rem;
+  }
+
+  .workspace-heading h1 {
+    color: var(--ink);
+    font-size: 1.25rem;
+    line-height: 1.4;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+  }
+
+  .workspace-heading p {
+    margin-top: 0.25rem;
+    color: var(--mut);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .workspace-toolbar,
+  .workspace-section {
+    background: var(--surf);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+    min-width: 0;
+  }
+
+  .workspace-toolbar {
+    padding: 1rem;
+  }
+
+  .workspace-field {
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    color: var(--mut);
+  }
+
+  .workspace-field :is(input, select) {
+    min-height: 2.5rem;
+    max-width: 100%;
+    font-size: 0.875rem;
+    color: var(--ink);
+  }
+
+  .workspace-form > label {
+    font-size: 0.8125rem;
+    font-weight: 550;
+    color: var(--mut);
+  }
+
+  .workspace-form :is(input:not([type="checkbox"]), select) {
+    min-height: 2.5rem;
+    min-width: 0;
+    background: var(--surf);
+    color: var(--ink);
+  }
+
+  .workspace-form :is(input, select):focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+  }
+
+  .workspace-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    color: var(--ink);
+  }
+
+  .workspace-table thead {
+    background: var(--soft);
+    color: var(--mut);
+  }
+
+  .workspace-table th {
+    font-size: 0.75rem;
+    font-weight: 650;
+    text-align: left;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .workspace-table td {
+    line-height: 1.5;
+    vertical-align: middle;
+  }
+
+  .workspace-table tbody tr:hover {
+    background: var(--hover);
+  }
+
+  .workspace-table :is(th, td) {
+    padding: 0.75rem;
+  }
+
+  .workspace-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .workspace-actions button {
+    min-height: 2rem;
+  }
+
+  .workspace-table :is(button, input, select):focus-visible,
+  .workspace-toolbar :is(button, input, select):focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 639px) {
+    .workspace-heading {
+      align-items: stretch;
+    }
+
+    .workspace-toolbar {
+      padding: 0.75rem;
+    }
   }
 }

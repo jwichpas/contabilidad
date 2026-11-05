@@ -44,6 +44,7 @@ const {
   isLoading,
   errorMessage,
   fetchTree,
+  refreshTree,
   expandAll,
   collapseAll,
   toggleExpand,
@@ -334,7 +335,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="space-y-4">
+  <section class="workspace-page space-y-4" aria-label="Plan contable PCGE">
+    <header class="workspace-heading">
+      <div>
+        <h1>Plan contable empresarial (PCGE)</h1>
+        <p>Consulta y configura cuentas, dimensiones contables y destinos automáticos de la empresa.</p>
+      </div>
+      <span class="rounded-md border border-line bg-soft px-3 py-1.5 text-xs font-medium text-muted">Vista jerárquica</span>
+    </header>
     <p v-if="catalogsLoading" role="status" class="rounded-md border border-line bg-soft px-3 py-2 text-xs text-muted">
       Cargando las opciones necesarias para configurar la cuenta…
     </p>
@@ -451,18 +459,19 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 2. Barra de Herramientas, Buscador y Filtros por Elemento Contable -->
-    <div class="panel p-0 overflow-hidden">
+    <div class="panel workspace-section p-0 overflow-hidden">
       <!-- Fila Superior: Búsqueda, Filtros Rápidos y Botón Primario -->
-      <div class="p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div class="workspace-toolbar border-0 flex flex-col gap-3 rounded-none lg:flex-row lg:items-center lg:justify-between">
         <!-- Buscador Instantáneo -->
-        <div class="relative flex-1 max-w-xl">
+        <div class="relative min-w-0 flex-1 max-w-xl">
           <Search class="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             ref="searchInputRef"
             v-model="searchQuery"
             type="search"
+            aria-label="Buscar cuenta contable por código, denominación o rubro"
             placeholder="Buscar cuenta por código (1041, 6361, 9411), denominación o rubro EEFF..."
-            class="w-full rounded-md border border-line bg-surf pl-9 pr-16 py-1.5 text-xs sm:text-sm text-foreground placeholder:text-muted/75 focus:outline-none focus:ring-1 focus:ring-brand"
+            class="w-full min-h-10 rounded-md border border-line bg-surf pl-9 pr-16 py-2 text-sm text-foreground placeholder:text-muted/75 focus:outline-none focus:ring-2 focus:ring-brand/20"
           />
           <kbd
             class="hidden sm:inline-flex items-center gap-0.5 absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted bg-soft border border-line rounded"
@@ -543,7 +552,7 @@ onBeforeUnmount(() => {
             type="button"
             class="inline-flex items-center justify-center w-8 h-8 rounded-md border border-line bg-surf text-muted hover:text-foreground transition-colors cursor-pointer"
             title="Sincronizar Plan de Cuentas"
-            @click="fetchTree"
+            @click="refreshTree"
           >
             <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
           </button>
@@ -607,7 +616,7 @@ onBeforeUnmount(() => {
     <!-- 3. Estación de Trabajo Master-Detail (Árbol Jerárquico + Inspector Ficha Técnica) -->
     <div class="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-4 items-start">
       <!-- Panel Izquierdo: Grilla Jerárquica PCGE -->
-      <div class="panel p-0 overflow-hidden">
+      <div class="panel workspace-section p-0 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse" role="treegrid" aria-label="Plan Contable General Empresarial">
             <thead>
@@ -668,7 +677,7 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="font-mono text-[11px] num">
-            Mostrando <strong>{{ filteredRows.length }}</strong> de <strong>{{ kpiMetrics.total }}</strong> cuentas
+            <strong>{{ filteredRows.length }}</strong> filas visibles · <strong>{{ kpiMetrics.total }}</strong> cuentas en el plan
           </div>
         </div>
       </div>

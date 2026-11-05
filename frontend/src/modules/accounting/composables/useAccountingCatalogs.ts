@@ -1,4 +1,5 @@
 import { computed, shallowRef } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { AccountingApiClient } from '../api/httpClient';
 import type { UiSelectOption } from '@/shared/ui/types';
 import {
@@ -28,10 +29,7 @@ export interface UseAccountingCatalogsOptions {
 }
 
 export function useAccountingCatalogs(options: UseAccountingCatalogsOptions) {
-  const apiClient = new AccountingApiClient('', {
-    getAccessToken: options.getAccessToken,
-    getActiveCompanyId: options.getActiveCompanyId,
-  });
+  const queryClient = useQueryClient();
 
   const currencies = shallowRef<readonly CurrencyItem[]>([]);
   const rubrics = shallowRef<readonly FinancialStatementRubricItem[]>([]);
@@ -162,6 +160,14 @@ export function useAccountingCatalogs(options: UseAccountingCatalogsOptions) {
     error.value = null;
 
     try {
+      const requestedCompany = options.getActiveCompanyId();
+      const token = options.getAccessToken();
+      const requestApi = new AccountingApiClient('', {
+        getAccessToken: () => token,
+        getActiveCompanyId: () => requestedCompany,
+      });
+      const publicCatalogStaleMs = 30 * 60_000;
+      const companyCatalogStaleMs = 30_000;
       const [
         currenciesRes,
         rubricsRes,
@@ -170,13 +176,52 @@ export function useAccountingCatalogs(options: UseAccountingCatalogsOptions) {
         sunatBancosRes,
         settingsRes,
       ] = await Promise.allSettled([
-        apiClient.fetchCurrencies(),
-        apiClient.fetchFinancialStatementRubrics(),
-        apiClient.fetchCostCenters(),
-        apiClient.fetchCashFlowAreas(),
-        apiClient.fetchSunatTable(3),
-        apiClient.fetchCompanySettings(),
+        queryClient.fetchQuery({
+          queryKey: ['reference-catalog', 'currencies'],
+          queryFn: () => requestApi.fetchCurrencies(),
+          staleTime: publicCatalogStaleMs,
+          gcTime: 60 * 60_000,
+          retry: false,
+        }),
+        queryClient.fetchQuery({
+          queryKey: ['reference-catalog', 'financial-statement-rubrics'],
+          queryFn: () => requestApi.fetchFinancialStatementRubrics(),
+          staleTime: publicCatalogStaleMs,
+          gcTime: 60 * 60_000,
+          retry: false,
+        }),
+        queryClient.fetchQuery({
+          queryKey: ['company-catalog', requestedCompany, 'cost-centers'],
+          queryFn: () => requestApi.fetchCostCenters(),
+          staleTime: companyCatalogStaleMs,
+          gcTime: 300_000,
+          retry: false,
+        }),
+        queryClient.fetchQuery({
+          queryKey: ['company-catalog', requestedCompany, 'cash-flow-areas'],
+          queryFn: () => requestApi.fetchCashFlowAreas(),
+          staleTime: companyCatalogStaleMs,
+          gcTime: 300_000,
+          retry: false,
+        }),
+        queryClient.fetchQuery({
+          queryKey: ['reference-catalog', 'sunat-banks-03'],
+          queryFn: ({ signal }) => requestApi.fetchSunatTable(3, signal),
+          staleTime: publicCatalogStaleMs,
+          gcTime: 60 * 60_000,
+          retry: false,
+        }),
+        queryClient.fetchQuery({
+          queryKey: ['company-catalog', requestedCompany, 'settings'],
+          queryFn: () => requestApi.fetchCompanySettings(),
+          staleTime: 0, // Always refresh financial settings when opening the account editor.
+          gcTime: 300_000,
+          retry: false,
+        }),
       ]);
+      // A cancelled query from the previous company or session must not update
+      // its successor's dropdowns (the cache is also cleared in App.vue).
+      if (requestedCompany !== options.getActiveCompanyId() || token !== options.getAccessToken()) return;
 
       if (currenciesRes.status === 'fulfilled') {
         currencies.value = currenciesRes.value;

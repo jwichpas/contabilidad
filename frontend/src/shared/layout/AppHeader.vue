@@ -2,13 +2,13 @@
 import { computed } from 'vue';
 import {
   ArrowLeftRight,
-  Calendar,
   ChevronRight,
   LogOut,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  ShieldCheck,
+  Wifi,
+  WifiOff,
 } from 'lucide-vue-next';
 import UiSelect from '@/shared/ui/UiSelect.vue';
 import type { UiSelectOption } from '@/shared/ui/types';
@@ -72,10 +72,10 @@ const activeCompanyIdString = computed<string>({
 
 <template>
   <header
-    class="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-border px-4 lg:px-6 h-14 flex items-center justify-between gap-3"
+    class="app-header sticky top-0 z-30 border-b px-3 sm:px-4 lg:px-6 h-14 flex items-center justify-between gap-3"
   >
     <!-- Izquierda: Botón Menú / Colapsar + Breadcrumb -->
-    <div class="flex items-center gap-2.5 min-w-0">
+    <div class="flex flex-1 items-center gap-2.5 min-w-0">
       <button
         type="button"
         class="lg:hidden inline-flex items-center justify-center w-8 h-8 rounded-md border border-line bg-surf text-foreground hover:bg-soft cursor-pointer"
@@ -89,13 +89,15 @@ const activeCompanyIdString = computed<string>({
         type="button"
         class="hidden lg:inline-flex items-center justify-center w-8 h-8 rounded-md border border-line bg-surf text-muted hover:text-foreground transition-colors cursor-pointer"
         :title="isSidebarCollapsed ? 'Expandir panel lateral' : 'Contraer panel lateral'"
+        :aria-label="isSidebarCollapsed ? 'Expandir panel lateral' : 'Contraer panel lateral'"
+        :aria-expanded="!isSidebarCollapsed"
         @click="emit('toggle-collapse')"
       >
         <PanelLeftOpen v-if="isSidebarCollapsed" class="w-4 h-4" />
         <PanelLeftClose v-else class="w-4 h-4" />
       </button>
 
-      <nav class="flex items-center gap-1.5 text-xs sm:text-sm min-w-0" aria-label="Ruta de navegación">
+      <nav class="flex flex-1 items-center gap-1.5 text-xs sm:text-sm min-w-0" aria-label="Ruta de navegación">
         <span class="hidden md:inline text-muted font-medium truncate">
           {{ activeCompany.businessName }}
         </span>
@@ -133,9 +135,9 @@ const activeCompanyIdString = computed<string>({
     </div>
 
     <!-- Derecha: Indicadores Financieros Bimoneda (TC SUNAT), Periodo y Selector Móvil -->
-    <div class="flex items-center gap-2 sm:gap-3">
+    <div class="flex shrink-0 items-center gap-2 sm:gap-3">
       <!-- Selector rápido de empresa en móvil/tablet -->
-      <div class="lg:hidden w-44">
+      <div class="hidden w-40 sm:block lg:hidden">
         <UiSelect
           v-model="activeCompanyIdString"
           :options="companyOptions"
@@ -144,24 +146,27 @@ const activeCompanyIdString = computed<string>({
         />
       </div>
 
-      <!-- Indicador de Seguridad ISO/IEC 27001:2023 -->
+      <!-- Resultado de la última comprobación de API; no representa certificación. -->
       <div
-        class="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors"
-        :class="isLiveConnected ? 'tag ok' : 'tag wa'"
-        :title="isLiveConnected ? 'Sesión auditada y cifrada bajo controles ISO/IEC 27001:2023 (Control 8.5, 8.15)' : 'Conectando con el servidor seguro...'"
+        class="hidden xl:inline-flex items-center gap-1.5 rounded-md border border-line bg-soft px-2.5 py-1 text-xs font-medium"
+        :class="isLiveConnected ? 'text-pos' : 'text-warn'"
+        :title="isLiveConnected
+          ? 'La última comprobación con la API fue satisfactoria'
+          : 'La última comprobación con la API no fue satisfactoria'"
+        role="status"
       >
-        <ShieldCheck class="w-3.5 h-3.5 shrink-0" />
-        <span class="font-semibold">ISO 27001</span>
-        <span class="text-[10px] font-mono opacity-80">· {{ isLiveConnected ? 'SGSI Activo' : 'Conectando...' }}</span>
+        <Wifi v-if="isLiveConnected" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <WifiOff v-else class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <span>{{ isLiveConnected ? 'API verificada' : 'API sin verificar' }}</span>
       </div>
 
       <!-- Usuario Autenticado en Servidor -->
       <div
         v-if="currentUser"
         class="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surf border border-line text-xs font-medium text-foreground"
-        :title="`Usuario auditado: ${currentUser.email}`"
+        :title="`Usuario de sesión: ${currentUser.email}`"
       >
-        <span class="w-2 h-2 rounded-full bg-pos animate-pulse" />
+        <span class="w-2 h-2 rounded-full bg-pos" />
         <span class="truncate max-w-[140px]">{{ currentUser.name }}</span>
       </div>
 
@@ -169,26 +174,17 @@ const activeCompanyIdString = computed<string>({
       <button
         type="button"
         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-line bg-surf text-xs font-medium text-muted hover:text-neg hover:border-neg transition-colors cursor-pointer"
-        title="Cerrar sesión de forma segura (ISO 27001)"
+        title="Cerrar sesión"
+        aria-label="Cerrar sesión"
         @click="emit('logout')"
       >
         <LogOut class="w-3.5 h-3.5 shrink-0 text-neg" />
         <span class="hidden sm:inline">Cerrar Sesión</span>
       </button>
 
-      <!-- Periodo Contable Activo -->
-      <div
-        class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surf border border-line text-xs font-medium text-foreground"
-      >
-        <Calendar class="w-3.5 h-3.5 text-brand" />
-        <span>Ejercicio:</span>
-        <strong class="num">2026-10</strong>
-        <span class="w-2 h-2 rounded-full bg-pos" title="Periodo Contable Abierto" />
-      </div>
-
       <!-- Ticker Tipo de Cambio SUNAT (System.Decimal 14,6) -->
       <div
-        class="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surf border border-line text-xs num"
+        class="hidden 2xl:inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surf border border-line text-xs num"
         :title="`Spread cambiario exacto System.Decimal(14,6): ${sunatSpread.toString()}`"
       >
         <ArrowLeftRight class="w-3.5 h-3.5 text-pos" />

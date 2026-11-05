@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { BookOpen, CheckCircle2, Plus, RefreshCw, ShieldCheck } from 'lucide-vue-next';
 import { AccountingApiClient } from '../api/httpClient';
 import type { CompanyId } from '../types/accountingAccount.types';
@@ -10,6 +11,8 @@ const props = defineProps<{
   readonly getAccessToken: () => string | null;
   readonly canWrite: boolean;
 }>();
+const queryClient = useQueryClient();
+const cachePrefix = computed(() => ['company-subdiaries', props.activeCompanyId] as const);
 const api = computed(() => new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
   getActiveCompanyId: () => props.activeCompanyId,
@@ -32,16 +35,36 @@ const visible = computed(() => records.value.filter(item =>
 async function load(): Promise<void> {
   const requestId = ++sequence;
   const tenant = props.activeCompanyId;
+  const token = props.getAccessToken();
   loading.value = true;
   error.value = '';
   try {
-    const data = await api.value.fetchCompanySubdiaries();
-    if (requestId === sequence && tenant === props.activeCompanyId) records.value = data;
+    const requestApi = new AccountingApiClient('', {
+      getAccessToken: () => token,
+      getActiveCompanyId: () => tenant,
+    });
+    const data = await queryClient.fetchQuery({
+      queryKey: ['company-subdiaries', tenant, 'all'],
+      queryFn: ({ signal }) => requestApi.fetchCompanySubdiaries(false, signal),
+      staleTime: 60_000,
+      gcTime: 300_000,
+      retry: false,
+    });
+    if (requestId === sequence && tenant === props.activeCompanyId
+      && token === props.getAccessToken()) records.value = data;
   } catch (e) {
-    if (requestId === sequence) error.value = e instanceof Error ? e.message : 'No se pudieron cargar los subdiarios.';
+    if (requestId === sequence && tenant === props.activeCompanyId
+      && token === props.getAccessToken()) {
+      error.value = e instanceof Error ? e.message : 'No se pudieron cargar los subdiarios.';
+    }
   } finally {
     if (requestId === sequence) loading.value = false;
   }
+}
+
+async function refresh(): Promise<void> {
+  await queryClient.invalidateQueries({ queryKey: cachePrefix.value, refetchType: 'none' });
+  await load();
 }
 function reset(): void {
   code.value = '';
@@ -78,7 +101,7 @@ async function save(): Promise<void> {
       message.value = 'Nombre actualizado sin cambiar el código histórico.';
     }
     reset();
-    await load();
+    await refresh();
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudo guardar el subdiario.';
   } finally {
@@ -94,7 +117,7 @@ async function changeStatus(item: CompanySubdiaryItem): Promise<void> {
   try {
     await api.value.setCompanySubdiaryActive(item.id, !item.is_active);
     message.value = `Subdiario ${item.code} ${item.is_active ? 'desactivado' : 'activado'}.`;
-    await load();
+    await refresh();
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudo actualizar el estado.';
   } finally {
@@ -116,7 +139,7 @@ onMounted(() => { void load(); });
           Configuración independiente por empresa · Códigos estables · Asientos históricos inmutables
         </p>
       </div>
-      <button type="button" :disabled="loading" class="rounded-lg border border-line bg-surf px-3 py-2 text-xs font-semibold text-foreground disabled:opacity-40" @click="load">
+      <button type="button" :disabled="loading" class="rounded-lg border border-line bg-surf px-3 py-2 text-xs font-semibold text-foreground disabled:opacity-40" @click="refresh">
         <RefreshCw class="mr-1 inline h-3.5 w-3.5" /> Actualizar
       </button>
     </header>
