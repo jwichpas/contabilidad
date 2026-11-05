@@ -147,7 +147,13 @@ async function refreshEntities(): Promise<void> {
 
 async function loadDocumentTypes(): Promise<void> {
   try {
-    documentTypes.value = await api.value.fetchSunatTable(2);
+    documentTypes.value = await queryClient.fetchQuery({
+      queryKey: ['sunat-reference', 'document-types', 2],
+      queryFn: ({ signal }) => api.value.fetchSunatTable(2, signal),
+      staleTime: 3_600_000,
+      gcTime: 3_600_000,
+      retry: false,
+    });
   } catch {
     // Keep safe known types usable even when global SUNAT catalog is temporarily inaccessible.
     documentTypes.value = [];
