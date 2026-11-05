@@ -213,3 +213,41 @@ Repetir pruebas manuales frontend y revisar rutas tras primer inicio (incluida l
 6. Verificar pantalla móvil y mensajes accesibles del buscador.
 
 **Pendiente:** compilación local y pruebas con los datos reales sobre este commit; las 79 pruebas PASS reportadas antes pertenecen a la iteración anterior.
+
+## 13. Iteración 8 — Caché selectiva para maestros, PCGE y referencias
+
+**Estado:** implementado en rama de diseño; pendiente ejecutar nuevamente `pnpm typecheck`, `pnpm test:unit`, `pnpm build` y validación funcional local sobre los últimos commits. La evidencia compartida de 83/83 pruebas PASS corresponde a la iteración anterior.
+
+### Política de caché
+
+| Recurso | Clave TanStack Query | Frescura | Invalidación |
+|---|---|---:|---|
+| Centros de costo paginados | `['cost-center-master', companyId, search, status, page]` | 60 s | Crear, editar, desactivar |
+| Selector de centros de costo en PCGE | `['company-catalog', companyId, 'cost-centers']` | 30 s | Cambios del maestro |
+| Selector de cuentas operativas | `['operational-accounts', companyId]` | 30 s | Cambios del Plan Contable |
+| Subdiarios, lista completa | `['company-subdiaries', companyId, 'all']` | 60 s | Crear, renombrar, activar, desactivar |
+| Árbol PCGE | `['account-tree', companyId, onlyActive]` | 30 s | Crear, editar, desactivar, botón Actualizar |
+| Monedas, rubros EF y bancos SUNAT | `['reference-catalog', tipo]` | 30 min | Cambio de sesión/empresa; caducidad |
+| Áreas de flujo de efectivo por empresa | `['company-catalog', companyId, 'cash-flow-areas']` | 30 s | Caducidad; cambio de sesión/empresa |
+| Configuración financiera | `['company-catalog', companyId, 'settings']` | **0 s** | Nueva lectura al abrir editor |
+
+Todos estos caches permanecen únicamente en memoria y se eliminan en `App.vue` cuando cambia el token de sesión o la empresa. La recolección es de 5 minutos para datos empresariales y 60 minutos para referencias globales; las referencias globales se limpian igualmente al cambiar de sesión/empresa. Las consultas protegidas capturan Bearer y empresa de origen, comprueban el contexto al resolver y soportan `AbortSignal` en los endpoints grandes o frecuentes.
+
+### Elección deliberada: mantener datos transaccionales en vivo
+**NO se agregan `fetchQuery` con frescura a** asientos contables, tipos de cambio diarios o estados de períodos. El ahorro en estos módulos no debe comprometer valores ni estados fiscales vigentes.
+
+### Comportamiento esperado
+- Reabrir Centros de Costo o Subdiarios dentro de la ventana de frescura no repite el mismo GET.
+- Cambiar de filtro/página en Centros de Costo y volver al filtro/página reciente reutiliza esa consulta; la búsqueda completa permanece paginada.
+- Cambiar el texto de búsqueda en Subdiarios filtra de inmediato el listado existente, sin GET por carácter.
+- Reabrir PCGE poco después reutiliza el árbol de cuentas; el botón Actualizar y las mutaciones invalidan el árbol antes de volver a leerlo.
+- Abrir una segunda vez el formulario de edición de cuentas reutiliza monedas/rubros/SUNAT, sin reutilizar configuración financiera antigua.
+- Una cuenta operativa recién creada o editada invalida la lista que selecciona destinos de centros de costo.
+- Tras cambiar de empresa o cerrar sesión, no deben verse resultados almacenados de otro tenant.
+
+### Pruebas nuevas y manuales
+- `frontend/scripts/catalog-cache.test.mjs`: seis controles de claves, invalidaciones, aislamiento y exclusión de datos transaccionales, registrados en `pnpm test:unit`.
+- Revisar en Network la reutilización de las mismas solicitudes, la carga de una nueva empresa, los permisos y las mutaciones de cada maestro.
+- Probar errores HTTP, accesos sin permisos, cierre de sesión durante cargas y refetch explícito del árbol PCGE.
+
+**Sin cambios en backend**, migraciones o reglas financieras. No fusionar hasta validar nuevamente los resultados reales.
