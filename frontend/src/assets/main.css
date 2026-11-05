@@ -1418,3 +1418,121 @@
     }
   }
 }
+
+/* ═══════ MAESTROS DEL ERP: PCGE, CENTROS DE COSTO Y ANEXOS ═══════ */
+@layer components {
+  .workspace-page {
+    min-width: 0;
+  }
+
+  .workspace-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 1rem;
+  }
+
+  .workspace-heading h1 {
+    color: var(--ink);
+    font-size: 1.25rem;
+    line-height: 1.4;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+  }
+
+  .workspace-heading p {
+    margin-top: 0.25rem;
+    color: var(--mut);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .workspace-toolbar,
+  .workspace-section {
+    background: var(--surf);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+    min-width: 0;
+  }
+
+  .workspace-toolbar {
+    padding: 1rem;
+  }
+
+  .workspace-field {
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 550;
+    color: var(--mut);
+  }
+
+  .workspace-field :is(input, select) {
+    min-height: 2.5rem;
+    max-width: 100%;
+    font-size: 0.875rem;
+    color: var(--ink);
+  }
+
+  .workspace-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    color: var(--ink);
+  }
+
+  .workspace-table thead {
+    background: var(--soft);
+    color: var(--mut);
+  }
+
+  .workspace-table th {
+    font-size: 0.75rem;
+    font-weight: 650;
+    text-align: left;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .workspace-table td {
+    line-height: 1.5;
+    vertical-align: middle;
+  }
+
+  .workspace-table tbody tr:hover {
+    background: var(--hover);
+  }
+
+  .workspace-table :is(th, td) {
+    padding: 0.75rem;
+  }
+
+  .workspace-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .workspace-actions button {
+    min-height: 2rem;
+  }
+
+  .workspace-table :is(button, input, select):focus-visible,
+  .workspace-toolbar :is(button, input, select):focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 639px) {
+    .workspace-heading {
+      align-items: stretch;
+    }
+
+    .workspace-toolbar {
+      padding: 0.75rem;
+    }
+  }
+}
