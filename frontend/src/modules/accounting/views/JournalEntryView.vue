@@ -895,12 +895,12 @@ onBeforeUnmount(() => {
       <div class="journal-tabs inline-flex max-w-full gap-1 rounded-lg border border-line bg-soft p-1">
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+          class="journal-tab inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors cursor-pointer"
           :aria-pressed="activeTab === 'form'"
           :class="
             activeTab === 'form'
-              ? 'bg-brand text-white shadow-xs font-semibold'
-              : 'text-muted hover:text-foreground'
+              ? 'bg-surf text-foreground shadow-card font-semibold'
+              : 'text-muted hover:bg-surf/70 hover:text-foreground'
           "
           @click="activeTab = 'form'"
         >
@@ -910,12 +910,12 @@ onBeforeUnmount(() => {
 
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer"
+          class="journal-tab inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors cursor-pointer"
           :aria-pressed="activeTab === 'history'"
           :class="
             activeTab === 'history'
-              ? 'bg-brand text-white shadow-xs font-semibold'
-              : 'text-muted hover:text-foreground'
+              ? 'bg-surf text-foreground shadow-card font-semibold'
+              : 'text-muted hover:bg-surf/70 hover:text-foreground'
           "
           @click="activeTab = 'history'"
         >
@@ -933,7 +933,7 @@ onBeforeUnmount(() => {
 
     <div
       v-if="successMessage"
-      class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-between text-xs font-medium"
+      class="journal-alert flex items-center justify-between gap-3 rounded-lg border border-pos/35 bg-pos/5 p-4 text-xs font-medium text-foreground"
       role="alert"
     >
       <div class="flex items-center gap-2">
@@ -942,7 +942,8 @@ onBeforeUnmount(() => {
       </div>
       <button
         type="button"
-        class="text-emerald-600 hover:text-emerald-800 font-bold"
+        class="text-pos hover:opacity-80 font-bold"
+        aria-label="Cerrar mensaje de éxito"
         @click="successMessage = null"
       >
         ✕
@@ -952,7 +953,7 @@ onBeforeUnmount(() => {
     <!-- Alerta de Error -->
     <div
       v-if="errorMessage"
-      class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 flex items-center justify-between text-xs font-medium"
+      class="journal-alert flex items-center justify-between gap-3 rounded-lg border border-neg/35 bg-neg/5 p-4 text-xs font-medium text-foreground"
       role="alert"
     >
       <div class="flex items-center gap-2">
@@ -961,7 +962,8 @@ onBeforeUnmount(() => {
       </div>
       <button
         type="button"
-        class="text-rose-600 hover:text-rose-800 font-bold"
+        class="text-neg hover:opacity-80 font-bold"
+        aria-label="Cerrar mensaje de error"
         @click="errorMessage = null"
       >
         ✕
