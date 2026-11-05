@@ -125,7 +125,8 @@ async function loadEntities(): Promise<void> {
       await loadEntities();
     }
   } catch (error) {
-    if (sequence === requestSequence && requestedCompany === props.activeCompanyId) {
+    if (sequence === requestSequence && requestedCompany === props.activeCompanyId
+      && requestToken === props.getAccessToken()) {
       list.value = null;
       if (isBaseRequest) baseDirectory.value = null;
       loadError.value = error instanceof Error ? error.message : 'No fue posible cargar los anexos.';
