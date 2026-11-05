@@ -54,3 +54,18 @@ test('navegación accesible en pestañas, partidas e historial', () => {
   assert.match(css, /\.journal-total dd/);
   assert.match(css, /\.journal-lines-table/);
 });
+
+test('resumen de cuadre visible desde la cabecera del editor sin alterar cálculos', () => {
+  assert.match(view, /journal-quick-status/);
+  assert.match(view, /isReadyToPost \? 'Listo para registrar'/);
+  assert.match(view, /isBalanced \? 'Cuadrado · faltan datos'/);
+  assert.match(view, /totalDebitLocal\.isPositive\(\) \|\| totalCreditLocal\.isPositive\(\)/);
+  assert.match(view, /Diferencia: \{\{ baseCurrencyInfo\.symbol \}\} \{\{ diffLocal\.toDisplay\(4\) \}\}/);
+  assert.match(css, /\.journal-quick-status/);
+});
+
+test('los tipos de cambio editables no tienen aspecto de campos deshabilitados', () => {
+  assert.equal((view.match(/w-\[104px\] rounded-md border border-border-strong bg-surf/g) ?? []).length, 2);
+  assert.match(css, /\.journal-header-fields label/);
+});
+
