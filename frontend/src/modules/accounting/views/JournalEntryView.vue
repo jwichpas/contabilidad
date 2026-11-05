@@ -1122,14 +1122,14 @@ onBeforeUnmount(() => {
                 Compra
                 <input :value="rateItem.buy_rate" type="number" step="0.000001" min="0.000001" required
                   :aria-label="`Tipo de cambio compra ${rateItem.code}`"
-                  class="w-[104px] rounded-md border border-line-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  class="w-[104px] rounded-md border border-border-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
                   @input="updateRateForCurrency(rateItem.code, 'buy_rate', ($event.target as HTMLInputElement).value)" />
               </label>
               <label class="flex items-center gap-1 text-[10px] text-muted">
                 Venta
                 <input :value="rateItem.sell_rate" type="number" step="0.000001" min="0.000001" required
                   :aria-label="`Tipo de cambio venta ${rateItem.code}`"
-                  class="w-[104px] rounded-md border border-line-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  class="w-[104px] rounded-md border border-border-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
                   @input="updateRateForCurrency(rateItem.code, 'sell_rate', ($event.target as HTMLInputElement).value)" />
               </label>
               <span class="text-[10px] font-medium"
