@@ -51,3 +51,6 @@ jobs:
 
       - name: Compilar para producción
         run: pnpm build
+
+      - name: Vigilar tamaño del JavaScript inicial
+        run: pnpm check:bundle
