@@ -72,12 +72,25 @@ async function start(center: CostCenterMaster | null): Promise<void> {
   error.value = ''; formError.value = ''; success.value = ''; deactivating.value = null;
   if (!accountsReady.value) {
     loading.value = true;
+    const token = props.getAccessToken();
     try {
-      const result = await api.fetchOperationalAccounts();
-      if (!current()) return;
+      const requestApi = new AccountingApiClient('', {
+        getAccessToken: () => token,
+        getActiveCompanyId: () => companyId,
+      });
+      const result = await queryClient.fetchQuery({
+        queryKey: ['operational-accounts', companyId],
+        queryFn: ({ signal }) => requestApi.fetchOperationalAccounts(signal),
+        staleTime: 30_000,
+        gcTime: 300_000,
+        retry: false,
+      });
+      if (!current() || token !== props.getAccessToken()) return;
       accounts.value = result; accountsReady.value = true;
-    } catch (e) { if (current()) error.value = explain(e); return; }
-    finally { if (current()) loading.value = false; }
+    } catch (e) {
+      if (current() && token === props.getAccessToken()) error.value = explain(e);
+      return;
+    } finally { if (current()) loading.value = false; }
   }
   if (current()) editing.value = center;
 }
