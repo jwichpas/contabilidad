@@ -36,3 +36,18 @@ jobs:
 
       - name: Verificar importación de Schema en controladores
         run: php backend/scripts/check-controller-schema-imports.php
+
+      - name: Verificar sintaxis PowerShell de prueba PostgreSQL 18
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/backend/scripts/phase2-active-rls-docker.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
