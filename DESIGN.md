@@ -222,7 +222,7 @@ Repetir pruebas manuales frontend y revisar rutas tras primer inicio (incluida l
 
 | Recurso | Clave TanStack Query | Frescura | Invalidación |
 |---|---|---:|---|
-| Centros de costo paginados | `['cost-center-master', companyId, search, status, page]` | 60 s | Crear, editar, desactivar |
+| Centros de costo paginados | `['cost-center-master', companyId, search, status, page]` | 60 s | Crear, editar, desactivar, botón Actualizar |
 | Selector de centros de costo en PCGE | `['company-catalog', companyId, 'cost-centers']` | 30 s | Cambios del maestro |
 | Selector de cuentas operativas | `['operational-accounts', companyId]` | 30 s | Cambios del Plan Contable |
 | Subdiarios, lista completa | `['company-subdiaries', companyId, 'all']` | 60 s | Crear, renombrar, activar, desactivar |
@@ -237,7 +237,7 @@ Todos estos caches permanecen únicamente en memoria y se eliminan en `App.vue` 
 **NO se agregan `fetchQuery` con frescura a** asientos contables, tipos de cambio diarios o estados de períodos. El ahorro en estos módulos no debe comprometer valores ni estados fiscales vigentes.
 
 ### Comportamiento esperado
-- Reabrir Centros de Costo o Subdiarios dentro de la ventana de frescura no repite el mismo GET.
+- Reabrir Centros de Costo o Subdiarios dentro de la ventana de frescura no repite el mismo GET; los botones Actualizar fuerzan una nueva lectura.
 - Cambiar de filtro/página en Centros de Costo y volver al filtro/página reciente reutiliza esa consulta; la búsqueda completa permanece paginada.
 - Cambiar el texto de búsqueda en Subdiarios filtra de inmediato el listado existente, sin GET por carácter.
 - Reabrir PCGE poco después reutiliza el árbol de cuentas; el botón Actualizar y las mutaciones invalidan el árbol antes de volver a leerlo.
