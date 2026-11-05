@@ -153,6 +153,9 @@ onBeforeUnmount(() => { alive = false; ++sequence; });
       <UiButton type="submit" variant="secondary" :disabled="loading || saving">
         Consultar
       </UiButton>
+      <UiButton variant="ghost" :disabled="loading || saving" @click="refresh">
+        Actualizar
+      </UiButton>
     </form>
 
     <p v-if="error" role="alert" class="rounded-md border border-neg/35 bg-neg/5 px-3 py-2 text-sm text-neg">{{ error }}</p>
