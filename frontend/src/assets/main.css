@@ -6,36 +6,42 @@
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  --bg: #ffffff;
+  --bg: #fcfcfc;
+  --side: #f3f3f3;
   --surf: #ffffff;
-  --ink: #0b1b3f;
-  --mut: #5a6683;
-  --line: #dce2ee;
-  --brand: #002a8d;
+  --card: #ffffff;
+  --line: #ebebeb;
+  --ink: #333333;
+  --mut: #8c8c8c;
+  --hover: #ececec;
+  --brand: #3e63dd;
   --brandtx: #ffffff;
-  --pos: #1f7a4d;
-  --warn: #b85400;
-  --neg: #c8102e;
-  --soft: #e8edf8;
-  --bar2: #ff7800;
-  --accent: #ff7800;
+  --pos: #1f8a4c;
+  --warn: #9a6200;
+  --neg: #c0392b;
+  --soft: #e6ecfb;
+  --bar2: #e08a3c;
+  --accent: #3e63dd;
 }
 
 :root[data-theme="dark"],
 .dark {
-  --bg: #0a1230;
-  --surf: #101b42;
-  --ink: #e8edfa;
-  --mut: #9aa8cf;
-  --line: #223062;
-  --brand: #245ae2;
+  --bg: #171717;
+  --side: #1e1e1e;
+  --surf: #1c1c1c;
+  --card: #1c1c1c;
+  --line: #2d2d2d;
+  --ink: #e4e4e4;
+  --mut: #8a8a8a;
+  --hover: #272727;
+  --brand: #7b96f0;
   --brandtx: #ffffff;
-  --pos: #5fd09a;
-  --warn: #ffa14a;
-  --neg: #ff6b7f;
-  --soft: #182654;
-  --bar2: #ff8a1f;
-  --accent: #ff8a1f;
+  --pos: #5fd08a;
+  --warn: #e6b04d;
+  --neg: #f08a80;
+  --soft: #1d2640;
+  --bar2: #e08a3c;
+  --accent: #7b96f0;
 
   color-scheme: dark;
 }
@@ -60,9 +66,9 @@
  * ════════════════════════════════════════════════════════════════════════════
  */
 @theme {
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
-  --font-display: "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+  --font-display: Inter, system-ui, sans-serif;
+  --font-mono: Inter, ui-monospace, monospace;
 
   /* Superficies ligadas dinámicamente a tokens */
   --color-background: var(--bg);
@@ -136,7 +142,7 @@
     min-height: 100%;
     background-color: var(--bg);
     color: var(--ink);
-    font: 400 14px/1.5 "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font: 400 14px/1.5 Inter, system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -1294,4 +1300,68 @@
 .ui-slide-right-leave-to {
   transform: translateX(24px);
   opacity: 0;
+}
+
+
+/* Shell y paleta del diseño adjunto */
+@layer base {
+  :root { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { background: var(--side); color: var(--ink); }
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: var(--side);
+}
+
+.app-panel {
+  min-width: 0;
+  margin: 8px 8px 8px 0;
+  overflow: hidden;
+  background: var(--surf);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.app-content { max-width: none; }
+
+aside[aria-label="Menú principal del ERP Contable"] {
+  padding: 10px 8px;
+  color: var(--ink) !important;
+  background: var(--side) !important;
+  border-color: var(--line) !important;
+}
+
+aside[aria-label="Menú principal del ERP Contable"] .text-white:not(.bg-accent) {
+  color: var(--ink) !important;
+}
+
+aside[aria-label="Menú principal del ERP Contable"] .text-white\/75,
+aside[aria-label="Menú principal del ERP Contable"] .text-white\/80,
+aside[aria-label="Menú principal del ERP Contable"] .text-white\/70,
+aside[aria-label="Menú principal del ERP Contable"] .text-white\/60 {
+  color: var(--mut) !important;
+}
+
+aside[aria-label="Menú principal del ERP Contable"] .bg-white\/10,
+aside[aria-label="Menú principal del ERP Contable"] .bg-white\/15,
+aside[aria-label="Menú principal del ERP Contable"] .bg-white\/20 {
+  background-color: var(--hover) !important;
+}
+
+aside[aria-label="Menú principal del ERP Contable"] .border-white\/15 {
+  border-color: var(--line) !important;
+}
+
+aside[aria-label="Menú principal del ERP Contable"] .bg-brand {
+  background-color: var(--side) !important;
+}
+
+@media (max-width: 1023px) {
+  .app-panel {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
 }
