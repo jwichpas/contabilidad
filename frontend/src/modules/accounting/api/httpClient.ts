@@ -656,6 +656,7 @@ export class AccountingApiClient {
     readonly search?: string;
     readonly role?: 'all' | 'is_client' | 'is_supplier' | 'is_employee' | 'is_shareholder' | 'is_financial_institution' | 'is_tax_authority';
     readonly page?: number;
+    readonly signal?: AbortSignal;
   } = {}): Promise<EntityMasterPage> {
     const query = new URLSearchParams();
     if (params.search?.trim()) query.set('search', params.search.trim());
@@ -663,7 +664,7 @@ export class AccountingApiClient {
     query.set('per_page', '20');
     if (params.page && params.page > 1) query.set('page', String(params.page));
     return await this.request<EntityMasterPage>(
-      '/api/v1/company/entities?' + query.toString(), { method: 'GET' }, true,
+      '/api/v1/company/entities?' + query.toString(), { method: 'GET', signal: params.signal }, true,
     );
   }
 
