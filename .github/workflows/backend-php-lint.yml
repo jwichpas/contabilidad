@@ -33,3 +33,6 @@ jobs:
 
       - name: Verificar sintaxis de controladores, servicios y pruebas
         run: find backend/app backend/tests -type f -name '*.php' -print0 | xargs -0 -n 1 php -l
+
+      - name: Verificar importación de Schema en controladores
+        run: php backend/scripts/check-controller-schema-imports.php
