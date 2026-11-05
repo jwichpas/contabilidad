@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, shallowRef } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { AccountingApiClient, ApiHttpError } from '@/modules/accounting/api/httpClient';
 import type { CompanyId } from '@/modules/accounting/types/accountingAccount.types';
 import type { CostCenterAccount, CostCenterInput, CostCenterMaster, CostCenterStatus } from '../types/costCenterMaster.types';
@@ -10,6 +11,8 @@ const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => st
 // App keys this view by company. Capture the tenant for all requests from this instance.
 const companyId = props.activeCompanyId;
 const api = new AccountingApiClient('', { getAccessToken: props.getAccessToken, getActiveCompanyId: () => companyId });
+const queryClient = useQueryClient();
+const cachePrefix = ['cost-center-master', companyId] as const;
 const rows = shallowRef<readonly CostCenterMaster[]>([]);
 const accounts = shallowRef<readonly CostCenterAccount[]>([]);
 const search = shallowRef(''), status = shallowRef<CostCenterStatus>('active');
@@ -30,13 +33,33 @@ function explain(e: unknown): string {
 async function load(): Promise<void> {
   if (!current()) return;
   const request = ++sequence;
-  loading.value = true; error.value = ''; rows.value = [];
+  const token = props.getAccessToken();
+  const params = { search: search.value.trim(), status: status.value, page: page.value };
+  loading.value = true; error.value = '';
   try {
-    const result = await api.fetchCostCenterMaster({ search: search.value, status: status.value, page: page.value });
-    if (!current() || request !== sequence) return;
+    const requestApi = new AccountingApiClient('', {
+      getAccessToken: () => token,
+      getActiveCompanyId: () => companyId,
+    });
+    const result = await queryClient.fetchQuery({
+      queryKey: [...cachePrefix, params.search, params.status, params.page],
+      queryFn: ({ signal }) => requestApi.fetchCostCenterMaster({ ...params, signal }),
+      staleTime: 60_000,
+      gcTime: 300_000,
+      retry: false,
+    });
+    if (!current() || request !== sequence || token !== props.getAccessToken()) return;
     rows.value = result.data; total.value = result.meta.total; lastPage.value = result.meta.last_page;
-  } catch (e) { if (current() && request === sequence) error.value = explain(e); }
-  finally { if (current() && request === sequence) loading.value = false; }
+  } catch (e) {
+    if (current() && request === sequence && token === props.getAccessToken()) error.value = explain(e);
+  } finally {
+    if (current() && request === sequence) loading.value = false;
+  }
+}
+
+async function refresh(): Promise<void> {
+  await queryClient.invalidateQueries({ queryKey: cachePrefix, refetchType: 'none' });
+  await load();
 }
 async function start(center: CostCenterMaster | null): Promise<void> {
   if (!props.canWrite || saving.value || !current()) return;
@@ -61,7 +84,7 @@ async function save(payload: CostCenterInput): Promise<void> {
     else await api.updateCostCenter(id, payload);
     if (!current()) return;
     editing.value = undefined; success.value = 'Centro de costo guardado y auditado.';
-    page.value = 1; await load();
+    page.value = 1; await refresh();
   } catch (e) { if (current()) formError.value = explain(e); }
   finally { if (current()) saving.value = false; }
 }
@@ -72,7 +95,7 @@ async function deactivate(): Promise<void> {
     await api.deactivateCostCenter(deactivating.value.id);
     if (!current()) return;
     deactivating.value = null; success.value = 'Centro desactivado. Sus movimientos se conservan.';
-    page.value = 1; await load();
+    page.value = 1; await refresh();
   } catch (e) { if (current()) error.value = explain(e); }
   finally { if (current()) saving.value = false; }
 }
