@@ -89,3 +89,19 @@ Además de las pruebas: revisar modo claro/oscuro, foco y teclado, zoom 200%, te
 2. Migración paulatina de botones, etiquetas, formularios y tablas a componentes compartidos.
 3. Mejora de layout, dashboard y editor de asientos sin tocar reglas del dominio.
 4. Reportes y presentaciones con Frontend Slides; landing externa opcional con Scroll World.
+
+
+## 7. Iteración 2 — Layout, menú lateral y encabezado
+
+- Se sustituyeron las clases claras/oscuras contradictorias del menú lateral por los colores semánticos actuales.
+- El menú utiliza `aria-current="page"` para las 13 rutas existentes; mantiene los eventos de navegación, cambio de empresa y el drawer móvil.
+- El indicador del menú activo utiliza `--nav-active` independiente de `--brand`, con contraste mínimo 4.5:1 sobre `--soft` en ambos temas.
+- Se retiraron las sobrescrituras globales con `!important` que modificaban indiscriminadamente la barra lateral.
+- El encabezado ya no presenta un supuesto estado de certificación ISO 27001 a partir de `isLiveConnected`: se limita a informar sobre la última comprobación de API.
+- Se retiró la etiqueta fija `2026-10`, que no representaba necesariamente el período activo. Solo debe reintroducirse cuando provenga del estado real de la empresa.
+- Se simplificaron los indicadores de escritorio y la cabecera móvil; el selector de empresa móvil sigue accesible dentro del drawer.
+- No se modificaron contratos API, lógica de asiento, permisos, rutas ni estados contables.
+
+### Comprobación necesaria en el navegador antes de integrar
+
+Validar en 375/768/1024/1440 px: menú expandido/contraído, drawer y cierre, selector de empresa, estado activo de cada ruta, encabezado con nombre largo, modo claro/oscuro, teclado, zoom 200% y `prefers-reduced-motion`. Verificar visualmente colores aplicados por Tailwind y contraste final con datos reales; estas observaciones no pueden sustituirse con pruebas estáticas.
