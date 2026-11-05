@@ -234,6 +234,32 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
     });
 });
 
+it('loads the journal bootstrap in two accounting read statements without skipping tenant membership', function (): void {
+    $sql = [];
+    DB::listen(static function ($event) use (&$sql): void {
+        $sql[] = strtolower((string) $event->sql);
+    });
+
+    $this->getJson('/api/v1/accounting/journal-entries/editor-bootstrap?date=2026-10-24')
+        ->assertOk();
+
+    $catalogAndNumber = array_filter($sql, static fn (string $statement): bool =>
+        str_contains($statement, 'from public.accounting_accounts a')
+        && str_contains($statement, 'from public.fiscal_periods fp')
+    );
+    $currenciesAndRates = array_filter($sql, static fn (string $statement): bool =>
+        str_contains($statement, 'from public.company_currencies cc')
+        && str_contains($statement, 'from public.exchange_rates')
+    );
+    $membership = array_filter($sql, static fn (string $statement): bool =>
+        str_contains($statement, 'from public.company_user cu')
+    );
+
+    expect(count($catalogAndNumber))->toBe(1)
+        ->and(count($currenciesAndRates))->toBe(1)
+        ->and(count($membership))->toBe(1);
+});
+
 it('returns the same non-reserving number preview as the standalone endpoint before and after posting', function (): void {
     $date = '2026-10-24';
     $bootstrapUrl = '/api/v1/accounting/journal-entries/editor-bootstrap?date='.$date;
