@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Support\Database\LocalPg18InstallGuard;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -55,7 +56,7 @@ return new class extends Migration
             && ! in_array($branchName, ['', 'production', 'prod', 'main', 'master'], true)
             && in_array((string) ($config['sslmode'] ?? ''), ['require', 'verify-ca', 'verify-full'], true);
 
-        if (! $isDisposableCI && ! $isApprovedDev && ! $isApprovedNeon) {
+        if (! $isDisposableCI && ! $isApprovedDev && ! $isApprovedNeon && ! LocalPg18InstallGuard::approved()) {
             throw new RuntimeException('Bloqueo: search_path solo en Supabase Dev aprobado, rama Neon de pruebas o PostgreSQL CI local.');
         }
 
