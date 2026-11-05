@@ -1113,7 +1113,7 @@ onBeforeUnmount(() => {
               <option value="SELL">SUNAT Venta (Pasivo/Gasto)</option>
               <option value="BUY">SUNAT Compra (Activo/Ingreso)</option>
             </select>
-  
+            </div>
           </div>
 
           <!-- Tasas de compra y venta obligatorias para cada moneda secundaria. -->
@@ -1151,7 +1151,7 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-                <!-- Glosa / Descripción General -->
+        <!-- Glosa / Descripción General -->
         <div>
           <label for="journal-description" class="block text-[11px] font-semibold text-muted mb-1">
             Glosa / Explicación del Asiento
