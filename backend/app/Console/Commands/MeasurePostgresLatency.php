@@ -46,18 +46,20 @@ final class MeasurePostgresLatency extends Command
 
         $count = (int) $sampleValue;
         $measurements = ['connect' => [], 'query1' => [], 'query2' => []];
-        $db = DB::connection('pgsql');
-
         $this->line('Diagnóstico local: solo SELECT 1, sin datos contables ni credenciales.');
         $this->line('Las cifras son de este comando CLI; no equivalen al tiempo del navegador.');
 
         try {
             for ($index = 1; $index <= $count; $index++) {
-                // Cold connection on each sample; there are no other requests
-                // in this Artisan process. Do not change app PDO options.
-                $db->disconnect();
+                // Remove Laravel's cached connection object, not merely its PDO.
+                // disconnect() followed directly by getPdo() can return null;
+                // a fresh connection manager entry guarantees a new PDO.
+                DB::purge('pgsql');
                 $started = hrtime(true);
-                $db->getPdo();
+                $db = DB::connection('pgsql');
+                if (! $db->getPdo() instanceof \PDO) {
+                    throw new \RuntimeException('PDO no disponible.');
+                }
                 $connectMs = self::elapsedMs($started);
 
                 $started = hrtime(true);
@@ -88,7 +90,7 @@ final class MeasurePostgresLatency extends Command
 
             return self::FAILURE;
         } finally {
-            $db->disconnect();
+            DB::purge('pgsql');
         }
 
         $this->info(sprintf(
