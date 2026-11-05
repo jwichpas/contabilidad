@@ -8,6 +8,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const tokens = readFileSync(join(here, '../src/assets/design-tokens.css'), 'utf8');
 const entry = readFileSync(join(here, '../src/main.ts'), 'utf8');
 const styles = readFileSync(join(here, '../src/assets/main.css'), 'utf8');
+const header = readFileSync(join(here, '../src/shared/layout/AppHeader.vue'), 'utf8');
+const sidebar = readFileSync(join(here, '../src/shared/layout/AppSidebar.vue'), 'utf8');
 
 const light = tokens.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1];
 const dark = tokens.match(/:root\[data-theme="dark"\],\s*\.dark\s*\{([\s\S]*?)\n\}/)?.[1];
@@ -59,6 +61,33 @@ describe('Design tokens Fase 1', () => {
       assert.ok(contrast(hex(theme, '--accent'), '#ffffff') >= 4.5);
       assert.ok(contrast(hex(theme, '--accent-text'), hex(theme, '--surf')) >= 4.5);
     }
+  });
+
+  it('el elemento de navegación activo es legible en los dos temas', () => {
+    for (const theme of [light, dark]) {
+      assert.ok(contrast(hex(theme, '--nav-active'), hex(theme, '--soft')) >= 4.5);
+    }
+    assert.match(styles, /color:\s*var\(--nav-active\)/);
+  });
+
+  it('la navegación muestra 13 destinos y sus estados accesibles', () => {
+    const modules = [
+      'entities', 'fiscal-history', 'subdiaries', 'cost-centers',
+      'catalog', 'journal', 'fiscal-periods', 'exchange-rates',
+      'financial-statements', 'see-references', 'sunat-references',
+      'company-create', 'company',
+    ];
+    for (const module of modules) {
+      assert.ok(sidebar.includes(`currentModule === '${module}' ? 'page' : undefined`), module);
+    }
+    assert.match(sidebar, /app-sidebar-nav/);
+    assert.match(styles, /\.app-sidebar-nav button\[aria-current="page"\]/);
+  });
+
+  it('el encabezado no inventa certificación ni ejercicio fiscal activo', () => {
+    assert.doesNotMatch(header, /ISO\s*27001|SGSI Activo|2026-10/);
+    assert.match(header, /API verificada/);
+    assert.doesNotMatch(styles, /aside\[aria-label="Menú principal del ERP Contable"\]/);
   });
 
   it('carga los tokens antes del CSS global y evita duplicar paletas', () => {
