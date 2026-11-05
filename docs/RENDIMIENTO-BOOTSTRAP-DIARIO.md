@@ -96,3 +96,64 @@ Evidencia de ejecución local aportada por el usuario, sobre `main` después de 
 - Cubrió la equivalencia del correlativo de bootstrap con el endpoint independiente, dos lecturas contables agregadas, tipos de cambio exactos/históricos/predeterminados, aislamiento del tenant, reglas de dimensiones, subdiarios e idempotencia.
 - El tiempo de toda la suite **no representa latencia HTTP** del editor. La mejora del bootstrap necesita volver a medirse con `Server-Timing` desde DevTools después de esta validación.
 
+## Segunda medición del usuario — 2026-11-05
+
+Nueva solicitud del mismo endpoint y fecha, después de combinar la numeración y las
+tasas de cambio. Respuesta **200 OK**:
+
+| Métrica | Antes (ms) | Ahora (ms) | Diferencia (ms) |
+|---|---:|---:|---:|
+| `request_total` | 4050.4 | 3444.7 | -605.7 |
+| `controller_total` | 1702.0 | 1062.0 | -640.0 |
+| `catalogs_sql` | 760.7 | 712.0 | -48.7 |
+| `exchange_rates` | 626.3 | 306.9 | -319.4 |
+| `tenant_membership` | 301.0 | 301.2 | +0.2 |
+| `tenant_total` | 2505.3 | 1869.6 | -635.7 |
+| `pre_auth_pipeline` | No disponible | 1573.7 | Nueva métrica |
+
+La latencia total bajó aproximadamente **15 %** en estas dos muestras.
+`next_number` ahora aparece como `included_in_catalogs_sql`, sin tiempo
+independiente. La bajada observada no constituye todavía una mediana ni prueba
+que todas las peticiones tengan igual rendimiento.
+
+### Instrumentación adicional, sin alterar acceso
+
+El siguiente cambio de `main` únicamente agrega métricas:
+
+- `pre_auth_route`: desde el marcador de inicio global hasta comenzar el
+  middleware de la ruta protegida.
+- `auth_route_segment`: desde ese marcador de ruta hasta el middleware
+  posterior a Sanctum; incluye el costo de autenticación y otras tareas
+  de pipeline entre ambos, **no equivale exclusivamente a SQL de Sanctum**.
+- `tenant_context_setup`: inicio del middleware de empresa hasta entrar al
+  callback que ya tiene `SET LOCAL` y transacción.
+- `tenant_context_finalize`: tiempo restante después de salir del callback
+  del controlador, incluyendo cierre/commit transaccional.
+
+Se conservan `pre_auth_pipeline` y los indicadores anteriores. No se
+desactiva Sanctum, no se cachean membresías ni se alteran políticas RLS.
+
+### Siguiente comparación solicitada
+
+1. Actualizar `main`, reiniciar el backend si es necesario y abrir el Libro
+   Diario con la misma empresa y fecha.
+2. Capturar cinco respuestas de `editor-bootstrap`, no solo una: idealmente
+   tres con la conexión ya caliente y dos tras inactividad controlada.
+3. Copiar los valores de `pre_auth_route`, `auth_route_segment`,
+   `tenant_context_setup`, `tenant_membership`,
+   `tenant_context_finalize`, `catalogs_sql`, `exchange_rates` y
+   `request_total`.
+4. Comparar la mediana. Si domina el tramo de autenticación, revisar número
+   de consultas por Bearer, reapertura de conexión y distancia de la BD,
+   **sin cachear la validez de tokens revocados**.
+5. Si dominan `tenant_context_setup` o `tenant_context_finalize`,
+   verificar tiempos de BEGIN/SET LOCAL/COMMIT y tipo de conexión con Neon.
+   El contexto RLS debe seguir siendo local a la transacción.
+
+Un endpoint agrupado en Laravel PHP con una base PostgreSQL remota puede sufrir
+varios tiempos de ida y vuelta. En Neon existe un endpoint agrupado por PgBouncer
+para aplicaciones; no cambiar el host automáticamente ni usar conexiones
+administrativas de migración en solicitudes del ERP. Comprobar compatibilidad
+con `SET LOCAL`, transacciones, conexión TLS y el entorno real antes de alterar
+el despliegue. La existencia de esa opción **no demuestra** que sea la causa
+de esta muestra de 1.57 s.
