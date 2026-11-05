@@ -2,68 +2,10 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
-  box-sizing: border-box;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  --bg: #fcfcfc;
-  --side: #f3f3f3;
-  --surf: #ffffff;
-  --card: #ffffff;
-  --line: #ebebeb;
-  --ink: #333333;
-  --mut: #8c8c8c;
-  --hover: #ececec;
-  --brand: #3e63dd;
-  --brandtx: #ffffff;
-  --pos: #1f8a4c;
-  --warn: #9a6200;
-  --neg: #c0392b;
-  --soft: #e6ecfb;
-  --bar2: #e08a3c;
-  --accent: #3e63dd;
-}
-
-:root[data-theme="dark"],
-.dark {
-  --bg: #171717;
-  --side: #1e1e1e;
-  --surf: #1c1c1c;
-  --card: #1c1c1c;
-  --line: #2d2d2d;
-  --ink: #e4e4e4;
-  --mut: #8a8a8a;
-  --hover: #272727;
-  --brand: #7b96f0;
-  --brandtx: #ffffff;
-  --pos: #5fd08a;
-  --warn: #e6b04d;
-  --neg: #f08a80;
-  --soft: #1d2640;
-  --bar2: #e08a3c;
-  --accent: #7b96f0;
-
-  color-scheme: dark;
-}
-
 /*
- * ════════════════════════════════════════════════════════════════════════════
- *  SISTEMA DE DISEÑO PERÚ — Libro Mayor Perú · Dashboard Contable
- * ════════════════════════════════════════════════════════════════════════════
- *  Paleta oficial Dashboard Contable Perú:
- *    --bg: #ffffff / #0a1230
- *    --surf: #ffffff / #101b42
- *    --ink: #0b1b3f / #e8edfa
- *    --mut: #5a6683 / #9aa8cf
- *    --line: #dce2ee / #223062
- *    --brand: #002a8d / #2f5fd6
- *    --brandtx: #ffffff
- *    --pos: #1f7a4d / #5fd09a
- *    --warn: #b85400 / #ffa14a
- *    --neg: #c8102e / #ff6b7f
- *    --soft: #e8edf8 / #182654
- *    --accent: #ff7800 / #ff8a1f
- * ════════════════════════════════════════════════════════════════════════════
+ * Paleta, densidad y valores de tema: assets/design-tokens.css
+ * Directrices y criterios de aceptación: /DESIGN.md
+ * Esta hoja conserva componentes y utilidades existentes.
  */
 @theme {
   --font-sans: Inter, system-ui, -apple-system, sans-serif;
@@ -81,7 +23,7 @@
   --color-muted: var(--mut);
   --color-border: var(--line);
   --color-line: var(--line);
-  --color-border-strong: var(--line);
+  --color-border-strong: var(--line-strong);
 
   /* Marca */
   --color-brand: var(--brand);
@@ -92,7 +34,7 @@
 
   /* Acento */
   --color-accent: var(--accent);
-  --color-accent-ink: var(--accent);
+  --color-accent-ink: var(--accent-text);
   --color-on-accent: #ffffff;
 
   /* Semánticos */
@@ -189,7 +131,7 @@
   select:focus-visible,
   [role="tab"]:focus-visible,
   [role="treeitem"]:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus-color);
     outline-offset: 2px;
     border-radius: 6px;
   }
@@ -205,9 +147,9 @@
     color: var(--color-foreground);
     background-color: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     padding: 0.5rem 0.75rem;
-    min-height: 2.25rem;
+    min-height: var(--control-height);
     transition:
       border-color 120ms ease,
       box-shadow 120ms ease,
@@ -425,7 +367,7 @@
   .panel {
     background: var(--surf);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
     padding: 16px;
     margin-bottom: 16px;
   }
@@ -548,7 +490,7 @@
   .ui-card {
     background: var(--surf);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
     box-shadow: var(--shadow-card);
   }
 
@@ -638,9 +580,9 @@
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    min-height: 2.25rem;
+    min-height: var(--control-height);
     padding: 0 0.9rem;
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     border: 1px solid var(--line);
     font-size: 0.75rem;
     font-weight: 600;
