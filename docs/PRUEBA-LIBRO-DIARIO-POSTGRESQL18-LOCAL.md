@@ -148,3 +148,64 @@ Resultado esperado, todavía pendiente de ejecución funcional tras este cambio:
 **15 tests aprobados, 0 fallidos**, con borrado del contenedor. La
 validación CI solo comprueba sintaxis PHP y PowerShell, no sustituye
 la ejecución PostgreSQL 18 que debe hacerse en el equipo local.
+
+## Validación funcional confirmada y siguiente etapa persistente
+
+El usuario ejecutó en Windows el modo `-JournalAreaDimensionTest`
+después de corregir la preparación del catálogo de monedas. Resultado
+**verificado**:
+
+- PostgreSQL **18.6** en contenedor efímero; `app_backend` sin `BYPASSRLS`.
+- Cinco tablas con `FORCE RLS`.
+- `currencies` sin permiso de escritura para `app_backend`.
+- Monedas PEN/USD/EUR instaladas exclusivamente por el propietario.
+- **15/15 tests PASS, 142 aserciones, duración Pest 2.48 s.**
+- Contenedor descartable eliminado correctamente en `finally`.
+
+El resultado confirma las pruebas funcionales; 2.48 segundos no son el
+tiempo HTTP de apertura de pantalla.
+
+### Preparación PostgreSQL 18 persistente (primera etapa, sin migraciones)
+
+Se añadió `backend/scripts/iniciar-postgres18-local.ps1`. En una
+**nueva terminal PowerShell**, ejecutar:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+.\scripts\iniciar-postgres18-local.ps1 -Accion Crear
+.\scripts\iniciar-postgres18-local.ps1 -Accion Estado
+```
+
+El script:
+- Crea un contenedor `contabilidad-pg18-local` (Docker `postgres:18-alpine`)
+  accesible solo desde `127.0.0.1:55433`.
+- Usa el volumen persistente nombrado `contabilidad-pg18-local-data`
+  montado en `/var/lib/postgresql` (estructura PostgreSQL 18).
+- Genera una contraseña local aleatoria y la conserva en
+  `backend/.env.pg18.local`, ignorado por Git. **No compartir este archivo**.
+- Bloquea la inicialización si ya existe el contenedor, el volumen
+  o el archivo local: no sobrescribe bases existentes.
+- No cambia `backend/.env`, no conecta con Neon/Supabase y
+  **no ejecuta migraciones ni crea usuarios o empresas**.
+- Ofrece `-Accion Estado`, `-Accion Iniciar` y `-Accion Detener`;
+  `Detener` conserva el volumen y sus datos.
+
+**Atención:** el instalador se valida estáticamente en CI; aún debe
+probarse en Windows. Si la instalación se detiene por puerto ocupado,
+no modificar la base remota ni ejecutar manualmente migraciones generales.
+Verificar y resolver el conflicto local primero.
+
+### Próxima etapa posterior a una creación correcta
+
+Aplicar las 25 migraciones **explícitas y revisadas**, únicamente a
+`contabilidad_local` PostgreSQL 18, con preflight de conexión, puerto,
+versión y rol. Instalar referencias con rol de propietario, y preparar
+usuario, empresa y cuentas **sintéticos** con `app_backend` limitado,
+sin copiar información contable real. Solo entonces iniciar el backend
+en puerto separado y medir cinco `editor-bootstrap` desde el navegador.
+
+Nunca ejecutar `php artisan migrate` general ni `migrate:fresh`
+contra `backend/.env` (base remota).
