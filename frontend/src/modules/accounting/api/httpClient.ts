@@ -31,6 +31,7 @@ import type {
 import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo, SeeCompanyVisibility, SeeCompanyVisibilityRevision } from '../types/seeReferences.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
+import type { CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
   SunatContributorType, SunatCiiuClass, SunatTaxCode,
@@ -516,6 +517,17 @@ export class AccountingApiClient {
     return result.data;
   }
 
+  public async fetchCashFlowReport(params: CashFlowQuery): Promise<CashFlowReport> {
+    const query = new URLSearchParams({ from: params.from, to: params.to });
+    if (params.section) query.set('section', params.section);
+    if (params.area_id !== undefined) query.set('area_id', String(params.area_id));
+    if (params.page !== undefined) query.set('page', String(params.page));
+    const result = await this.request<{ data: CashFlowReport }>(
+      `/api/v1/accounting/reports/cash-flow?${query}`, { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
   public async fetchJournalEntries(params?: {
     readonly year?: number;
     readonly month?: number;
@@ -766,3 +778,4 @@ export class AccountingApiClient {
     );
   }
 }
+

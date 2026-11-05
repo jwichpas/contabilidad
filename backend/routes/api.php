@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
 use App\Http\Controllers\Api\V1\Accounting\CreateJournalEntryController;
 use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\GetFinancialSnapshotController;
+use App\Http\Controllers\Api\V1\Accounting\GetCashFlowStatementController;
 use App\Http\Controllers\Api\V1\Accounting\GetGeneralLedgerController;
 use App\Http\Controllers\Api\V1\Accounting\GetNextJournalEntryNumberController;
 use App\Http\Controllers\Api\V1\Accounting\GetJournalEditorBootstrapController;
@@ -153,6 +154,8 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/accounting/reports/financial-snapshot', GetFinancialSnapshotController::class)
                 ->name('api.v1.accounting.reports.financial-snapshot');
+            Route::get('/accounting/reports/cash-flow', GetCashFlowStatementController::class)
+                ->name('api.v1.accounting.reports.cash-flow');
             Route::get('/accounting/reports/general-ledger', GetGeneralLedgerController::class)
                 ->name('api.v1.accounting.reports.general-ledger');
 
@@ -272,4 +275,5 @@ Route::prefix('v1')->group(function (): void {
         });
     });
 });
+
 

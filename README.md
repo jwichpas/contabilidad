@@ -1,3 +1,5 @@
+> **Flujo de efectivo · 05/11/2026:** reporte preliminar por método directo en **Estados financieros → Flujo de efectivo**. Incluye actividades, conciliación, detalle paginado, transferencias, extornos y partidas pendientes de clasificación. Calculador PHP **19/19 PASS**; frontend **62/62 y build PASS**. Pruebas HTTP Laravel/Neon DEV pendientes. [Contrato, reglas y validación](docs/ESTADO-FLUJO-EFECTIVO.md).
+
 > **F3.3 · Áreas en partidas (24/10/2026):** área organizativa opcional y área de flujo según requisito de cuenta, validación tenant/estado/categoría y conservación en extorno. Frontend **33/33 pruebas y build PASS**; nueva migración y pruebas Laravel pendientes. [Alcance y validación](docs/F3-3-AREAS-EN-PARTIDAS.md). Avance: **8/32 (25%)**.
 
 > **F3.3 · Anexos en partidas (24/10/2026):** implementados selector por partida, validación por tipo de cuenta/empresa/estado, referencia histórica y copia en extorno. Frontend **30/30 pruebas y build PASS**; Feature **4/4 PASS, 29 aserciones (144,19 s)** según ejecución manual del usuario. Unit PHP y aceptación visual completa pendientes. [Instalación, alcance y aceptación](docs/F3-3-ANEXOS-EN-PARTIDAS.md). Avance oficial sin cambios: **8/32 (25%)**.
@@ -333,3 +335,4 @@ La aceptación funcional y sus pasos están en [F3.3 maestros](docs/F3-3-MAESTRO
 **Evidencia recibida · 24/10/2026:** `CostCenterMasterCrudTest` **10/10 PASS, 105 aserciones, 364,12 s**, ejecución manual del usuario contra Neon DEV. Incluye protección de matriz, sin casos omitidos. Capturas del usuario confirman apertura de anexos, historial fiscal y centros de costo; consulta de CC-ADM/CC-VTA en empresa 4 y sidebar sin duplicado tras `e067b77`. No certifican altas/ediciones/desactivaciones en navegador, cambio de empresa ni permisos visuales. F3.3 sigue abierta, **8/32 (25%)**.
 
 La consulta del catálogo SUNAT se normaliza en el cliente HTTP para mostrar el nombre cuando la API entrega `name` en lugar de `description`; corrige la etiqueta vacía observada en el formulario de anexos. No modifica códigos ni datos persistidos.
+

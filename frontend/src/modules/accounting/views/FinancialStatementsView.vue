@@ -5,11 +5,14 @@ import { AccountingApiClient } from '../api/httpClient';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { FinancialSnapshot, FinancialSnapshotAccount, GeneralLedgerPage } from '../types/financialSnapshot.types';
+import CashFlowStatementView from './CashFlowStatementView.vue';
 
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly getAccessToken: () => string | null;
 }>();
+
+const activeReport = shallowRef<'snapshot' | 'cash-flow'>('snapshot');
 
 const client = computed(() => new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
@@ -112,7 +115,13 @@ onMounted(() => { void load(); });
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div>
+    <nav aria-label="Seleccionar estado financiero" class="mb-5 flex flex-wrap gap-2 border-b border-border pb-3">
+      <button type="button" :aria-pressed="activeReport === 'snapshot'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'snapshot' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="activeReport = 'snapshot'">Situación financiera y resultados</button>
+      <button type="button" :aria-pressed="activeReport === 'cash-flow'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'cash-flow' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="activeReport = 'cash-flow'">Flujo de efectivo</button>
+    </nav>
+    <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :get-access-token="getAccessToken" />
+  <div v-show="activeReport === 'snapshot'" class="space-y-5">
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="flex items-start gap-3">
         <div class="rounded-xl bg-brand/10 p-3 text-brand"><FileBarChart2 class="h-5 w-5" /></div>
@@ -284,4 +293,6 @@ onMounted(() => { void load(); });
       </template>
     </template>
   </div>
+  </div>
 </template>
+
