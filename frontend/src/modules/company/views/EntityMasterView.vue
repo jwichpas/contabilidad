@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { Building2, CirclePlus, Loader2, Pencil, RefreshCcw, Search, ShieldCheck, Users, X } from 'lucide-vue-next';
 import { AccountingApiClient, ApiHttpError } from '@/modules/accounting/api/httpClient';
 import type { CompanyId } from '@/modules/accounting/types/accountingAccount.types';
 import type { SunatCatalogItem } from '@/modules/accounting/types/catalogs.types';
 import UiButton from '@/shared/ui/UiButton.vue';
 import type { EntityMaster, EntityMasterInput, EntityMasterPage } from '../types/entityMaster.types';
+import { filterEntitiesLocally, isCompleteEntityDirectory } from '../utils/entityLocalSearch';
 
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
@@ -14,6 +16,7 @@ const props = defineProps<{
   readonly canDeactivate: boolean;
 }>();
 
+const queryClient = useQueryClient();
 const api = computed(() => new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
   getActiveCompanyId: () => props.activeCompanyId,
@@ -25,6 +28,8 @@ const searchInput = ref('');
 const committedSearch = ref('');
 const page = ref(1);
 const list = ref<EntityMasterPage | null>(null);
+// The unfiltered first page determines whether all records are already in memory.
+const baseDirectory = ref<EntityMasterPage | null>(null);
 const isLoading = ref(false);
 const isSaving = ref(false);
 const loadError = ref<string | null>(null);
@@ -72,29 +77,71 @@ const flags = [
   { key: 'is_tax_authority', label: 'Autoridad tributaria' },
 ] as const;
 
-const listItems = computed(() => list.value?.data ?? []);
-const total = computed(() => list.value?.total ?? 0);
-const canPrevious = computed(() => page.value > 1);
-const canNext = computed(() => page.value < (list.value?.last_page ?? 1));
+const isLocalDirectory = computed(() => isCompleteEntityDirectory(baseDirectory.value));
+const listItems = computed(() => isLocalDirectory.value
+  ? filterEntitiesLocally(baseDirectory.value?.data ?? [], searchInput.value, roleFilter.value)
+  : list.value?.data ?? []);
+const total = computed(() => isLocalDirectory.value ? listItems.value.length : list.value?.total ?? 0);
+const canPrevious = computed(() => !isLocalDirectory.value && page.value > 1);
+const canNext = computed(() => !isLocalDirectory.value && page.value < (list.value?.last_page ?? 1));
+
+// Cache by company + filters + page. Never cache the Bearer or transfer rows between tenants.
+const entityCachePrefix = (companyId: CompanyId) => ['entity-directory', companyId] as const;
+const QUERY_FRESH_MS = 120_000;
+const QUERY_GC_MS = 300_000;
 
 async function loadEntities(): Promise<void> {
   const sequence = ++requestSequence;
+  const requestedCompany = props.activeCompanyId;
+  const requestToken = props.getAccessToken();
+  // For a fully loaded directory, re-read only its base page, then filter in memory.
+  const useBase = isLocalDirectory.value;
+  const params: { search: string; role: RoleFilter; page: number } = useBase
+    ? { search: '', role: 'all', page: 1 }
+    : { search: committedSearch.value, role: roleFilter.value, page: page.value };
+  const isBaseRequest = params.search === '' && params.role === 'all' && params.page === 1;
   isLoading.value = true;
   loadError.value = null;
   try {
-    const response = await api.value.fetchEntities({
-      search: committedSearch.value, role: roleFilter.value, page: page.value,
+    const requestApi = new AccountingApiClient('', {
+      getAccessToken: () => requestToken,
+      getActiveCompanyId: () => requestedCompany,
     });
-    if (sequence !== requestSequence) return;
+    const response = await queryClient.fetchQuery({
+      queryKey: [...entityCachePrefix(requestedCompany), params.search, params.role, params.page],
+      queryFn: ({ signal }) => requestApi.fetchEntities({ ...params, signal }),
+      staleTime: QUERY_FRESH_MS,
+      gcTime: QUERY_GC_MS,
+      retry: false,
+    });
+    if (sequence !== requestSequence || requestedCompany !== props.activeCompanyId
+      || requestToken !== props.getAccessToken()) return;
     list.value = response;
+    if (isBaseRequest) baseDirectory.value = response;
+
+    // If adding a record makes a small directory exceed one page, revert to server filtering.
+    if (isBaseRequest && !isCompleteEntityDirectory(response)
+      && (committedSearch.value !== '' || roleFilter.value !== 'all' || page.value !== 1)) {
+      await loadEntities();
+    }
   } catch (error) {
-    if (sequence === requestSequence) {
+    if (sequence === requestSequence && requestedCompany === props.activeCompanyId) {
       list.value = null;
+      if (isBaseRequest) baseDirectory.value = null;
       loadError.value = error instanceof Error ? error.message : 'No fue posible cargar los anexos.';
     }
   } finally {
     if (sequence === requestSequence) isLoading.value = false;
   }
+}
+
+async function refreshEntities(): Promise<void> {
+  // Explicit refresh bypasses freshness and refetches only the current page.
+  await queryClient.invalidateQueries({
+    queryKey: entityCachePrefix(props.activeCompanyId),
+    refetchType: 'none',
+  });
+  await loadEntities();
 }
 
 async function loadDocumentTypes(): Promise<void> {
@@ -113,11 +160,13 @@ const docChoices = computed(() => documentTypes.value.length > 0
 function applyFilters(): void {
   page.value = 1;
   committedSearch.value = searchInput.value.trim();
+  // A complete directory is filtered reactively as the user types. Zero requests.
+  if (isLocalDirectory.value) return;
   void loadEntities();
 }
 
 function changePage(next: number): void {
-  if (next < 1 || next > (list.value?.last_page ?? 1)) return;
+  if (isLocalDirectory.value || next < 1 || next > (list.value?.last_page ?? 1)) return;
   page.value = next;
   void loadEntities();
 }
@@ -206,7 +255,7 @@ async function saveEntity(): Promise<void> {
     successMessage.value = 'Anexo ' + entity.legal_name + ' guardado y auditado.';
     showForm.value = false;
     editingId.value = null;
-    await loadEntities();
+    await refreshEntities();
   } catch (error) {
     formError.value = formatValidationError(error);
   } finally {
@@ -222,7 +271,7 @@ async function deactivate(): Promise<void> {
     await api.value.deactivateEntity(pendingDeactivate.value.id);
     successMessage.value = 'Anexo desactivado sin eliminación física.';
     pendingDeactivate.value = null;
-    await loadEntities();
+    await refreshEntities();
   } catch (error) {
     loadError.value = formatValidationError(error);
   } finally {
@@ -236,6 +285,7 @@ function roleLabels(entity: EntityMaster): string[] {
 
 watch(() => props.activeCompanyId, () => {
   ++requestSequence; // stale HTTP responses from old tenant must never populate this view
+  baseDirectory.value = null;
   list.value = null;
   page.value = 1;
   roleFilter.value = 'all';
@@ -287,7 +337,7 @@ onMounted(() => {
             <input v-model="searchInput" aria-label="Buscar anexo" aria-describedby="entity-search-help" type="search" maxlength="100" class="w-full bg-transparent py-2 text-sm outline-none" placeholder="RUC, DNI, razón social…" @keyup.enter="applyFilters" />
           </span>
           <span id="entity-search-help" class="block text-xs leading-5 text-muted" aria-live="polite">
-            {{ searchInput.trim() !== committedSearch ? 'Búsqueda sin aplicar: presiona Enter o pulsa Buscar.' : committedSearch ? 'Filtro de búsqueda aplicado.' : 'Presiona Enter o pulsa Buscar para filtrar.' }}
+            {{ isLocalDirectory ? 'Filtrado instantáneo sobre los ' + baseDirectory?.total + ' anexos cargados · sin consultas adicionales.' : searchInput.trim() !== committedSearch ? 'Directorio paginado: presiona Enter o pulsa Buscar para consultar.' : committedSearch ? 'Filtro paginado aplicado; las consultas se reutilizan desde caché.' : 'Directorio paginado: presiona Enter o pulsa Buscar para filtrar.' }}
           </span>
         </label>
         <label class="workspace-field space-y-1">
@@ -299,15 +349,15 @@ onMounted(() => {
             <option value="is_employee">Trabajadores</option>
           </select>
         </label>
-        <UiButton variant="secondary" @click="applyFilters">
+        <UiButton v-if="!isLocalDirectory" variant="secondary" @click="applyFilters">
           <Search class="size-4" aria-hidden="true" /> Buscar
         </UiButton>
-        <UiButton variant="secondary" size="icon" aria-label="Actualizar directorio" :disabled="isLoading" @click="loadEntities">
+        <UiButton variant="secondary" size="icon" aria-label="Actualizar directorio" :disabled="isLoading" @click="refreshEntities">
           <RefreshCcw class="size-4" :class="{ 'animate-spin': isLoading }" aria-hidden="true" />
         </UiButton>
       </div>
       <div class="mt-3 flex items-center justify-between text-xs text-muted">
-        <span>{{ total }} anexos en la consulta · una entidad puede tener varios roles</span>
+        <span>{{ total }} anexos en la consulta · {{ isLocalDirectory ? 'filtrado local' : 'búsqueda paginada' }}</span>
         <span v-if="!canWrite" class="inline-flex items-center gap-1"><ShieldCheck class="size-3.5" /> Solo lectura</span>
       </div>
 
