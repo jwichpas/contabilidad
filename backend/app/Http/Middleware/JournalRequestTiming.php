@@ -25,6 +25,8 @@ final class JournalRequestTiming
         }
 
         $started = hrtime(true);
+        // Used by the post-auth middleware to isolate the pre-auth pipeline.
+        $request->attributes->set('journal_request_timing_start_ns', $started);
         $response = $next($request);
         $durationMs = number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
         $previous = (string) $response->headers->get('Server-Timing', '');
