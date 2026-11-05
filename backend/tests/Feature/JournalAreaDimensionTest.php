@@ -202,6 +202,25 @@ it('rejects an invalid subdiary before opening periods or creating journal data'
     });
 });
 
+it('runs the timing marker before Sanctum in the effective Laravel middleware order', function (): void {
+    $request = \Illuminate\Http\Request::create(
+        '/api/v1/accounting/journal-entries/editor-bootstrap?date=2026-11-05', 'GET'
+    );
+    $route = \Illuminate\Support\Facades\Route::getRoutes()->match($request);
+    $middleware = app('router')->gatherRouteMiddleware($route);
+
+    $markerIndex = array_search(\App\Http\Middleware\JournalAuthenticationStartTiming::class, $middleware, true);
+    $authIndex = array_search(true, array_map(
+        static fn (string $item): bool => str_starts_with(
+            $item, \Illuminate\Auth\Middleware\Authenticate::class.':sanctum'
+        ), $middleware
+    ), true);
+
+    expect($markerIndex)->toBeInt()
+        ->and($authIndex)->toBeInt()
+        ->and($markerIndex)->toBeLessThan($authIndex);
+});
+
 it('loads journal editor catalogs and subdiaries in a single read-only request', function (): void {
     $response = $this->getJson('/api/v1/accounting/journal-entries/editor-bootstrap?date=2026-10-24')
         ->assertOk()
