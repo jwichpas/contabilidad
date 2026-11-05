@@ -676,7 +676,7 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="font-mono text-[11px] num">
-            Mostrando <strong>{{ filteredRows.length }}</strong> de <strong>{{ kpiMetrics.total }}</strong> cuentas
+            <strong>{{ filteredRows.length }}</strong> filas visibles · <strong>{{ kpiMetrics.total }}</strong> cuentas en el plan
           </div>
         </div>
       </div>
