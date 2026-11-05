@@ -105,3 +105,24 @@ Además de las pruebas: revisar modo claro/oscuro, foco y teclado, zoom 200%, te
 ### Comprobación necesaria en el navegador antes de integrar
 
 Validar en 375/768/1024/1440 px: menú expandido/contraído, drawer y cierre, selector de empresa, estado activo de cada ruta, encabezado con nombre largo, modo claro/oscuro, teclado, zoom 200% y `prefers-reduced-motion`. Verificar visualmente colores aplicados por Tailwind y contraste final con datos reales; estas observaciones no pueden sustituirse con pruebas estáticas.
+
+## 8. Iteración 3 — Libro diario y editor bimoneda
+
+**Objetivo:** ordenar la experiencia de trabajo de alta densidad conservando exactamente el flujo de registro, las reglas de validación y las funciones de decimal.
+
+### Cambios realizados
+- `JournalEntryView.vue`: jerarquía de la pantalla, pestañas con `aria-pressed`, ocho campos de cabecera con etiquetas asociadas y advertencia veraz de período sujeto a validación.
+- La indicación `ISO 27001 Inmutable` se eliminó porque no representaba una certificación demostrada; también se retiró la misma afirmación del historial.
+- Acciones `autoBalance`, `addLine`, `clearForm`, `handleSubmit`, `loadHistory` y creación inicial conectadas a `UiButton`. Estado de registro usa `:loading="isSubmitting"`.
+- Totales de Debe/Haber local y extranjero se muestran como cuatro datos semánticos `dl/dt/dd`, conservando `toDisplay(4)` para cada importe.
+- Partidas seleccionables en desktop y móvil con `aria-pressed`. Se conservan el editor único, los selectores y las validaciones condicionales.
+- Historial: expansión accesible por botón (`aria-expanded`), sin perder el clic existente en la fila; el detalle ancho tiene desplazamiento horizontal propio.
+- `main.css`: estilos compartidos `.journal-*` con geometría uniforme, foco visible, densidad compacta y ajustes móviles.
+- `frontend/scripts/journal-design.test.mjs`: nuevas pruebas estáticas, agregadas a `pnpm test:unit`.
+
+### Verificación
+- Revisión estática directa del contenido de GitHub: **37/37 comprobaciones satisfechas** (no es una ejecución de Node ni un test de navegador).
+- No se ha ejecutado `pnpm typecheck`, `pnpm test:unit`, `pnpm build` ni una sesión visual local. **El PR continúa como borrador.**
+- Antes de integrar, verificar el flujo con `PEN` y `USD`, una cuenta que exige las cuatro dimensiones, cambio de empresa con borrador, deshabilitación durante POST, autobalanceo, historial desplegable con teclado, visualización en móvil y exportación si aplica.
+
+**Fuera de alcance:** cambios en validación del dominio, cuentas, eventos HTTP, números monetarios, transacciones, migraciones y permisos.
