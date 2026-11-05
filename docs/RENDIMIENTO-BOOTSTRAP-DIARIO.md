@@ -198,3 +198,78 @@ si hay que optimizar las conexiones o los índices.
 uso de Supavisor/Supabase con el rol `app_backend`. El proveedor y endpoint
 realmente utilizados se definen por variables `DB_URL`, `DB_HOST`, etc.,
 del entorno de ejecución; no se deben suponer ni divulgar sus credenciales.
+
+## Cuarta instrumentación: tiempo SQL dentro del tramo de autenticación
+
+En la medición posterior a corregir la prioridad de middleware:
+
+| Métrica | Tiempo |
+|---|---:|
+| `request_total` | 3649.5 ms |
+| `pre_auth_route` | 3.5 ms |
+| `auth_route_segment` | **1653.1 ms** |
+| `tenant_context_setup` | 432.2 ms |
+| `tenant_membership` | 324.5 ms |
+| `catalogs_sql` | 769.4 ms |
+| `exchange_rates` | 327.1 ms |
+
+**Hallazgo:** el 45 % de la solicitud ocurre entre el marcador previo a
+`auth:sanctum` y el marcador posterior. No necesariamente todo ese período
+corresponde a consultas SQL.
+
+### Nuevas métricas SQL, sin alterar la autenticación
+
+El `AppServiceProvider` registra un único listener de eventos
+`Illuminate\Database\Events\QueryExecuted` usando `DB::listen`.
+Únicamente recopila duraciones agregadas durante el tramo de autenticación
+del endpoint `GET /api/v1/accounting/journal-entries/editor-bootstrap`.
+No almacena ni expone SQL, parámetros, tokens, IDs, RUC o datos de usuario.
+
+El campo `QueryExecuted::$time` representa milisegundos de ejecución
+reportados por Laravel. No garantiza separar espera de conexión/TLS de
+ejecución en la base.
+
+Las métricas nuevas son:
+
+- `auth_sql_total;dur=N`: suma de los tiempos SQL registrados en el tramo.
+- `auth_sql_queries;desc="N"`: número de consultas SQL registradas.
+- `auth_sql_first;dur=N`: duración de la primera consulta observada.
+- `auth_sql_max;dur=N`: duración de la consulta más lenta.
+- `auth_sql_token;dur=N`: tiempo de las consultas de la tabla de tokens
+  (clasificación interna; SQL/credenciales nunca aparecen en el header).
+- `auth_sql_user;dur=N`: tiempo de las consultas de usuarios.
+
+Los marcadores son **por solicitud** y se desactivan al entrar al middleware
+`JournalAuthenticatedTiming`: las consultas posteriores del tenant y del
+controlador no alteran los tiempos de autenticación. El listener se registra
+una sola vez en el arranque de Laravel, para no acumularse en workers largos.
+Si la prueba usa `actingAs` sin consultas SQL de Sanctum, el contador puede
+ser cero; no confundir esa prueba con una sesión Bearer real.
+
+**Seguridad:** permanece intacto `auth:sanctum`, comprobación de expiración,
+revocación de tokens, membresía por empresa y PostgreSQL FORCE RLS. El
+proyecto configura `SANCTUM_TRACK_LAST_USED_AT=false` por defecto; no se
+cambia el seguimiento de última actividad ni se activa caché de tokens.
+
+### Qué comparar en el navegador
+
+Actualizar `main`, repetir cinco solicitudes con el mismo usuario,
+empresa y fecha, y registrar `auth_route_segment`,
+`auth_sql_total`, `auth_sql_queries`, `auth_sql_first`,
+`auth_sql_max`, `auth_sql_token`, `auth_sql_user` y
+`request_total`.
+
+Interpretación:
+- Si `auth_sql_total` explica casi todo `auth_route_segment`, revisar
+  latencia de consulta/primera conexión PostgreSQL; no eliminar lecturas de
+  revocación del token.
+- Si `auth_sql_first` domina, investigar costo de conexión inicial,
+  configuración TLS, host/región del proveedor y modo de pooler.
+- Si el tiempo SQL es pequeño, investigar resolución del guard y otro
+  procesamiento entre los marcadores.
+- Las cifras de un solo request no establecen una reducción sostenida; usar
+  mediana de cinco o más mediciones.
+
+**Validación pendiente de esta instrumentación:** ejecutar el test
+`php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="loads journal editor catalogs"`.
+El lint de GitHub Actions solo verifica sintaxis, no conexiones PostgreSQL.
