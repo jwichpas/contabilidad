@@ -1,0 +1,77 @@
+/*
+ * Libro Mayor Perú — Design tokens v1 (Fase 1)
+ * Única fuente de verdad para colores y dimensiones compartidas.
+ * Los nombres históricos (--bg, --side, --surf, etc.) permanecen para no romper
+ * las vistas existentes. Las utilidades Tailwind se enlazan en main.css.
+ *
+ * Accesibilidad: --brand y --accent tienen texto blanco de contraste >= 4.5:1
+ * tanto en claro como en oscuro. Para acentos usados como TEXTO, emplear
+ * --accent-text, especialmente sobre superficies oscuras.
+ */
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Superficies: escritorio financiero luminoso, sin efectos de decoración. */
+  --bg: #ffffff;
+  --side: #f4f6fb;
+  --surf: #ffffff;
+  --card: #ffffff;
+  --line: #dce2ee;
+  --line-strong: #b6c1d6;
+  --ink: #0b1b3f;
+  --mut: #5a6683;
+  --hover: #edf1fa;
+  --soft: #e8edf8;
+
+  /* Identidad: azul institucional + naranja de énfasis controlado. */
+  --brand: #002a8d;
+  --brandtx: #ffffff;
+  --accent: #ad4f00;
+  --accent-text: #a84f00;
+  --focus-color: #a84f00;
+
+  /* Estado: el significado nunca depende exclusivamente del color. */
+  --pos: #1f7a4d;
+  --warn: #995000;
+  --neg: #c8102e;
+  --bar2: #d66e29;
+
+  /* Ritmo y geometría compartidos por los componentes existentes. */
+  --radius-control: 7px;
+  --radius-panel: 10px;
+  --control-height: 2.25rem;
+  --duration-fast: 120ms;
+  --duration-standard: 180ms;
+
+  color-scheme: light;
+}
+
+/* App.vue sincroniza .dark y data-theme; ambos selectores dan el mismo tema. */
+:root[data-theme="dark"],
+.dark {
+  --bg: #0a1230;
+  --side: #0a1230;
+  --surf: #101b42;
+  --card: #101b42;
+  --line: #223062;
+  --line-strong: #40578e;
+  --ink: #e8edfa;
+  --mut: #9aa8cf;
+  --hover: #1b2b5b;
+  --soft: #182654;
+
+  --brand: #2f5fd6;
+  --brandtx: #ffffff;
+  --accent: #a84f00;
+  --accent-text: #ffb766;
+  --focus-color: #ffb766;
+
+  --pos: #5fd09a;
+  --warn: #ffb766;
+  --neg: #ff6b7f;
+  --bar2: #ff9d4f;
+
+  color-scheme: dark;
+}
