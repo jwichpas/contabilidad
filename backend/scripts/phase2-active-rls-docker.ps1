@@ -164,13 +164,36 @@ SELECT
   JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
   WHERE n.nspname='public'
     AND c.relname IN ('company_user','journal_entries','journal_entry_lines','company_subdiaries','journal_post_idempotency')
-    AND c.relrowsecurity AND c.relforcerowsecurity)::integer
+    AND c.relrowsecurity AND c.relforcerowsecurity)::integer,
+ (SELECT CASE WHEN has_table_privilege('app_backend', 'public.currencies', 'INSERT')
+  THEN 1 ELSE 0 END)::integer
 '@
         $securityProof=(& docker exec $containerName psql -U postgres -d contabilidad_ci -X -A -t -F '|' -v ON_ERROR_STOP=1 -c $securitySql 2>&1 | Out-String).Trim()
-        if($LASTEXITCODE -ne 0 -or $securityProof -ne '1|5'){
-            throw 'No se verificaron app_backend restringido y 5 tablas FORCE RLS en Docker.'
+        if($LASTEXITCODE -ne 0 -or $securityProof -ne '1|5|0'){
+            throw 'No se verificaron app_backend restringido, 5 tablas FORCE RLS y currencies sin INSERT.'
         }
-        Write-Host ('[PASS] PostgreSQL '+$pgVersion+'; app_backend sin BYPASSRLS; 5 tablas FORCE RLS.')
+        Write-Host ('[PASS] PostgreSQL '+$pgVersion+'; app_backend sin BYPASSRLS; 5 tablas FORCE RLS; currencies solo lectura.')
+        # The catalog is global and immutable to app_backend. Seed official
+        # reference currencies only as postgres in this disposable database,
+        # before tests begin; never grant INSERT to the application role.
+        $currencySeedSql=@'
+INSERT INTO public.currencies
+ (code, sunat_code, name, symbol, is_base_currency, created_at, updated_at)
+VALUES
+ ('PEN','1','Soles','S/',TRUE,now(),now()),
+ ('USD','2','Dolares Americanos','$',FALSE,now(),now()),
+ ('EUR','9','Euros',chr(8364),FALSE,now(),now());
+'@
+        Invoke-F23h -Program 'docker' -Arguments @(
+            'exec',$containerName,'psql','-U','postgres',
+            '-d','contabilidad_ci','-X','-v','ON_ERROR_STOP=1',
+            '-c',$currencySeedSql
+        )
+        $seededCurrencies=(& docker exec $containerName psql -U postgres -d contabilidad_ci -X -A -t -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM public.currencies WHERE code IN ('PEN','USD','EUR')" 2>&1 | Out-String).Trim()
+        if($LASTEXITCODE -ne 0 -or $seededCurrencies -ne '3'){
+            throw 'No se confirmaron las tres monedas de referencia en Docker.'
+        }
+        Write-Host '[PASS] Referencias PEN/USD/EUR instaladas por owner solamente en Docker.'
         # Pest runs against this disposable container as the *restricted*
         # application role, not the owner used only for schema migrations.
         Set-F23hEnv @{
