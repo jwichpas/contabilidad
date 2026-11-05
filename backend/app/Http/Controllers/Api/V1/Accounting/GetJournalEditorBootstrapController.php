@@ -6,6 +6,9 @@ namespace App\Http\Controllers\Api\V1\Accounting;
 
 use App\Http\Controllers\Api\V1\Company\GetCompanyExchangeRatesController;
 use App\Models\AccountingAccount;
+use Carbon\CarbonImmutable;
+use DomainException;
+use Illuminate\Validation\ValidationException;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +26,6 @@ final readonly class GetJournalEditorBootstrapController
 {
     public function __construct(
         private TenantContext $tenant,
-        private GetNextJournalEntryNumberController $nextNumber,
         private GetCompanyExchangeRatesController $rates,
     ) {}
 
@@ -32,6 +34,15 @@ final readonly class GetJournalEditorBootstrapController
         $controllerStarted = hrtime(true);
         $timings = [];
         $companyId = $this->tenant->requireCompanyId(AccountingAccount::class);
+        $validated = $request->validate(['date' => ['sometimes', 'date_format:Y-m-d']]);
+        $date = isset($validated['date'])
+            ? CarbonImmutable::createFromFormat('!Y-m-d', $validated['date'])
+            : CarbonImmutable::now();
+        if ($date === false) {
+            throw ValidationException::withMessages(['date' => ['Fecha contable invalida.']]);
+        }
+        $month = $date->month;
+        $year = $date->year;
 
         // Explicit company predicates are an additional defence on top of
         // PostgreSQL FORCE RLS and the request's SET LOCAL tenant context.
@@ -86,8 +97,29 @@ final readonly class GetJournalEditorBootstrapController
                 ) ORDER BY s.code)
                 FROM public.company_subdiaries s
                 WHERE s.company_id = ?::bigint AND s.is_active IS TRUE
-              ), '[]'::jsonb) AS subdiaries
-            SQL, array_fill(0, 5, $companyId));
+              ), '[]'::jsonb) AS subdiaries,
+              COALESCE((
+                SELECT jsonb_build_object(
+                  'status', fp.status,
+                  'max_suffix', (
+                    SELECT COALESCE(MAX(right(je.entry_number, 5)::integer), 0)
+                    FROM public.journal_entries je
+                    WHERE je.company_id = ?::bigint
+                      AND je.fiscal_period_id = fp.id
+                      AND je.entry_number LIKE ?
+                      AND je.entry_number ~ '^[0-9]{2}-[0-9]{5}$'
+                  )
+                )
+                FROM public.fiscal_periods fp
+                WHERE fp.company_id = ?::bigint
+                  AND fp.year = ?::integer
+                  AND fp.month = ?::integer
+                LIMIT 1
+              ), '{}'::jsonb) AS number_context
+            SQL, [
+                ...array_fill(0, 5, $companyId),
+                $companyId, sprintf('%02d-', $month).'%', $companyId, $year, $month,
+            ]);
 
         $data = [];
         foreach (['accounts', 'company_areas', 'cash_flow_areas', 'cost_centers', 'subdiaries'] as $key) {
@@ -102,10 +134,26 @@ final readonly class GetJournalEditorBootstrapController
         }
         $timings[] = 'catalogs_sql;dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
 
-        foreach ([
-            'next_number' => $this->nextNumber,
-            'exchange_rates' => $this->rates,
-        ] as $name => $handler) {
+        // Vista previa no reservada, calculada junto a los catálogos.
+        // El registro POST sigue usando bloqueo del periodo (FOR UPDATE).
+        $numberContext = json_decode((string) ($row?->number_context ?? '{}'), true, 512, JSON_THROW_ON_ERROR);
+        if (! is_array($numberContext)) {
+            return response()->json(['message' => 'Contexto de numeración contable inválido.'], 503);
+        }
+        $nextSuffix = (int) ($numberContext['max_suffix'] ?? 0) + 1;
+        if ($nextSuffix > 99999) {
+            throw new DomainException('El periodo alcanzó el límite del correlativo contable.');
+        }
+        $data['next_number'] = [
+            'next_number' => sprintf('%02d-%05d', $month, $nextSuffix),
+            'period_year' => $year,
+            'period_month' => $month,
+            'is_period_open' => ! isset($numberContext['status']) || $numberContext['status'] === 'OPEN',
+            'is_reserved' => false,
+        ];
+        $timings[] = 'next_number;desc="included_in_catalogs_sql"';
+
+        foreach (['exchange_rates' => $this->rates] as $name => $handler) {
             $started = hrtime(true);
             $response = $handler($request);
             $timings[] = $name.';dur='.number_format((hrtime(true) - $started) / 1000000, 1, '.', '');
