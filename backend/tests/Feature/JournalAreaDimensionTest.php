@@ -226,6 +226,10 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
         ->toContain('tenant_membership;dur=')
         ->toContain('post_auth_total;dur=')
         ->toContain('pre_auth_pipeline;dur=')
+        ->toContain('pre_auth_route;dur=')
+        ->toContain('auth_route_segment;dur=')
+        ->toContain('tenant_context_setup;dur=')
+        ->toContain('tenant_context_finalize;dur=')
         ->toContain('request_total;dur=')
         ->not->toContain('password')
         ->not->toContain('tax_id');
