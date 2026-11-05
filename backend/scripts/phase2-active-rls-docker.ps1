@@ -3,11 +3,14 @@
   F2.3h: combined ACTIVE + app_backend FORCE RLS through actual Laravel HTTP,
   entirely within one disposable PostgreSQL 18 Docker container.
   Run from backend: .\scripts\phase2-active-rls-docker.ps1
+  For Libro Diario PG18: .\scripts\phase2-active-rls-docker.ps1 -JournalAreaDimensionTest
   This script NEVER connects to Neon and ALWAYS deletes its container.
 #>
 param(
     # Opt-in targeted F2.3 row-lock race test instead of full F2.3h HTTP.
-    [switch]$PeriodConcurrency
+    [switch]$PeriodConcurrency,
+    # Full 15-test Libro Diario regression suite with RLS, on disposable PG18.
+    [switch]$JournalAreaDimensionTest
 )
 $ErrorActionPreference='Stop'
 $backend=Split-Path -Parent $PSScriptRoot
@@ -19,6 +22,7 @@ $guardToken=[Guid]::NewGuid().ToString('N')
 $runContainer=$false
 $success=$false
 $originalEnv=@{}
+$junitPath=$null
 function Set-F23hEnv {
     param([hashtable]$Values)
     foreach($key in $Values.Keys){
@@ -40,6 +44,9 @@ function Invoke-F23h {
     if($LASTEXITCODE -ne 0){throw "$Program fallo: codigo $LASTEXITCODE"}
 }
 try{
+    if($PeriodConcurrency -and $JournalAreaDimensionTest){
+        throw 'No combinar -PeriodConcurrency y -JournalAreaDimensionTest.'
+    }
     Set-Location $backend
     if(-not (Test-Path 'vendor/autoload.php') -or (Test-Path 'bootstrap/cache/config.php')){
         throw 'Requiere vendor de Composer y ausencia de config cacheada.'
@@ -119,6 +126,19 @@ try{
         if(-not (Test-Path $migration)){throw "Falta $migration"}
     }
     Write-Host ('[MIGRACIONES] '+$migrations.Count+' migraciones reales en el contenedor desechable.')
+    if($JournalAreaDimensionTest){
+        # Exact additive migrations needed by the current journal editor,
+        # applied only after its 20 base+portable migrations. Never run
+        # 'migrate' without a --path against the user's remote database.
+        $migrations += @(
+            'database/migrations/2026_10_24_080000_add_journal_line_entities.php'
+            'database/migrations/2026_10_24_100000_add_journal_line_areas.php'
+            'database/migrations/2026_10_24_120000_add_account_requires_company_area.php'
+            'database/migrations/2026_10_24_130000_add_journal_entry_subdiary.php'
+            'database/migrations/2026_10_24_140000_create_company_subdiaries.php'
+        )
+        Write-Host '[DIARIO] Se agregaron 5 migraciones de entidades, áreas y subdiarios.'
+    }
     foreach($migration in $migrations){
         Invoke-F23h -Program 'php' -Arguments @('artisan','migrate','--database=pgsql_migrations',
             ('--path='+$migration),'--force','--no-interaction')
@@ -129,7 +149,47 @@ try{
     }
     Invoke-F23h -Program 'docker' -Arguments @('exec',$containerName,'psql','-U','postgres','-d','contabilidad_ci',
         '-X','-v','ON_ERROR_STOP=1','-c','GRANT SELECT ON public.f23h_guard TO app_backend')
-    if($PeriodConcurrency){
+    if($JournalAreaDimensionTest){
+        # Pest runs against this disposable container as the *restricted*
+        # application role, not the owner used only for schema migrations.
+        Set-F23hEnv @{
+            DB_USERNAME='app_backend'
+            DB_PASSWORD=$appPassword
+            DB_EMULATE_PREPARES='false'
+        }
+        $junitPath=Join-Path ([IO.Path]::GetTempPath()) ($containerName+'-journal.xml')
+        Write-Host '[DIARIO] Ejecutando 15 pruebas funcionales contra PostgreSQL 18 con app_backend/ FORCE RLS.'
+        Invoke-F23h -Program 'php' -Arguments @(
+            'artisan','test','tests/Feature/JournalAreaDimensionTest.php',
+            ('--log-junit='+$junitPath)
+        )
+        if(-not (Test-Path -LiteralPath $junitPath)){
+            throw 'Pest no genero reporte JUnit; no declarar PASS.'
+        }
+        try{
+            [xml]$report=Get-Content -LiteralPath $junitPath -Raw -ErrorAction Stop
+        }catch{
+            throw 'El reporte JUnit no es XML valido.'
+        }
+        $cases=@($report.SelectNodes('//testcase'))
+        $errors=@($report.SelectNodes('//testcase/failure | //testcase/error'))
+        $incomplete=@($report.SelectNodes('//testcase/skipped'))
+        $testSuites=@($report.SelectNodes('//testsuite'))
+        $suiteHasFailures=$false
+        foreach($suite in $testSuites){
+            if([int]$suite.GetAttribute('failures') -ne 0 -or
+               [int]$suite.GetAttribute('errors') -ne 0 -or
+               [int]$suite.GetAttribute('skipped') -ne 0){
+                $suiteHasFailures=$true
+            }
+        }
+        if($cases.Count -ne 15 -or $errors.Count -ne 0 -or
+           $incomplete.Count -ne 0 -or $suiteHasFailures){
+            throw ('Las pruebas del Diario no aprobaron: total='+$cases.Count+
+                ', fallos='+$errors.Count+', omitidas='+$incomplete.Count)
+        }
+        Write-Host '[PASS] Diario: 15 pruebas, 0 fallos, 0 omitidas; PostgreSQL 18 local con FORCE RLS.'
+    }elseif($PeriodConcurrency){
         # A committed fixture is safe here because this whole database is a
         # newly-created ephemeral Docker container removed in finally.
         # Two connections cannot lock the same uncommitted period fixture.
@@ -173,6 +233,9 @@ try{
             if($LASTEXITCODE -eq 0){Write-Host '[LIMPIEZA] PostgreSQL Docker descartable eliminado.'}
             else{$success=$false;Write-Host ('[WARN] No se pudo eliminar '+$containerName)}
         }
+    }
+    if($junitPath -and (Test-Path -LiteralPath $junitPath)){
+        Remove-Item -LiteralPath $junitPath -Force -ErrorAction SilentlyContinue
     }
     Set-Location $oldLocation
 }
