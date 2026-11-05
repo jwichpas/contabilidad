@@ -273,3 +273,82 @@ Interpretación:
 **Validación pendiente de esta instrumentación:** ejecutar el test
 `php artisan test tests/Feature/JournalAreaDimensionTest.php --filter="loads journal editor catalogs"`.
 El lint de GitHub Actions solo verifica sintaxis, no conexiones PostgreSQL.
+
+## Quinta medición: token y usuario, y diagnóstico de conexión
+
+El usuario verificó `php artisan test ... --filter="loads journal editor catalogs"`:
+**1 prueba PASS y 33 aserciones**. La solicitud de desarrollo del
+2026-11-05 devolvió **200 OK** con:
+
+| Métrica | ms |
+|---|---:|
+| `request_total` | 3522.1 |
+| `auth_route_segment` | 1543.1 |
+| `auth_sql_total` | 1537.0 |
+| `auth_sql_queries` | 2 consultas |
+| `auth_sql_first` y `auth_sql_token` | **1237.2** |
+| `auth_sql_user` | **299.8** |
+| `tenant_context_setup` | 401.2 |
+| `tenant_membership` | 301.6 |
+| `catalogs_sql` | 789.3 |
+| `exchange_rates` | 314.5 |
+
+Esto indica que el tramo de autenticación se explica casi íntegramente
+por dos operaciones de base de datos. La primera puede incluir el
+establecimiento de una conexión PDO, pero **los contadores SQL por sí
+solos no prueban esa hipótesis**.
+
+### Diagnóstico seguro de conexión publicado en `main`
+
+El nuevo comando **solo para `APP_ENV=local`** mide por muestra una
+nueva conexión PDO y luego ejecuta dos veces `SELECT 1`:
+
+```powershell
+cd C:\Proyectos\contabilidad\backend
+php artisan contabilidad:medir-latencia-db --muestras=5
+```
+
+- Usa exclusivamente `DB::connection('pgsql')`, nunca la conexión
+  administrativa `pgsql_migrations`.
+- Para cada muestra invalida la conexión anterior con `DB::purge` y
+  obtiene una nueva PDO para separar **conexión inicial**, **primera
+  consulta** y **segunda consulta**.
+- No obtiene ni imprime registros de usuarios, tokens, empresas o asientos;
+  tampoco imprime hosts, nombres de usuario, cadenas de conexión ni errores
+  completos del driver. Solo reporta tiempos y medianas.
+- No escribe datos, altera permisos, opciones PDO ni políticas RLS.
+- Los resultados reflejan el proceso CLI, que no es idéntico al ciclo
+  HTTP del servidor local. Úsalos para diagnosticar, no para afirmar
+  un tiempo de respuesta exacto.
+
+**Cómo interpretar:**
+
+1. Si `conexión` ronda 700–1000 ms y cada SELECT 1 ronda 250–350 ms,
+   la mayor parte del costo proviene de conexión + red a PostgreSQL,
+   no de un algoritmo complejo de búsqueda Sanctum.
+2. Si `conexión` es baja pero SELECT 1 tarda cientos de ms, investigar
+   proximidad del servidor y configuración de acceso.
+3. Si `conexión` y ambos SELECT 1 son rápidos, revisar los planes de
+   consulta/índices para la búsqueda de tokens y usuarios en un entorno
+   autorizado, sin mostrar datos confidenciales.
+4. Medir cinco veces y comparar medianas. **No** cambiar `DB_URL`,
+   `DB_HOST`, pooling, `PDO::ATTR_PERSISTENT` ni región de datos
+   sin demostrar compatibilidad con `SET LOCAL`, FORCE RLS, TLS y
+   rotación/revocación de sesiones.
+
+### Posibles decisiones posteriores
+
+El repositorio contiene configuraciones y scripts históricos para más
+de un proveedor PostgreSQL. Solo la configuración privada efectiva del
+entorno local determina el host/region/pooler que usa una solicitud.
+No asumir Neon ni Supabase ni una región concreta a partir del nombre
+de un archivo del repositorio.
+
+La documentación oficial de Supabase sobre conexiones diferencia
+pooler en transacción, pooler en sesión y conexión directa: el modo
+recomendado depende de la duración de las conexiones del servidor,
+capacidad IPv4/IPv6 y características del despliegue. No migrar a
+ningún modo sin medir primero y conservar el rol `app_backend`.
+
+**Pendiente:** ejecutar este comando desde Windows, adjuntar las
+cinco muestras y confirmar que el nuevo archivo PHP pasó el lint.
