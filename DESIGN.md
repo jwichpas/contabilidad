@@ -126,3 +126,23 @@ Validar en 375/768/1024/1440 px: menú expandido/contraído, drawer y cierre, se
 - Antes de integrar, verificar el flujo con `PEN` y `USD`, una cuenta que exige las cuatro dimensiones, cambio de empresa con borrador, deshabilitación durante POST, autobalanceo, historial desplegable con teclado, visualización en móvil y exportación si aplica.
 
 **Fuera de alcance:** cambios en validación del dominio, cuentas, eventos HTTP, números monetarios, transacciones, migraciones y permisos.
+
+## 9. Iteración 4 — Ajustes derivados de captura real (05/11/2026)
+
+**Evidencia visual:** captura del ERP abierto en escritorio facilitada por el usuario tras ejecutar con éxito `typecheck`, 71/71 pruebas y `pnpm build` en la iteración anterior. Los siguientes cambios son nuevos y necesitan repetir la validación técnica local.
+
+### Hallazgos y soluciones
+- Navegación de ancho reducido: varios nombres aparecían cortados por etiquetas secundarias (`Vouchers`, `SUNAT`, `Monedas`). Se amplía el menú desplegado a 17.5rem y se retiran las etiquetas decorativas que competían por espacio. Se preservan los 13 destinos, el comportamiento de colapsar y el drawer móvil.
+- Selector de empresa: identificador y régimen se apretaban en una fila. Ahora se muestra el RUC explícito y régimen debajo, manteniendo el mismo selector de empresa y sin exponer información nueva de la API.
+- Lectura fatigosa: se mejora la tipografía de navegación, títulos, etiquetas y datos del editor sin inflar los importes ni modificar su formato.
+- Cabecera de siete columnas: algunos selectores cortaban opciones. Se limita a cinco columnas en pantallas 2xl, con filas de campos adaptables.
+- El estado del asiento quedaba debajo del pliegue: se añade un pequeño indicador en la barra del editor, con `isReadyToPost`, `isBalanced` y la diferencia calculada ya existente. No se presenta diferencia cero antes de ingresar valores y no se cambian fórmulas contables.
+- Las tasas de cambio de compra y venta parecían deshabilitadas por el fondo gris: ahora parecen controles editables, sin cambiar sus handlers ni la obligatoriedad.
+
+### Controles añadidos
+- Tests de estructura de menú y resumen del editor integrados en `pnpm test:unit`.
+- Inspección estática de la rama: **19/19 comprobaciones**, incluyendo igualdad del script contable respecto de `main` una vez excluidas las importaciones visuales.
+- **Pendiente:** ejecución local de `pnpm typecheck`, `pnpm test:unit`, `pnpm build` después de esta iteración y nueva captura en claro/oscuro, con ancho reducido y gran tamaño de texto.
+
+### No se hizo
+- Ningún cambio en backend, RLS, autorización, POST, líneas contables, conversión exacta, reintentos ni datos persistidos.
