@@ -247,10 +247,13 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
         ->toContain('pre_auth_pipeline;dur=')
         ->toContain('pre_auth_route;dur=')
         ->toContain('auth_route_segment;dur=')
+        ->toContain('auth_sql_total;dur=')
+        ->toContain('auth_sql_queries;desc="')
         ->toContain('tenant_context_setup;dur=')
         ->toContain('tenant_context_finalize;dur=')
         ->toContain('request_total;dur=')
         ->not->toContain('password')
+        ->not->toContain('personal_access_tokens')
         ->not->toContain('tax_id');
     $this->tenant->run($this->company->id, function (): void {
         expect(JournalEntry::query()->count())->toBe(0);
