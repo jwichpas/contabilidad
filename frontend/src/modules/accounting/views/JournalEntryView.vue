@@ -987,7 +987,7 @@ onBeforeUnmount(() => {
       <div
         class="panel journal-section space-y-4"
       >
-        <div class="flex items-center justify-between border-b border-line pb-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
           <span class="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-2">
             <Layers class="w-3.5 h-3.5 text-brand" />
             Datos Generales del Asiento
@@ -1122,14 +1122,14 @@ onBeforeUnmount(() => {
                 Compra
                 <input :value="rateItem.buy_rate" type="number" step="0.000001" min="0.000001" required
                   :aria-label="`Tipo de cambio compra ${rateItem.code}`"
-                  class="w-[92px] rounded border border-line bg-soft px-1.5 py-1 text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  class="w-[104px] rounded-md border border-line-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
                   @input="updateRateForCurrency(rateItem.code, 'buy_rate', ($event.target as HTMLInputElement).value)" />
               </label>
               <label class="flex items-center gap-1 text-[10px] text-muted">
                 Venta
                 <input :value="rateItem.sell_rate" type="number" step="0.000001" min="0.000001" required
                   :aria-label="`Tipo de cambio venta ${rateItem.code}`"
-                  class="w-[92px] rounded border border-line bg-soft px-1.5 py-1 text-xs font-semibold num text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                  class="w-[104px] rounded-md border border-line-strong bg-surf px-2 py-1.5 text-xs font-semibold num text-foreground focus:outline-none focus:ring-2 focus:ring-brand/20"
                   @input="updateRateForCurrency(rateItem.code, 'sell_rate', ($event.target as HTMLInputElement).value)" />
               </label>
               <span class="text-[10px] font-medium"
@@ -1160,6 +1160,14 @@ onBeforeUnmount(() => {
           <div>
             <h2 class="text-base font-semibold tracking-tight text-foreground">Editor único de asientos</h2>
             <p class="text-xs text-muted">{{ lines.length }} partidas · mínimo 2 para registrar</p>
+          </div>
+          <div class="journal-quick-status flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-line bg-soft px-3 py-2 text-xs">
+            <span class="font-semibold" :class="isReadyToPost ? 'text-pos' : 'text-warn'">
+              {{ isReadyToPost ? 'Listo para registrar' : isBalanced ? 'Cuadrado · faltan datos' : 'Completar y cuadrar partidas' }}
+            </span>
+            <span v-if="totalDebitLocal.isPositive() || totalCreditLocal.isPositive()" class="num text-foreground">
+              Diferencia: {{ baseCurrencyInfo.symbol }} {{ diffLocal.toDisplay(4) }} · {{ activeForeignCurrency.symbol }} {{ diffForeign.toDisplay(4) }}
+            </span>
           </div>
           <div class="flex flex-wrap gap-2">
             <UiButton variant="secondary" title="Completa la diferencia en Debe o Haber" @click="autoBalance">
