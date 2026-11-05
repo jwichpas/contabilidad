@@ -219,7 +219,7 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
     $timing = (string) $response->headers->get('Server-Timing');
     expect($timing)
         ->toContain('catalogs_sql;dur=')
-        ->toContain('next_number;dur=')
+        ->toContain('next_number;desc="included_in_catalogs_sql"')
         ->toContain('exchange_rates;dur=')
         ->toContain('controller_total;dur=')
         ->toContain('tenant_total;dur=')
@@ -232,6 +232,28 @@ it('loads journal editor catalogs and subdiaries in a single read-only request',
         expect(JournalEntry::query()->count())->toBe(0);
         expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
     });
+});
+
+it('returns the same non-reserving number preview as the standalone endpoint before and after posting', function (): void {
+    $date = '2026-10-24';
+    $bootstrapUrl = '/api/v1/accounting/journal-entries/editor-bootstrap?date='.$date;
+    $numberUrl = '/api/v1/accounting/journal-entries/next-number?date='.$date;
+
+    $initial = $this->getJson($bootstrapUrl)->assertOk();
+    $standalone = $this->getJson($numberUrl)->assertOk();
+    expect($initial->json('data.next_number'))->toEqual($standalone->json('data'));
+    expect($initial->json('data.next_number.next_number'))->toBe('10-00001')
+        ->and($initial->json('data.next_number.is_reserved'))->toBeFalse();
+
+    $this->postJson('/api/v1/accounting/journal-entries', $this->payload)->assertCreated();
+
+    $updated = $this->getJson($bootstrapUrl)->assertOk();
+    $standaloneUpdated = $this->getJson($numberUrl)->assertOk();
+    expect($updated->json('data.next_number'))->toEqual($standaloneUpdated->json('data'))
+        ->and($updated->json('data.next_number.next_number'))->toBe('10-00002');
+
+    $this->getJson('/api/v1/accounting/journal-entries/editor-bootstrap?date=2026-02-30')
+        ->assertUnprocessable();
 });
 
 it('rejects new postings to an inactive subdiary but preserves reversal classification', function (): void {
