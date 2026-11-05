@@ -352,3 +352,24 @@ ningún modo sin medir primero y conservar el rol `app_backend`.
 
 **Pendiente:** ejecutar este comando desde Windows, adjuntar las
 cinco muestras y confirmar que el nuevo archivo PHP pasó el lint.
+
+## Diagnóstico local de conexión confirmado (cinco muestras)
+
+El usuario ejecutó en Windows `php artisan contabilidad:medir-latencia-db --muestras=5`
+con la conexión de aplicación. Las cinco muestras completaron correctamente.
+
+- **Mediana de apertura de conexión:** 954.2 ms.
+- **Mediana de primer SELECT 1:** 308.5 ms.
+- **Mediana de segundo SELECT 1:** 306.8 ms.
+- La muestra inicial de apertura fue mayor: 2665.9 ms.
+- El tiempo HTTP anterior de autenticación (`auth_sql_token=1237.2ms`)
+  es compatible en escala con abrir conexión y hacer un SELECT,
+  pero se midió en otro proceso y no debe equipararse exactamente.
+- **Conclusión:** el principal obstáculo para el rendimiento local
+  es la comunicación PHP–PostgreSQL; se prioriza evaluar ubicación
+  del backend próxima a la DB, y no desactivar controles Sanctum/RLS.
+
+La decisión de arquitectura, cuatro alternativas, criterios de
+seguridad y mediciones completas están en
+[`docs/DECISION-LATENCIA-POSTGRESQL.md`](DECISION-LATENCIA-POSTGRESQL.md).
+No se cambió ningún endpoint, rol, política RLS, credencial o migración.
