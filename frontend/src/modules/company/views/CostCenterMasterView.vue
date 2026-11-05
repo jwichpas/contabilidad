@@ -58,7 +58,13 @@ async function load(): Promise<void> {
 }
 
 async function refresh(): Promise<void> {
-  await queryClient.invalidateQueries({ queryKey: cachePrefix, refetchType: 'none' });
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: cachePrefix, refetchType: 'none' }),
+    // The account editor uses this separate projection for cost-center dimensions.
+    queryClient.invalidateQueries({
+      queryKey: ['company-catalog', companyId, 'cost-centers'], refetchType: 'none',
+    }),
+  ]);
   await load();
 }
 async function start(center: CostCenterMaster | null): Promise<void> {
