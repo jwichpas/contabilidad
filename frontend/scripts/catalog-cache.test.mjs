@@ -52,7 +52,10 @@ test('árbol de cuentas PCGE: cacheada lectura y reconsulta tras crear, editar y
   assert.match(accounts, /staleTime: 30_000/);
   assert.match(accounts, /token !== options\.getAccessToken\(\)/);
   assert.match(accounts, /\['account-tree', resolveCompanyId\(\)\]/);
-  assert.equal((accounts.match(/await refreshTreeAfterMutation\(\)/g) ?? []).length, 3);
+  assert.equal((accounts.match(/await refreshTree\(\)/g) ?? []).length, 3);
+  const view = read('../src/modules/accounting/views/AccountingCatalogView.vue');
+  assert.match(view, /@click="refreshTree"/);
+  assert.match(accounts, /async function refreshTree\(\)/);
 });
 
 test('API permite abortar lecturas; caché se borra al cambiar sesión o empresa', () => {
