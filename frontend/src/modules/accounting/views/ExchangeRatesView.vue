@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -23,6 +24,8 @@ import type {
   HistoricalExchangeRateItem,
   RequiredExchangeRateItem,
 } from '@/modules/company/types/companySettings.types';
+
+const queryClient = useQueryClient();
 
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
@@ -154,6 +157,9 @@ async function handleSave(): Promise<void> {
       rate_date: selectedDate.value,
       rates: ratesArray,
     });
+
+    // La cabecera global nunca debe conservar la tasa anterior tras un guardado.
+    void queryClient.invalidateQueries({ queryKey: ['header-exchange-rates', props.activeCompanyId] });
 
     successMessage.value = `¡Tipos de cambio del día ${selectedDate.value} guardados y auditados exitosamente en el Libro Mayor!`;
     // Recargar datos actualizados
