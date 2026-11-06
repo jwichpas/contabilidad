@@ -358,3 +358,101 @@ rol restringido, ausencia de INSERT en monedas, cinco tablas
 pero aún no se ha ejecutado el flujo de recuperación funcional sobre
 el Docker persistente del usuario. No publicar `.env.pg18.local`,
 contraseñas, `DB_URL` ni trazas con SQL confidencial.
+
+## PG18 persistente verificado: fixture sintético y banco de pruebas HTTP
+
+La base persistente `contabilidad_local` se instaló en Docker PostgreSQL
+**18.6** después de recuperar un preflight que se había detenido
+antes de migrar. El usuario aportó pruebas de:
+
+- **25/25 migraciones aplicadas** y validadas.
+- Catálogo global `PEN/USD/EUR`, solo lectura para `app_backend`.
+- Rol de aplicación `app_backend` limitado y 5 tablas `FORCE RLS`.
+- `-Accion Verificar` volvió a confirmar el estado anterior.
+- `backend/.env` remoto intacto; no se usó `migrate:fresh`.
+
+### Objetivo siguiente: Libro Diario con Sanctum real y 200 cuentas
+
+Se añadieron estos archivos a `main`:
+
+- `backend/scripts/crear-fixture-pg18-local.php`: crea una empresa
+  completamente ficticia, usuario con contraseña aleatoria, membresía
+  `ADMIN`, configuración PEN/USD, subdiarios, áreas y **200 cuentas
+  sintéticas operativas** con jerarquía completa de seis niveles.
+  La creación utiliza únicamente el rol `app_backend` y
+  `TenantContext::run` con RLS. No habilita `BYPASSRLS`.
+  Conserva las credenciales de demostración en
+  `backend/.env.pg18.demo.local` **antes de confirmar la transacción**,
+  para poder revertir la base si no se puede escribir el archivo.
+- `backend/scripts/preparar-demo-pg18-local.ps1`: permite ejecutar
+  el fixture una sola vez, levantar el backend de prueba en
+  `127.0.0.1:8011` sin sustituir el backend normal `8010` y
+  medir cinco solicitudes HTTP `editor-bootstrap` con token Sanctum
+  real. Las credenciales de usuario y token nunca aparecen en la salida.
+
+**Protecciones del lanzador:** lee exclusivamente la configuración
+local privada; comprueba nombre y etiqueta Docker, puerto `55433`,
+volumen persistente, permisos de conexión y `app_backend`;
+fija todas las conexiones `pgsql` y `pgsql_migrations` en
+`127.0.0.1:55433` y usa el rol restringido también para
+`pgsql_migrations` durante el banco de pruebas. No importa las
+credenciales administrativas de Neon.
+
+### Instrucciones Windows
+
+En una nueva ventana PowerShell:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+.\scripts\instalar-esquema-pg18-local.ps1 -Accion Verificar
+.\scripts\preparar-demo-pg18-local.ps1 -Accion Crear
+```
+
+El segundo comando se ejecuta **una sola vez** y rechaza instalar el
+fixture si ya existe cualquier usuario, empresa o token local, o si
+falta el esquema. No necesita permisos de propietario PostgreSQL.
+No compartir el archivo `.env.pg18.demo.local`.
+
+Si la creación pasa, en la misma terminal o en una segunda
+ventana ejecuta:
+
+```powershell
+cd C:\Proyectos\contabilidad\backend
+.\scripts\preparar-demo-pg18-local.ps1 -Accion Servidor
+```
+
+La consola queda ocupada por el servidor de prueba; detener con
+`Ctrl+C` al finalizar. El servidor solo escucha en
+`http://127.0.0.1:8011` y usa `contabilidad_local`.
+
+En **otra ventana PowerShell**:
+
+```powershell
+cd C:\Proyectos\contabilidad\backend
+.\scripts\preparar-demo-pg18-local.ps1 -Accion Medir
+```
+
+Este comando inicia sesión contra el backend **local** con credenciales
+ficticias, usa el token Sanctum y `X-Company-Id` de la empresa creada,
+solicita `editor-bootstrap` cinco veces y muestra medianas de
+`request_total`, `auth_sql_total`, `catalogs_sql`.
+La solicitud GET es de solo lectura, aunque el inicio de sesión
+crea el token de prueba y sus registros de auditoría.
+Los tiempos deben compararse con el registro remoto de
+`request_total=3522.1` ms, **sin confundir datasets diferentes**:
+el remoto tiene sus propias cuentas y distribuciones.
+
+### Validaciones posteriores
+
+Si las pruebas HTTP pasan, confirmar acceso de Vue al backend de
+laboratorio mediante `VITE_API_PROXY_TARGET=http://127.0.0.1:8011`
+en una instancia de frontend separada, sin reutilizar sesiones
+de empresas reales. No se configura todavía un cambio de
+la base remota ni se propone copiar información productiva.
+
+**Estado:** los archivos pasan por verificación sintáctica CI;
+su ejecución end-to-end en Docker/Windows queda pendiente hasta
+que el usuario ejecute los comandos y envíe el resultado.
