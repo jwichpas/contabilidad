@@ -6,9 +6,10 @@
 
   .\scripts\instalar-esquema-pg18-local.ps1 -Accion Plan
   .\scripts\instalar-esquema-pg18-local.ps1 -Accion Instalar
+  .\scripts\instalar-esquema-pg18-local.ps1 -Accion Recuperar
   .\scripts\instalar-esquema-pg18-local.ps1 -Accion Verificar
 #>
-param([ValidateSet('Plan','Instalar','Verificar')][string]$Accion='Plan')
+param([ValidateSet('Plan','Instalar','Recuperar','Verificar')][string]$Accion='Plan')
 $ErrorActionPreference='Stop'
 $backend=Split-Path -Parent $PSScriptRoot
 $previous=Get-Location
@@ -80,6 +81,29 @@ SELECT
     Write-Host ('[ESTADO] Tablas public | roles app_backend | tabla migrations = '+$state)
     return $state
 }
+function CheckRecoverableState {
+    # Recovery is only permitted for the exact residue of the failed
+    # preflight: one guard table (one row), two NOLOGIN auxiliary roles,
+    # no app_backend, and no migration table or other user tables.
+    $residue=SqlResult @'
+SELECT
+ (SELECT count(*) FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  WHERE n.nspname='public' AND c.relkind IN ('r','p')
+    AND c.relname='local_pg18_install_guard')::integer,
+ (SELECT count(*) FROM public.local_pg18_install_guard)::integer,
+ (SELECT count(*) FROM pg_catalog.pg_roles
+  WHERE rolname IN ('anon','authenticated') AND NOT rolcanlogin
+    AND NOT rolsuper AND NOT rolbypassrls AND NOT rolcreatedb
+    AND NOT rolcreaterole)::integer,
+ (SELECT count(*) FROM pg_catalog.pg_roles WHERE rolname='app_backend')::integer,
+ (SELECT CASE WHEN to_regclass('public.migrations') IS NULL THEN 0 ELSE 1 END)::integer
+'@
+    if($residue -ne '1|1|2|0|0'){
+        throw 'La instalación parcial no coincide con el fallo conocido: recuperación bloqueada.'
+    }
+    Write-Host '[PASS] Estado parcial exacto verificado; ningún asiento ni migración presente.'
+}
 function VerifyInstalled {
     $result=SqlResult @'
 SELECT
@@ -124,8 +148,12 @@ try {
         if($state -eq '0|0|0'){
             Write-Host '[PLAN] Base vacía: lista para 25 migraciones revisadas.'
             Write-Host '[PLAN] No se realizó ninguna escritura ni conexión remota.'
+        }elseif($state -eq '1|0|0'){
+            CheckRecoverableState
+            Write-Host '[PLAN] Instalación detenida en el preflight; usar -Accion Recuperar.'
+            Write-Host '[PLAN] Sin escrituras ni conexiones remotas.'
         }else{
-            Write-Host '[PLAN] La base no está vacía: no volver a instalar. Use -Accion Verificar.'
+            Write-Host '[PLAN] Hay esquema parcial o un estado diferente: no instalar ni recuperar automáticamente.'
         }
         $success=$true
     }else{
@@ -136,16 +164,34 @@ try {
         $php=(& php -r 'echo PHP_VERSION;' | Out-String).Trim()
         if($LASTEXITCODE -ne 0 -or $php -notmatch '^8[.]5[.]'){throw 'Se requiere PHP 8.5.'}
         $state=ShowState
-        if($state -ne '0|0|0' -or $local.ContainsKey('DB_APP_BACKEND_ROLE_PASSWORD')){
-            throw 'La base no está vacía o existe una instalación anterior. No se sobrescribe.'
+        if($local.ContainsKey('DB_APP_BACKEND_ROLE_PASSWORD')){
+            throw 'Ya existe una contraseña de app_backend: no sobrescribir instalación.'
+        }
+        if($Accion -eq 'Recuperar'){
+            if($state -ne '1|0|0'){
+                throw 'Recuperar requiere exactamente la tabla de guardia sin ninguna migración.'
+            }
+            CheckRecoverableState
+        }elseif($state -ne '0|0|0'){
+            throw 'La base ya no está vacía. Use Plan; no ejecutar Instalar sobre esquema parcial.'
         }
         $rolePassword='app-'+[Guid]::NewGuid().ToString('N')
         $installToken=[Guid]::NewGuid().ToString('N')
         # Guard is created via docker exec on the identity-verified LOCAL
         # container, before any Laravel call. Remote DB is never a target.
-        $createGuard="CREATE TABLE public.local_pg18_install_guard(token text NOT NULL); INSERT INTO public.local_pg18_install_guard VALUES ('$installToken'); CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;"
-        RunDocker @('exec',$name,'psql','-U','postgres','-d','contabilidad_local',
-            '-X','-v','ON_ERROR_STOP=1','-c',$createGuard)
+        if($Accion -eq 'Recuperar'){
+            # Rotate only the existing disposable installation marker after
+            # checking the exact residue. No DROP TABLE / DROP ROLE / DELETE.
+            $rotated=SqlResult ("UPDATE public.local_pg18_install_guard SET token='"+$installToken+"'")
+            if($rotated -ne 'UPDATE 1'){
+                throw 'No se pudo renovar el token de instalación local.'
+            }
+            Write-Host '[RECUPERACION] Guardia local renovada, sin eliminar datos.'
+        }else{
+            $createGuard="CREATE TABLE public.local_pg18_install_guard(token text NOT NULL); INSERT INTO public.local_pg18_install_guard VALUES ('$installToken'); CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;"
+            RunDocker @('exec',$name,'psql','-U','postgres','-d','contabilidad_local',
+                '-X','-v','ON_ERROR_STOP=1','-c',$createGuard)
+        }
         SetLocalEnv @{
             APP_ENV='testing';APP_DEBUG='false'
             APP_KEY=([Guid]::NewGuid().ToString('N'))
@@ -162,23 +208,12 @@ try {
         }
         # Verify Laravel's *resolved* connection against the local guard.
         # Sensitive driver errors and configuration values are never printed.
-        $phpCheck=@'
-require "vendor/autoload.php";
-$app=require "bootstrap/app.php";
-$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-$a=(array)config("database.connections.pgsql_migrations",[]);
-$t=(array)config("database.connections.pgsql",[]);
-if (!app()->environment("testing") || config("database.default")!=="pgsql"
- || ($a["host"]??"")!=="127.0.0.1" || ($t["host"]??"")!=="127.0.0.1"
- || (string)($a["port"]??"")!=="55433" || (string)($t["port"]??"")!=="55433"
- || ($a["database"]??"")!=="contabilidad_local" || ($t["database"]??"")!=="contabilidad_local"
- || ($a["username"]??"")!=="postgres" || ($t["username"]??"")!=="postgres"
- || trim((string)($a["url"]??""))!=="" || trim((string)($t["url"]??""))!==""
- || !\App\Support\Database\LocalPg18InstallGuard::approved()){exit(73);}
-echo "[PASS] Laravel solo puede usar PostgreSQL 18 local autorizado\n";
-'@
-        $result=(& php -r $phpCheck 2>&1 | Out-String).Trim()
-        if($LASTEXITCODE -ne 0 -or $result -notmatch '^[PASS] Laravel solo puede usar PostgreSQL 18 local autorizado'){
+        # Use a dedicated PHP file: PowerShell/Windows may mangle quotes
+        # passed to php -r. Compare the complete literal PASS line instead
+        # of the broken regex [PASS] (which means a character class).
+        $preflightOutput=(& php scripts/verificar-preflight-pg18-local.php 2>&1 | Out-String).Trim()
+        if($LASTEXITCODE -ne 0 -or
+            $preflightOutput -cne '[PASS] Laravel solo puede usar PostgreSQL 18 local autorizado'){
             throw 'Laravel no superó el preflight de identidad local; no se migró.'
         }
         Write-Host '[PASS] Preflight Laravel local confirmado.'
