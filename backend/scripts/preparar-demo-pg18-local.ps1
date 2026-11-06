@@ -86,6 +86,16 @@ try {
         DB_HOST='127.0.0.1'; DB_PORT='55433'; DB_DATABASE='contabilidad_local'
         DB_USERNAME='app_backend'; DB_PASSWORD=$local['DB_PASSWORD']
         DB_SSLMODE='disable'; DB_EMULATE_PREPARES='false'
+        # The admin connection must never inherit a remote .env endpoint.
+        # Use the same restricted LOCAL role, not a schema owner, on this
+        # browser test server. It is not a migration environment.
+        DB_MIGRATIONS_URL=''
+        DB_MIGRATIONS_HOST='127.0.0.1'
+        DB_MIGRATIONS_PORT='55433'
+        DB_MIGRATIONS_DATABASE='contabilidad_local'
+        DB_MIGRATIONS_USERNAME='app_backend'
+        DB_MIGRATIONS_PASSWORD=$local['DB_PASSWORD']
+        DB_MIGRATIONS_SSLMODE='disable'
         CACHE_STORE='file'; SESSION_DRIVER='array'; QUEUE_CONNECTION='sync'
         SANCTUM_TRACK_LAST_USED_AT='false'
     }
