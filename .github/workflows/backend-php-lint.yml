@@ -73,6 +73,9 @@ jobs:
             exit 1
           }
 
+      - name: Verificar sintaxis PHP del preflight PG18
+        run: php -l backend/scripts/verificar-preflight-pg18-local.php
+
       - name: Verificar sintaxis PowerShell del instalador de esquema PG18
         shell: pwsh
         run: |
