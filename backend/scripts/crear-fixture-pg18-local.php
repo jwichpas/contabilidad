@@ -51,11 +51,13 @@ try {
         throw new RuntimeException('LOCAL_CONFIG');
     }
 
+    // pgsql/app_backend must not read public.migrations; it is an
+    // administrative catalog checked by the Docker-only harness before
+    // this process starts.
     $phase = 'DB_STATE';
     $info = DB::selectOne(<<<'SQL'
         SELECT current_database() AS db, current_user AS actor,
           current_setting('server_version_num')::integer AS version_num,
-          (SELECT count(*) FROM public.migrations)::integer AS migrations,
           (SELECT count(*) FROM public.companies)::integer AS companies,
           (SELECT count(*) FROM public.users)::integer AS users,
           (SELECT count(*) FROM public.personal_access_tokens)::integer AS tokens,
@@ -67,7 +69,6 @@ try {
     if ($info?->db !== 'contabilidad_local'
         || $info?->actor !== 'app_backend'
         || intdiv((int) ($info?->version_num ?? 0), 10000) !== 18
-        || (int) ($info?->migrations ?? 0) !== 25
         || (int) ($info?->companies ?? -1) !== 0
         || (int) ($info?->users ?? -1) !== 0
         || (int) ($info?->tokens ?? -1) !== 0
