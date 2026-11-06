@@ -289,3 +289,27 @@ con el laboratorio PostgreSQL 18 (recarga del asiento `11-00001`, detalle
 de partidas, cambio de empresa, fecha sin tasa, actualización de tasas,
 claro/oscuro, ancho 375/768/1024/1440 px y teclado). Una inspección
 estática de GitHub no sustituye esas comprobaciones.
+
+
+### Ajuste de presupuesto de bundle y validación en Windows (06/11/2026)
+
+El usuario ejecutó la suite local de esta rama y reportó:
+- `pnpm test:unit`: **100/100 PASS** (en el commit previo al ajuste de carga diferida).
+- `pnpm build`: **PASS**, 1788 módulos, 4.14 s.
+- `pnpm check:bundle`: **FAIL** porque el JS de entrada midió
+  **280.33 kB** (gzip **85.97 kB**); presupuesto actual **250 kB**
+  crudos / **90 kB** gzip. No aumentar el presupuesto.
+
+Se observó que `App.vue` importaba `AccountingApiClient` estáticamente
+solo para consultar la tasa de la cabecera: el cliente a su vez importa
+esquemas de validación, incrementando el bundle inicial. Se reemplazó
+la importación estática por `await import(...)` exclusivamente en la
+consulta `headerRateQuery.queryFn`, con captura previa de Bearer,
+empresa y fecha, además de respetar `AbortSignal` para evitar datos
+de contextos anteriores. La consulta diaria y los endpoints no cambian.
+
+**Pendiente después de esta corrección:** repetir los cuatro comandos
+en Windows y confirmar tamaño real del nuevo chunk de entrada, sin
+dar por aprobada la reducción hasta recibir evidencia. El aviso de
+WebSocket del puerto 24678 en el log de unit tests no hizo fallar la
+suite, pero investigar si reaparece o provoca inestabilidad.
