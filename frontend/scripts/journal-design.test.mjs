@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { formatAccountingDate, journalEntryStatusLabel, journalEntryTypeLabel, peruAccountingDate } from '../src/modules/accounting/utils/journalPresentation.ts';
+import { selectRecordedUsdPenRate } from '../src/modules/accounting/utils/headerExchangeRate.ts';
 
 const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/assets/main.css', import.meta.url), 'utf8');
@@ -71,3 +73,61 @@ test('los tipos de cambio editables no tienen aspecto de campos deshabilitados',
   assert.match(css, /\.journal-header-fields label/);
 });
 
+
+const app = readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8');
+const header = readFileSync(new URL('../src/shared/layout/AppHeader.vue', import.meta.url), 'utf8');
+const ratesView = readFileSync(new URL('../src/modules/accounting/views/ExchangeRatesView.vue', import.meta.url), 'utf8');
+const apiClient = readFileSync(new URL('../src/modules/accounting/api/httpClient.ts', import.meta.url), 'utf8');
+
+test('fecha histórica ISO se presenta sin corrimiento de día UTC', () => {
+  assert.equal(formatAccountingDate('2026-11-06T00:00:00.000000Z'), '06/11/2026');
+  assert.equal(formatAccountingDate('2026-11-06'), '06/11/2026');
+  assert.equal(formatAccountingDate('2026-02-30T00:00:00Z'), '2026-02-30T00:00:00Z');
+  assert.equal(formatAccountingDate('sin-fecha'), 'sin-fecha');
+  assert.equal(peruAccountingDate(new Date('2026-11-07T04:59:59Z')), '2026-11-06');
+  assert.equal(peruAccountingDate(new Date('2026-11-07T05:00:00Z')), '2026-11-07');
+});
+
+test('estados y tipos contables legibles preservan valores originales de la API', () => {
+  assert.equal(journalEntryTypeLabel('STANDARD'), 'Diario');
+  assert.equal(journalEntryTypeLabel('OPENING'), 'Apertura');
+  assert.equal(journalEntryTypeLabel('ADJUSTMENT'), 'Ajuste');
+  assert.equal(journalEntryTypeLabel('REVERSAL'), 'Reversión');
+  assert.equal(journalEntryTypeLabel('CLOSING'), 'Cierre');
+  assert.equal(journalEntryStatusLabel('POSTED'), 'Registrado');
+  assert.equal(journalEntryStatusLabel('REVERSED'), 'Revertido');
+  assert.match(view, /formatAccountingDate\(entry\.entry_date\)/);
+  assert.match(view, /journalEntryStatusLabel\(entry\.status\)/);
+  assert.match(view, /journalEntryTypeLabel\(entry\.entry_type\)/);
+  assert.doesNotMatch(view, /\{\{ entry\.entry_date \}\}/);
+});
+
+test('el indicador de cabecera rechaza tasas sugeridas, otras fechas y otra moneda base', () => {
+  const response = {
+    rate_date: '2026-11-06',
+    base_currency: { code: 'PEN', name: 'Soles', symbol: 'S/' },
+    required_currencies: [{
+      currency_id: 2, code: 'USD', name: 'Dólar', symbol: '$',
+      buy_rate: '3.741000', sell_rate: '3.755000', is_recorded_for_date: true, source: 'LOCAL',
+    }],
+  };
+  assert.equal(selectRecordedUsdPenRate(response, '2026-11-06')?.buy_rate, '3.741000');
+  assert.equal(selectRecordedUsdPenRate(response, '2026-11-05'), null);
+  assert.equal(selectRecordedUsdPenRate({ ...response, base_currency: { ...response.base_currency, code: 'USD' } }, '2026-11-06'), null);
+  assert.equal(selectRecordedUsdPenRate({ ...response, required_currencies: [{ ...response.required_currencies[0], is_recorded_for_date: false }] }, '2026-11-06'), null);
+  assert.equal(selectRecordedUsdPenRate(undefined, '2026-11-06'), null);
+});
+
+test('la cabecera consulta el tipo de cambio y no muestra valores de demostración', () => {
+  assert.match(app, /useQuery\(/);
+  assert.match(app, /'header-exchange-rates', activeCompanyId\.value, headerFxDate\.value/);
+  assert.match(app, /selectRecordedUsdPenRate\(/);
+  assert.match(app, /fetchCompanyExchangeRates\(headerFxDate\.value, signal\)/);
+  assert.match(app, /queryClient\.clear\(\)/);
+  assert.doesNotMatch(app, /const sunatBuyRate = SystemDecimal\.fromExchangeRate/);
+  assert.match(header, /headerRateStatus === 'recorded'/);
+  assert.match(header, /Sin registro diario/);
+  assert.match(header, /no es una cotización SUNAT en vivo/);
+  assert.match(apiClient, /fetchCompanyExchangeRates\(date: string, signal\?: AbortSignal\)/);
+  assert.match(ratesView, /invalidateQueries\(\{ queryKey: \['header-exchange-rates', props\.activeCompanyId\]/);
+});
