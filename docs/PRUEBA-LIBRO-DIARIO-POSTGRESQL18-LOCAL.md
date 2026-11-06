@@ -456,3 +456,54 @@ la base remota ni se propone copiar información productiva.
 **Estado:** los archivos pasan por verificación sintáctica CI;
 su ejecución end-to-end en Docker/Windows queda pendiente hasta
 que el usuario ejecute los comandos y envíe el resultado.
+
+## Corrección de fixture PG18 al iniciar demostración (2026-11-06)
+
+El usuario completó la instalación de PostgreSQL 18.6 persistente,
+25 migraciones, tres monedas y cinco tablas FORCE RLS. La primera
+ejecución de `preparar-demo-pg18-local.ps1 -Accion Crear` devolvió
+solo `Fixture PG18 no completada: RuntimeException`, sin aportar
+la causa interna.
+
+Se identificaron y corrigieron **dos riesgos reales** en la fixture:
+
+1. Se intentaban crear cuentas de hasta **nivel 6** cuando la
+   migración del plan de cuentas exige `level BETWEEN 1 AND 4`
+   y `is_operational` únicamente en nivel 4. Ahora el árbol
+   sintético genera 3 cuentas jerárquicas no imputables
+   (`1 -> 12 -> 121`) y **200 operativas de nivel 4 con
+   códigos de seis dígitos**, sin alterar la migración.
+2. El lanzador dependía de `APP_KEY` heredado de
+   `backend/.env`, que puede faltar o no ser apropiado
+   para el laboratorio. Ahora genera una clave aleatoria
+   independiente de 256 bits y la conserva en
+   `backend/.env.pg18.local` como `LOCAL_DEMO_APP_KEY`,
+   que se aplica a las tres acciones de la demostración.
+   No modifica `.env` remoto ni la conexión Neon.
+
+También se añadieron **códigos de error seguros por fase** a
+`crear-fixture-pg18-local.php` (incluido SQLSTATE sin SQL
+ni parámetros), por ejemplo `fase=CONFIG; motivo=LOCAL_CONFIG`.
+La excepción original `RuntimeException` no identifica por sí
+sola qué validación falló; la corrección de la clave es preventiva,
+no una causa demostrada.
+
+### Cómo reintentar una sola vez
+
+```powershell
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+.\scripts\instalar-esquema-pg18-local.ps1 -Accion Verificar
+.\scripts\preparar-demo-pg18-local.ps1 -Accion Crear
+```
+
+Si `Crear` falla, no ejecutar migraciones ni borrar volúmenes.
+Compartir solo la línea `[FAIL] Fixture PG18: fase=...; motivo=...;
+tipo=...; SQLSTATE=...`, sin secretos ni archivos privados.
+Si pasa, seguir con `-Accion Servidor` y `-Accion Medir`
+según la sección anterior.
+
+**Estado:** correcciones publicadas; la creación de la fixture
+y las cinco mediciones HTTP deben confirmarse todavía en Windows.
