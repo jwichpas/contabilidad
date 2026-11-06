@@ -76,6 +76,9 @@ jobs:
       - name: Verificar sintaxis PHP del preflight PG18
         run: php -l backend/scripts/verificar-preflight-pg18-local.php
 
+      - name: Verificar sintaxis PHP del fixture sintético PG18
+        run: php -l backend/scripts/crear-fixture-pg18-local.php
+
       - name: Verificar sintaxis PowerShell del instalador de esquema PG18
         shell: pwsh
         run: |
@@ -83,6 +86,21 @@ jobs:
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile(
             "$PWD/backend/scripts/instalar-esquema-pg18-local.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
+      - name: Verificar sintaxis PowerShell del servidor y medidor local PG18
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/backend/scripts/preparar-demo-pg18-local.ps1",
             [ref]$tokens,
             [ref]$errors
           ) | Out-Null
