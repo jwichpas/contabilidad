@@ -82,6 +82,31 @@ function Check-Container([hashtable]$local){
     & docker exec $name pg_isready -h 127.0.0.1 -U postgres -d contabilidad_local 1>$null 2>$null
     if($LASTEXITCODE -ne 0){throw 'PostgreSQL 18 local no está disponible.'}
 }
+function Check-InstalledSchema {
+    # Read schema metadata with postgres INSIDE the already identity-checked
+    # local Docker container. app_backend is intentionally denied SELECT on
+    # public.migrations. This owner connection never belongs to Laravel.
+    $sql=@'
+SELECT
+ (SELECT count(*) FROM public.migrations)::integer,
+ (SELECT count(*) FROM public.currencies)::integer,
+ (SELECT CASE WHEN rolcanlogin AND NOT rolsuper AND NOT rolbypassrls
+  THEN 1 ELSE 0 END FROM pg_catalog.pg_roles WHERE rolname='app_backend')::integer,
+ (SELECT CASE WHEN has_table_privilege('app_backend','public.currencies','INSERT')
+  THEN 1 ELSE 0 END)::integer,
+ (SELECT count(*) FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  WHERE n.nspname='public'
+    AND c.relname IN ('company_user','journal_entries','journal_entry_lines','company_subdiaries','journal_post_idempotency')
+    AND c.relrowsecurity AND c.relforcerowsecurity)::integer
+'@
+    $result=(& docker exec contabilidad-pg18-local psql -U postgres -d contabilidad_local
+        -X -A -t -F '|' -v ON_ERROR_STOP=1 -c $sql 2>&1 | Out-String).Trim()
+    if($LASTEXITCODE -ne 0 -or $result -ne '25|3|1|0|5'){
+        throw 'Esquema local PG18 no verificado: abortar sin crear datos.'
+    }
+    Write-Host '[PASS] Esquema PG18 verificado por el propietario local; rol app_backend sin permisos administrativos.'
+}
 function Get-Median([double[]]$values){
     $sorted=@($values | Sort-Object)
     $n=$sorted.Count
@@ -119,6 +144,7 @@ try {
         SANCTUM_TRACK_LAST_USED_AT='false'
     }
     if($Accion -eq 'Crear'){
+        Check-InstalledSchema
         if(Test-Path -LiteralPath $privateDemo){
             throw 'El usuario ficticio ya existe; no crear dos veces.'
         }
