@@ -507,3 +507,39 @@ según la sección anterior.
 
 **Estado:** correcciones publicadas; la creación de la fixture
 y las cinco mediciones HTTP deben confirmarse todavía en Windows.
+
+## Corrección DB_STATE: SQLSTATE 42501 por catálogo de migraciones
+
+Al ejecutar `preparar-demo-pg18-local.ps1 -Accion Crear`, con
+el esquema persistente correctamente verificado, el usuario reportó:
+`fase=DB_STATE; tipo=Illuminate\\Database\\QueryException; SQLSTATE=42501`.
+
+**Causa identificada:** la consulta de preflight del fixture PHP
+incluía `SELECT count(*) FROM public.migrations`, ejecutada con el
+rol de aplicación restringido `app_backend`. PostgreSQL denegó
+correctamente ese permiso: `migrations` es una tabla administrativa.
+El fallo ocurrió **antes de iniciar la transacción de creación**
+de usuario, empresa y cuentas.
+
+**Corrección:**
+- El fixture PHP conserva sus comprobaciones de conexión y datos de
+  aplicación, pero **ya no consulta `public.migrations`**.
+- El lanzador PowerShell invoca ahora `Check-InstalledSchema` solo
+  dentro del contenedor Docker de identidad y volumen comprobados,
+  mediante `psql -U postgres`, y valida las 25 migraciones, tres
+  monedas, rol `app_backend` restringido, falta de INSERT sobre
+  `currencies` y cinco tablas FORCE RLS antes de ejecutar PHP.
+- **No se ha otorgado ningún permiso sobre `migrations` a
+  `app_backend`**. No se modificaron migraciones ni `backend/.env`.
+
+Tras `git pull --ff-only`, desde `backend` ejecutar
+`./scripts/preparar-demo-pg18-local.ps1 -Accion Crear` (en
+PowerShell, usar `.\\scripts\\preparar-demo-pg18-local.ps1`).
+No reinstalar el esquema ni eliminar el volumen. Si la demo
+vuelve a fallar, compartir **solo** la línea diagnóstica segura
+`fase=...; motivo=...; tipo=...; SQLSTATE=...` antes de reintentar.
+
+**Estado:** corrección de código preparada y sujeto a verificación
+estática CI; la creación real de datos ficticios queda pendiente en
+Windows. El servidor Laravel 8011 y las cinco mediciones HTTP tampoco
+se han ejecutado aún.
