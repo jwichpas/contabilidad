@@ -94,6 +94,21 @@ jobs:
             exit 1
           }
 
+      - name: Verificar sintaxis PowerShell de política RLS de membresías PG18 local
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/backend/scripts/habilitar-listado-empresas-pg18-local.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
       - name: Verificar sintaxis PowerShell del servidor y medidor local PG18
         shell: pwsh
         run: |
