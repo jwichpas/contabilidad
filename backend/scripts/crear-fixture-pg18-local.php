@@ -17,7 +17,6 @@ use App\Models\ExchangeRate;
 use App\Models\User;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Support\Facades\DB;
-use Throwable;
 
 if (PHP_SAPI !== 'cli' || count($argv) !== 1) {
     fwrite(STDERR, "[BLOQUEO] Solo ejecución CLI local sin argumentos.\n");
