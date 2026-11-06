@@ -37,6 +37,24 @@ function Override-Env([hashtable]$vars){
         [Environment]::SetEnvironmentVariable($key,[string]$vars[$key],'Process')
     }
 }
+function Ensure-LocalAppKey([hashtable]$local){
+    # Dedicated 256-bit key for fixture, server and HTTP benchmark.
+    # Never print or reuse the remote Laravel APP_KEY.
+    if($local.ContainsKey('LOCAL_DEMO_APP_KEY')){
+        if($local['LOCAL_DEMO_APP_KEY'] -cnotmatch '^base64:[A-Za-z0-9+/]{43}=$'){
+            throw 'Clave privada del laboratorio con formato inválido.'
+        }
+        return $local['LOCAL_DEMO_APP_KEY']
+    }
+    $bytes=New-Object byte[] 32
+    $rng=[System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try{$rng.GetBytes($bytes)}finally{$rng.Dispose()}
+    $value='base64:'+[Convert]::ToBase64String($bytes)
+    [IO.File]::AppendAllText($privateDb,
+        ([Environment]::NewLine+'LOCAL_DEMO_APP_KEY='+$value+[Environment]::NewLine),
+        (New-Object System.Text.UTF8Encoding($false)))
+    return $value
+}
 function Check-Container([hashtable]$local){
     if($local['DB_HOST'] -ne '127.0.0.1' -or
        $local['DB_PORT'] -ne '55433' -or
@@ -79,8 +97,9 @@ try {
     }
     $local=Read-Private $privateDb
     Check-Container $local
+    $demoAppKey=Ensure-LocalAppKey $local
     Override-Env @{
-        APP_ENV='local'; APP_DEBUG='false'
+        APP_ENV='local'; APP_DEBUG='false'; APP_KEY=$demoAppKey
         APP_URL='http://127.0.0.1:8011'
         DB_CONNECTION='pgsql'; DB_URL=''; DATABASE_URL=''
         DB_HOST='127.0.0.1'; DB_PORT='55433'; DB_DATABASE='contabilidad_local'
