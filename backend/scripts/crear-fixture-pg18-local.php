@@ -140,9 +140,9 @@ try {
                     'buy_rate' => '3.741000', 'sell_rate' => '3.755000',
                 ]);
 
-                // 200 synthetic operational accounts, using the same 6-level
-                // hierarchy validated by JournalAreaDimensionTest. Does not
-                // install or alter any official PCGE account templates.
+                // 200 synthetic 6-digit operational accounts at level 4.
+                // PostgreSQL enforces level 1..4 and only level 4 operational.
+                // The three parent nodes are 1 -> 12 -> 121.
                 $parent = null;
                 $path = '';
                 foreach (['1', '12', '121'] as $level => $code) {
@@ -159,48 +159,23 @@ try {
                     $path = $account->path;
                 }
 
-                $total = 3;
-                for ($group = 2; $group <= 3; ++$group) {
-                    $fourCode = '121'.$group;
-                    $four = AccountingAccount::query()->create([
-                        'code' => $fourCode, 'name' => 'Rama ficticia '.$fourCode,
+                for ($i = 0; $i < 200; ++$i) {
+                    $code = '121'.str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+                    AccountingAccount::query()->create([
+                        'code' => $code, 'name' => 'Cuenta sintética '.$code,
                         'parent_id' => $parent->id, 'level' => 4,
-                        'path' => $parent->path.'.'.$fourCode,
+                        'path' => $parent->path.'.'.$code,
                         'account_type' => 'ASSET', 'balance_type' => 'DEBIT',
-                        'currency_mode' => 'PEN', 'is_operational' => false,
+                        'currency_mode' => 'PEN', 'is_operational' => true,
                         'is_active' => true,
+                        'entity_requirement_type' => 'NONE',
+                        'requires_auxiliary' => false,
+                        'requires_company_area' => false,
+                        'requires_cash_flow_area' => false,
+                        'cash_flow_category' => 'NONE',
                     ]);
-                    ++$total;
-                    for ($fifth = 0; $fifth <= 9; ++$fifth) {
-                        $fiveCode = $fourCode.$fifth;
-                        $five = AccountingAccount::query()->create([
-                            'code' => $fiveCode, 'name' => 'Rama ficticia '.$fiveCode,
-                            'parent_id' => $four->id, 'level' => 5,
-                            'path' => $four->path.'.'.$fiveCode,
-                            'account_type' => 'ASSET', 'balance_type' => 'DEBIT',
-                            'currency_mode' => 'PEN', 'is_operational' => false,
-                            'is_active' => true,
-                        ]);
-                        ++$total;
-                        for ($sixth = 0; $sixth <= 9; ++$sixth) {
-                            $sixCode = $fiveCode.$sixth;
-                            AccountingAccount::query()->create([
-                                'code' => $sixCode, 'name' => 'Cuenta sintética '.$sixCode,
-                                'parent_id' => $five->id, 'level' => 6,
-                                'path' => $five->path.'.'.$sixCode,
-                                'account_type' => 'ASSET', 'balance_type' => 'DEBIT',
-                                'currency_mode' => 'PEN', 'is_operational' => true,
-                                'is_active' => true,
-                                'entity_requirement_type' => 'NONE',
-                                'requires_auxiliary' => false,
-                                'requires_company_area' => false,
-                                'requires_cash_flow_area' => false,
-                                'cash_flow_category' => 'NONE',
-                            ]);
-                            ++$total;
-                        }
-                    }
                 }
+                $total = 203;
 
                 return $total;
             });
