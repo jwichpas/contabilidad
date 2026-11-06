@@ -619,3 +619,54 @@ estado actual y compartir solo la salida sin credenciales.
 **Estado:** la corrección se publicó en GitHub; las comprobaciones
 de sintaxis en CI y el ensayo real contra Docker local deben
 confirmarse antes de considerar el flujo resuelto.
+
+## Corrección del falso negativo en verificación RLS de membresías
+
+En PostgreSQL 18 local, el primer `-Accion Aplicar` de
+`habilitar-listado-empresas-pg18-local.ps1` instaló la política
+`company_user_authenticated_member_listing_policy`, pero terminó
+mostrando `[FAIL] Prueba transaccional RLS de usuario propio y ajeno
+no aprobada.`. Después, `-Accion Verificar` llegó de nuevo al
+mismo error.
+
+**Diagnóstico:** la prueba de seguridad ejecutaba
+`BEGIN; SET LOCAL ROLE app_backend; ... DO ...; ROLLBACK;`
+con `psql -c` en una sola solicitud SQL, y luego buscaba
+literalmente una línea de salida `DO`. El comando SQL completo
+había finalizado sin fallo (la función `SqlResult` ya verifica
+el código de salida con `ON_ERROR_STOP=1`), pero la salida
+de una combinación de instrucciones en `-c` no tiene por
+qué incluir el *command tag* de `DO`. La comprobación de
+salida daba un **falso negativo**, no evidencia de que RLS
+se hubiera debilitado.
+
+**Corrección en main:** tras `ROLLBACK`, el SQL devuelve una
+única cadena verificable:
+`SELECT 'PG18_RLS_MEMBERSHIP_OK'::text AS verified;`
+y PowerShell exige que el resultado sea exactamente esa cadena,
+además del código de ejecución de `psql`. El bloque `DO`
+sigue verificando que la membresía propia sea visible y
+que un ID ajeno no permita ver filas; cualquier excepción
+detiene la ejecución. La política y los privilegios no cambian.
+
+**Pasos de continuación:**
+
+```powershell
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+.\scripts\habilitar-listado-empresas-pg18-local.ps1 -Accion Verificar
+```
+
+No volver a ejecutar `-Accion Aplicar` ni `-Accion Crear`
+si la primera verificación es correcta; la política y la
+empresa de laboratorio ya existen. Si `-Accion Verificar`
+da `[PASS]`, el servidor Laravel `8011` que ya esté abierto
+puede permanecer activo (no se cambió código de Laravel),
+y en otra terminal ejecutar
+`preparar-demo-pg18-local.ps1 -Accion Medir`.
+
+**Pendiente:** verificar funcionalmente el script corregido y
+las cinco mediciones HTTP en el Windows del usuario. Sintaxis
+CI no sustituye la ejecución en PostgreSQL local.
