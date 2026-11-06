@@ -122,7 +122,10 @@ test('la cabecera consulta el tipo de cambio y no muestra valores de demostraci√
   assert.match(app, /useQuery\(/);
   assert.match(app, /'header-exchange-rates', activeCompanyId\.value, headerFxDate\.value/);
   assert.match(app, /selectRecordedUsdPenRate\(/);
-  assert.match(app, /fetchCompanyExchangeRates\(headerFxDate\.value, signal\)/);
+  assert.match(app, /await import\('\.\/modules\/accounting\/api\/httpClient'\)/);
+  assert.match(app, /fetchCompanyExchangeRates\(date, signal\)/);
+  assert.match(app, /if \(signal\.aborted\) throw new DOMException/);
+  assert.doesNotMatch(app, /^import \{ AccountingApiClient \}/m);
   assert.match(app, /queryClient\.clear\(\)/);
   assert.doesNotMatch(app, /const sunatBuyRate = SystemDecimal\.fromExchangeRate/);
   assert.match(header, /headerRateStatus === 'recorded'/);
