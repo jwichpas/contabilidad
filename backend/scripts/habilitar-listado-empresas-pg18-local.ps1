@@ -112,9 +112,16 @@ BEGIN
 END
 $verify$;
 ROLLBACK;
+-- psql -c sends the multi-statement string as one request: the DO
+-- command tag is not guaranteed to be part of the captured output.
+-- Use one final, exact marker returned only after the DO validation
+-- has completed successfully and the transaction has rolled back.
+SELECT 'PG18_RLS_MEMBERSHIP_OK'::text AS verified;
 '@
     $out=SqlResult $sql
-    if($out -notmatch '(?m)^DO$'){throw 'Prueba transaccional RLS de usuario propio y ajeno no aprobada.'}
+    if($out -cne 'PG18_RLS_MEMBERSHIP_OK'){
+        throw 'Prueba transaccional RLS de usuario propio y ajeno no aprobada.'
+    }
     Write-Host '[PASS] RLS: usuario propio ve una membresía, usuario ajeno no ve ninguna.'
 }
 try{
