@@ -100,8 +100,10 @@ SELECT
     AND c.relname IN ('company_user','journal_entries','journal_entry_lines','company_subdiaries','journal_post_idempotency')
     AND c.relrowsecurity AND c.relforcerowsecurity)::integer
 '@
-    $result=(& docker exec contabilidad-pg18-local psql -U postgres -d contabilidad_local
-        -X -A -t -F '|' -v ON_ERROR_STOP=1 -c $sql 2>&1 | Out-String).Trim()
+    $checkArguments=@('exec','contabilidad-pg18-local','psql',
+        '-U','postgres','-d','contabilidad_local',
+        '-X','-A','-t','-F','|','-v','ON_ERROR_STOP=1','-c',$sql)
+    $result=(& docker @checkArguments 2>&1 | Out-String).Trim()
     if($LASTEXITCODE -ne 0 -or $result -ne '25|3|1|0|5'){
         throw 'Esquema local PG18 no verificado: abortar sin crear datos.'
     }
