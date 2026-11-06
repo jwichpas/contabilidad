@@ -33,8 +33,11 @@ if (is_file($secretFile)) {
 require $root.'/vendor/autoload.php';
 $app = require $root.'/bootstrap/app.php';
 
+$phase = 'BOOTSTRAP';
+
 try {
     $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+    $phase = 'CONFIG';
     $dbConfig = (array) config('database.connections.pgsql');
     if (! app()->environment('local')
         || config('database.default') !== 'pgsql'
@@ -45,9 +48,10 @@ try {
         || (string) ($dbConfig['sslmode'] ?? '') !== 'disable'
         || trim((string) ($dbConfig['url'] ?? '')) !== ''
         || ! is_string(config('app.key')) || strlen((string) config('app.key')) < 32) {
-        throw new RuntimeException('Config app no autorizada para DB local.');
+        throw new RuntimeException('LOCAL_CONFIG');
     }
 
+    $phase = 'DB_STATE';
     $info = DB::selectOne(<<<'SQL'
         SELECT current_database() AS db, current_user AS actor,
           current_setting('server_version_num')::integer AS version_num,
@@ -69,24 +73,28 @@ try {
         || (int) ($info?->tokens ?? -1) !== 0
         || (int) ($info?->currencies ?? 0) !== 3
         || (int) ($info?->currency_write ?? 1) !== 0) {
-        throw new RuntimeException('Estado de base local incompatible.');
+        throw new RuntimeException('LOCAL_STATE');
     }
 
+    $phase = 'REFERENCE_CURRENCIES';
     $currencies = Currency::query()->whereIn('code', ['PEN', 'USD'])->get()->keyBy('code');
     if ($currencies->count() !== 2) {
-        throw new RuntimeException('Faltan PEN/USD en catálogo de solo lectura.');
+        throw new RuntimeException('LOCAL_CURRENCY');
     }
 
     $password = bin2hex(random_bytes(20));
     $createdFile = false;
 
     try {
-        $details = DB::transaction(static function () use ($currencies, $password, $secretFile, &$createdFile): array {
+        $phase = 'TRANSACTION';
+        $details = DB::transaction(static function () use ($currencies, $password, $secretFile, &$createdFile, &$phase): array {
+            $phase = 'USER';
             $user = User::query()->create([
                 'name' => 'Usuario de prueba PG18',
                 'email' => 'demo.pg18@example.test',
                 'password' => $password,
             ]);
+            $phase = 'COMPANY';
             $company = Company::query()->create([
                 'tax_id' => '20999990099',
                 'business_name' => 'EMPRESA FICTICIA - LABORATORIO PG18',
@@ -95,7 +103,8 @@ try {
             ]);
 
             $tenant = app(TenantContext::class);
-            $accountCount = $tenant->run((int) $company->id, static function () use ($user, $company, $currencies): int {
+            $accountCount = $tenant->run((int) $company->id, static function () use ($user, $company, $currencies, &$phase): int {
+                $phase = 'TENANT_MEMBERSHIP';
                 DB::table('company_user')->insert([
                     'company_id' => $company->id,
                     'user_id' => $user->id,
@@ -105,12 +114,14 @@ try {
                     'updated_at' => now(),
                 ]);
 
+                $phase = 'TENANT_SETTINGS';
                 CompanySetting::query()->create([
                     'base_currency_id' => $currencies['PEN']->id,
                     'secondary_currency_id' => $currencies['USD']->id,
                     'tax_regime' => 'GENERAL',
                 ]);
 
+                $phase = 'TENANT_CURRENCIES';
                 foreach (['PEN' => true, 'USD' => false] as $code => $isBase) {
                     CompanyCurrency::query()->create([
                         'currency_id' => $currencies[$code]->id,
@@ -119,6 +130,7 @@ try {
                     ]);
                 }
 
+                $phase = 'SUBDIARIES';
                 foreach ([
                     ['GENERAL', 'Diario general'],
                     ['BANCOS', 'Bancos'],
@@ -126,6 +138,7 @@ try {
                     CompanySubdiary::query()->create(['code' => $code, 'name' => $name]);
                 }
 
+                $phase = 'AREAS';
                 CompanyArea::query()->create([
                     'code' => 'ADM-DEMO', 'name' => 'Administración de prueba', 'is_active' => true,
                 ]);
@@ -134,12 +147,14 @@ try {
                     'activity_category' => 'OPERATING',
                     'flow_direction' => 'BOTH', 'is_active' => true,
                 ]);
+                $phase = 'EXCHANGE_RATE';
                 ExchangeRate::query()->create([
                     'rate_date' => now()->toDateString(),
                     'source_currency' => 'USD', 'target_currency' => 'PEN',
                     'buy_rate' => '3.741000', 'sell_rate' => '3.755000',
                 ]);
 
+                $phase = 'ACCOUNTS';
                 // 200 synthetic 6-digit operational accounts at level 4.
                 // PostgreSQL enforces level 1..4 and only level 4 operational.
                 // The three parent nodes are 1 -> 12 -> 121.
@@ -180,17 +195,19 @@ try {
                 return $total;
             });
 
+            $phase = 'CURRENT_COMPANY';
             $user->update(['current_company_id' => $company->id]);
 
             // Write credentials before DB commit, so inability to protect the
             // file rolls the SQL transaction back. Remove file on any failure.
+            $phase = 'CREDENTIAL_FILE';
             $lines = [
                 'LOCAL_DEMO_EMAIL=demo.pg18@example.test',
                 'LOCAL_DEMO_PASSWORD='.$password,
                 'LOCAL_DEMO_COMPANY_ID='.$company->id,
             ];
             if (file_put_contents($secretFile, implode(PHP_EOL, $lines).PHP_EOL, LOCK_EX) === false) {
-                throw new RuntimeException('No se pudo guardar credenciales privadas.');
+                throw new RuntimeException('LOCAL_CREDENTIAL_FILE');
             }
             $createdFile = true;
 
@@ -208,7 +225,19 @@ try {
     echo "[PASS] Credenciales privadas guardadas en backend/.env.pg18.demo.local.\n";
     echo "[SIGUIENTE] Iniciar backend local 8011 y medir tiempos HTTP reales.\n";
 } catch (Throwable $e) {
-    // Never echo driver exceptions, SQL bindings, passwords or token values.
-    fwrite(STDERR, '[FAIL] Fixture PG18 no completada: '.get_class($e).".\n");
+    // Only print static, allowlisted diagnostic codes. Never print SQL,
+    // bindings, passwords, DB URLs, driver messages or token strings.
+    $safeReasons = ['LOCAL_CONFIG', 'LOCAL_STATE', 'LOCAL_CURRENCY', 'LOCAL_CREDENTIAL_FILE'];
+    $reason = $e instanceof RuntimeException && in_array($e->getMessage(), $safeReasons, true)
+        ? $e->getMessage() : 'OTHER_ERROR';
+    $sqlstate = 'NONE';
+    if ($e instanceof \Illuminate\Database\QueryException) {
+        $raw = (string) ($e->errorInfo[0] ?? '');
+        if (preg_match('/^[0-9A-Z]{5}$/D', $raw) === 1) {
+            $sqlstate = $raw;
+        }
+    }
+    fwrite(STDERR, '[FAIL] Fixture PG18: fase='.$phase.'; motivo='.$reason
+        .'; tipo='.get_class($e).'; SQLSTATE='.$sqlstate.".\n");
     exit(1);
 }
