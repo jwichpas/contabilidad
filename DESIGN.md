@@ -251,3 +251,41 @@ Todos estos caches permanecen únicamente en memoria y se eliminan en `App.vue` 
 - Probar errores HTTP, accesos sin permisos, cierre de sesión durante cargas y refetch explícito del árbol PCGE.
 
 **Sin cambios en backend**, migraciones o reglas financieras. No fusionar hasta validar nuevamente los resultados reales.
+
+
+## 13. Iteración 8 — Historial del Libro Diario y T.C. veraz (06/11/2026)
+
+**Evidencia:** el usuario registró un asiento ficticio en PostgreSQL 18 local
+(`11-00001`, fecha 2026-11-06, estado `POSTED`). La captura del historial
+mostró una fecha ISO cruda y una etiqueta de tipo muy estrecha; la cabecera
+mostraba tasas codificadas que no coincidían con las registradas en el editor.
+
+**Ajustes propuestos en esta rama (no integrados en main):**
+- Mostrar la fecha del asiento como `DD/MM/AAAA` sin interpretar la medianoche
+  UTC como una fecha local diferente; el valor de la API se conserva.
+- Separar el tipo contable y el subdiario, traducir estados de presentación
+  (Registrado/Revertido) y evitar saltos de línea en la fecha.
+- Sustituir el indicador fijo de `App.vue` por una consulta GET del tipo de
+  cambio diario de la **empresa activa**, con clave de caché por empresa y fecha
+  contable peruana. Solo se muestran cifras si el API confirma registro exacto
+  para ese día (`is_recorded_for_date`), moneda USD y base PEN.
+- Mostrar el estado de consulta, falta de registro, error o base diferente;
+  no identificar la tasa empresarial como una cotización SUNAT en vivo.
+- Cancelar solicitudes anteriores con `AbortSignal` al cambiar el contexto
+  y refrescar el indicador al guardar tasas en el maestro de cambios.
+- Pruebas unitarias de fechas y selección estricta de tasa; regresiones
+  estáticas de presentación, aislamiento y actualización.
+
+**Referencias:** UI UX Pro Max, Hallmark e Impeccable guían esta iteración.
+Frontend Slides queda para reportes y Scroll World para eventual landing,
+según §1. No se añadieron dependencias, efectos 3D ni animaciones pesadas.
+
+**No se modifica:** backend, esquemas, RLS, funciones de registro/extorno,
+precisión monetaria, cuentas, idempotencia ni datos persistidos.
+
+**Aprobación pendiente:** ejecutar `pnpm typecheck`, `pnpm test:unit`,
+`pnpm build` y `pnpm check:bundle` en `frontend`; probar navegador
+con el laboratorio PostgreSQL 18 (recarga del asiento `11-00001`, detalle
+de partidas, cambio de empresa, fecha sin tasa, actualización de tasas,
+claro/oscuro, ancho 375/768/1024/1440 px y teclado). Una inspección
+estática de GitHub no sustituye esas comprobaciones.
