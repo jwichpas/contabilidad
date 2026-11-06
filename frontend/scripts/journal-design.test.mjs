@@ -89,7 +89,7 @@ test('fecha histórica ISO se presenta sin corrimiento de día UTC', () => {
 });
 
 test('estados y tipos contables legibles preservan valores originales de la API', () => {
-  assert.equal(journalEntryTypeLabel('STANDARD'), 'Diario');
+  assert.equal(journalEntryTypeLabel('STANDARD'), 'Estándar');
   assert.equal(journalEntryTypeLabel('OPENING'), 'Apertura');
   assert.equal(journalEntryTypeLabel('ADJUSTMENT'), 'Ajuste');
   assert.equal(journalEntryTypeLabel('REVERSAL'), 'Reversión');
