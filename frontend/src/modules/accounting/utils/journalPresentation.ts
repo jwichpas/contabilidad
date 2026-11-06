@@ -21,7 +21,7 @@ export function formatAccountingDate(value: string): string {
 
 export function journalEntryTypeLabel(value: EntryType): string {
   switch (value) {
-    case 'STANDARD': return 'Diario';
+    case 'STANDARD': return 'Estándar';
     case 'OPENING': return 'Apertura';
     case 'ADJUSTMENT': return 'Ajuste';
     case 'REVERSAL': return 'Reversión';
