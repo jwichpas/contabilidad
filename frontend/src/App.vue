@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue';
-import { useQueryClient } from '@tanstack/vue-query';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { Loader2 } from 'lucide-vue-next';
 
 
@@ -24,7 +24,9 @@ import AppHeader from './shared/layout/AppHeader.vue';
 import type { ActiveCompanyInfo, NavigationModule } from './shared/layout/navigation.types';
 import { asCompanyId, type CompanyId } from './modules/accounting/types/accountingAccount.types';
 import { useAuthSession } from './shared/auth/useAuthSession';
-import { SystemDecimal } from './shared/types/numeric.types';
+
+import { selectRecordedUsdPenRate } from './modules/accounting/utils/headerExchangeRate';
+import { formatAccountingDate, peruAccountingDate } from './modules/accounting/utils/journalPresentation';
 
 // Pantallas cargadas por módulo, conservando la clave por empresa y los eventos.
  // Vista y autenticación globales permanecen síncronas para evitar un shell vacío.
@@ -181,10 +183,46 @@ const canManagePeriods = computed(() => {
   return company?.role === 'ADMIN' || company?.role === 'CHIEF_ACCOUNTANT';
 });
 
-// Demostración en vivo de System.Decimal (NUMERIC(14,6)) para Tipo de Cambio SUNAT
-const sunatBuyRate = SystemDecimal.fromExchangeRate('3.742000');
-const sunatSellRate = SystemDecimal.fromExchangeRate('3.758000');
-const sunatSpread = sunatSellRate.subtract(sunatBuyRate);
+// El indicador global usa exclusivamente el T.C. registrado de la empresa activa.
+// La fecha pertenece a Perú, no al huso horario del navegador ni al UTC.
+const headerFxDate = shallowRef(peruAccountingDate());
+const headerRateQuery = useQuery({
+  queryKey: computed(() => ['header-exchange-rates', activeCompanyId.value, headerFxDate.value] as const),
+  enabled: computed(() => isAuthenticated.value && !isSwitchingCompany.value),
+  queryFn: async ({ signal }) => {
+    // Capturar sesión, empresa y fecha antes de cargar el módulo dinámico.
+    // El cliente HTTP y sus esquemas no son necesarios en el shell inicial.
+    const token = accessToken.value;
+    const tenant = activeCompanyId.value;
+    const date = headerFxDate.value;
+    if (!token) throw new Error('Sesión no disponible para consultar tipos de cambio.');
+    const { AccountingApiClient } = await import('./modules/accounting/api/httpClient');
+    if (signal.aborted) throw new DOMException('Consulta anterior cancelada.', 'AbortError');
+    return new AccountingApiClient('', {
+      getAccessToken: () => token,
+      getActiveCompanyId: () => tenant,
+    }).fetchCompanyExchangeRates(date, signal);
+  },
+  staleTime: 60_000,
+  refetchOnWindowFocus: true,
+  retry: false,
+});
+
+const headerUsdRate = computed(() => {
+  if (!isAuthenticated.value || isSwitchingCompany.value || headerRateQuery.isFetching.value) return null;
+  return selectRecordedUsdPenRate(headerRateQuery.data.value, headerFxDate.value);
+});
+
+const headerRateStatus = computed<'loading' | 'unavailable' | 'unrecorded' | 'not-applicable' | 'recorded'>(() => {
+  if (!isAuthenticated.value || isSwitchingCompany.value || headerRateQuery.isPending.value || headerRateQuery.isFetching.value) return 'loading';
+  if (headerRateQuery.isError.value) return 'unavailable';
+  if (headerRateQuery.data.value?.base_currency.code !== 'PEN') return 'not-applicable';
+  return headerUsdRate.value ? 'recorded' : 'unrecorded';
+});
+
+function refreshHeaderDate(): void {
+  headerFxDate.value = peruAccountingDate();
+}
 
 function resolveModuleFromHash(): NavigationModule {
   if (typeof window === 'undefined') return 'journal';
@@ -274,6 +312,7 @@ async function handleCompanyCreated(result: CompanyOnboardingResult): Promise<vo
 onMounted(async () => {
   syncHashWithModule();
   window.addEventListener('hashchange', syncHashWithModule);
+  window.addEventListener('focus', refreshHeaderDate);
   try {
     await ensureAuthenticated();
   } finally {
@@ -283,6 +322,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('hashchange', syncHashWithModule);
+  window.removeEventListener('focus', refreshHeaderDate);
 });
 
 watch(
@@ -347,9 +387,9 @@ watch(
         :is-live-connected="isLiveConnected"
         :is-switching-company="isSwitchingCompany"
         :is-sidebar-collapsed="isSidebarCollapsed"
-        :sunat-buy-rate="sunatBuyRate"
-        :sunat-sell-rate="sunatSellRate"
-        :sunat-spread="sunatSpread"
+        :header-usd-rate="headerUsdRate"
+        :header-rate-date="formatAccountingDate(headerFxDate)"
+        :header-rate-status="headerRateStatus"
         @toggle-collapse="isSidebarCollapsed = !isSidebarCollapsed"
         @open-mobile="isMobileDrawerOpen = true"
         @switch-company="handleSwitchCompany"

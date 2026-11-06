@@ -14,7 +14,6 @@ import UiSelect from '@/shared/ui/UiSelect.vue';
 import type { UiSelectOption } from '@/shared/ui/types';
 import type { CompanyId } from '@/modules/accounting/types/accountingAccount.types';
 import type { UserCompany } from '@/shared/auth/useAuthSession';
-import type { SystemDecimal } from '@/shared/types/numeric.types';
 import type { ActiveCompanyInfo, NavigationModule } from './navigation.types';
 
 interface AuthenticatedUser {
@@ -32,9 +31,9 @@ const props = defineProps<{
   readonly isLiveConnected: boolean;
   readonly isSwitchingCompany: boolean;
   readonly isSidebarCollapsed: boolean;
-  readonly sunatBuyRate: SystemDecimal;
-  readonly sunatSellRate: SystemDecimal;
-  readonly sunatSpread: SystemDecimal;
+  readonly headerUsdRate: { readonly buy_rate: string; readonly sell_rate: string } | null;
+  readonly headerRateDate: string;
+  readonly headerRateStatus: 'loading' | 'unavailable' | 'unrecorded' | 'not-applicable' | 'recorded';
 }>();
 
 const emit = defineEmits<{
@@ -182,16 +181,23 @@ const activeCompanyIdString = computed<string>({
         <span class="hidden sm:inline">Cerrar Sesión</span>
       </button>
 
-      <!-- Ticker Tipo de Cambio SUNAT (System.Decimal 14,6) -->
+      <!-- Solo tipos de cambio diarios registrados para la empresa activa. -->
       <div
         class="hidden 2xl:inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surf border border-line text-xs num"
-        :title="`Spread cambiario exacto System.Decimal(14,6): ${sunatSpread.toString()}`"
+        :title="`Tipo de cambio de la empresa para ${headerRateDate}; no es una cotización SUNAT en vivo.`"
+        role="status"
+        aria-live="polite"
       >
-        <ArrowLeftRight class="w-3.5 h-3.5 text-pos" />
-        <span class="text-muted">USD/PEN:</span>
-        <span class="text-foreground font-semibold">C: {{ sunatBuyRate.toString() }}</span>
-        <span class="text-line">|</span>
-        <span class="text-brand font-semibold">V: {{ sunatSellRate.toString() }}</span>
+        <ArrowLeftRight class="w-3.5 h-3.5 shrink-0" :class="headerRateStatus === 'recorded' ? 'text-pos' : 'text-muted'" aria-hidden="true" />
+        <span class="text-muted whitespace-nowrap">USD/PEN · {{ headerRateDate }}</span>
+        <template v-if="headerRateStatus === 'recorded' && headerUsdRate">
+          <span class="text-foreground font-semibold whitespace-nowrap">C: {{ headerUsdRate.buy_rate }}</span>
+          <span class="text-line" aria-hidden="true">|</span>
+          <span class="text-brand font-semibold whitespace-nowrap">V: {{ headerUsdRate.sell_rate }}</span>
+        </template>
+        <span v-else class="text-muted whitespace-nowrap">
+          {{ headerRateStatus === 'loading' ? 'Consultando…' : headerRateStatus === 'unavailable' ? 'No disponible' : headerRateStatus === 'not-applicable' ? 'Base distinta de PEN' : 'Sin registro diario' }}
+        </span>
       </div>
     </div>
   </header>

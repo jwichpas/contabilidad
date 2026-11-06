@@ -755,10 +755,10 @@ export class AccountingApiClient {
   /**
    * Obtiene los tipos de cambio de las monedas secundarias configuradas para una fecha contable.
    */
-  public async fetchCompanyExchangeRates(date: string): Promise<CompanyExchangeRatesResponse> {
+  public async fetchCompanyExchangeRates(date: string, signal?: AbortSignal): Promise<CompanyExchangeRatesResponse> {
     const rawPayload = await this.request<{ data: CompanyExchangeRatesResponse }>(
       `/api/v1/company/exchange-rates?date=${encodeURIComponent(date)}`,
-      { method: 'GET' },
+      { method: 'GET', signal },
       true,
     );
     return rawPayload.data;
