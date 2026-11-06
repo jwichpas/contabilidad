@@ -94,12 +94,16 @@ WHERE schemaname='public'
     $sql=@'
 BEGIN;
 SET LOCAL ROLE app_backend;
+SELECT set_config('app.current_company_id','',true);
 SELECT set_config('app.current_user_id',(
   SELECT id::text FROM public.users WHERE email='demo.pg18@example.test'
 ),true);
 DO $verify$
 DECLARE v_count integer;
 BEGIN
+ IF current_user <> 'app_backend' THEN
+   RAISE EXCEPTION 'Local RLS verifier is not app_backend';
+ END IF;
  SELECT count(*) INTO v_count FROM public.company_user;
  IF v_count <> 1 THEN
    RAISE EXCEPTION 'Local RLS owner membership failed';
@@ -112,16 +116,13 @@ BEGIN
 END
 $verify$;
 ROLLBACK;
--- psql -c sends the multi-statement string as one request: the DO
--- command tag is not guaranteed to be part of the captured output.
--- Use one final, exact marker returned only after the DO validation
--- has completed successfully and the transaction has rolled back.
-SELECT 'PG18_RLS_MEMBERSHIP_OK'::text AS verified;
 '@
-    $out=SqlResult $sql
-    if($out -cne 'PG18_RLS_MEMBERSHIP_OK'){
-        throw 'Prueba transaccional RLS de usuario propio y ajeno no aprobada.'
-    }
+    # The DO block itself asserts the correct SQL role and both RLS
+    # visibility counts. Any failed assertion raises an SQL error.
+    # SqlResult enforces ON_ERROR_STOP=1 plus docker/psql exit status.
+    # Never infer successful RLS execution from psql output tags or a
+    # marker: with multi-statement -c, those are presentation-dependent.
+    $null=SqlResult $sql
     Write-Host '[PASS] RLS: usuario propio ve una membresía, usuario ajeno no ve ninguna.'
 }
 try{
