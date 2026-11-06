@@ -24,7 +24,7 @@ import AppHeader from './shared/layout/AppHeader.vue';
 import type { ActiveCompanyInfo, NavigationModule } from './shared/layout/navigation.types';
 import { asCompanyId, type CompanyId } from './modules/accounting/types/accountingAccount.types';
 import { useAuthSession } from './shared/auth/useAuthSession';
-import { AccountingApiClient } from './modules/accounting/api/httpClient';
+
 import { selectRecordedUsdPenRate } from './modules/accounting/utils/headerExchangeRate';
 import { formatAccountingDate, peruAccountingDate } from './modules/accounting/utils/journalPresentation';
 
@@ -189,14 +189,19 @@ const headerFxDate = shallowRef(peruAccountingDate());
 const headerRateQuery = useQuery({
   queryKey: computed(() => ['header-exchange-rates', activeCompanyId.value, headerFxDate.value] as const),
   enabled: computed(() => isAuthenticated.value && !isSwitchingCompany.value),
-  queryFn: ({ signal }) => {
+  queryFn: async ({ signal }) => {
+    // Capturar sesión, empresa y fecha antes de cargar el módulo dinámico.
+    // El cliente HTTP y sus esquemas no son necesarios en el shell inicial.
     const token = accessToken.value;
     const tenant = activeCompanyId.value;
+    const date = headerFxDate.value;
     if (!token) throw new Error('Sesión no disponible para consultar tipos de cambio.');
+    const { AccountingApiClient } = await import('./modules/accounting/api/httpClient');
+    if (signal.aborted) throw new DOMException('Consulta anterior cancelada.', 'AbortError');
     return new AccountingApiClient('', {
       getAccessToken: () => token,
       getActiveCompanyId: () => tenant,
-    }).fetchCompanyExchangeRates(headerFxDate.value, signal);
+    }).fetchCompanyExchangeRates(date, signal);
   },
   staleTime: 60_000,
   refetchOnWindowFocus: true,
