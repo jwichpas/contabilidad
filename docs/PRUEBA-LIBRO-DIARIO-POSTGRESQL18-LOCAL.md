@@ -670,3 +670,40 @@ y en otra terminal ejecutar
 **Pendiente:** verificar funcionalmente el script corregido y
 las cinco mediciones HTTP en el Windows del usuario. Sintaxis
 CI no sustituye la ejecución en PostgreSQL local.
+
+## Segunda corrección de la verificación RLS: aserciones SQL sin etiquetas
+
+El usuario confirmó que, después de adoptar el marcador de resultado
+`PG18_RLS_MEMBERSHIP_OK`, `-Accion Verificar` seguía produciendo
+`[FAIL] Prueba transaccional RLS de usuario propio y ajeno no aprobada.`.
+El mensaje se emitía **después** de que `SqlResult` ejecutara
+`psql` sin error y al comparar un texto de salida, no debido a una
+excepción SQL ni a una condición RLS comprobada como falsa.
+
+El cambio ahora evita completamente depender de las etiquetas o
+de la presentación de salida de `psql -c` multisentencia:
+
+- Se abre una transacción en el contenedor local verificado,
+  se asume `SET LOCAL ROLE app_backend` y se deja vacío el GUC
+  de empresa para probar específicamente el listado por usuario.
+- Se configura `app.current_user_id` con el usuario sintético.
+- Un bloque `DO` comprueba que el rol SQL sea `app_backend`,
+  que el usuario vea exactamente **una** membresía y que, después
+  de cambiarlo al identificador de un usuario ajeno, vea **cero**.
+- Cualquier incumplimiento ejecuta `RAISE EXCEPTION` y obliga
+  a `psql -v ON_ERROR_STOP=1` a terminar con código distinto de
+  cero. El wrapper `SqlResult` comprueba ese código.
+- El `ROLLBACK` garantiza que las variables GUC locales no se
+  conservan. Ya no hay comparación de etiquetas `DO` ni marcadores.
+
+No se alteró ninguna política, rol, permiso ni dato empresarial:
+la corrección únicamente cambia **la prueba de verificación**.
+
+Desde `backend`, después de `git pull --ff-only`, ejecutar
+`./scripts/habilitar-listado-empresas-pg18-local.ps1 -Accion Verificar`
+(en PowerShell: `.\\scripts\\habilitar-listado-empresas-pg18-local.ps1`).
+No volver a ejecutar `-Accion Aplicar` ni `-Accion Crear`.
+
+Si RLS pasa, el usuario puede ejecutar
+`./scripts/preparar-demo-pg18-local.ps1 -Accion Medir`
+con Laravel `8011` activo; las cinco mediciones HTTP siguen pendientes.
