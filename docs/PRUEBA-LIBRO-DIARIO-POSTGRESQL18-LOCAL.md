@@ -287,3 +287,74 @@ monedas PEN/USD, tasas de cambio, subdiarios y plan de cuentas.
 Preparar un backend Laravel de medición aislado en otro puerto,
 sin cambiar el servicio actual contra Neon. Comparar medianas de
 al menos cinco solicitudes HTTP `editor-bootstrap`.
+
+## Recuperación controlada tras fallo de preflight (2026-11-06)
+
+El usuario ejecutó `-Accion Plan` con el contenedor persistente
+`contabilidad-pg18-local` y obtuvo `0|0|0`. El primer
+`-Accion Instalar` creó correctamente la tabla
+`local_pg18_install_guard` y los roles auxiliares
+`anon` y `authenticated` (ambos `NOLOGIN`), pero se detuvo
+en el preflight Laravel **antes de ejecutar migraciones**.
+
+### Causa identificada en el instalador
+
+Se usaba `-notmatch '^[PASS] Laravel...'` para verificar un texto que
+comienza literalmente por `[PASS]`. En expresiones regulares,
+`[PASS]` es una clase de caracteres y **no** coincide con la cadena
+literal `[PASS]`. Esa condición rechazaba incluso una respuesta
+correcta. La salida interna de PHP se ocultaba por seguridad, de modo
+que no puede descartarse otro error independiente.
+
+**Correcciones en main:**
+- `php -r` sustituido por
+  `backend/scripts/verificar-preflight-pg18-local.php`: preflight
+  CLI robusto, valida ambas conexiones resueltas, rol, motor y token,
+  no imprime secretos ni SQL;
+- el resultado se comprueba mediante **comparación literal exacta**,
+  no regex ambigua;
+- `-Accion Recuperar` permite reanudar solo tras comprobar un estado
+  parcial específico: exactamente **una tabla** (la guardia),
+  **una fila** de guardia, ambos roles auxiliares sin capacidad LOGIN,
+  ningún `app_backend` y ninguna tabla de migraciones.
+  Además revalida el nombre/etiqueta Docker, puerto/volumen,
+  base `contabilidad_local` y PostgreSQL 18;
+- la recuperación **renueva el token de la única fila de guardia**;
+  no ejecuta `DROP`, no borra el volumen y no reescribe datos contables;
+- si hay cualquier otro estado, se interrumpe sin intentar reparar
+  automáticamente. Si alguna migración futura falla, analizar la base
+  parcial; no repetir `Instalar` ni `Recuperar` ciegamente.
+
+### Comandos en Windows
+
+En una ventana PowerShell limpia:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+.\scripts\instalar-esquema-pg18-local.ps1 -Accion Plan
+```
+
+Si devuelve `[ESTADO] ... = 1|0|0` y
+`[PASS] Estado parcial exacto verificado`, entonces:
+
+```powershell
+.\scripts\instalar-esquema-pg18-local.ps1 -Accion Recuperar
+```
+
+Si finaliza correctamente:
+
+```powershell
+.\scripts\instalar-esquema-pg18-local.ps1 -Accion Verificar
+```
+
+Se espera `25|3|1|0|5` internamente (migraciones, monedas,
+rol restringido, ausencia de INSERT en monedas, cinco tablas
+`FORCE RLS`) y el mensaje `[PASS] 25 migraciones...`.
+
+**Importante:** la corrección está validada por la sintaxis en CI,
+pero aún no se ha ejecutado el flujo de recuperación funcional sobre
+el Docker persistente del usuario. No publicar `.env.pg18.local`,
+contraseñas, `DB_URL` ni trazas con SQL confidencial.
