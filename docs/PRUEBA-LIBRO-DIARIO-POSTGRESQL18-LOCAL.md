@@ -543,3 +543,79 @@ vuelve a fallar, compartir **solo** la línea diagnóstica segura
 estática CI; la creación real de datos ficticios queda pendiente en
 Windows. El servidor Laravel 8011 y las cinco mediciones HTTP tampoco
 se han ejecutado aún.
+
+## Login local 8011: membresía ausente por política RLS de lectura (2026-11-06)
+
+Después de crear la empresa ficticia y usuario con 200 cuentas operativas,
+el usuario abrió el Laravel local en `127.0.0.1:8011` e intentó
+`preparar-demo-pg18-local.ps1 -Accion Medir`. El login devolvió una
+identidad y empresa actual válidas, pero `data.companies` no contenía
+la membresía esperada. El medidor detuvo las solicitudes antes de
+consultar el Libro Diario.
+
+**Causa verificada en el repositorio:** la migración original
+`backend/database/migrations/2026_10_20_010000_scope_company_listing_to_authenticated_user.php`
+agrega la política `company_user_authenticated_member_listing_policy`,
+una política `SELECT` que permite consultar exclusivamente las filas
+con `user_id = current_setting('app.current_user_id', true)::bigint`
+dentro de una transacción. Esa migración estaba restringida
+deliberadamente a un entorno antiguo y **no** estaba entre las
+25 migraciones locales. La política base `company_user_tenant_isolation_policy`
+es por `app.current_company_id`; no permite listar empresas
+antes de que exista una empresa activa en la transacción.
+
+### Solución local separada, sin modificar producción
+
+El script `backend/scripts/habilitar-listado-empresas-pg18-local.ps1`
+replica solo el SQL **SELECT** autorizado de aquella migración, pero
+con guardas específicas y explícitas del laboratorio PostgreSQL 18:
+
+- En `-Accion Verificar` no hace escrituras.
+- Comprueba Docker Linux, nombre, etiqueta `pg18-dev`, puerto
+  `127.0.0.1:55433`, volumen `contabilidad-pg18-local-data`,
+  motor PostgreSQL 18 y base `contabilidad_local`.
+- Comprueba 25 migraciones, un usuario y una empresa ficticios,
+  exactamente una membresía activa, rol limitado `app_backend`,
+  `FORCE RLS` y la política de tenant original activa.
+- En `-Accion Aplicar` instala exclusivamente
+  `company_user_authenticated_member_listing_policy` para
+  `SELECT TO app_backend`. No concede privilegios DML,
+  no altera políticas existentes y no usa Laravel ni Neon.
+- Verifica con el rol restringido en una transacción que el usuario
+  vea la membresía propia y que otro identificador no vea filas.
+- La instalación es idempotente: si la política existe y supera
+  la validación, no la crea por segunda vez.
+
+### Pasos en Windows
+
+Mantener cerrado únicamente el proceso Laravel `8011` mientras
+se actualiza código; el contenedor PostgreSQL **debe permanecer
+encendido**. En PowerShell:
+
+```powershell
+cd C:\Proyectos\contabilidad
+git switch main
+git pull --ff-only
+cd backend
+.\scripts\habilitar-listado-empresas-pg18-local.ps1 -Accion Verificar
+```
+
+Si confirma que falta la política y las comprobaciones pasan:
+
+```powershell
+.\scripts\habilitar-listado-empresas-pg18-local.ps1 -Accion Aplicar
+.\scripts\habilitar-listado-empresas-pg18-local.ps1 -Accion Verificar
+```
+
+Luego reiniciar el servidor Laravel en `8011` con
+`preparar-demo-pg18-local.ps1 -Accion Servidor` y, en otra
+terminal, ejecutar `preparar-demo-pg18-local.ps1 -Accion Medir`.
+
+**No volver a ejecutar `-Accion Crear`** ni instalar nuevas
+migraciones generales. Si hay error en las validaciones,
+no realizar modificaciones manuales de RLS: conservar el
+estado actual y compartir solo la salida sin credenciales.
+
+**Estado:** la corrección se publicó en GitHub; las comprobaciones
+de sintaxis en CI y el ensayo real contra Docker local deben
+confirmarse antes de considerar el flujo resuelto.
