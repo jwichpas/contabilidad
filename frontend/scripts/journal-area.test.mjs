@@ -206,7 +206,12 @@ test('exchange-rate catalog uses one currency join and preserves exact/historica
   const fx = readFileSync(new URL('../../backend/app/Http/Controllers/Api/V1/Company/GetCompanyExchangeRatesController.php', import.meta.url), 'utf8');
   const requestTiming = readFileSync(new URL('../../backend/app/Http/Middleware/JournalRequestTiming.php', import.meta.url), 'utf8');
   const bootstrap = readFileSync(new URL('../../backend/bootstrap/app.php', import.meta.url), 'utf8');
-  assert.match(fx, /join\('currencies as currency_catalog'/);
+  // La consulta optimizada agrega catálogos y tasas en una sola petición SQL.
+  // Verificar unión real, filtros por empresa y prioridad de tasa exacta
+  // sin acoplar el test a una implementación Eloquent anterior.
+  assert.match(fx, /JOIN public\.currencies cur ON cur\.id = cc\.currency_id/);
+  assert.match(fx, /cc\.company_id = \?::bigint AND cc\.is_active IS TRUE/);
+  assert.match(fx, /WHERE company_id = \?::bigint AND rate_date <= \?::date/);
   assert.doesNotMatch(fx, /->with\('currency'\)/);
   assert.match(fx, /DATABASE_EXACT/);
   assert.match(fx, /LATEST_HISTORICAL/);
