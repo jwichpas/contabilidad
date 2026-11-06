@@ -25,6 +25,7 @@ import type { ActiveCompanyInfo, NavigationModule } from './shared/layout/naviga
 import { asCompanyId, type CompanyId } from './modules/accounting/types/accountingAccount.types';
 import { useAuthSession } from './shared/auth/useAuthSession';
 import { AccountingApiClient } from './modules/accounting/api/httpClient';
+import { selectRecordedUsdPenRate } from './modules/accounting/utils/headerExchangeRate';
 import { formatAccountingDate, peruAccountingDate } from './modules/accounting/utils/journalPresentation';
 
 // Pantallas cargadas por módulo, conservando la clave por empresa y los eventos.
@@ -204,9 +205,7 @@ const headerRateQuery = useQuery({
 
 const headerUsdRate = computed(() => {
   if (!isAuthenticated.value || isSwitchingCompany.value || headerRateQuery.isFetching.value) return null;
-  const data = headerRateQuery.data.value;
-  if (!data || data.rate_date !== headerFxDate.value || data.base_currency.code !== 'PEN') return null;
-  return data.required_currencies.find(rate => rate.code === 'USD' && rate.is_recorded_for_date) ?? null;
+  return selectRecordedUsdPenRate(headerRateQuery.data.value, headerFxDate.value);
 });
 
 const headerRateStatus = computed<'loading' | 'unavailable' | 'unrecorded' | 'not-applicable' | 'recorded'>(() => {
