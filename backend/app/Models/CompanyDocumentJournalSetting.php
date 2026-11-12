@@ -16,7 +16,7 @@ final class CompanyDocumentJournalSetting extends Model
 
     protected $fillable = [
         'module', 'subdiary_code', 'main_account_id', 'tax_account_id',
-        'settlement_account_id', 'default_tax_rate',
+        'settlement_account_id', 'default_tax_rate', 'category_account_map',
     ];
 
     protected function casts(): array
@@ -25,6 +25,7 @@ final class CompanyDocumentJournalSetting extends Model
             'id' => 'integer', 'company_id' => 'integer',
             'main_account_id' => 'integer', 'tax_account_id' => 'integer',
             'settlement_account_id' => 'integer', 'default_tax_rate' => 'decimal:4',
+            'category_account_map' => 'array',
         ];
     }
 }
