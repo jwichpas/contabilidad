@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { TAX_CATEGORY_LABELS } from '../src/modules/accounting/types/documentJournal.types.ts';
 import { buildDocumentJournalEntityQuery } from '../src/modules/accounting/api/documentJournalEntityQuery.ts';
 import { createDocumentJournalDraftSchema } from '../src/modules/accounting/schemas/documentJournalDraft.schema.ts';
+import { isDocumentFxReady } from '../src/modules/accounting/api/documentJournalFx.ts';
 
 const read = (relative) => readFileSync(new URL(relative, import.meta.url), 'utf8');
 
@@ -121,4 +122,30 @@ test('VueSonner, VeeValidate and live registered FX rate are used before POST', 
   assert.match(dialog, /<Dialog/);
   assert.match(app, /<Toaster/);
   assert.match(client, /fetchCompanyExchangeRates\(date: string\)/);
+});
+
+
+test('FX gate rejects stale, suggested and historical rates even when the invoice currency is PEN', () => {
+  const exact = {
+    rate_date: '2026-11-12',
+    base_currency: { code: 'PEN', name: 'Soles', symbol: 'S/' },
+    required_currencies: [{
+      currency_id: 1, code: 'USD', name: 'Dólares', symbol: '$',
+      buy_rate: '3.742000', sell_rate: '3.758000',
+      is_recorded_for_date: true, source: 'DATABASE_EXACT',
+    }],
+  };
+  assert.equal(isDocumentFxReady(exact, '2026-11-12'), true);
+  assert.equal(isDocumentFxReady(exact, '2026-11-13'), false);
+  assert.equal(isDocumentFxReady(null, '2026-11-12'), false);
+  assert.equal(isDocumentFxReady({
+    ...exact, required_currencies: [{ ...exact.required_currencies[0], is_recorded_for_date: false, source: 'LATEST_HISTORICAL' }],
+  }, '2026-11-12'), false);
+  assert.equal(isDocumentFxReady({
+    ...exact, required_currencies: [{ ...exact.required_currencies[0], is_recorded_for_date: false, source: 'DEFAULT_PRESET' }],
+  }, '2026-11-12'), false);
+  assert.equal(isDocumentFxReady({
+    ...exact, required_currencies: [{ ...exact.required_currencies[0], sell_rate: '0' }],
+  }, '2026-11-12'), false);
+  assert.equal(isDocumentFxReady({ ...exact, required_currencies: [] }, '2026-11-12'), true);
 });
