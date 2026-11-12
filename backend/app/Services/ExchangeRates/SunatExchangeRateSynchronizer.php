@@ -73,6 +73,24 @@ final readonly class SunatExchangeRateSynchronizer
 
         $quote = $this->client->fetch();
         if ($quote === null) {
+            // SUNAT may be temporarily inaccessible. Another authorized request
+            // could have saved the rate while the HTTP lookup was in flight.
+            // Re-check the authoritative tenant-scoped database before reporting 503.
+            $concurrent = $this->tenant->run($companyId, static function () use ($companyId, $date): ?ExchangeRate {
+                return ExchangeRate::query()
+                    ->where('company_id', $companyId)
+                    ->where('rate_date', $date)
+                    ->where('source_currency', 'USD')
+                    ->where('target_currency', 'PEN')
+                    ->first();
+            });
+            if ($concurrent !== null) {
+                return [
+                    ...$base, 'status' => 'existing',
+                    'buy_rate' => (string) $concurrent->buy_rate,
+                    'sell_rate' => (string) $concurrent->sell_rate,
+                ];
+            }
             return [...$base, 'status' => 'unavailable'];
         }
         if ($quote['date'] !== $date) {
