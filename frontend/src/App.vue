@@ -405,7 +405,7 @@ watch(
         <DocumentJournalView
           v-else-if="currentModule === 'purchases' || currentModule === 'sales'"
           :key="'documents-' + currentModule + '-' + activeCompanyId"
-          :module="currentModule"
+          :module="currentModule === 'purchases' ? 'purchases' : 'sales'"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
           :can-configure="canDeactivateEntities"
