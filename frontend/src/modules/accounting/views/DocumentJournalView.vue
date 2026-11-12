@@ -172,9 +172,7 @@ async function refreshFx(): Promise<void> {
  * histórica se rechaza sin copiar el valor del día actual.
  */
 async function importSunatFx(showSuccess = true): Promise<boolean> {
-  if (fxImporting.value || fxLoading.value || posting.value || fxError.value || !fxSnapshot.value ||
-    fxSnapshot.value.rate_date !== draft.entry_date ||
-    !secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)) return false;
+  if (!canImportFx.value || posting.value) return false;
   const targetDate = draft.entry_date;
   const companyId = props.activeCompanyId;
   fxImporting.value = true;
@@ -249,7 +247,11 @@ const amountTax = computed(() => taxAllocations.value.reduce((sum, row) => sum +
 const amountTotal = computed(() => amountBase.value + amountTax.value);
 const secondaryRates = computed(() => fxSnapshot.value?.required_currencies ?? []);
 const fxReady = computed(() => !fxLoading.value && !fxError.value &&
-  isDocumentFxReady(fxSnapshot.value, draft.entry_date));
+  isDocumentFxReady(fxSnapshot.value, draft.entry_date)
+  && currencies.value.every(code => code === 'PEN' || secondaryRates.value.some(rate => rate.code === code)));
+const canImportFx = computed(() => !fxLoading.value && !fxImporting.value && !fxError.value
+  && fxSnapshot.value?.rate_date === draft.entry_date && currencies.value.includes('USD')
+  && secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date));
 const fxSourceLabel = (rate: RequiredExchangeRateItem): string =>
   rate.is_recorded_for_date ? 'Registrado para esta fecha'
     : rate.source === 'LATEST_HISTORICAL' ? 'Referencia histórica; no registrada para el día'
@@ -453,9 +455,7 @@ async function preparePosting(): Promise<void> {
   // Only a SUCCESSFUL database lookup that explicitly reports a missing USD
   // daily rate can initiate a SUNAT import. A failed GET is not evidence
   // that no rate exists; retry it rather than creating an unrelated 503.
-  if (!fxReady.value && !fxError.value && fxSnapshot.value?.rate_date === draft.entry_date
-    && currencies.value.includes('USD')
-    && secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)) {
+  if (!fxReady.value && canImportFx.value) {
     // El usuario está confirmando un comprobante; se intenta importar solo aquí.
     await importSunatFx(false);
   }
@@ -672,8 +672,7 @@ onMounted(() => { void load(); });
                 :disabled="fxLoading || fxImporting" @click="refreshFx">
                 <RefreshCw class="size-3.5" :class="{ 'animate-spin': fxLoading }" /> Actualizar
               </button>
-              <button v-if="!fxError && fxSnapshot?.rate_date === draft.entry_date && currencies.includes('USD')
-                && secondaryRates.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)"
+              <button v-if="canImportFx || fxImporting"
                 type="button" class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
                 :disabled="fxLoading || fxImporting || posting"
                 @click="importSunatFx()">
