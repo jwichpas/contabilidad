@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Api\V1\Accounting;
 
 use App\Models\AccountingAccount;
 use App\Models\AccountingDocumentEntry;
+use App\Models\AccountingTaxRegisterEntry;
+use App\Models\AccountingTaxRegisterAllocation;
 use App\Models\CompanyCurrency;
 use App\Models\CompanyDocumentJournalSetting;
 use App\Models\CompanySubdiary;
@@ -14,6 +16,7 @@ use App\Models\ExchangeRate;
 use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Services\Accounting\PostJournalEntryService;
+use App\Services\Accounting\DocumentTaxAllocationService;
 use App\Services\Security\AuditLoggerService;
 use App\Support\Math\Decimal;
 use App\Support\Tenant\TenantContext;
@@ -79,8 +82,16 @@ final readonly class DocumentJournalController
             'issue_date' => ['required', 'date_format:Y-m-d'],
             'entry_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:issue_date'],
             'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
-            'taxable_amount' => ['required', 'numeric', 'gt:0', 'max:999999999', 'regex:/^\d+(?:\.\d{1,4})?$/'],
-            'tax_amount' => ['required', 'numeric', 'min:0', 'max:999999999', 'regex:/^\d+(?:\.\d{1,4})?$/'],
+            // Backwards-compatible totals are verified against typed tax allocations.
+            'taxable_amount' => ['sometimes', 'numeric', 'gt:0', 'max:999999999', 'regex:/^\d+(?:\.\d{1,4})?$/'],
+            'tax_amount' => ['sometimes', 'numeric', 'min:0', 'max:999999999', 'regex:/^\d+(?:\.\d{1,4})?$/'],
+            'tax_period' => ['sometimes', 'string', 'regex:/^[0-9]{4}(0[1-9]|1[0-2])$/'],
+            'due_date' => ['nullable', 'date_format:Y-m-d'],
+            'tax_allocations' => ['sometimes', 'array', 'min:1', 'max:6'],
+            'tax_allocations.*.category' => ['required_with:tax_allocations', 'string', 'max:30'],
+            'tax_allocations.*.base_amount' => ['required_with:tax_allocations', 'numeric', 'gt:0', 'max:999999999', 'regex:/^\d+(?:\.\d{1,4})?$/'],
+            'tax_allocations.*.tax_amount' => ['required_with:tax_allocations', 'numeric', 'min:0', 'max:999999999', 'regex:/^\d+(?:\.\d{1,4})?$/'],
+            'tax_allocations.*.creditable_tax_amount' => ['sometimes', 'numeric', 'min:0', 'max:999999999', 'regex:/^\d+(?:\.\d{1,4})?$/'],
             'cost_center_id' => ['nullable', 'integer', 'min:1'],
             'company_area_id' => ['nullable', 'integer', 'min:1'],
             'cash_flow_area_id' => ['nullable', 'integer', 'min:1'],
@@ -103,10 +114,25 @@ final readonly class DocumentJournalController
             throw ValidationException::withMessages(['entity_id' => ['Seleccione un proveedor o cliente activo de esta empresa.']]);
         }
 
+        $taxBreakdown = DocumentTaxAllocationService::normalize($kind, $data);
+        $base = $taxBreakdown['base'];
+        $taxAmount = $taxBreakdown['tax'];
+        $creditableTax = $taxBreakdown['creditable'];
+        $total = $taxBreakdown['total'];
+        $taxLineAmount = $kind === 'SALE' ? $taxAmount : $creditableTax;
+        $categoryAccountMap = $setting->category_account_map ?? [];
+        $usedCategoryAccounts = array_map(
+            static fn (array $item): int => (int) ($categoryAccountMap[$item['category']] ?? $setting->main_account_id),
+            $taxBreakdown['allocations']
+        );
+        $accountIds = array_values(array_unique(array_merge(
+            $usedCategoryAccounts,
+            [$setting->main_account_id, $setting->settlement_account_id],
+            $setting->tax_account_id ? [$setting->tax_account_id] : []
+        )));
+
         $accounts = AccountingAccount::query()
-            ->whereIn('id', array_values(array_filter([
-                $setting->main_account_id, $setting->tax_account_id, $setting->settlement_account_id,
-            ])))->operationalActive()->get()->keyBy('id');
+            ->whereIn('id', $accountIds)->operationalActive()->get()->keyBy('id');
         $main = $accounts->get($setting->main_account_id);
         $settlement = $accounts->get($setting->settlement_account_id);
         $tax = $setting->tax_account_id === null ? null : $accounts->get($setting->tax_account_id);
@@ -114,19 +140,12 @@ final readonly class DocumentJournalController
             throw ValidationException::withMessages(['module' => ['Revise las cuentas de configuración: una o más están inactivas.']]);
         }
 
-        $base = Decimal::ofMonetary((string) $data['taxable_amount']);
-        $taxAmount = Decimal::ofMonetary((string) $data['tax_amount']);
-        // La boleta de compra no se imputa automáticamente como crédito fiscal.
-        // En esta versión conservadora, el monto completo se lleva a la cuenta principal.
-        if ($kind === 'PURCHASE' && $data['document_type'] === '03' && $taxAmount->isPositive()) {
-            throw ValidationException::withMessages(['tax_amount' => [
-                'La boleta de compra no habilita crédito fiscal en este flujo. Consigne el importe total en la cuenta de compra y tributo 0.',
-            ]]);
+        if ($accounts->count() !== count($accountIds)) {
+            throw ValidationException::withMessages(['module' => ['Una cuenta tributaria de la clasificación está inactiva o no pertenece a esta empresa.']]);
         }
-        if ($taxAmount->isPositive() && $tax === null) {
-            throw ValidationException::withMessages(['tax_amount' => ['Configure una cuenta tributaria o registre tributo cero.']]);
+        if ($taxLineAmount->isPositive() && $tax === null) {
+            throw ValidationException::withMessages(['tax_allocations' => ['Configure una cuenta de IGV para registrar el monto tributario correspondiente.']]);
         }
-        $total = $base->add($taxAmount);
         $date = CarbonImmutable::createFromFormat('!Y-m-d', $data['entry_date']);
         if (! $date) {
             throw ValidationException::withMessages(['entry_date' => ['Fecha contable inválida.']]);
@@ -161,20 +180,32 @@ final readonly class DocumentJournalController
             }
         }
 
-        if ($currency === 'PEN') {
-            $mainLocal = $base;
-            $taxLocal = $taxAmount;
-            $mainForeign = $base->divide($rate);
-            $taxForeign = $taxAmount->isZero() ? Decimal::zero() : $taxAmount->divide($rate);
-        } else {
-            $mainForeign = $base;
-            $taxForeign = $taxAmount;
-            $mainLocal = $base->multiply($rate);
-            $taxLocal = $taxAmount->isZero() ? Decimal::zero() : $taxAmount->multiply($rate);
+        // Cada categoría tiene su base fiscal propia; el diario puede agrupar
+        // cuentas, pero el Registro SUNAT conservará las asignaciones originales.
+        $categoryMainLines = [];
+        $totalLocal = Decimal::zero();
+        $totalForeign = Decimal::zero();
+        foreach ($taxBreakdown['allocations'] as $item) {
+            $categoryBase = Decimal::ofMonetary($item['base_amount']);
+            $categoryTax = Decimal::ofMonetary($item['tax_amount']);
+            $categoryCredit = Decimal::ofMonetary($item['creditable_tax_amount']);
+            $categoryAccountingBase = $kind === 'PURCHASE'
+                ? $categoryBase->add($categoryTax)->sub($categoryCredit)
+                : $categoryBase;
+            $local = $currency === 'PEN' ? $categoryAccountingBase : $categoryAccountingBase->multiply($rate);
+            $foreign = $currency === 'PEN' ? $categoryAccountingBase->divide($rate) : $categoryAccountingBase;
+            $totalLocal = $totalLocal->add($local);
+            $totalForeign = $totalForeign->add($foreign);
+            $categoryMainLines[] = [
+                'category' => $item['category'],
+                'account_id' => (int) ($categoryAccountMap[$item['category']] ?? $setting->main_account_id),
+                'local' => $local, 'foreign' => $foreign,
+            ];
         }
-        // Construir las contrapartidas sumando los importes ya redondeados: diferencia = 0.0000.
-        $totalLocal = $mainLocal->add($taxLocal);
-        $totalForeign = $mainForeign->add($taxForeign);
+        $taxLocal = $currency === 'PEN' ? $taxLineAmount : $taxLineAmount->multiply($rate);
+        $taxForeign = $currency === 'PEN' ? $taxLineAmount->divide($rate) : $taxLineAmount;
+        $totalLocal = $totalLocal->add($taxLocal);
+        $totalForeign = $totalForeign->add($taxForeign);
 
         $period = FiscalPeriod::query()->firstOrCreate(
             ['year' => $date->year, 'month' => $date->month],
@@ -204,27 +235,30 @@ final readonly class DocumentJournalController
         }
         $isSale = $kind === 'SALE';
         $zero = Decimal::zero()->toString();
-        $mainEntity = $this->accountNeedsEntity($main) ? (int) $entity->id : null;
         $taxEntity = $tax && $this->accountNeedsEntity($tax) ? (int) $entity->id : null;
         $settlementEntity = $this->accountNeedsEntity($settlement) ? (int) $entity->id : null;
-        $lines = [
-            [
-                'accounting_account_id' => (int) $main->id,
-                'entity_id' => $mainEntity,
+
+        $lines = [];
+        foreach ($categoryMainLines as $source) {
+            $sourceAccount = $accounts->get($source['account_id']);
+            $sourceEntity = $this->accountNeedsEntity($sourceAccount) ? (int) $entity->id : null;
+            $lines[] = [
+                'accounting_account_id' => (int) $sourceAccount->id,
+                'entity_id' => $sourceEntity,
                 'cost_center_id' => $data['cost_center_id'] ?? null,
                 'company_area_id' => $data['company_area_id'] ?? null,
                 'cash_flow_area_id' => $data['cash_flow_area_id'] ?? null,
-                'description' => $description,
-                'debit_local' => $isSale ? $zero : $mainLocal->toString(),
-                'credit_local' => $isSale ? $mainLocal->toString() : $zero,
-                'debit_foreign' => $isSale ? $zero : $mainForeign->toString(),
-                'credit_foreign' => $isSale ? $mainForeign->toString() : $zero,
-            ],
-        ];
-        if ($taxAmount->isPositive()) {
+                'description' => $description.' / '.$source['category'],
+                'debit_local' => $isSale ? $zero : $source['local']->toString(),
+                'credit_local' => $isSale ? $source['local']->toString() : $zero,
+                'debit_foreign' => $isSale ? $zero : $source['foreign']->toString(),
+                'credit_foreign' => $isSale ? $source['foreign']->toString() : $zero,
+            ];
+        }
+        if ($taxLineAmount->isPositive()) {
             $lines[] = [
                 'accounting_account_id' => (int) $tax->id, 'entity_id' => $taxEntity,
-                'description' => $description,
+                'description' => $description.' / IGV',
                 'debit_local' => $isSale ? $zero : $taxLocal->toString(),
                 'credit_local' => $isSale ? $taxLocal->toString() : $zero,
                 'debit_foreign' => $isSale ? $zero : $taxForeign->toString(),
@@ -245,7 +279,7 @@ final readonly class DocumentJournalController
             // SAVEPOINT: errores del motor no deben dejar periodo ni comprobante parcial.
             $document = DB::transaction(function () use (
                 $period, $date, $setting, $currency, $rate, $description, $request,
-                $lines, $kind, $data, $series, $number, $entity, $base, $taxAmount, $total
+                $lines, $kind, $data, $series, $number, $entity, $base, $taxAmount, $total, $taxBreakdown
             ): AccountingDocumentEntry {
                 $entry = $this->journal->post([
                     'fiscal_period_id' => (int) $period->id,
@@ -260,7 +294,7 @@ final readonly class DocumentJournalController
                     'lines' => $lines,
                 ]);
 
-                return AccountingDocumentEntry::query()->create([
+                $document = AccountingDocumentEntry::query()->create([
                     'module' => $kind,
                     'document_type' => $data['document_type'],
                     'series' => $series,
@@ -275,6 +309,25 @@ final readonly class DocumentJournalController
                     'total_amount' => $total->toString(),
                     'journal_entry_id' => $entry->id,
                 ]);
+
+                $taxRegister = AccountingTaxRegisterEntry::query()->create([
+                    'accounting_document_entry_id' => (int) $document->id,
+                    'module' => $kind,
+                    'tax_period' => $data['tax_period'] ?? $date->format('Ym'),
+                    'source' => 'INTERNAL',
+                    'reconciliation_status' => 'PENDING_REVIEW',
+                    'counterparty_identity_type' => $entity->identity_document_type_code,
+                    'counterparty_tax_id' => $entity->tax_id,
+                    'counterparty_name' => $entity->legal_name,
+                    'due_date' => $data['due_date'] ?? null,
+                ]);
+                foreach ($taxBreakdown['allocations'] as $allocation) {
+                    AccountingTaxRegisterAllocation::query()->create([
+                        'tax_register_entry_id' => (int) $taxRegister->id,
+                        ...$allocation,
+                    ]);
+                }
+                return $document;
             });
         } catch (DomainException $exception) {
             throw ValidationException::withMessages(['module' => [$exception->getMessage()]]);
@@ -283,12 +336,14 @@ final readonly class DocumentJournalController
         $this->audit->log(
             'ACCOUNTING_DOCUMENT_POSTED', $companyId, (int) $request->user()->id,
             AccountingDocumentEntry::class, (string) $document->id, null,
-            ['module' => $kind, 'document_type' => $data['document_type'],
+            ['module' => $kind, 'tax_period' => $data['tax_period'] ?? $date->format('Ym'),
+                'categories' => array_column($taxBreakdown['allocations'], 'category'),
+                'document_type' => $data['document_type'],
                 'series' => $series, 'number' => $number,
                 'journal_entry_id' => $document->journal_entry_id], $request
         );
 
-        $document->load(['entity:id,tax_id,legal_name', 'journal:id,entry_number,status,subdiary_code']);
+        $document->load(['entity:id,tax_id,legal_name', 'journal:id,entry_number,status,subdiary_code', 'taxRegister.allocations']);
         return response()->json([
             'message' => 'Comprobante contabilizado y vinculado al Libro Diario.',
             'data' => $document,
@@ -305,7 +360,9 @@ final readonly class DocumentJournalController
     private function assertSchema(): void
     {
         if (! Schema::hasTable('company_document_journal_settings')
-            || ! Schema::hasTable('accounting_document_entries')) {
+            || ! Schema::hasTable('accounting_document_entries')
+            || ! Schema::hasTable('accounting_tax_register_entries')
+            || ! Schema::hasTable('accounting_tax_register_allocations')) {
             abort(503, 'Falta aplicar la migración de compras y ventas.');
         }
     }
