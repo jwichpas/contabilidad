@@ -165,8 +165,14 @@ try{
             Write-Host '[PLAN] Falta carga global: 3401 plantillas PCGE, SUNAT, NIIF y rubros.'
             Write-Host '[PLAN] Despues, crear una segunda empresa PCGE manteniendo laboratorio original.'
         }elseif($state.templates -eq 3401 -and $state.companies -eq 1){
-            Write-Host '[PLAN] Catalogos presentes. Falta crear empresa PCGE independiente.'
+            if($state.migrations -ne 29 -or $state.sunat -ne 20 -or $state.otherReferences -ne 234) {
+                throw 'PCGE presente pero catalogos/migraciones F2 incompletos; revisar antes de crear empresa.'
+            }
+            Write-Host '[PASS] Catalogos globales completos; revisar creacion de empresa PCGE independiente.'
         }elseif($state.templates -eq 3401 -and $state.companies -eq 2){
+            if($state.migrations -ne 29 -or $state.sunat -ne 20 -or $state.otherReferences -ne 234) {
+                throw 'PCGE/empresa presentes pero catalogos F2 incompletos; revisar.'
+            }
             Write-Host '[PLAN] Referencias y empresa PCGE ya existentes; comprobar -Accion Verificar.'
         }else{throw 'Estado inesperado, no continuar.'}
         Write-Host '[PLAN] Solo SELECT; ninguna conexion a Neon ni escrituras.'
