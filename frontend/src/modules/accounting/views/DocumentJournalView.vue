@@ -4,7 +4,7 @@ import { BookOpenCheck, CheckCircle2, FilePlus2, RefreshCw, Settings2 } from 'lu
 import UiSelect from '@/shared/ui/UiSelect.vue';
 import { AccountingApiClient } from '../api/httpClient';
 import type { CompanyId } from '../types/accountingAccount.types';
-import type { OperationalAccount, CompanySubdiaryItem } from '../types/journalEntry.types';
+import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { CashFlowAreaItem, CompanyAreaItem, CostCenterItem } from '../types/catalogs.types';
 import type {
   DocumentJournalModule, DocumentJournalSettings, DocumentJournalRecord,
@@ -33,8 +33,8 @@ const posting = ref(false);
 const error = ref('');
 const success = ref('');
 const settings = ref<DocumentJournalSettings | null>(null);
-const accounts = ref<readonly OperationalAccount[]>([]);
-const subdiaries = ref<readonly CompanySubdiaryItem[]>([]);
+const accounts = ref<readonly JournalEditorAccount[]>([]);
+const subdiaries = ref<readonly { code: string; name: string }[]>([]);
 const costCenters = ref<readonly CostCenterItem[]>([]);
 const companyAreas = ref<readonly CompanyAreaItem[]>([]);
 const cashFlowAreas = ref<readonly CashFlowAreaItem[]>([]);
@@ -42,6 +42,7 @@ const entities = ref<readonly DocumentJournalEntity[]>([]);
 const currencies = ref<readonly string[]>(['PEN']);
 const history = ref<DocumentJournalPage | null>(null);
 const entityQuery = ref('');
+const sections = ['register', 'history', 'settings'] as const;
 
 function todayLocal(): string {
   const date = new Date();
@@ -80,7 +81,7 @@ const taxAccountOptions = computed(() => [
   { value: '', label: 'Sin cuenta tributaria (operaciones no gravadas)' },
   ...accounts.value.map(a => ({ value: String(a.id), label: a.code + ' · ' + a.name })),
 ]);
-const subdiaryOptions = computed(() => subdiaries.value.filter(s => s.is_active).map(s => ({
+const subdiaryOptions = computed(() => subdiaries.value.map(s => ({
   value: s.code, label: s.code + ' · ' + s.name,
 })));
 const entityOptions = computed(() => [
@@ -127,23 +128,19 @@ async function load(): Promise<void> {
   loading.value = true;
   error.value = '';
   try {
-    const [cfg, chart, subs, cost, areas, flow, company, documents, directory] = await Promise.all([
+    const [cfg, bootstrap, company, documents, directory] = await Promise.all([
       api.fetchDocumentJournalSettings(props.module),
-      api.fetchOperationalAccounts(),
-      api.fetchCompanySubdiaries(true),
-      api.fetchCostCenters(),
-      api.fetchCompanyAreas(),
-      api.fetchCashFlowAreas(),
+      api.fetchJournalEditorBootstrap(draft.entry_date),
       api.fetchCompanySettings(),
       api.fetchDocumentJournalRecords(props.module),
       api.findDocumentJournalEntities(props.module),
     ]);
     setForm(cfg);
-    accounts.value = chart;
-    subdiaries.value = subs;
-    costCenters.value = cost;
-    companyAreas.value = areas;
-    cashFlowAreas.value = flow;
+    accounts.value = bootstrap.accounts;
+    subdiaries.value = bootstrap.subdiaries;
+    costCenters.value = bootstrap.cost_centers;
+    companyAreas.value = bootstrap.company_areas;
+    cashFlowAreas.value = bootstrap.cash_flow_areas;
     history.value = documents;
     entities.value = directory.data;
     const codes = company.company_currencies
@@ -285,7 +282,7 @@ onMounted(() => { void load(); });
     <div v-if="loading" role="status" class="rounded-xl border border-line bg-surface p-8 text-sm text-muted">Cargando cuentas, subdiarios y comprobantes de la empresa…</div>
     <template v-else>
       <div class="flex flex-wrap gap-2 border-b border-line pb-3" role="tablist" :aria-label="title">
-        <button v-for="t in (['register', 'history', 'settings'] as const)" :key="t" type="button"
+        <button v-for="t in sections" :key="t" type="button"
           role="tab" :aria-selected="tab === t"
           :class="['inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm',
             tab === t ? 'bg-brand/10 font-semibold text-foreground' : 'text-muted hover:bg-hover']"
