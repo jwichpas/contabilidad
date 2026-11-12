@@ -141,7 +141,7 @@ it('rejects unknown or unsupported document types and missing setup', function (
 });
 
 
-it('prevents assigning fiscal credit to a purchase receipt while allowing normal sales receipts', function (): void {
+it('books taxed purchase receipts without fiscal credit and sales receipts with IGV', function (): void {
     $settings = [
         'main_account_id' => $this->accounts[0]->id,
         'tax_account_id' => $this->accounts[2]->id,
@@ -160,8 +160,115 @@ it('prevents assigning fiscal credit to a purchase receipt while allowing normal
         'currency' => 'PEN', 'taxable_amount' => '100', 'tax_amount' => '18',
     ];
     $this->postJson('/api/v1/accounting/document-journals/purchases/documents', $payload)
-        ->assertUnprocessable()->assertJsonValidationErrors('tax_amount');
-    // Sales with an actual tax amount are not rejected just because they are boletas.
+        ->assertCreated()->assertJsonPath('data.tax_register.allocations.0.category', 'P_TAXED_NO_CREDIT')
+        ->assertJsonPath('data.tax_register.allocations.0.creditable_tax_amount', '0.0000');
+    // The same tax amount from a sale is posted to sales IGV, not purchase credit.
     $this->postJson('/api/v1/accounting/document-journals/sales/documents', $payload)
         ->assertCreated()->assertJsonPath('data.module', 'SALE');
+});
+
+
+it('keeps tax register separate and groups sales by taxable, exports and period', function (): void {
+    $settings = [
+        'subdiary_code' => 'VENTAS',
+        'main_account_id' => $this->accounts[0]->id,
+        'tax_account_id' => $this->accounts[2]->id,
+        'settlement_account_id' => $this->accounts[1]->id,
+        'default_tax_rate' => '18.0000',
+        'category_account_map' => ['S_EXPORT' => $this->accounts[0]->id],
+    ];
+    $this->putJson('/api/v1/accounting/document-journals/sales/settings', $settings)
+        ->assertOk()->assertJsonPath('data.category_account_map.S_EXPORT', $this->accounts[0]->id);
+    $payload = [
+        'document_type' => '01', 'series' => 'F002', 'number' => '00004',
+        'entity_id' => $this->entityId,
+        'issue_date' => '2026-10-31', 'entry_date' => '2026-11-12',
+        'tax_period' => '202610',
+        'currency' => 'PEN',
+        'tax_allocations' => [
+            ['category' => 'S_TAXED', 'base_amount' => '100.00', 'tax_amount' => '18.00'],
+            ['category' => 'S_EXPORT', 'base_amount' => '250.00', 'tax_amount' => '0.00'],
+        ],
+    ];
+    $response = $this->postJson('/api/v1/accounting/document-journals/sales/documents', $payload)
+        ->assertCreated()
+        ->assertJsonPath('data.total_amount', '368.0000')
+        ->assertJsonPath('data.tax_register.tax_period', '202610')
+        ->assertJsonPath('data.tax_register.reconciliation_status', 'PENDING_REVIEW')
+        ->assertJsonCount(2, 'data.tax_register.allocations');
+    $journalId = (int) $response->json('data.journal_entry_id');
+    $this->tenant->run($this->company->id, function () use ($journalId): void {
+        $entry = JournalEntry::query()->findOrFail($journalId);
+        expect($entry->lines)->toHaveCount(4);
+        expect($entry->subdiary_code)->toBe('VENTAS');
+    });
+    $this->getJson('/api/v1/accounting/document-journals/sales/tax-register?period=202610')
+        ->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.document.journal_entry_id', $journalId);
+    $this->getJson('/api/v1/accounting/document-journals/sales/tax-register/summary?period=202610')
+        ->assertOk()->assertJsonCount(2, 'data.breakdown');
+    $this->getJson('/api/v1/accounting/document-journals/purchases/tax-register?period=202610')
+        ->assertOk()->assertJsonCount(0, 'data');
+});
+
+it('distinguishes non-taxed purchases from mixed purchases and never infers prorrata credit', function (): void {
+    $this->putJson('/api/v1/accounting/document-journals/purchases/settings', [
+        'subdiary_code' => 'COMPRAS',
+        'main_account_id' => $this->accounts[0]->id,
+        'tax_account_id' => $this->accounts[2]->id,
+        'settlement_account_id' => $this->accounts[1]->id,
+        'default_tax_rate' => '18.0000',
+    ])->assertOk();
+    $payload = [
+        'document_type' => '01', 'series' => 'F010', 'number' => '00001',
+        'entity_id' => $this->entityId,
+        'issue_date' => '2026-11-12', 'entry_date' => '2026-11-12',
+        'currency' => 'PEN', 'tax_period' => '202611',
+        'tax_allocations' => [
+            ['category' => 'P_TAXED_MIXED', 'base_amount' => '100', 'tax_amount' => '18'],
+            ['category' => 'P_NON_TAXED', 'base_amount' => '40', 'tax_amount' => '0'],
+        ],
+    ];
+    $this->postJson('/api/v1/accounting/document-journals/purchases/documents', $payload)
+        ->assertUnprocessable()->assertJsonValidationErrors('tax_allocations.0.creditable_tax_amount');
+
+    $payload['tax_allocations'][0]['creditable_tax_amount'] = '10.0000';
+    $response = $this->postJson('/api/v1/accounting/document-journals/purchases/documents', $payload)
+        ->assertCreated()
+        ->assertJsonPath('data.total_amount', '158.0000')
+        ->assertJsonPath('data.tax_register.allocations.0.creditable_tax_amount', '10.0000');
+    $journalId = (int) $response->json('data.journal_entry_id');
+    $this->tenant->run($this->company->id, function () use ($journalId): void {
+        $lines = JournalEntry::query()->findOrFail($journalId)->lines;
+        expect($lines)->toHaveCount(4);
+        $sumDebit = $lines->reduce(fn ($sum, $line) => bcadd($sum, (string)$line->debit_local, 4), '0.0000');
+        $sumCredit = $lines->reduce(fn ($sum, $line) => bcadd($sum, (string)$line->credit_local, 4), '0.0000');
+        expect($sumDebit)->toBe($sumCredit);
+    });
+    $this->getJson('/api/v1/accounting/document-journals/purchases/tax-register/summary?period=202611')
+        ->assertOk()->assertJsonCount(2, 'data.breakdown');
+});
+
+it('rejects zero tax on taxable sales, tax on export and incorrect module category', function (): void {
+    $this->putJson('/api/v1/accounting/document-journals/sales/settings', [
+        'subdiary_code' => 'VENTAS',
+        'main_account_id' => $this->accounts[0]->id,
+        'tax_account_id' => $this->accounts[2]->id,
+        'settlement_account_id' => $this->accounts[1]->id,
+        'default_tax_rate' => '18.0000',
+    ])->assertOk();
+    $payload = [
+        'document_type' => '01', 'series' => 'F300', 'number' => '1',
+        'entity_id' => $this->entityId,
+        'issue_date' => '2026-11-12', 'entry_date' => '2026-11-12', 'currency' => 'PEN',
+        'tax_allocations' => [['category' => 'S_TAXED', 'base_amount' => '100', 'tax_amount' => '0']],
+    ];
+    $this->postJson('/api/v1/accounting/document-journals/sales/documents', $payload)
+        ->assertUnprocessable()->assertJsonValidationErrors('tax_allocations.0.tax_amount');
+    $payload['tax_allocations'][0] = ['category' => 'S_EXPORT', 'base_amount' => '100', 'tax_amount' => '18'];
+    $this->postJson('/api/v1/accounting/document-journals/sales/documents', $payload)
+        ->assertUnprocessable()->assertJsonValidationErrors('tax_allocations.0.tax_amount');
+    $payload['tax_allocations'][0] = ['category' => 'P_NON_TAXED', 'base_amount' => '100', 'tax_amount' => '0'];
+    $this->postJson('/api/v1/accounting/document-journals/sales/documents', $payload)
+        ->assertUnprocessable()->assertJsonValidationErrors('tax_allocations.0.category');
 });
