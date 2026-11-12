@@ -124,6 +124,7 @@ final readonly class GetCompanyExchangeRatesController
 
             $latestRate = $allRates->first(fn (array $rate): bool =>
                 $rate['source_currency'] === $currencyCode
+                && $rate['target_currency'] === $baseCode
             );
 
             $defaultBuy = $currencyCode === 'USD' ? '3.742000' : ($currencyCode === 'EUR' ? '4.085000' : '1.000000');
