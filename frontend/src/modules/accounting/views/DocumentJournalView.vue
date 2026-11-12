@@ -192,6 +192,7 @@ async function saveSettings(): Promise<void> {
 }
 
 function calculateTax(): void {
+  if (isPurchase.value && draft.document_type === '03') return;
   const base = Number(draft.taxable_amount);
   const rate = Number(settings.value?.default_tax_rate ?? '0');
   if (Number.isFinite(base) && base > 0 && Number.isFinite(rate)) {
@@ -368,6 +369,9 @@ onMounted(() => { void load(); });
 
         <h3 class="mt-7 font-semibold">Distribución contable</h3>
         <p class="mt-1 text-xs text-muted">Importes positivos de la factura o boleta. No incluye notas de crédito ni operaciones exoneradas especiales en esta primera versión.</p>
+        <p v-if="isPurchase && draft.document_type === '03'" class="mt-3 rounded-lg border border-line bg-soft p-3 text-xs text-muted">
+          La boleta de compra no se contabiliza como crédito fiscal en este flujo. Coloque el importe total en base imponible y registre IGV 0.
+        </p>
         <div class="mt-4 grid gap-4 sm:grid-cols-3">
           <label class="space-y-1.5 text-sm"><span class="font-medium">Base imponible</span>
             <input v-model="draft.taxable_amount" inputmode="decimal" type="number" step="0.01" min="0.01"
@@ -378,7 +382,7 @@ onMounted(() => { void load(); });
             <div class="flex gap-2">
               <input id="doc-tax-amount" v-model="draft.tax_amount" inputmode="decimal" type="number" step="0.01" min="0"
                 class="min-w-0 w-full rounded-lg border border-line bg-background px-3 py-2" />
-              <button type="button" title="Calcular con tasa referencial" class="shrink-0 rounded-lg border border-line px-2 text-xs hover:bg-hover"
+              <button type="button" :disabled="isPurchase && draft.document_type === '03'" title="Calcular con tasa referencial" class="shrink-0 rounded-lg border border-line px-2 text-xs hover:bg-hover"
                 @click="calculateTax">Calcular</button>
             </div>
           </div>
