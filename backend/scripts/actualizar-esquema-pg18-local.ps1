@@ -1,7 +1,9 @@
 #requires -Version 5.1
 <#
- Actualizacion adicional de Docker PG18 persistente, sobre 25 migraciones
- revisadas. No usa los endpoints Neon ni instala en otras bases.
+ Actualizacion CONTABLE aditiva de Docker PG18 persistente (25 -> 28 migraciones).
+ Exclusivamente perfil fiscal, registro de compras/ventas y RCE/RVIE interno.
+ Las migraciones SEE/PLE se excluyen deliberadamente: requieren datos de
+ referencia SUNAT heredados que la instalacion base de 25 no carga. No usa los endpoints Neon ni instala en otras bases.
  Por defecto: Plan (SOLO SELECT). Aplicar exige baseline exacto, respaldo
  local y comprobacion doble de identidad ANTES de cualquier migracion.
  No ejecuta migrate general, ni DROP, ni db:seed.
@@ -48,39 +50,6 @@ $baseline=@(
 )
 $updates=@(
     '2026_10_23_140000_create_company_fiscal_profiles'
-    '2026_10_24_150000_create_see_reference_catalogs'
-    '2026_10_24_160000_add_see_catalog_20_sunat_2024_version'
-    '2026_10_24_170000_add_see_catalog_15_19_55_versions'
-    '2026_10_24_180000_add_see_catalog_02_iso_4217_version'
-    '2026_10_24_190000_add_see_ubigeo_inei_2026_version'
-    '2026_10_24_200000_add_see_catalog_04_uncefact_country_version'
-    '2026_10_24_210000_add_see_catalog_03_unece_rec20_rev17_version'
-    '2026_10_24_220000_create_company_see_visibility_revisions'
-    '2026_10_24_230000_add_see_catalogs_26_27_sunat_2017_version'
-    '2026_10_24_240000_add_see_catalog_59_payment_methods_version'
-    '2026_10_25_000000_add_see_catalog_06_sunat_2026_identity_version'
-    '2026_10_25_010000_reconcile_ple_table_01_payment_methods'
-    '2026_10_25_020000_reconcile_ple_table_02_identity_documents'
-    '2026_10_25_030000_reconcile_ple_table_05_inventory_types'
-    '2026_10_25_040000_version_ple_table_06_measurement_units'
-    '2026_10_25_050000_version_ple_table_03_financial_institutions'
-    '2026_10_25_060000_version_ple_table_12_inventory_operations'
-    '2026_10_25_070000_version_ple_table_11_customs_dependencies'
-    '2026_10_25_080000_version_ple_table_10_document_types'
-    '2026_10_25_090000_version_sunat_table_08_book_codes'
-    '2026_10_25_100000_add_ple_table_04_currency_codes'
-    '2026_10_25_110000_add_ple_tables_13_14_inventory_references'
-    '2026_10_25_120000_add_ple_tables_15_20_reference_editions'
-    '2026_10_25_130000_add_ple_tables_21_22_reference_editions'
-    '2026_10_25_140000_add_ple_table_25_historical_treaty_codes'
-    '2026_10_25_150000_add_ple_table_27_economic_relationship'
-    '2026_10_25_160000_add_ple_table_28_historical_net_equity'
-    '2026_10_25_170000_add_ple_table_30_acquisition_classification'
-    '2026_10_25_180000_add_ple_table_32_nonresident_service'
-    '2026_10_25_190000_add_ple_table_33_historical_exemptions'
-    '2026_10_25_200000_add_ple_table_31_historical_income_types'
-    '2026_10_25_210000_add_ple_table_34_financial_rubrics'
-    '2026_10_25_220000_add_ple_table_35_country_codes'
     '2026_11_12_000000_create_document_journal_modules'
     '2026_11_12_000001_create_tax_registers_and_allocations'
 )
@@ -163,8 +132,8 @@ function SetProcessEnv([hashtable]$values) {
     }
 }
 function CheckUpdated([hashtable]$inventory) {
-    if($inventory.applied.Count -ne 61 -or $inventory.pending.Count -ne 0) {
-        throw 'Aun no estan las 61 migraciones portables revisadas.'
+    if($inventory.applied.Count -ne 28 -or $inventory.pending.Count -ne 0) {
+        throw 'Aun no estan las 28 migraciones de la etapa contable.'
     }
     $tables=SqlLocal @'
 SELECT
@@ -177,7 +146,7 @@ SELECT
     if($tables -ne '1|1|1|1|1') {
         throw 'Faltan tablas clave de catalogos o registros de Compras/Ventas.'
     }
-    Write-Host '[PASS] 61 migraciones portables y tablas de Compras/Ventas presentes en Docker.'
+    Write-Host '[PASS] 28 migraciones y tablas de Compras/Ventas presentes en Docker.'
 }
 function BackupLocal {
     $backupRoot=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Contabilidad\Backups'
@@ -205,13 +174,13 @@ function BackupLocal {
 
 try {
     Set-Location $backend
-    if($baseline.Count -ne 25 -or $updates.Count -ne 36){throw 'Inventario revisado inconsistente.'}
+    if($baseline.Count -ne 25 -or $updates.Count -ne 3){throw 'Inventario revisado inconsistente.'}
     VerifyDockerIdentity
     $inventory=CheckMigrationInventory
 
     if($Accion -eq 'Plan') {
         if($inventory.pending.Count -eq 0) {
-            Write-Host '[PLAN] Las 36 migraciones adicionales ya estan registradas.'
+            Write-Host '[PLAN] Las tres migraciones adicionales ya estan registradas.'
         } else {
             foreach($migration in $inventory.pending){Write-Host ('[PENDIENTE] '+$migration)}
         }
@@ -221,7 +190,7 @@ try {
         CheckUpdated $inventory
         $success=$true
     } else {
-        if($inventory.pending.Count -ne 36 -or $inventory.done.Count -ne 0 -or
+        if($inventory.pending.Count -ne 3 -or $inventory.done.Count -ne 0 -or
             $inventory.applied.Count -ne 25){
             throw 'La aplicacion exige exactamente las 25 migraciones iniciales. Estado parcial: detener y revisar.'
         }
