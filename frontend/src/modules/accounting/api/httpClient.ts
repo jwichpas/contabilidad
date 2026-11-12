@@ -833,10 +833,10 @@ export class AccountingApiClient {
     return response.data;
   }
 
-  public async fetchCompanyExchangeRates(date: string): Promise<CompanyExchangeRatesResponse> {
+  public async fetchCompanyExchangeRates(date: string, signal?: AbortSignal): Promise<CompanyExchangeRatesResponse> {
     const rawPayload = await this.request<{ data: CompanyExchangeRatesResponse }>(
       `/api/v1/company/exchange-rates?date=${encodeURIComponent(date)}`,
-      { method: 'GET' },
+      { method: 'GET', signal },
       true,
     );
     return rawPayload.data;
