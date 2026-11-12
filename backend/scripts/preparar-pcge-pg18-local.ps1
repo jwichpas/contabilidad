@@ -133,10 +133,22 @@ try{
     $state=InspectState
     Write-Host ('[ESTADO] Migraciones '+$state.migrations+' | empresas '+$state.companies+
         ' | usuarios '+$state.users+' | cuentas '+$state.accounts+
-        ' | plantillas PCGE '+$state.templates+' | tasas '+$state.rates)
+        ' | plantillas PCGE '+$state.templates+' | tasas '+$state.rates+
+        ' | SUNAT 01 '+$state.sunat+' | asientos '+$state.journals)
 
     if($Accion -eq 'Plan') {
         if($state.templates -eq 0 -and $state.companies -eq 1 -and $state.accounts -eq 203){
+            if($state.migrations -ne 28){
+                Write-Host '[BLOQUEO] No corresponde ejecutar carga inicial en 29 migraciones; revisar ledger.'
+            }elseif($state.sunat -ne 0){
+                Write-Host ('[BLOQUEO] SUNAT 01 contiene '+$state.sunat+' filas. La carga inicial exige 0.')
+                Write-Host '[AVISO] No borrar ni sobrescribir: confirmar la version de estos datos.'
+            }else{
+                Write-Host '[PASS] Requisitos visibles para iniciar la carga global F2.'
+            }
+            if($state.journals -gt 0){
+                Write-Host ('[INFO] Hay '+$state.journals+' asientos existentes: se conservaran sin modificacion.')
+            }
             Write-Host '[PLAN] Falta carga global: 3401 plantillas PCGE, SUNAT, NIIF y rubros.'
             Write-Host '[PLAN] Despues, crear una segunda empresa PCGE manteniendo laboratorio original.'
         }elseif($state.templates -eq 3401 -and $state.companies -eq 1){
@@ -187,7 +199,7 @@ SELECT
         if($Accion -eq 'CargarReferencias'){
             if($state.migrations -ne 28 -or $state.templates -ne 0 -or
                $state.sunat -ne 0 -or $state.companies -ne 1 -or
-               $state.accounts -ne 203 -or $state.journals -ne 0) {
+               $state.accounts -ne 203) {
                 throw 'La carga inicial de referencias exige el laboratorio exacto de 28 migraciones.'
             }
             $user='postgres'
@@ -196,7 +208,7 @@ SELECT
         }else{
             if($state.migrations -ne 29 -or $state.templates -ne 3401 -or
                $state.sunat -ne 20 -or $state.companies -ne 1 -or
-               $state.accounts -ne 203 -or $state.journals -ne 0){
+               $state.accounts -ne 203){
                 throw 'La segunda empresa exige catalogos completos y laboratorio intacto.'
             }
             $user='app_backend'
