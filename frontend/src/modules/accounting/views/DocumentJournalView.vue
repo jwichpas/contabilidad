@@ -445,7 +445,9 @@ async function preparePosting(): Promise<void> {
   // La validación aquí es una vista previa: backend vuelve a comprobar la tasa
   // exacta en su transacción; nunca aceptar valores históricos ni presets.
   await refreshFx();
-  if (!fxReady.value && !fxError.value && secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)) {
+  if (!fxReady.value && currencies.value.includes('USD') && (
+    fxError.value !== '' || secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)
+  )) {
     // El usuario está confirmando un comprobante; se intenta importar solo aquí.
     await importSunatFx(false);
   }
@@ -660,7 +662,7 @@ onMounted(() => { void load(); });
                 :disabled="fxLoading || fxImporting" @click="refreshFx">
                 <RefreshCw class="size-3.5" :class="{ 'animate-spin': fxLoading }" /> Actualizar
               </button>
-              <button v-if="secondaryRates.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)"
+              <button v-if="currencies.includes('USD') && (fxError || secondaryRates.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date))"
                 type="button" class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
                 :disabled="fxLoading || fxImporting || posting"
                 @click="importSunatFx()">
