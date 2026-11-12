@@ -9,7 +9,7 @@ import DocumentPostingConfirmDialog from '../components/DocumentPostingConfirmDi
 import { createDocumentJournalDraftSchema, type DocumentJournalDraftValues } from '../schemas/documentJournalDraft.schema';
 import UiSelect from '@/shared/ui/UiSelect.vue';
 import { AccountingApiClient } from '../api/httpClient';
-import { isDocumentFxReady } from '../api/documentJournalFx';
+import { isDocumentFxReady, shouldOfferSunatFxImport } from '../api/documentJournalFx';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { CashFlowAreaItem, CompanyAreaItem, CostCenterItem } from '../types/catalogs.types';
@@ -249,9 +249,8 @@ const secondaryRates = computed(() => fxSnapshot.value?.required_currencies ?? [
 const fxReady = computed(() => !fxLoading.value && !fxError.value &&
   isDocumentFxReady(fxSnapshot.value, draft.entry_date)
   && currencies.value.every(code => code === 'PEN' || secondaryRates.value.some(rate => rate.code === code)));
-const canImportFx = computed(() => !fxLoading.value && !fxImporting.value && !fxError.value
-  && fxSnapshot.value?.rate_date === draft.entry_date && currencies.value.includes('USD')
-  && secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date));
+const canImportFx = computed(() => !fxLoading.value && !fxImporting.value &&
+  shouldOfferSunatFxImport(fxSnapshot.value, draft.entry_date, currencies.value, fxError.value !== ''));
 const fxSourceLabel = (rate: RequiredExchangeRateItem): string =>
   rate.is_recorded_for_date ? 'Registrado para esta fecha'
     : rate.source === 'LATEST_HISTORICAL' ? 'Referencia histórica; no registrada para el día'
