@@ -17,6 +17,7 @@ use App\Models\FiscalPeriod;
 use App\Models\JournalEntry;
 use App\Services\Accounting\PostJournalEntryService;
 use App\Services\Accounting\DocumentTaxAllocationService;
+use App\Services\ExchangeRates\SunatExchangeRateSynchronizer;
 use App\Services\Security\AuditLoggerService;
 use App\Support\Math\Decimal;
 use App\Support\Tenant\TenantContext;
@@ -40,6 +41,7 @@ final readonly class DocumentJournalController
         private TenantContext $tenant,
         private PostJournalEntryService $journal,
         private AuditLoggerService $audit,
+        private SunatExchangeRateSynchronizer $sunatFx,
     ) {}
 
     private function module(string $module): string
@@ -167,12 +169,32 @@ final readonly class DocumentJournalController
         }
         $rate = Decimal::ofExchangeRate('1');
         if ($foreignCode !== null) {
-            $dailyRate = ExchangeRate::query()->where('company_id', $companyId)
+            $rateQuery = static fn () => ExchangeRate::query()
+                ->where('company_id', $companyId)
                 ->where('rate_date', $date->toDateString())
                 ->where('source_currency', $foreignCode)
                 ->where('target_currency', 'PEN')->first();
-            if (! $dailyRate) {
-                throw ValidationException::withMessages(['entry_date' => ['Registre el tipo de cambio del día para '.$foreignCode.' antes de contabilizar.']]);
+            $dailyRate = $rateQuery();
+            if ($dailyRate === null && $foreignCode === 'USD') {
+                // SUNAT TXT publica una única fecha, nunca tasas históricas.
+                // Importador idempotente: NO sobreescribe cotizaciones manuales.
+                $sync = $this->sunatFx->sync(
+                    $companyId, $date->toDateString(), (int) $request->user()->id
+                );
+                if ($sync['status'] === 'date_mismatch') {
+                    throw ValidationException::withMessages(['entry_date' => [
+                        'No existe tipo de cambio para '.$date->toDateString()
+                        .'. SUNAT publica '.$sync['published_date']
+                        .'; no puede utilizarse una tasa de otra fecha.',
+                    ]]);
+                }
+                $dailyRate = $rateQuery();
+            }
+            if ($dailyRate === null) {
+                throw ValidationException::withMessages(['entry_date' => [
+                    'No se encontró un tipo de cambio válido para '.$foreignCode
+                    .' en '.$date->toDateString().'. Consulte SUNAT o regístrelo manualmente antes de contabilizar.',
+                ]]);
             }
             $rate = Decimal::ofExchangeRate((string) $dailyRate->sell_rate);
             if (! $rate->isPositive()) {
