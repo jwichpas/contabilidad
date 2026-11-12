@@ -7,7 +7,7 @@ import type { CompanyId } from '../types/accountingAccount.types';
 import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { CashFlowAreaItem, CompanyAreaItem, CostCenterItem } from '../types/catalogs.types';
 import type {
-  DocumentJournalModule, DocumentJournalSettings, DocumentJournalRecord,
+  DocumentJournalModule, DocumentJournalSettings,
   DocumentJournalEntity, DocumentJournalPage,
 } from '../types/documentJournal.types';
 
