@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Dialog, DialogPanel, DialogTitle, Description } from '@headlessui/vue';
+import { Dialog, DialogPanel, DialogTitle, DialogDescription } from '@headlessui/vue';
 import { AlertTriangle, CheckCircle2 } from 'lucide-vue-next';
 
 defineProps<{
@@ -24,11 +24,11 @@ const emit = defineEmits<{ (e: 'cancel'): void; (e: 'confirm'): void }>();
             </div>
             <div class="min-w-0">
               <DialogTitle class="text-base font-semibold">Confirmar contabilización</DialogTitle>
-              <Description class="mt-2 text-sm text-muted">
+              <DialogDescription class="mt-2 text-sm text-muted">
                 Se registrará el comprobante <strong class="text-foreground">{{ documentLabel }}</strong>
                 por <strong class="text-foreground">{{ currency }} {{ total }}</strong> en el Libro Diario
                 y en el registro tributario interno.
-              </Description>
+              </DialogDescription>
               <p class="mt-2 text-xs text-muted">El asiento será inmutable; una corrección se realiza mediante extorno.</p>
             </div>
           </div>
