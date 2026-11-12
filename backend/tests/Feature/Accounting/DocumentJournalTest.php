@@ -52,9 +52,9 @@ beforeEach(function (): void {
             ->where('has_automatic_destination', false)
             ->where('requires_company_area', false)
             ->where('requires_cash_flow_area', false)
-            ->orderBy('code')->limit(3)->get()->all();
+            ->orderBy('code')->limit(4)->get()->all();
     });
-    expect($this->accounts)->toHaveCount(3);
+    expect($this->accounts)->toHaveCount(4);
     $this->actingAs($this->user)->withHeader('X-Company-Id', (string) $this->company->id);
     $this->entityId = (int) $this->postJson('/api/v1/company/entities', [
         'identity_document_type_code' => '6',
@@ -175,10 +175,10 @@ it('keeps tax register separate and groups sales by taxable, exports and period'
         'tax_account_id' => $this->accounts[2]->id,
         'settlement_account_id' => $this->accounts[1]->id,
         'default_tax_rate' => '18.0000',
-        'category_account_map' => ['S_EXPORT' => $this->accounts[0]->id],
+        'category_account_map' => ['S_EXPORT' => $this->accounts[3]->id],
     ];
     $this->putJson('/api/v1/accounting/document-journals/sales/settings', $settings)
-        ->assertOk()->assertJsonPath('data.category_account_map.S_EXPORT', $this->accounts[0]->id);
+        ->assertOk()->assertJsonPath('data.category_account_map.S_EXPORT', $this->accounts[3]->id);
     $payload = [
         'document_type' => '01', 'series' => 'F002', 'number' => '00004',
         'entity_id' => $this->entityId,
@@ -201,6 +201,8 @@ it('keeps tax register separate and groups sales by taxable, exports and period'
         $entry = JournalEntry::query()->findOrFail($journalId);
         expect($entry->lines)->toHaveCount(4);
         expect($entry->subdiary_code)->toBe('VENTAS');
+        expect((int) $entry->lines[0]->accounting_account_id)->toBe((int) $this->accounts[0]->id);
+        expect((int) $entry->lines[1]->accounting_account_id)->toBe((int) $this->accounts[3]->id);
     });
     $this->getJson('/api/v1/accounting/document-journals/sales/tax-register?period=202610')
         ->assertOk()->assertJsonCount(1, 'data')
@@ -209,6 +211,20 @@ it('keeps tax register separate and groups sales by taxable, exports and period'
         ->assertOk()->assertJsonCount(2, 'data.breakdown');
     $this->getJson('/api/v1/accounting/document-journals/purchases/tax-register?period=202610')
         ->assertOk()->assertJsonCount(0, 'data');
+
+    // Un extorno no elimina el registro histórico, pero deja de integrar el resumen tributario activo.
+    $periodId = $this->tenant->run($this->company->id,
+        fn (): int => (int) JournalEntry::query()->findOrFail($journalId)->fiscal_period_id);
+    $this->postJson('/api/v1/accounting/journal-entries/'.$journalId.'/reverse', [
+        'fiscal_period_id' => $periodId,
+        'reversal_date' => '2026-11-12',
+        'reason' => 'Rectificación en pruebas del registro',
+    ])->assertCreated();
+    $this->getJson('/api/v1/accounting/document-journals/sales/tax-register/summary?period=202610')
+        ->assertOk()->assertJsonCount(0, 'data.breakdown');
+    $this->getJson('/api/v1/accounting/document-journals/sales/tax-register?period=202610')
+        ->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.document.journal.status', 'REVERSED');
 });
 
 it('distinguishes non-taxed purchases from mixed purchases and never infers prorrata credit', function (): void {
