@@ -127,3 +127,58 @@ it('rejects forged company IDs and user-supplied remote URLs', function (): void
         'source_url' => 'http://127.0.0.1/private',
     ])->assertUnprocessable()->assertJsonValidationErrors(['company_id', 'source_url']);
 });
+
+
+it('keeps an exact rate visible even if more than 100 other same-day rows occupy the history window', function (): void {
+    $this->tenant->run((int) $this->company->id, function (): void {
+        ExchangeRate::query()->create([
+            'rate_date' => '2026-11-12', 'source_currency' => 'USD',
+            'target_currency' => 'PEN',
+            'buy_rate' => '3.407000', 'sell_rate' => '3.414000',
+        ]);
+
+        // Historical/cross-currency rows are intentionally unrelated to
+        // active USD/PEN. They cannot hide the exact daily quote.
+        $rows = [];
+        for ($i = 0; $i < 120; ++$i) {
+            $rows[] = [
+                'company_id' => $this->company->id,
+                'rate_date' => '2026-11-12',
+                'source_currency' => $i < 100 ? sprintf('A%02d', $i) : sprintf('B%02d', $i - 100),
+                'target_currency' => 'PEN',
+                'buy_rate' => '3.300000', 'sell_rate' => '3.310000',
+                'created_at' => now(), 'updated_at' => now(),
+            ];
+        }
+        \Illuminate\Support\Facades\DB::table('exchange_rates')->insert($rows);
+    });
+
+    $this->getJson('/api/v1/company/exchange-rates?date=2026-11-12')
+        ->assertOk()
+        ->assertJsonPath('data.rate_date', '2026-11-12')
+        ->assertJsonPath('data.required_currencies.0.code', 'USD')
+        ->assertJsonPath('data.required_currencies.0.is_recorded_for_date', true)
+        ->assertJsonPath('data.required_currencies.0.source', 'DATABASE_EXACT')
+        ->assertJsonPath('data.required_currencies.0.sell_rate', '3.414000');
+
+    Http::fake([
+        SunatCurrentExchangeRateClient::SOURCE_URL => Http::response('<html>unavailable</html>', 503),
+    ]);
+    $this->postJson('/api/v1/company/exchange-rates/import-sunat', [
+        'rate_date' => '2026-11-12',
+    ])->assertOk()->assertJsonPath('data.status', 'existing');
+    Http::assertNothingSent();
+});
+
+it('does not mark a rate for a different target currency as a registered USD/PEN rate', function (): void {
+    $this->tenant->run((int) $this->company->id, function (): void {
+        ExchangeRate::query()->create([
+            'rate_date' => '2026-11-12', 'source_currency' => 'USD',
+            'target_currency' => 'EUR', 'buy_rate' => '0.920000', 'sell_rate' => '0.930000',
+        ]);
+    });
+    $this->getJson('/api/v1/company/exchange-rates?date=2026-11-12')
+        ->assertOk()
+        ->assertJsonPath('data.required_currencies.0.code', 'USD')
+        ->assertJsonPath('data.required_currencies.0.is_recorded_for_date', false);
+});
