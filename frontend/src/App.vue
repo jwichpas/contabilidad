@@ -56,6 +56,13 @@ const JournalEntryView = defineAsyncComponent({
   delay: 120,
 });
 
+const DocumentJournalView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/DocumentJournalView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
 const CompanySubdiariesView = defineAsyncComponent({
   loader: () => import('./modules/accounting/views/CompanySubdiariesView.vue'),
   loadingComponent: UiViewLoading,
@@ -191,6 +198,8 @@ function resolveModuleFromHash(): NavigationModule {
   const hash = window.location.hash.toLowerCase();
   if (hash.includes('catalogos-see')) return 'see-references';
   if (hash.includes('catalogos-sunat')) return 'sunat-references';
+  if (hash.includes('registro-compras')) return 'purchases';
+  if (hash.includes('registro-ventas')) return 'sales';
   if (hash.includes('subdiarios') || hash.includes('subdiaries')) return 'subdiaries';
   if (hash.includes('centros-costo') || hash.includes('cost-centers')) return 'cost-centers';
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
@@ -222,6 +231,10 @@ function handleNavigate(mod: NavigationModule): void {
   currentModule.value = mod;
   if (mod === 'journal') {
     window.location.hash = '#diario';
+  } else if (mod === 'purchases') {
+    window.location.hash = '#registro-compras';
+  } else if (mod === 'sales') {
+    window.location.hash = '#registro-ventas';
   } else if (mod === 'catalog') {
     window.location.hash = '#plan-cuentas';
   } else if (mod === 'see-references') {
@@ -387,6 +400,16 @@ watch(
           :key="`journal-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+          @posting-change="isJournalSubmitting = $event"
+        />
+        <DocumentJournalView
+          v-else-if="currentModule === 'purchases' || currentModule === 'sales'"
+          :key="'documents-' + currentModule + '-' + activeCompanyId"
+          :module="currentModule"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-configure="canDeactivateEntities"
+          :can-post="canManageEntities"
           @posting-change="isJournalSubmitting = $event"
         />
         <FiscalPeriodsView
