@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\V1\Company\ListEntitiesController;
 use App\Http\Controllers\Api\V1\Company\EntityMasterController;
 use App\Http\Controllers\Api\V1\Company\CompanyFiscalProfileController;
 use App\Http\Controllers\Api\V1\Company\SaveCompanyExchangeRatesController;
+use App\Http\Controllers\Api\V1\Company\ImportSunatExchangeRateController;
 use App\Http\Controllers\Api\V1\Company\UpdateCompanySettingsController;
 use App\Http\Controllers\Api\V1\Tenant\CompanyOnboardingCapabilityController;
 use App\Http\Controllers\Api\V1\Tenant\CreateCompanyFromWizardController;
@@ -230,6 +231,10 @@ Route::prefix('v1')->group(function (): void {
 
                 Route::get('/exchange-rates', GetCompanyExchangeRatesController::class)
                     ->name('api.v1.company.exchange-rates.show');
+
+                Route::post('/exchange-rates/import-sunat', ImportSunatExchangeRateController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                    ->name('api.v1.company.exchange-rates.import-sunat');
 
                 Route::post('/exchange-rates', SaveCompanyExchangeRatesController::class)
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
