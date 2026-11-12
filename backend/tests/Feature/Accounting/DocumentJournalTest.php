@@ -139,3 +139,29 @@ it('rejects unknown or unsupported document types and missing setup', function (
         'currency' => 'PEN', 'taxable_amount' => '100', 'tax_amount' => '0',
     ])->assertUnprocessable()->assertJsonValidationErrors('document_type');
 });
+
+
+it('prevents assigning fiscal credit to a purchase receipt while allowing normal sales receipts', function (): void {
+    $settings = [
+        'main_account_id' => $this->accounts[0]->id,
+        'tax_account_id' => $this->accounts[2]->id,
+        'settlement_account_id' => $this->accounts[1]->id,
+        'default_tax_rate' => '18.0000',
+    ];
+    $this->putJson('/api/v1/accounting/document-journals/purchases/settings',
+        array_merge($settings, ['subdiary_code' => 'COMPRAS']))->assertOk();
+    $this->putJson('/api/v1/accounting/document-journals/sales/settings',
+        array_merge($settings, ['subdiary_code' => 'VENTAS']))->assertOk();
+
+    $payload = [
+        'document_type' => '03', 'series' => 'B001', 'number' => '00009',
+        'entity_id' => $this->entityId,
+        'issue_date' => '2026-11-12', 'entry_date' => '2026-11-12',
+        'currency' => 'PEN', 'taxable_amount' => '100', 'tax_amount' => '18',
+    ];
+    $this->postJson('/api/v1/accounting/document-journals/purchases/documents', $payload)
+        ->assertUnprocessable()->assertJsonValidationErrors('tax_amount');
+    // Sales with an actual tax amount are not rejected just because they are boletas.
+    $this->postJson('/api/v1/accounting/document-journals/sales/documents', $payload)
+        ->assertCreated()->assertJsonPath('data.module', 'SALE');
+});
