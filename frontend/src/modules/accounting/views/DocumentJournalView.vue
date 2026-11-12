@@ -260,10 +260,12 @@ function setForm(data: DocumentJournalSettings): void {
 async function load(): Promise<void> {
   loading.value = true;
   error.value = '';
+  const requestedDate = draft.entry_date;
+  const requestedCompany = props.activeCompanyId;
   try {
     const [cfg, bootstrap, company, documents, directory] = await Promise.all([
       api.fetchDocumentJournalSettings(props.module),
-      api.fetchJournalEditorBootstrap(draft.entry_date),
+      api.fetchJournalEditorBootstrap(requestedDate),
       api.fetchCompanySettings(),
       api.fetchDocumentJournalRecords(props.module),
       api.findDocumentJournalEntities(props.module),
@@ -274,8 +276,12 @@ async function load(): Promise<void> {
     costCenters.value = bootstrap.cost_centers;
     companyAreas.value = bootstrap.company_areas;
     cashFlowAreas.value = bootstrap.cash_flow_areas;
-    fxSnapshot.value = bootstrap.exchange_rates;
-    fxError.value = '';
+    // Evita que un bootstrap tardío sobrescriba la cotización de otra fecha/empresa.
+    if (requestedDate === draft.entry_date && requestedCompany === props.activeCompanyId &&
+      !fxLoading.value) {
+      fxSnapshot.value = bootstrap.exchange_rates;
+      fxError.value = '';
+    }
     history.value = documents;
     entities.value = directory.data;
     const codes = company.company_currencies
