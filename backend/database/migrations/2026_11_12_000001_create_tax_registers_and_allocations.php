@@ -74,7 +74,7 @@ return new class extends Migration
               ADD CONSTRAINT chk_tax_register_category CHECK (
                 category IN (
                   'P_TAXED_EXCLUSIVE', 'P_TAXED_MIXED', 'P_TAXED_NON_TAXED',
-                  'P_NON_TAXED', 'S_TAXED', 'S_EXONERATED', 'S_UNAFFECTED', 'S_EXPORT'
+                  'P_TAXED_NO_CREDIT', 'P_NON_TAXED', 'S_TAXED', 'S_EXONERATED', 'S_UNAFFECTED', 'S_EXPORT'
                 )
               ),
               ADD CONSTRAINT chk_tax_allocation_values CHECK (
