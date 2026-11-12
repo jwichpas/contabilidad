@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { TAX_CATEGORY_LABELS } from '../src/modules/accounting/types/documentJournal.types.ts';
 import { buildDocumentJournalEntityQuery } from '../src/modules/accounting/api/documentJournalEntityQuery.ts';
 import { createDocumentJournalDraftSchema } from '../src/modules/accounting/schemas/documentJournalDraft.schema.ts';
-import { isDocumentFxReady } from '../src/modules/accounting/api/documentJournalFx.ts';
+import { isDocumentFxReady, shouldOfferSunatFxImport } from '../src/modules/accounting/api/documentJournalFx.ts';
 
 const read = (relative) => readFileSync(new URL(relative, import.meta.url), 'utf8');
 
@@ -116,7 +116,8 @@ test('VueSonner, VeeValidate and live registered FX rate are used before POST', 
   assert.match(view, /const result = await validate\(\)/);
   assert.match(view, /await refreshFx\(\)/);
   assert.match(view, /rate\.is_recorded_for_date/);
-  assert.match(view, /toast\.warning\('Falta registrar el tipo de cambio diario/);
+  assert.match(view, /'Falta registrar el tipo de cambio diario/);
+  assert.match(view, /'No se pudo verificar el tipo de cambio registrado/);
   assert.match(view, /:disabled="!canPost \|\| !configured \|\| posting \|\| fxLoading \|\| fxImporting"/);
   assert.doesNotMatch(view, /window\.confirm/);
   assert.match(dialog, /<Dialog/);
@@ -169,4 +170,36 @@ test('SUNAT fallback integrates through explicit POST and exact company/date che
   assert.match(schedule, /twiceDailyAt\(10, 16, 30\)/);
   assert.match(schedule, /withoutOverlapping\(10\)/);
   assert.match(bootstrap, /withSchedule/);
+});
+
+
+test('SUNAT fallback only follows a successful exact-date Neon lookup that reports USD missing', () => {
+  const exact = {
+    rate_date: '2026-11-12',
+    base_currency: { code: 'PEN', name: 'Soles', symbol: 'S/' },
+    required_currencies: [{
+      currency_id: 2, code: 'USD', name: 'Dólar', symbol: '$',
+      buy_rate: '3.407000', sell_rate: '3.414000',
+      is_recorded_for_date: true, source: 'DATABASE_EXACT',
+    }],
+  };
+  const missing = {
+    ...exact,
+    required_currencies: [{
+      ...exact.required_currencies[0],
+      is_recorded_for_date: false, source: 'LATEST_HISTORICAL',
+    }],
+  };
+  assert.equal(shouldOfferSunatFxImport(exact, '2026-11-12', ['PEN', 'USD']), false);
+  assert.equal(shouldOfferSunatFxImport(null, '2026-11-12', ['PEN', 'USD'], true), false);
+  assert.equal(shouldOfferSunatFxImport(missing, '2026-11-12', ['PEN', 'USD'], true), false);
+  assert.equal(shouldOfferSunatFxImport(missing, '2026-11-11', ['PEN', 'USD']), false);
+  assert.equal(shouldOfferSunatFxImport({ ...missing, base_currency: { ...missing.base_currency, code: 'USD' } }, '2026-11-12', ['PEN', 'USD']), false);
+  assert.equal(shouldOfferSunatFxImport(missing, '2026-11-12', ['PEN']), false);
+  assert.equal(shouldOfferSunatFxImport(missing, '2026-11-12', ['PEN', 'USD']), true);
+
+  const view = read('../src/modules/accounting/views/DocumentJournalView.vue');
+  assert.match(view, /shouldOfferSunatFxImport\(fxSnapshot\.value, draft\.entry_date, currencies\.value, fxError\.value !== ''\)/);
+  assert.match(view, /if \(!fxReady\.value && canImportFx\.value\)/);
+  assert.doesNotMatch(view, /fxError\.value !== '' \|\| secondaryRates/);
 });
