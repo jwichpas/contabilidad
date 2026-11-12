@@ -1,6 +1,12 @@
 name: Validación frontend
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/**'
   push:
     branches: [main]
     paths:
