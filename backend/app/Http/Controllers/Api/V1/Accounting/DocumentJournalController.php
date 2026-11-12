@@ -218,13 +218,18 @@ final readonly class DocumentJournalController
 
         $series = strtoupper($data['series']);
         $number = strtoupper($data['number']);
-        $docKey = implode(':', [$companyId, $kind, $data['document_type'], $series, $number, $entity->id]);
+        $docKey = implode(':', [$companyId, $kind, $data['document_type'], $series, $number,
+            $kind === 'PURCHASE' ? $entity->id : 'ISSUER']);
         // Bloqueo transaccional para evitar dos asientos ante envíos concurrentes del mismo documento.
         DB::selectOne('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', ['document-journal:'.$docKey]);
-        if (AccountingDocumentEntry::query()->where([
+        $duplicateQuery = AccountingDocumentEntry::query()->where([
             'module' => $kind, 'document_type' => $data['document_type'],
-            'series' => $series, 'number' => $number, 'entity_id' => $entity->id,
-        ])->exists()) {
+            'series' => $series, 'number' => $number,
+        ]);
+        if ($kind === 'PURCHASE') {
+            $duplicateQuery->where('entity_id', $entity->id);
+        }
+        if ($duplicateQuery->exists()) {
             throw ValidationException::withMessages(['number' => ['Este comprobante ya fue contabilizado para el mismo tercero.']]);
         }
 
