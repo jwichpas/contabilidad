@@ -2,6 +2,12 @@
 
 El laboratorio existente tiene 28 migraciones, una empresa `20999990099`,
 un usuario `demo.pg18@example.test`, 203 cuentas ficticias y una tasa USD/PEN.
+La ejecución del `Plan` informa por separado las filas SUNAT 01, otras
+referencias y asientos del laboratorio. La presencia de asientos **no**
+impide instalar referencias maestras inmutables: no se alteran ni se eliminan
+asientos anteriores. Sin embargo, cualquier tabla de referencia previa
+parcialmente poblada sí bloquea la importación automática para evitar
+sobrescrituras de catálogos o mezcla de versiones.
 **No** es una copia de Neon. Los datos sintéticos no permiten probar
 correctamente todo el sistema. No usar `db:seed` genérico ni borrar la
 empresa ficticia; es necesaria para las pruebas originales de latencia/RLS.

@@ -57,10 +57,20 @@ SELECT
 (SELECT count(*) FROM public.accounting_account_templates),
 (SELECT count(*) FROM public.sunat_table_01_payment_methods),
 (SELECT count(*) FROM public.exchange_rates),
-(SELECT count(*) FROM public.journal_entries)
+(SELECT count(*) FROM public.journal_entries),
+(SELECT count(*) FROM public.accounting_standards)
++ (SELECT count(*) FROM public.financial_statement_rubrics)
++ (SELECT count(*) FROM public.sunat_table_02_identity_document_types)
++ (SELECT count(*) FROM public.sunat_table_03_financial_institutions)
++ (SELECT count(*) FROM public.sunat_table_05_inventory_types)
++ (SELECT count(*) FROM public.sunat_table_06_measurement_units)
++ (SELECT count(*) FROM public.sunat_table_08_electronic_books)
++ (SELECT count(*) FROM public.sunat_table_10_electronic_document_types)
++ (SELECT count(*) FROM public.sunat_table_11_customs_dependencies)
++ (SELECT count(*) FROM public.sunat_table_12_operation_types)
 '@
     $parts=@($result -split '[|]')
-    if($parts.Count -ne 8 -or $parts[0] -notin @('28','29') -or $parts[2] -ne '1' -or $parts[6] -ne '1'){
+    if($parts.Count -ne 9 -or $parts[0] -notin @('28','29') -or $parts[2] -ne '1' -or $parts[6] -ne '1'){
         throw 'El historial o los datos del laboratorio cambiaron; no automatizar.'
     }
     return @{
@@ -68,6 +78,7 @@ SELECT
         users=[int]$parts[2];accounts=[int]$parts[3]
         templates=[int]$parts[4];sunat=[int]$parts[5]
         rates=[int]$parts[6];journals=[int]$parts[7]
+        otherReferences=[int]$parts[8]
     }
 }
 function ReadLocalSecrets {
@@ -133,23 +144,43 @@ try{
     $state=InspectState
     Write-Host ('[ESTADO] Migraciones '+$state.migrations+' | empresas '+$state.companies+
         ' | usuarios '+$state.users+' | cuentas '+$state.accounts+
-        ' | plantillas PCGE '+$state.templates+' | tasas '+$state.rates)
+        ' | plantillas PCGE '+$state.templates+' | tasas '+$state.rates+
+        ' | SUNAT 01 '+$state.sunat+' | otras referencias '+$state.otherReferences+
+        ' | asientos '+$state.journals)
 
     if($Accion -eq 'Plan') {
         if($state.templates -eq 0 -and $state.companies -eq 1 -and $state.accounts -eq 203){
+            if($state.migrations -ne 28){
+                Write-Host '[BLOQUEO] No corresponde ejecutar carga inicial en 29 migraciones; revisar ledger.'
+            }elseif($state.sunat -ne 0 -or $state.otherReferences -ne 0){
+                Write-Host ('[BLOQUEO] Existen referencias anteriores: SUNAT 01='+$state.sunat+
+                    ', otras='+$state.otherReferences+'. La carga F2 necesita estos catalogos vacios.')
+                Write-Host '[AVISO] No borrar ni sobrescribir: confirmar la version de estos datos.'
+            }else{
+                Write-Host '[PASS] Requisitos visibles para iniciar la carga global F2.'
+            }
+            if($state.journals -gt 0){
+                Write-Host ('[INFO] Hay '+$state.journals+' asientos existentes: se conservaran sin modificacion.')
+            }
             Write-Host '[PLAN] Falta carga global: 3401 plantillas PCGE, SUNAT, NIIF y rubros.'
             Write-Host '[PLAN] Despues, crear una segunda empresa PCGE manteniendo laboratorio original.'
         }elseif($state.templates -eq 3401 -and $state.companies -eq 1){
-            Write-Host '[PLAN] Catalogos presentes. Falta crear empresa PCGE independiente.'
+            if($state.migrations -ne 29 -or $state.sunat -ne 20 -or $state.otherReferences -ne 234) {
+                throw 'PCGE presente pero catalogos/migraciones F2 incompletos; revisar antes de crear empresa.'
+            }
+            Write-Host '[PASS] Catalogos globales completos; revisar creacion de empresa PCGE independiente.'
         }elseif($state.templates -eq 3401 -and $state.companies -eq 2){
+            if($state.migrations -ne 29 -or $state.sunat -ne 20 -or $state.otherReferences -ne 234) {
+                throw 'PCGE/empresa presentes pero catalogos F2 incompletos; revisar.'
+            }
             Write-Host '[PLAN] Referencias y empresa PCGE ya existentes; comprobar -Accion Verificar.'
         }else{throw 'Estado inesperado, no continuar.'}
         Write-Host '[PLAN] Solo SELECT; ninguna conexion a Neon ni escrituras.'
         $success=$true
     }elseif($Accion -eq 'Verificar'){
         if($state.migrations -ne 29 -or $state.templates -ne 3401 -or
-           $state.sunat -ne 20 -or $state.companies -ne 2 -or
-           $state.accounts -lt 3158){
+           $state.sunat -ne 20 -or $state.otherReferences -ne 234 -or
+           $state.companies -ne 2 -or $state.accounts -lt 3158){
             throw 'No estan completos los catalogos o la segunda empresa de prueba.'
         }
         $summary=SqlLocal @'
@@ -186,8 +217,8 @@ SELECT
         $settings=ReadLocalSecrets
         if($Accion -eq 'CargarReferencias'){
             if($state.migrations -ne 28 -or $state.templates -ne 0 -or
-               $state.sunat -ne 0 -or $state.companies -ne 1 -or
-               $state.accounts -ne 203 -or $state.journals -ne 0) {
+               $state.sunat -ne 0 -or $state.otherReferences -ne 0 -or
+               $state.companies -ne 1 -or $state.accounts -ne 203) {
                 throw 'La carga inicial de referencias exige el laboratorio exacto de 28 migraciones.'
             }
             $user='postgres'
@@ -195,8 +226,8 @@ SELECT
             $target='scripts/cargar-pcge-referencias-pg18-local.php'
         }else{
             if($state.migrations -ne 29 -or $state.templates -ne 3401 -or
-               $state.sunat -ne 20 -or $state.companies -ne 1 -or
-               $state.accounts -ne 203 -or $state.journals -ne 0){
+               $state.sunat -ne 20 -or $state.otherReferences -ne 234 -or
+               $state.companies -ne 1 -or $state.accounts -ne 203){
                 throw 'La segunda empresa exige catalogos completos y laboratorio intacto.'
             }
             $user='app_backend'
