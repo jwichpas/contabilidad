@@ -202,11 +202,12 @@ test('tenant middleware reports total time separately from the journal controlle
   assert.match(middleware, /tenantContext->run/);
 });
 
-test('exchange-rate catalog uses one currency join and preserves exact/historical/default cases', () => {
+test('exchange-rate catalog uses a single PostgreSQL SQL query and preserves exact/historical/default cases', () => {
   const fx = readFileSync(new URL('../../backend/app/Http/Controllers/Api/V1/Company/GetCompanyExchangeRatesController.php', import.meta.url), 'utf8');
   const requestTiming = readFileSync(new URL('../../backend/app/Http/Middleware/JournalRequestTiming.php', import.meta.url), 'utf8');
   const bootstrap = readFileSync(new URL('../../backend/bootstrap/app.php', import.meta.url), 'utf8');
-  assert.match(fx, /join\('currencies as currency_catalog'/);
+  assert.match(fx, /JOIN public\.currencies cur ON cur\.id = cc\.currency_id/);
+  assert.match(fx, /DB::selectOne/);
   assert.doesNotMatch(fx, /->with\('currency'\)/);
   assert.match(fx, /DATABASE_EXACT/);
   assert.match(fx, /LATEST_HISTORICAL/);
