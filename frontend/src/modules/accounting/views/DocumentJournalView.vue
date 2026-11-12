@@ -6,9 +6,11 @@ import { AccountingApiClient } from '../api/httpClient';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { CashFlowAreaItem, CompanyAreaItem, CostCenterItem } from '../types/catalogs.types';
+import { TAX_CATEGORY_LABELS } from '../types/documentJournal.types';
 import type {
   DocumentJournalModule, DocumentJournalSettings,
   DocumentJournalEntity, DocumentJournalPage,
+  TaxCategory, TaxAllocationInput, TaxRegisterPage, TaxRegisterSummary,
 } from '../types/documentJournal.types';
 
 const props = defineProps<{
@@ -26,7 +28,7 @@ const api = new AccountingApiClient('', {
 });
 const isPurchase = computed(() => props.module === 'purchases');
 const title = computed(() => isPurchase.value ? 'Registro de Compras' : 'Registro de Ventas');
-const tab = ref<'register' | 'settings' | 'history'>('register');
+const tab = ref<'register' | 'tax' | 'settings' | 'history'>('register');
 const loading = ref(true);
 const saving = ref(false);
 const posting = ref(false);
@@ -42,7 +44,39 @@ const entities = ref<readonly DocumentJournalEntity[]>([]);
 const currencies = ref<readonly string[]>(['PEN']);
 const history = ref<DocumentJournalPage | null>(null);
 const entityQuery = ref('');
-const sections = ['register', 'history', 'settings'] as const;
+const sections = ['register', 'tax', 'history', 'settings'] as const;
+const taxRegister = ref<TaxRegisterPage | null>(null);
+const taxSummary = ref<TaxRegisterSummary | null>(null);
+const taxLoading = ref(false);
+const taxPeriodFilter = ref(todayLocalMonth());
+const purchaseTaxCategories = [
+  'P_TAXED_EXCLUSIVE', 'P_TAXED_MIXED', 'P_TAXED_NON_TAXED',
+  'P_TAXED_NO_CREDIT', 'P_NON_TAXED',
+] as const;
+const saleTaxCategories = [
+  'S_TAXED', 'S_EXONERATED', 'S_UNAFFECTED', 'S_EXPORT',
+] as const;
+const categoryOptions = computed(() => (isPurchase.value ? purchaseTaxCategories : saleTaxCategories)
+  .map(category => ({ value: category as TaxCategory, label: TAX_CATEGORY_LABELS[category] })));
+const categoryAccountMap = reactive<Record<string, string>>({});
+const categoryAccountOptions = computed(() => [
+  { value: '', label: 'Usar cuenta principal por defecto' },
+  ...accounts.value.map(a => ({ value: String(a.id), label: a.code + ' · ' + a.name })),
+]);
+interface TaxAllocationDraft {
+  category: TaxCategory;
+  base_amount: string;
+  tax_amount: string;
+  creditable_tax_amount: string;
+}
+const taxAllocations = ref<TaxAllocationDraft[]>([{
+  category: props.module === 'purchases' ? 'P_TAXED_EXCLUSIVE' : 'S_TAXED',
+  base_amount: '', tax_amount: '0.00', creditable_tax_amount: '0.00',
+}]);
+function todayLocalMonth(): string {
+  return todayLocal().slice(0, 7);
+}
+
 
 function todayLocal(): string {
   const date = new Date();
@@ -65,8 +99,8 @@ const draft = reactive({
   issue_date: todayLocal(),
   entry_date: todayLocal(),
   currency: 'PEN',
-  taxable_amount: '',
-  tax_amount: '0.00',
+  tax_period: todayLocalMonth(),
+  due_date: '',
   cost_center_id: '',
   company_area_id: '',
   cash_flow_area_id: '',
@@ -103,14 +137,38 @@ const cashFlowOptions = computed(() => [
 ]);
 const configured = computed(() => settings.value?.main_account_id != null &&
   settings.value.settlement_account_id != null);
-const mainAccount = computed(() => accounts.value.find(a => a.id === settings.value?.main_account_id));
-const needsCostCenter = computed(() => !!mainAccount.value && (mainAccount.value.requires_cost_center ||
-  mainAccount.value.has_automatic_destination));
-const amountTotal = computed(() => {
-  const base = Number(draft.taxable_amount);
-  const tax = Number(draft.tax_amount);
-  return Number.isFinite(base) && Number.isFinite(tax) && base >= 0 && tax >= 0 ? base + tax : NaN;
-});
+const selectedMainAccounts = computed(() => taxAllocations.value.map(item => {
+  const categoryId = settings.value?.category_account_map?.[item.category];
+  const accountId = categoryId ?? settings.value?.main_account_id;
+  return accounts.value.find(a => a.id === accountId);
+}).filter((a): a is JournalEditorAccount => a !== undefined));
+const needsCostCenter = computed(() => selectedMainAccounts.value.some(a => a.requires_cost_center || a.has_automatic_destination));
+const needsCompanyArea = computed(() => selectedMainAccounts.value.some(a => a.requires_company_area));
+const needsCashFlowArea = computed(() => selectedMainAccounts.value.some(a => a.requires_cash_flow_area));
+const amountBase = computed(() => taxAllocations.value.reduce((sum, row) => sum + Number(row.base_amount || 0), 0));
+const amountTax = computed(() => taxAllocations.value.reduce((sum, row) => sum + Number(row.tax_amount || 0), 0));
+const amountTotal = computed(() => amountBase.value + amountTax.value);
+const isTaxedCategory = (category: TaxCategory): boolean =>
+  ['P_TAXED_EXCLUSIVE', 'P_TAXED_MIXED', 'P_TAXED_NON_TAXED', 'P_TAXED_NO_CREDIT', 'S_TAXED'].includes(category);
+const isPurchaseMixed = (category: TaxCategory): boolean => category === 'P_TAXED_MIXED';
+const isPurchaseExclusive = (category: TaxCategory): boolean => category === 'P_TAXED_EXCLUSIVE';
+const isPurchaseCreditCategory = (category: TaxCategory): boolean =>
+  category === 'P_TAXED_MIXED' || category === 'P_TAXED_EXCLUSIVE';
+const availableCategories = computed(() => categoryOptions.value
+  .filter(option => !taxAllocations.value.some(row => row.category === option.value)));
+function addTaxAllocation(): void {
+  const category = availableCategories.value[0]?.value;
+  if (!category) return;
+  taxAllocations.value.push({ category, base_amount: '', tax_amount: '0.00', creditable_tax_amount: '0.00' });
+}
+function removeTaxAllocation(index: number): void {
+  if (taxAllocations.value.length > 1) taxAllocations.value.splice(index, 1);
+}
+function taxCategoryChanged(row: TaxAllocationDraft): void {
+  if (!isTaxedCategory(row.category)) row.tax_amount = '0.00';
+  if (!isPurchaseMixed(row.category)) row.creditable_tax_amount = '0.00';
+}
+
 const money = (value: number) => Number.isFinite(value)
   ? new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
   : '—';
@@ -122,6 +180,10 @@ function setForm(data: DocumentJournalSettings): void {
   form.tax_account_id = data.tax_account_id == null ? '' : String(data.tax_account_id);
   form.settlement_account_id = data.settlement_account_id == null ? '' : String(data.settlement_account_id);
   form.default_tax_rate = data.default_tax_rate;
+  for (const category of categoryOptions.value) {
+    categoryAccountMap[category.value] = data.category_account_map?.[category.value] == null
+      ? '' : String(data.category_account_map[category.value]);
+  }
 }
 
 async function load(): Promise<void> {
@@ -180,6 +242,10 @@ async function saveSettings(): Promise<void> {
       tax_account_id: form.tax_account_id ? Number(form.tax_account_id) : null,
       settlement_account_id: Number(form.settlement_account_id),
       default_tax_rate: form.default_tax_rate,
+      category_account_map: Object.fromEntries(
+        Object.entries(categoryAccountMap).filter(([, value]) => value !== '')
+          .map(([category, value]) => [category, Number(value)]),
+      ),
     });
     setForm(saved);
     success.value = 'Parámetros guardados para esta empresa y este módulo.';
@@ -191,13 +257,37 @@ async function saveSettings(): Promise<void> {
   }
 }
 
-function calculateTax(): void {
-  if (isPurchase.value && draft.document_type === '03') return;
-  const base = Number(draft.taxable_amount);
+function calculateTax(row: TaxAllocationDraft): void {
+  if (!isTaxedCategory(row.category)) return;
+  const base = Number(row.base_amount);
   const rate = Number(settings.value?.default_tax_rate ?? '0');
   if (Number.isFinite(base) && base > 0 && Number.isFinite(rate)) {
-    draft.tax_amount = (Math.round((base * rate / 100 + Number.EPSILON) * 100) / 100).toFixed(2);
+    row.tax_amount = (Math.round((base * rate / 100 + Number.EPSILON) * 100) / 100).toFixed(2);
   }
+}
+
+async function refreshTaxRegister(page = 1): Promise<void> {
+  taxLoading.value = true;
+  error.value = '';
+  const period = taxPeriodFilter.value.replace('-', '');
+  try {
+    const [records, summary] = await Promise.all([
+      api.fetchTaxRegister(props.module, period, page),
+      api.fetchTaxRegisterSummary(props.module, period),
+    ]);
+    taxRegister.value = records;
+    taxSummary.value = summary;
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'No se pudo cargar el registro tributario.';
+  } finally {
+    taxLoading.value = false;
+  }
+}
+function selectTab(next: typeof sections[number]): void {
+  tab.value = next;
+  error.value = '';
+  success.value = '';
+  if (next === 'tax') void refreshTaxRegister();
 }
 
 async function refreshHistory(page = 1): Promise<void> {
@@ -212,8 +302,16 @@ async function postDocument(): Promise<void> {
   if (!props.canPost || posting.value || !configured.value) return;
   error.value = '';
   success.value = '';
-  if (!draft.entity_id || !draft.series.trim() || !draft.number.trim() || !draft.taxable_amount) {
+  if (!draft.entity_id || !draft.series.trim() || !draft.number.trim() || !taxAllocations.value.length) {
     error.value = 'Complete el tercero, la serie, el número y la base imponible.';
+    return;
+  }
+  if (taxAllocations.value.some(row => !row.base_amount || Number(row.base_amount) <= 0)) {
+    error.value = 'Todas las clasificaciones deben tener una base positiva.';
+    return;
+  }
+  if (new Set(taxAllocations.value.map(row => row.category)).size !== taxAllocations.value.length) {
+    error.value = 'No repita clasificaciones tributarias dentro del mismo comprobante.';
     return;
   }
   if (needsCostCenter.value && !draft.cost_center_id) {
@@ -238,8 +336,16 @@ async function postDocument(): Promise<void> {
       issue_date: draft.issue_date,
       entry_date: draft.entry_date,
       currency: draft.currency,
-      taxable_amount: draft.taxable_amount,
-      tax_amount: draft.tax_amount,
+      tax_period: draft.tax_period.replace('-', ''),
+      ...(draft.due_date ? { due_date: draft.due_date } : {}),
+      tax_allocations: taxAllocations.value.map((row): TaxAllocationInput => ({
+        category: row.category,
+        base_amount: row.base_amount,
+        tax_amount: row.tax_amount,
+        creditable_tax_amount: isPurchaseExclusive(row.category)
+          ? row.tax_amount
+          : isPurchaseMixed(row.category) ? row.creditable_tax_amount : '0',
+      })),
       ...(draft.cost_center_id ? { cost_center_id: Number(draft.cost_center_id) } : {}),
       ...(draft.company_area_id ? { company_area_id: Number(draft.company_area_id) } : {}),
       ...(draft.cash_flow_area_id ? { cash_flow_area_id: Number(draft.cash_flow_area_id) } : {}),
@@ -248,8 +354,8 @@ async function postDocument(): Promise<void> {
     success.value = 'Comprobante contabilizado. Voucher ' + (record.journal?.entry_number ?? record.journal_entry_id);
     draft.series = '';
     draft.number = '';
-    draft.taxable_amount = '';
-    draft.tax_amount = '0.00';
+    taxAllocations.value = [{ category: isPurchase.value ? 'P_TAXED_EXCLUSIVE' : 'S_TAXED',
+      base_amount: '', tax_amount: '0.00', creditable_tax_amount: '0.00' }];
     draft.description = '';
     await refreshHistory();
   } catch (e) {
