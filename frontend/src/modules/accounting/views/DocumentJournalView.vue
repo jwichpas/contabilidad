@@ -291,6 +291,7 @@ async function load(): Promise<void> {
     if (!currencies.value.includes(draft.currency)) draft.currency = currencies.value[0] ?? 'PEN';
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudo cargar el módulo.';
+    toast.error('No fue posible cargar el módulo.', { description: error.value });
   } finally {
     loading.value = false;
   }
@@ -303,6 +304,7 @@ async function searchEntities(): Promise<void> {
     if (!entities.value.some(e => String(e.id) === draft.entity_id)) draft.entity_id = '';
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudieron consultar los terceros.';
+    toast.error('No se pudieron consultar los terceros.', { description: error.value });
   }
 }
 
@@ -332,6 +334,7 @@ async function saveSettings(): Promise<void> {
     tab.value = 'register';
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudieron guardar los parámetros.';
+    toast.error('No se pudieron guardar los parámetros.', { description: error.value });
   } finally {
     saving.value = false;
   }
@@ -359,6 +362,7 @@ async function refreshTaxRegister(page = 1): Promise<void> {
     taxSummary.value = summary;
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudo cargar el registro tributario.';
+    toast.error('No se pudo cargar el registro tributario.', { description: error.value });
   } finally {
     taxLoading.value = false;
   }
@@ -375,6 +379,7 @@ async function refreshHistory(page = 1): Promise<void> {
     history.value = await api.fetchDocumentJournalRecords(props.module, page);
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudo actualizar el registro.';
+    toast.error('No se pudo actualizar el registro.', { description: error.value });
   }
 }
 
