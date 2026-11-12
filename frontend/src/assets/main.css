@@ -36,7 +36,7 @@
   /* Acento */
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-text);
-  --color-on-accent: #ffffff;
+  --color-on-accent: var(--color-white);
 
   /* Semánticos */
   --color-info: var(--brand);
@@ -167,8 +167,8 @@
   textarea:focus,
   select:focus {
     outline: none;
-    border-color: var(--color-brand-bright);
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 24%, transparent);
+    border-color: var(--focus-color);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus-color) 24%, transparent);
   }
 
   input::placeholder,
@@ -285,7 +285,7 @@
   input[type="checkbox"]:focus-visible,
   input[type="radio"]:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 30%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus-color) 30%, transparent);
   }
 
   input[type="checkbox"]:disabled,
@@ -415,7 +415,7 @@
   }
 
   .liq > div:last-child b {
-    color: #ffb066;
+    color: var(--color-orange-400);
   }
 
   .kpi {
