@@ -30,10 +30,9 @@ final readonly class GetCompanyExchangeRatesController
             ? CarbonImmutable::parse($dateParam)
             : CarbonImmutable::today();
 
-        // Both the active currencies and the last 100 eligible daily rates are
-        // fetched in ONE PostgreSQL roundtrip. Keep FORCE RLS plus explicit
-        // company predicates: neither authentication nor rates are cached.
-        // The 100-row cap, default prices and historic fallback are unchanged.
+        // One tenant-scoped SQL roundtrip: company currencies, ALL exact-day
+        // rates, and up to 100 recent historic rows for suggestions/history.
+        // The 100-row cap must NEVER affect whether an exact daily rate exists.
         $row = DB::selectOne(<<<'SQL'
             SELECT
               COALESCE((
@@ -48,6 +47,19 @@ final readonly class GetCompanyExchangeRatesController
                 JOIN public.currencies cur ON cur.id = cc.currency_id
                 WHERE cc.company_id = ?::bigint AND cc.is_active IS TRUE
               ), '[]'::jsonb) AS company_currencies,
+              -- Exact-day rate MUST NOT be selected from the capped 100-row
+              -- history. A busy company may have >100 records before this day.
+              COALESCE((
+                SELECT jsonb_agg(jsonb_build_object(
+                  'rate_date', er.rate_date::text,
+                  'source_currency', er.source_currency,
+                  'target_currency', er.target_currency,
+                  'buy_rate', er.buy_rate::text,
+                  'sell_rate', er.sell_rate::text
+                ))
+                FROM public.exchange_rates er
+                WHERE er.company_id = ?::bigint AND er.rate_date = ?::date
+              ), '[]'::jsonb) AS exact_rates,
               COALESCE((
                 SELECT jsonb_agg(jsonb_build_object(
                   'id', rates.id,
@@ -66,13 +78,16 @@ final readonly class GetCompanyExchangeRatesController
                   LIMIT 100
                 ) rates
               ), '[]'::jsonb) AS recent_rates
-            SQL, [$companyId, $companyId, $rateDate->toDateString()]);
+            SQL, [$companyId, $companyId, $rateDate->toDateString(), $companyId, $rateDate->toDateString()]);
 
         $companyCurrencies = collect(json_decode(
             (string) ($row?->company_currencies ?? '[]'), true, 512, JSON_THROW_ON_ERROR
         ));
         $allRates = collect(json_decode(
             (string) ($row?->recent_rates ?? '[]'), true, 512, JSON_THROW_ON_ERROR
+        ));
+        $exactRates = collect(json_decode(
+            (string) ($row?->exact_rates ?? '[]'), true, 512, JSON_THROW_ON_ERROR
         ));
 
         $baseCompanyCurrency = $companyCurrencies->first(fn (array $currency): bool => $currency['is_base'] === true);
@@ -87,8 +102,9 @@ final readonly class GetCompanyExchangeRatesController
             $currencyCode = $sec['currency_code'];
 
             // Exact rate takes precedence over historical fallback.
-            $exactRate = $allRates->first(fn (array $rate): bool =>
+            $exactRate = $exactRates->first(fn (array $rate): bool =>
                 $rate['source_currency'] === $currencyCode
+                && $rate['target_currency'] === $baseCode
                 && $rate['rate_date'] === $rateDate->toDateString()
             );
 
