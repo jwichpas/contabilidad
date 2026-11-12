@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\JournalRequestTiming;
+use App\Scheduling\AccountingTaskSchedule;
+use Illuminate\Console\Scheduling\Schedule;
 use App\Http\Middleware\JournalAuthenticationStartTiming;
 use App\Http\Middleware\SecurityHeadersMiddleware;
 use App\Http\Middleware\SetTenantContext;
@@ -16,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__ . '/../routes/api.php',
         health: '/up',
     )
+    ->withSchedule(static function (Schedule $schedule): void {
+        app(AccountingTaskSchedule::class)->register($schedule);
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(JournalRequestTiming::class);
         // Laravel sorts route middleware by priority, not always declaration order.
