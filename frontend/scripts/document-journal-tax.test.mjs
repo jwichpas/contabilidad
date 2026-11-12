@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { TAX_CATEGORY_LABELS } from '../src/modules/accounting/types/documentJournal.types.ts';
 import { buildDocumentJournalEntityQuery } from '../src/modules/accounting/api/documentJournalEntityQuery.ts';
+import { createDocumentJournalDraftSchema } from '../src/modules/accounting/schemas/documentJournalDraft.schema.ts';
 
 const read = (relative) => readFileSync(new URL(relative, import.meta.url), 'utf8');
 
@@ -66,4 +67,58 @@ test('directory search sends trimmed nonempty terms and preserves supplier/clien
   const sales = new URLSearchParams(buildDocumentJournalEntityQuery('sales', '  Comercial Andina  '));
   assert.equal(sales.get('search'), 'Comercial Andina');
   assert.equal(sales.get('is_client'), '1');
+});
+
+
+const validPurchase = () => ({
+  document_type: '01',
+  series: 'F600',
+  number: '3500',
+  entity_id: '1',
+  issue_date: '2026-11-12',
+  entry_date: '2026-11-12',
+  tax_period: '2026-11',
+  due_date: '',
+  currency: 'PEN',
+  description: 'Compra de mercadería',
+  cost_center_id: '',
+  company_area_id: '',
+  cash_flow_area_id: '',
+  tax_allocations: [{
+    category: 'P_TAXED_EXCLUSIVE',
+    base_amount: '100',
+    tax_amount: '18',
+    creditable_tax_amount: '0',
+  }],
+});
+
+test('Zod validates invoice before asking for posting confirmation', () => {
+  const schema = createDocumentJournalDraftSchema('purchases');
+  assert.equal(schema.safeParse(validPurchase()).success, true);
+  assert.equal(schema.safeParse({ ...validPurchase(), entity_id: '' }).success, false);
+  assert.equal(schema.safeParse({ ...validPurchase(), entry_date: '2026-11-01' }).success, false);
+  assert.equal(schema.safeParse({ ...validPurchase(), tax_allocations: [] }).success, false);
+  assert.equal(schema.safeParse({
+    ...validPurchase(),
+    tax_allocations: [{ category: 'P_NON_TAXED', base_amount: '100', tax_amount: '18', creditable_tax_amount: '0' }],
+  }).success, false);
+});
+
+test('VueSonner, VeeValidate and live registered FX rate are used before POST', () => {
+  const view = read('../src/modules/accounting/views/DocumentJournalView.vue');
+  const dialog = read('../src/modules/accounting/components/DocumentPostingConfirmDialog.vue');
+  const app = read('../src/App.vue');
+  const client = read('../src/modules/accounting/api/httpClient.ts');
+
+  assert.match(view, /useForm<DocumentJournalDraftValues>/);
+  assert.match(view, /toTypedSchema\(createDocumentJournalDraftSchema/);
+  assert.match(view, /const result = await validate\(\)/);
+  assert.match(view, /await refreshFx\(\)/);
+  assert.match(view, /rate\.is_recorded_for_date/);
+  assert.match(view, /toast\.warning\('Falta registrar el tipo de cambio diario/);
+  assert.match(view, /:disabled="!canPost \|\| !configured \|\| posting \|\| fxLoading"/);
+  assert.doesNotMatch(view, /window\.confirm/);
+  assert.match(dialog, /<Dialog/);
+  assert.match(app, /<Toaster/);
+  assert.match(client, /fetchCompanyExchangeRates\(date: string\)/);
 });
