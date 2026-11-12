@@ -36,7 +36,7 @@ test('backend posts both records in a transaction without pretending SUNAT trans
   assert.match(backend, /DocumentTaxAllocationService::normalize/);
   assert.match(backend, /AccountingTaxRegisterEntry::query\(\)->create/);
   assert.match(backend, /AccountingTaxRegisterAllocation::query\(\)->create/);
-  assert.match(backend, /\\$this->journal->post\(/);
+  assert.match(backend, /\$this->journal->post\(/);
   assert.match(route, /accounting\/document-journals\/\{module\}\/tax-register/);
   assert.match(summary, /PENDING_SIRE_RECONCILIATION/);
   assert.match(summary, /journal\.status', 'POSTED'/);
