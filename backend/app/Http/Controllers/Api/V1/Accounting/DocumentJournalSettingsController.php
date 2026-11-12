@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Accounting;
 use App\Models\AccountingAccount;
 use App\Models\CompanyDocumentJournalSetting;
 use App\Models\CompanySubdiary;
+use App\Services\Accounting\DocumentTaxAllocationService;
 use App\Services\Security\AuditLoggerService;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -45,6 +46,7 @@ final readonly class DocumentJournalSettingsController
             'tax_account_id' => null,
             'settlement_account_id' => null,
             'default_tax_rate' => '18.0000',
+            'category_account_map' => [],
         ]]);
     }
 
@@ -59,12 +61,30 @@ final readonly class DocumentJournalSettingsController
             'tax_account_id' => ['nullable', 'integer', 'min:1'],
             'settlement_account_id' => ['required', 'integer', 'min:1'],
             'default_tax_rate' => ['required', 'numeric', 'between:0,100', 'regex:/^\d+(?:\.\d{1,4})?$/'],
+            'category_account_map' => ['sometimes', 'array'],
+            'category_account_map.*' => ['required', 'integer', 'min:1'],
             'company_id' => ['prohibited'],
             'module' => ['prohibited'],
         ]);
         if (! CompanySubdiary::query()->where('code', $data['subdiary_code'])
             ->where('is_active', true)->exists()) {
             throw ValidationException::withMessages(['subdiary_code' => ['Seleccione un subdiario activo de la empresa.']]);
+        }
+
+        $categoryMap = $data['category_account_map'] ?? [];
+        foreach ($categoryMap as $category => $accountId) {
+            if (! in_array($category, DocumentTaxAllocationService::categories($kind), true)) {
+                throw ValidationException::withMessages([
+                    'category_account_map' => ['La clasificación '.$category.' no corresponde al módulo.'],
+                ]);
+            }
+            if (in_array((int) $accountId, [
+                (int) $data['settlement_account_id'], (int) ($data['tax_account_id'] ?? 0),
+            ], true)) {
+                throw ValidationException::withMessages([
+                    'category_account_map' => ['La cuenta de clasificación no puede ser IGV ni la contrapartida.'],
+                ]);
+            }
         }
 
         $accountIds = array_values(array_filter([
@@ -77,6 +97,7 @@ final readonly class DocumentJournalSettingsController
             throw ValidationException::withMessages(['main_account_id' => ['Use cuentas distintas para base, tributo y contrapartida.']]);
         }
 
+        $accountIds = array_values(array_unique(array_merge($accountIds, array_map('intval', array_values($categoryMap)))));
         $activeCount = AccountingAccount::query()->whereIn('id', $accountIds)
             ->operationalActive()->count();
         if ($activeCount !== count($accountIds)) {
@@ -91,6 +112,7 @@ final readonly class DocumentJournalSettingsController
                 'tax_account_id' => isset($data['tax_account_id']) ? (int) $data['tax_account_id'] : null,
                 'settlement_account_id' => (int) $data['settlement_account_id'],
                 'default_tax_rate' => $data['default_tax_rate'],
+                'category_account_map' => $categoryMap,
             ]
         );
 
@@ -99,7 +121,8 @@ final readonly class DocumentJournalSettingsController
             CompanyDocumentJournalSetting::class, (string) $record->id,
             null, ['module' => $kind, 'subdiary_code' => $record->subdiary_code,
                 'main_account_id' => $record->main_account_id, 'tax_account_id' => $record->tax_account_id,
-                'settlement_account_id' => $record->settlement_account_id], $request
+                'settlement_account_id' => $record->settlement_account_id,
+                'category_account_map' => $record->category_account_map], $request
         );
 
         return response()->json(['data' => $record]);
