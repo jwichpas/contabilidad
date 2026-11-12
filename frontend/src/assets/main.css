@@ -1554,3 +1554,32 @@
     }
   }
 }
+
+
+/*
+ * Vue Sonner - notificaciones contables.
+ * Paleta semántica OKLCH centralizada en design-tokens.css.
+ * Los colores de los textos mantienen contraste en claro y oscuro.
+ */
+[data-sonner-toaster] {
+  --normal-bg: var(--surf);
+  --normal-border: var(--line);
+  --normal-text: var(--ink);
+  --success-bg: var(--surf);
+  --success-border: var(--color-green-500);
+  --success-text: var(--pos);
+  --error-bg: var(--surf);
+  --error-border: var(--color-red-500);
+  --error-text: var(--neg);
+  --warning-bg: var(--surf);
+  --warning-border: var(--color-yellow-500);
+  --warning-text: var(--warn);
+  --info-bg: var(--surf);
+  --info-border: var(--color-blue-500);
+  --info-text: var(--accent-text);
+  font-family: inherit;
+}
+
+[data-sonner-toast] {
+  border-radius: var(--radius-panel);
+}
