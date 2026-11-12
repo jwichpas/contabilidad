@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { TAX_CATEGORY_LABELS } from '../src/modules/accounting/types/documentJournal.types.ts';
+import { buildDocumentJournalEntityQuery } from '../src/modules/accounting/api/documentJournalEntityQuery.ts';
 
 const read = (relative) => readFileSync(new URL(relative, import.meta.url), 'utf8');
 
@@ -42,4 +43,27 @@ test('backend posts both records in a transaction without pretending SUNAT trans
   assert.match(summary, /journal\.status', 'POSTED'/);
   assert.match(tax, /P_TAXED_MIXED/);
   assert.match(tax, /S_EXPORT/);
+});
+
+test('initial purchase and sales directories do not send search= when blank', () => {
+  const purchases = new URLSearchParams(buildDocumentJournalEntityQuery('purchases'));
+  assert.equal(purchases.get('per_page'), '100');
+  assert.equal(purchases.get('is_supplier'), '1');
+  assert.equal(purchases.has('is_client'), false);
+  assert.equal(purchases.has('search'), false);
+
+  const sales = new URLSearchParams(buildDocumentJournalEntityQuery('sales', '   '));
+  assert.equal(sales.get('is_client'), '1');
+  assert.equal(sales.has('is_supplier'), false);
+  assert.equal(sales.has('search'), false);
+});
+
+test('directory search sends trimmed nonempty terms and preserves supplier/client filters', () => {
+  const purchases = new URLSearchParams(buildDocumentJournalEntityQuery('purchases', '  20601234567  '));
+  assert.equal(purchases.get('search'), '20601234567');
+  assert.equal(purchases.get('is_supplier'), '1');
+
+  const sales = new URLSearchParams(buildDocumentJournalEntityQuery('sales', '  Comercial Andina  '));
+  assert.equal(sales.get('search'), 'Comercial Andina');
+  assert.equal(sales.get('is_client'), '1');
 });
