@@ -68,13 +68,13 @@ final readonly class GetCompanyExchangeRatesController
                   'target_currency', rates.target_currency,
                   'buy_rate', rates.buy_rate::text,
                   'sell_rate', rates.sell_rate::text
-                ) ORDER BY rates.rate_date DESC)
+                ) ORDER BY rates.rate_date DESC, rates.id DESC)
                 FROM (
                   SELECT id, rate_date, source_currency, target_currency,
                          buy_rate, sell_rate
                   FROM public.exchange_rates
                   WHERE company_id = ?::bigint AND rate_date <= ?::date
-                  ORDER BY rate_date DESC
+                  ORDER BY rate_date DESC, id DESC
                   LIMIT 100
                 ) rates
               ), '[]'::jsonb) AS recent_rates
