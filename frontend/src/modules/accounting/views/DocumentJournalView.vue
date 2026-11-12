@@ -373,35 +373,57 @@ async function refreshHistory(page = 1): Promise<void> {
   }
 }
 
-async function postDocument(): Promise<void> {
+async function preparePosting(): Promise<void> {
   if (!props.canPost || posting.value || !configured.value) return;
   error.value = '';
-  success.value = '';
-  if (!draft.entity_id || !draft.series.trim() || !draft.number.trim() || !taxAllocations.value.length) {
-    error.value = 'Complete el tercero, la serie, el número y la base imponible.';
-    return;
-  }
-  if (taxAllocations.value.some(row => !row.base_amount || Number(row.base_amount) <= 0)) {
-    error.value = 'Todas las clasificaciones deben tener una base positiva.';
-    return;
-  }
-  if (new Set(taxAllocations.value.map(row => row.category)).size !== taxAllocations.value.length) {
-    error.value = 'No repita clasificaciones tributarias dentro del mismo comprobante.';
+  setValues(validationSnapshot());
+  const result = await validate();
+  if (!result.valid) {
+    toast.error('Revise los datos del comprobante.', {
+      description: Object.values(result.errors)[0] ?? 'Complete los campos obligatorios.',
+    });
     return;
   }
   if (needsCostCenter.value && !draft.cost_center_id) {
-    error.value = 'La cuenta de origen requiere centro de costos.';
+    toast.error('La cuenta de origen requiere un centro de costo.');
+    return;
+  }
+  if (needsCompanyArea.value && !draft.company_area_id) {
+    toast.error('La cuenta de origen requiere un área de empresa.');
+    return;
+  }
+  if (needsCashFlowArea.value && !draft.cash_flow_area_id) {
+    toast.error('La cuenta de origen requiere un área de flujo de efectivo.');
     return;
   }
   if (!Number.isFinite(amountTotal.value) || amountTotal.value <= 0) {
-    error.value = 'Revise los importes de la operación.';
+    toast.error('El total del comprobante debe ser mayor a cero.');
     return;
   }
-  if (!window.confirm('¿Contabilizar el comprobante ' + draft.series + '-' + draft.number +
-    ' por ' + draft.currency + ' ' + money(amountTotal.value) +
-    '? El asiento será inmutable y sólo podrá corregirse mediante extorno.')) return;
+  // La validación aquí es una vista previa: backend vuelve a comprobar la tasa
+  // exacta en su transacción; nunca aceptar valores históricos ni presets.
+  await refreshFx();
+  if (!fxReady.value) {
+    toast.warning('Falta registrar el tipo de cambio diario.', {
+      description: 'El Libro Diario es bimoneda incluso cuando el comprobante está en PEN. Registre la tasa de la fecha antes de contabilizar.',
+    });
+    return;
+  }
+  confirmOpen.value = true;
+}
+
+async function postDocument(): Promise<void> {
+  if (!confirmOpen.value || !props.canPost || posting.value || !configured.value) return;
+  if (!fxReady.value) {
+    confirmOpen.value = false;
+    toast.error('La cotización diaria no está confirmada.');
+    return;
+  }
+  confirmOpen.value = false;
   posting.value = true;
   emit('posting-change', true);
+  error.value = '';
+  success.value = '';
   try {
     const record = await api.postDocumentJournal(props.module, {
       document_type: draft.document_type,
@@ -415,11 +437,11 @@ async function postDocument(): Promise<void> {
       ...(draft.due_date ? { due_date: draft.due_date } : {}),
       tax_allocations: taxAllocations.value.map((row): TaxAllocationInput => ({
         category: row.category,
-        base_amount: row.base_amount,
-        tax_amount: row.tax_amount,
+        base_amount: String(row.base_amount),
+        tax_amount: String(row.tax_amount),
         creditable_tax_amount: isPurchaseExclusive(row.category)
-          ? row.tax_amount
-          : isPurchaseMixed(row.category) ? row.creditable_tax_amount : '0',
+          ? String(row.tax_amount)
+          : isPurchaseMixed(row.category) ? String(row.creditable_tax_amount) : '0',
       })),
       ...(draft.cost_center_id ? { cost_center_id: Number(draft.cost_center_id) } : {}),
       ...(draft.company_area_id ? { company_area_id: Number(draft.company_area_id) } : {}),
@@ -427,6 +449,7 @@ async function postDocument(): Promise<void> {
       ...(draft.description.trim() ? { description: draft.description.trim() } : {}),
     });
     success.value = 'Comprobante contabilizado. Voucher ' + (record.journal?.entry_number ?? record.journal_entry_id);
+    toast.success('Comprobante registrado correctamente', { description: success.value });
     draft.series = '';
     draft.number = '';
     taxAllocations.value = [{ category: isPurchase.value ? 'P_TAXED_EXCLUSIVE' : 'S_TAXED',
@@ -434,12 +457,18 @@ async function postDocument(): Promise<void> {
     draft.description = '';
     await refreshHistory();
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'No se pudo contabilizar el documento.';
+    error.value = e instanceof Error ? e.message : 'No se pudo contabilizar el comprobante.';
+    toast.error('No fue posible contabilizar.', { description: error.value });
+    if (/tipo de cambio/i.test(error.value)) {
+      // Puede haber cambiado el valor de la fecha en otro módulo.
+      await refreshFx();
+    }
   } finally {
     posting.value = false;
     emit('posting-change', false);
   }
 }
+
 onMounted(() => { void load(); });
 </script>
 
