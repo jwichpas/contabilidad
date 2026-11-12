@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
-import { BookOpenCheck, CheckCircle2, FilePlus2, RefreshCw, Settings2 } from 'lucide-vue-next';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { AlertTriangle, ArrowLeftRight, BookOpenCheck, FilePlus2, RefreshCw, Settings2 } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
+import { useForm } from 'vee-validate';
+import { toTypedSchema } from '@vee-validate/zod';
+import DocumentPostingConfirmDialog from '../components/DocumentPostingConfirmDialog.vue';
+import { createDocumentJournalDraftSchema, type DocumentJournalDraftValues } from '../schemas/documentJournalDraft.schema';
 import UiSelect from '@/shared/ui/UiSelect.vue';
 import { AccountingApiClient } from '../api/httpClient';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { CashFlowAreaItem, CompanyAreaItem, CostCenterItem } from '../types/catalogs.types';
 import { TAX_CATEGORY_LABELS } from '../types/documentJournal.types';
+import type { CompanyExchangeRatesResponse, RequiredExchangeRateItem } from '@/modules/company/types/companySettings.types';
 import type {
   DocumentJournalModule, DocumentJournalSettings,
   DocumentJournalEntity, DocumentJournalPage,
@@ -34,6 +40,11 @@ const saving = ref(false);
 const posting = ref(false);
 const error = ref('');
 const success = ref('');
+const confirmOpen = ref(false);
+const fxLoading = ref(false);
+const fxError = ref('');
+const fxSnapshot = ref<CompanyExchangeRatesResponse | null>(null);
+let fxRequestId = 0;
 const settings = ref<DocumentJournalSettings | null>(null);
 const accounts = ref<readonly JournalEditorAccount[]>([]);
 const subdiaries = ref<readonly { code: string; name: string }[]>([]);
@@ -107,6 +118,56 @@ const draft = reactive({
   description: '',
 });
 
+// VeeValidate v4 + Zod validan el comprobante y cada clasificación antes del POST.
+// El backend conserva el control final de tipo de cambio, periodo, RLS y partida doble.
+const { validate, setValues, errors: validationErrors } = useForm<DocumentJournalDraftValues>({
+  validationSchema: toTypedSchema(createDocumentJournalDraftSchema(props.module)),
+});
+function validationSnapshot(): DocumentJournalDraftValues {
+  return {
+    ...draft,
+    tax_allocations: taxAllocations.value.map(row => ({
+      category: row.category,
+      base_amount: String(row.base_amount ?? ''),
+      tax_amount: String(row.tax_amount ?? ''),
+      creditable_tax_amount: String(row.creditable_tax_amount ?? '0'),
+    })),
+  };
+}
+
+async function refreshFx(): Promise<void> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.entry_date)) {
+    fxSnapshot.value = null;
+    fxError.value = 'Seleccione una fecha contable válida para consultar el tipo de cambio.';
+    return;
+  }
+  const requestId = ++fxRequestId;
+  const expectedDate = draft.entry_date;
+  const expectedCompany = props.activeCompanyId;
+  fxLoading.value = true;
+  fxError.value = '';
+  fxSnapshot.value = null;
+  try {
+    const fresh = await api.fetchCompanyExchangeRates(expectedDate);
+    if (requestId !== fxRequestId || expectedDate !== draft.entry_date ||
+      expectedCompany !== props.activeCompanyId) return;
+    if (fresh.rate_date !== expectedDate) throw new Error('La fecha del tipo de cambio no coincide con la fecha contable.');
+    fxSnapshot.value = fresh;
+  } catch (e) {
+    if (requestId === fxRequestId) {
+      fxSnapshot.value = null;
+      fxError.value = e instanceof Error ? e.message : 'No se pudo consultar el tipo de cambio.';
+    }
+  } finally {
+    if (requestId === fxRequestId) fxLoading.value = false;
+  }
+}
+watch(() => [draft.entry_date, props.activeCompanyId], () => {
+  void refreshFx();
+}, { flush: 'sync' });
+
+
+
 const accountOptions = computed(() => [
   { value: '', label: 'Seleccione una cuenta contable' },
   ...accounts.value.map(a => ({ value: String(a.id), label: a.code + ' · ' + a.name })),
@@ -148,6 +209,17 @@ const needsCashFlowArea = computed(() => selectedMainAccounts.value.some(a => a.
 const amountBase = computed(() => taxAllocations.value.reduce((sum, row) => sum + Number(row.base_amount || 0), 0));
 const amountTax = computed(() => taxAllocations.value.reduce((sum, row) => sum + Number(row.tax_amount || 0), 0));
 const amountTotal = computed(() => amountBase.value + amountTax.value);
+const secondaryRates = computed(() => fxSnapshot.value?.required_currencies ?? []);
+const fxReady = computed(() => !fxLoading.value && !fxError.value && fxSnapshot.value?.rate_date === draft.entry_date
+  && secondaryRates.value.every(rate => rate.is_recorded_for_date &&
+    Number(rate.buy_rate) > 0 && Number(rate.sell_rate) > 0));
+const missingRates = computed(() => secondaryRates.value.filter(rate => !rate.is_recorded_for_date));
+const fxSourceLabel = (rate: RequiredExchangeRateItem): string =>
+  rate.is_recorded_for_date ? 'Registrado para esta fecha'
+    : rate.source === 'LATEST_HISTORICAL' ? 'Referencia histórica; no registrada para el día'
+      : 'Valor predeterminado; no registrado para el día';
+const formatRate = (rate: string) => Number.isFinite(Number(rate)) ? Number(rate).toFixed(6) : '—';
+
 const isTaxedCategory = (category: TaxCategory): boolean =>
   ['P_TAXED_EXCLUSIVE', 'P_TAXED_MIXED', 'P_TAXED_NON_TAXED', 'P_TAXED_NO_CREDIT', 'S_TAXED'].includes(category);
 const isPurchaseMixed = (category: TaxCategory): boolean => category === 'P_TAXED_MIXED';
@@ -203,6 +275,8 @@ async function load(): Promise<void> {
     costCenters.value = bootstrap.cost_centers;
     companyAreas.value = bootstrap.company_areas;
     cashFlowAreas.value = bootstrap.cash_flow_areas;
+    fxSnapshot.value = bootstrap.exchange_rates;
+    fxError.value = '';
     history.value = documents;
     entities.value = directory.data;
     const codes = company.company_currencies
@@ -249,6 +323,7 @@ async function saveSettings(): Promise<void> {
     });
     setForm(saved);
     success.value = 'Parámetros guardados para esta empresa y este módulo.';
+    toast.success(success.value);
     tab.value = 'register';
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudieron guardar los parámetros.';
