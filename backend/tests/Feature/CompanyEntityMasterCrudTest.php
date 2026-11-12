@@ -153,3 +153,19 @@ it('protects writes by roles and prevents reading entities across two valid memb
     $this->withHeader('X-Company-Id',(string)$this->companyB->id)
         ->getJson('/api/v1/company/entities')->assertForbidden();
 });
+
+it('accepts empty optional directory search for purchase and sales lookups', function (): void {
+    $this->actingAs($this->admin)->withHeader('X-Company-Id', (string) $this->companyA->id);
+    $entityId = (int) $this->postJson('/api/v1/company/entities', $this->payload)
+        ->assertCreated()->json('data.id');
+
+    $this->getJson('/api/v1/company/entities?per_page=100&search=&is_supplier=1')
+        ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $entityId);
+    $this->getJson('/api/v1/company/entities?per_page=100&is_client=1')
+        ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $entityId);
+    $this->getJson('/api/v1/company/entities?per_page=100&search=Maestra&is_supplier=1')
+        ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $entityId);
+
+    $this->getJson('/api/v1/company/entities?search%5B%5D=Maestra')
+        ->assertUnprocessable()->assertJsonValidationErrors('search');
+});
