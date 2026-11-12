@@ -149,3 +149,24 @@ test('FX gate rejects stale, suggested and historical rates even when the invoic
   }, '2026-11-12'), false);
   assert.equal(isDocumentFxReady({ ...exact, required_currencies: [] }, '2026-11-12'), true);
 });
+
+
+test('SUNAT fallback integrates through explicit POST and exact company/date checks', () => {
+  const view = read('../src/modules/accounting/views/DocumentJournalView.vue');
+  const api = read('../src/modules/accounting/api/httpClient.ts');
+  const backend = read('../../backend/app/Http/Controllers/Api/V1/Accounting/DocumentJournalController.php');
+  const routes = read('../../backend/routes/api.php');
+  const schedule = read('../../backend/app/Scheduling/AccountingTaskSchedule.php');
+  const bootstrap = read('../../backend/bootstrap/app.php');
+
+  assert.match(view, /api\.importSunatExchangeRate\(targetDate\)/);
+  assert.match(view, /Importar tasa SUNAT/);
+  assert.match(view, /await importSunatFx\(false\)/);
+  assert.match(api, /exchange-rates\/import-sunat/);
+  assert.match(backend, /sunatFx->sync\(/);
+  assert.match(routes, /exchange-rates\/import-sunat/);
+  assert.match(routes, /ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT/);
+  assert.match(schedule, /twiceDailyAt\(10, 16, 30\)/);
+  assert.match(schedule, /withoutOverlapping\(10\)/);
+  assert.match(bootstrap, /withSchedule/);
+});
