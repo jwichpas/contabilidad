@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Validation\Rule;
 
 /**
  * Reporte tributario interno, independiente del libro diario.
@@ -66,6 +65,7 @@ final readonly class TaxRegisterController
         $companyId = $this->tenant->requireCompanyId(AccountingTaxRegisterEntry::class);
         $period = $this->validatedPeriod($request);
 
+        // Los asientos extornados siguen visibles en el historial, pero se excluyen del resumen activo.
         // Agrupar por moneda: no mezclar PEN con USD antes de convertir a soles
         // en el adaptador normativo SIRE, aún pendiente de implementar.
         $byCategory = DB::table('accounting_tax_register_entries as r')
@@ -77,9 +77,14 @@ final readonly class TaxRegisterController
                 $join->on('a.tax_register_entry_id', '=', 'r.id')
                     ->on('a.company_id', '=', 'r.company_id');
             })
+            ->join('journal_entries as journal', function ($join): void {
+                $join->on('journal.id', '=', 'd.journal_entry_id')
+                    ->on('journal.company_id', '=', 'd.company_id');
+            })
             ->where('r.company_id', $companyId)
             ->where('r.module', $kind)
             ->where('r.tax_period', $period)
+            ->where('journal.status', 'POSTED')
             ->groupBy('a.category', 'd.currency')
             ->orderBy('a.category')
             ->orderBy('d.currency')
