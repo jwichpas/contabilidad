@@ -172,7 +172,9 @@ async function refreshFx(): Promise<void> {
  * histórica se rechaza sin copiar el valor del día actual.
  */
 async function importSunatFx(showSuccess = true): Promise<boolean> {
-  if (fxImporting.value || fxLoading.value || posting.value) return false;
+  if (fxImporting.value || fxLoading.value || posting.value || fxError.value || !fxSnapshot.value ||
+    fxSnapshot.value.rate_date !== draft.entry_date ||
+    !secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)) return false;
   const targetDate = draft.entry_date;
   const companyId = props.activeCompanyId;
   fxImporting.value = true;
@@ -448,15 +450,20 @@ async function preparePosting(): Promise<void> {
   // La validación aquí es una vista previa: backend vuelve a comprobar la tasa
   // exacta en su transacción; nunca aceptar valores históricos ni presets.
   await refreshFx();
-  if (!fxReady.value && currencies.value.includes('USD') && (
-    fxError.value !== '' || secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)
-  )) {
+  // Only a SUCCESSFUL database lookup that explicitly reports a missing USD
+  // daily rate can initiate a SUNAT import. A failed GET is not evidence
+  // that no rate exists; retry it rather than creating an unrelated 503.
+  if (!fxReady.value && !fxError.value && fxSnapshot.value?.rate_date === draft.entry_date
+    && currencies.value.includes('USD')
+    && secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)) {
     // El usuario está confirmando un comprobante; se intenta importar solo aquí.
     await importSunatFx(false);
   }
   if (!fxReady.value) {
-    toast.warning('Falta registrar el tipo de cambio diario.', {
-      description: 'El Libro Diario es bimoneda incluso cuando el comprobante está en PEN. Registre la tasa de la fecha antes de contabilizar.',
+    toast.warning(fxError.value ? 'No se pudo verificar el tipo de cambio registrado.' : 'Falta registrar el tipo de cambio diario.', {
+      description: fxError.value
+        ? 'No se pudo consultar Neon: ' + fxError.value + '. Reintente «Actualizar» sin importar automáticamente desde SUNAT.'
+        : 'El Libro Diario es bimoneda incluso cuando el comprobante está en PEN. Verifique la empresa y fecha antes de registrar una nueva tasa.',
     });
     return;
   }
@@ -665,7 +672,8 @@ onMounted(() => { void load(); });
                 :disabled="fxLoading || fxImporting" @click="refreshFx">
                 <RefreshCw class="size-3.5" :class="{ 'animate-spin': fxLoading }" /> Actualizar
               </button>
-              <button v-if="currencies.includes('USD') && (fxError || secondaryRates.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date))"
+              <button v-if="!fxError && fxSnapshot?.rate_date === draft.entry_date && currencies.includes('USD')
+                && secondaryRates.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)"
                 type="button" class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
                 :disabled="fxLoading || fxImporting || posting"
                 @click="importSunatFx()">
