@@ -111,7 +111,8 @@ try {
         || (int) $identity->companies !== 1
         || (int) $identity->users !== 1
         || (int) $identity->accounts !== 203
-        || (int) $identity->journals !== 0
+        // Existing local journal entries are tenant-scoped and must be kept.
+        // Only global immutable reference tables are inserted below.
         || (int) $identity->rates !== 1
         || (int) $identity->rls !== 5) {
         throw new RuntimeException('Estado local previo inesperado; no importar.');
