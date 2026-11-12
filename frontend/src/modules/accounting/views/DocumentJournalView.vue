@@ -189,6 +189,10 @@ async function importSunatFx(showSuccess = true): Promise<boolean> {
     return fxReady.value;
   } catch (e) {
     if (targetDate === draft.entry_date && companyId === props.activeCompanyId) {
+      // A concurrent manual update might have landed while SUNAT returned 503.
+      // Prefer the saved company rate if it now exists.
+      await refreshFx();
+      if (fxReady.value) return true;
       const detail = e instanceof Error ? e.message : 'No fue posible consultar SUNAT.';
       toast.warning('No se pudo importar el tipo de cambio de SUNAT.', { description: detail });
     }
