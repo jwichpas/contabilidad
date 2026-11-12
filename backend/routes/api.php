@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\V1\Accounting\ChangeFiscalPeriodStatusController;
 use App\Http\Controllers\Api\V1\Accounting\ListFiscalPeriodsController;
 use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
 use App\Http\Controllers\Api\V1\Accounting\CreateJournalEntryController;
+use App\Http\Controllers\Api\V1\Accounting\DocumentJournalSettingsController;
+use App\Http\Controllers\Api\V1\Accounting\DocumentJournalController;
+use App\Http\Controllers\Api\V1\Accounting\TaxRegisterController;
 use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\GetFinancialSnapshotController;
 use App\Http\Controllers\Api\V1\Accounting\GetCashFlowStatementController;
@@ -43,6 +46,7 @@ use App\Http\Controllers\Api\V1\Company\ListEntitiesController;
 use App\Http\Controllers\Api\V1\Company\EntityMasterController;
 use App\Http\Controllers\Api\V1\Company\CompanyFiscalProfileController;
 use App\Http\Controllers\Api\V1\Company\SaveCompanyExchangeRatesController;
+use App\Http\Controllers\Api\V1\Company\ImportSunatExchangeRateController;
 use App\Http\Controllers\Api\V1\Company\UpdateCompanySettingsController;
 use App\Http\Controllers\Api\V1\Tenant\CompanyOnboardingCapabilityController;
 use App\Http\Controllers\Api\V1\Tenant\CreateCompanyFromWizardController;
@@ -181,6 +185,23 @@ Route::prefix('v1')->group(function (): void {
                     ->name('api.v1.accounting.journal-entries.reverse');
             });
 
+            // Registros de compras y ventas: configuraciones separadas, asientos en diario único.
+            Route::get('/accounting/document-journals/{module}/settings', [DocumentJournalSettingsController::class, 'show'])
+                ->whereIn('module', ['purchases', 'sales']);
+            Route::put('/accounting/document-journals/{module}/settings', [DocumentJournalSettingsController::class, 'update'])
+                ->whereIn('module', ['purchases', 'sales'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+            // RCE y RVIE internos: registro tributario separado del Libro Diario, aún sin presentación a SUNAT.
+            Route::get('/accounting/document-journals/{module}/tax-register', [TaxRegisterController::class, 'index'])
+                ->whereIn('module', ['purchases', 'sales']);
+            Route::get('/accounting/document-journals/{module}/tax-register/summary', [TaxRegisterController::class, 'summary'])
+                ->whereIn('module', ['purchases', 'sales']);
+            Route::get('/accounting/document-journals/{module}/documents', [DocumentJournalController::class, 'index'])
+                ->whereIn('module', ['purchases', 'sales']);
+            Route::post('/accounting/document-journals/{module}/documents', [DocumentJournalController::class, 'store'])
+                ->whereIn('module', ['purchases', 'sales'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
+
             Route::get('/company/subdiaries', [CompanySubdiaryMasterController::class, 'index'])
                 ->name('api.v1.company.subdiaries.index');
             Route::post('/company/subdiaries', [CompanySubdiaryMasterController::class, 'store'])
@@ -210,6 +231,10 @@ Route::prefix('v1')->group(function (): void {
 
                 Route::get('/exchange-rates', GetCompanyExchangeRatesController::class)
                     ->name('api.v1.company.exchange-rates.show');
+
+                Route::post('/exchange-rates/import-sunat', ImportSunatExchangeRateController::class)
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                    ->name('api.v1.company.exchange-rates.import-sunat');
 
                 Route::post('/exchange-rates', SaveCompanyExchangeRatesController::class)
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')

@@ -14,11 +14,40 @@ const sidebar = readFileSync(join(here, '../src/shared/layout/AppSidebar.vue'), 
 const light = tokens.match(/:root\s*\{([\s\S]*?)\n\}/)?.[1];
 const dark = tokens.match(/:root\[data-theme="dark"\],\s*\.dark\s*\{([\s\S]*?)\n\}/)?.[1];
 
+/**
+ * Resuelve colores semánticos var(--color-...) a los valores OKLCH suministrados
+ * para evaluar contraste en sRGB sin depender del navegador.
+ */
 function hex(section, variable) {
-  assert.ok(section, `Bloque de tema ausente: ${variable}`);
-  const match = section.match(new RegExp(`^\\s*${variable}:\\s*(#[a-fA-F0-9]{6});`, 'm'));
-  assert.ok(match, `Falta token hexadecimal ${variable}`);
-  return match[1];
+  const find = (text, key) => text?.match(new RegExp('^\\s*' + key + ':\\s*([^;]+);', 'm'))?.[1]?.trim();
+  const resolve = (key, depth = 0) => {
+    assert.ok(depth < 5, 'Referencia circular de color: ' + key);
+    const raw = find(section, key) ?? find(light, key);
+    assert.ok(raw, 'Falta token: ' + key);
+    const alias = raw.match(/^var\((--[\w-]+)\)$/);
+    if (alias) return resolve(alias[1], depth + 1);
+    if (/^#[0-9a-fA-F]{3}$/.test(raw)) return '#' + raw.slice(1).split('').map(c => c + c).join('');
+    if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
+    const match = raw.match(/^oklch\(([\d.]+)%\s+([\d.]+)\s+([\d.]+)\)$/);
+    assert.ok(match, 'Color inesperado para ' + key + ': ' + raw);
+    const L = Number(match[1]) / 100, C = Number(match[2]), h = Number(match[3]) * Math.PI / 180;
+    const a = C * Math.cos(h), b = C * Math.sin(h);
+    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+    const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+    const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+    const linear = [
+      4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+      -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+    ];
+    const bytes = linear.map(value => {
+      const channel = Math.min(1, Math.max(0, value));
+      const rgb = channel <= 0.0031308 ? channel * 12.92 : 1.055 * channel ** (1 / 2.4) - 0.055;
+      return Math.round(rgb * 255).toString(16).padStart(2, '0');
+    });
+    return '#' + bytes.join('');
+  };
+  return resolve(variable);
 }
 
 function luminance(color) {
@@ -35,7 +64,7 @@ function contrast(colorA, colorB) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-describe('Design tokens Fase 1', () => {
+describe('Design tokens OKLCH corporativos', () => {
   it('declara paleta clara y oscura con alias estables', () => {
     for (const theme of [light, dark]) {
       for (const token of [
@@ -46,6 +75,23 @@ describe('Design tokens Fase 1', () => {
         hex(theme, token);
       }
     }
+  });
+
+  it('conserva los valores OKLCH exactos y las familias cromaticas proporcionadas', () => {
+    for (const [token, value] of [
+      ['red-500', '63.7% 0.237 25.331'],
+      ['green-500', '72.3% 0.219 149.579'],
+      ['yellow-500', '79.5% 0.184 86.047'],
+      ['blue-600', '54.6% 0.245 262.881'],
+      ['violet-600', '54.1% 0.281 293.009'],
+      ['zinc-800', '27.4% 0.006 286.033'],
+      ['zinc-950', '14.1% 0.005 285.823'],
+    ]) {
+      assert.ok(tokens.includes('--color-' + token + ': oklch(' + value + ');'), token);
+    }
+    assert.match(light, /--focus-color: var\(--color-violet-600\)/);
+    assert.match(dark, /--focus-color: var\(--color-violet-600\)/);
+    assert.match(dark, /--line: var\(--color-zinc-800\)/);
   });
 
   it('asegura contraste de texto principal y secundario', () => {

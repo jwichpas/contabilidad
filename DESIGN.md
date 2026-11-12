@@ -20,26 +20,50 @@ Son referencias para el trabajo del agente, **no dependencias de producción** d
 **Personalidad:** competente, transparente, ágil, serena y precisa.  
 **Dirección:** utilitaria premium, con jerarquía clara y elementos de marca discretos, no tarjetas decorativas ni gradientes innecesarios.
 
-La paleta azul/naranja estaba documentada en `main.css` pero no coincidía con los valores aplicados. Fase 1 la consolida en `frontend/src/assets/design-tokens.css` preservando alias existentes.
+La base visual anterior era azul/naranja. Desde la iteración del **12/11/2026**
+la identidad de esta rama utiliza los valores **OKLCH exactos** proporcionados
+por el usuario, centralizados en `frontend/src/assets/design-tokens.css`.
+Este cambio alcanza a los módulos contables actuales y a las nuevas pantallas de
+Compras/Ventas porque sus clases Tailwind usan alias semánticos compartidos.
 
-### Colores canónicos
+### Roles de color vigentes en esta rama
 
-| Rol | Claro | Oscuro | Aplicación |
+| Rol | Claro | Oscuro | Uso |
 |---|---|---|---|
-| Fondo | `#FFFFFF` | `#0A1230` | Área de trabajo |
-| Barra lateral | `#F4F6FB` | `#0A1230` | Navegación |
-| Superficie | `#FFFFFF` | `#101B42` | Paneles y diálogos |
-| Texto principal | `#0B1B3F` | `#E8EDFA` | Contenido prioritario |
-| Texto secundario | `#5A6683` | `#9AA8CF` | Ayudas, etiquetas |
-| Bordes | `#DCE2EE` | `#223062` | Separadores |
-| Acción primaria | `#002A8D` | `#2F5FD6` | Botones principales |
-| Acción destacada | `#AD4F00` | `#A84F00` | CTA en naranja sobre blanco |
-| Acento como texto | `#A84F00` | `#FFB766` | Enlaces/avisos, separado del fondo |
-| Éxito | `#1F7A4D` | `#5FD09A` | Estado positivo |
-| Advertencia | `#995000` | `#FFB766` | Pendiente o advertencia |
-| Error | `#C8102E` | `#FF6B7F` | Error/acción de riesgo |
+| Fondo | zinc-50 | zinc-950 | Área de trabajo |
+| Superficie de panel | blanco | zinc-900 | Tarjetas, editor, modales |
+| Navegación lateral | zinc-100 | zinc-950 | Sidebar |
+| Texto principal | zinc-950 | zinc-50 | Datos y títulos |
+| Texto secundario | zinc-600 | zinc-400 | Etiquetas y ayuda |
+| Borde en reposo | zinc-200 | zinc-800 | Un borde por contenedor |
+| Borde marcado | zinc-300 | zinc-600 | Límites de mayor jerarquía |
+| Acción primaria | violet-600 | violet-600 | Botones principales |
+| Foco | violet-600 | violet-600 | Inputs, selectores, accesibilidad |
+| Acento secundario | blue-700 | blue-700 | Acciones secundarias |
+| Éxito, texto | green-700 | green-500 | Confirmaciones |
+| Advertencia, texto | yellow-800 | yellow-500 | Advertencias |
+| Error, texto | red-700 | red-500 | Validaciones y fallos |
+| Acento visual | orange-400 | orange-400 | Gráficos e indicadores secundarios |
 
-Las acciones `--brand` y `--accent` se eligieron para superar 4.5:1 frente a texto blanco en ambos temas. Esto **no significa** que todos los usos de color del sistema hayan superado una auditoría: revisar componentes renderizados, iconos y clases heredadas.
+Las variables `--color-red-*`, `--color-orange-*`, `--color-yellow-*`,
+`--color-green-*`, `--color-blue-*`, `--color-violet-*`,
+`--color-gray-*`, `--color-zinc-*`, `--color-neutral-*`,
+`--color-black` y `--color-white` reproducen los valores facilitados.
+Sólo están declarados explícitamente los tonos suministrados: no suponer
+que existe, por ejemplo, `--color-zinc-700`.
+
+La familia 500 se conserva en la paleta, pero los colores de texto sobre blanco
+pueden emplear los tonos 700/800 para asegurar al menos 4.5:1. Para superficies
+oscuras se utilizan normalmente tonos 500 legibles sobre zinc-900.
+
+### Pautas de aplicación
+
+- Mantener el foco violeta `violet-600` y reposo neutro zinc, no duplicar contornos.
+- Mantener estados con texto e iconografía, nunca exclusivamente con color.
+- Los paneles deben ser sobrios; bordes suaves claros y zinc-800 en modo oscuro.
+- No codificar colores hex o de marca en vistas nuevas: usar tokens y utilidades semánticas.
+- Validar contraste de los componentes renderizados en ambas modalidades.
+- Mantener tipografía y densidad del editor; no introducir animaciones pesadas.
 
 ### Tipografía, densidad y cifras
 

@@ -11,10 +11,10 @@ const entity = read('../src/modules/company/views/EntityMasterView.vue');
 const css = read('../src/assets/main.css');
 const costCenterEditor = read('../src/modules/company/components/CostCenterEditor.vue');
 
-test('trece pantallas se cargan solo cuando se visitan', () => {
+test('pantallas de compras y ventas mantienen la carga diferida del resto del sistema', () => {
   const views = [
     'AccountingCatalogView', 'SeeReferencesView', 'SunatReferencesView', 'JournalEntryView',
-    'CompanySubdiariesView', 'ExchangeRatesView', 'FiscalPeriodsView', 'FinancialStatementsView',
+    'DocumentJournalView', 'CompanySubdiariesView', 'ExchangeRatesView', 'FiscalPeriodsView', 'FinancialStatementsView',
     'CompanySettingsView', 'EntityMasterView', 'CompanyFiscalHistoryView',
     'CostCenterMasterView', 'CompanyOnboardingWizard',
   ];

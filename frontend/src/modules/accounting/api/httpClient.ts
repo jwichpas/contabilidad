@@ -29,6 +29,8 @@ import type {
   OperationalAccount,
 } from '../types/journalEntry.types';
 import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo, SeeCompanyVisibility, SeeCompanyVisibilityRevision } from '../types/seeReferences.types';
+import { buildDocumentJournalEntityQuery } from './documentJournalEntityQuery';
+import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage, TaxRegisterPage, TaxRegisterSummary } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
 import type { CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
@@ -446,6 +448,58 @@ export class AccountingApiClient {
     return result.data;
   }
 
+  /** Parámetros de cuentas y subdiario exclusivos de cada registro por empresa. */
+  public async fetchDocumentJournalSettings(module: DocumentJournalModule): Promise<DocumentJournalSettings> {
+    const response = await this.request<{ data: DocumentJournalSettings }>(
+      '/api/v1/accounting/document-journals/' + module + '/settings', { method: 'GET' }, true,
+    );
+    return response.data;
+  }
+
+  public async saveDocumentJournalSettings(module: DocumentJournalModule, payload: UpdateDocumentJournalSettings): Promise<DocumentJournalSettings> {
+    const response = await this.request<{ data: DocumentJournalSettings }>(
+      '/api/v1/accounting/document-journals/' + module + '/settings',
+      { method: 'PUT', body: JSON.stringify(payload) }, true,
+    );
+    return response.data;
+  }
+
+  public async fetchDocumentJournalRecords(module: DocumentJournalModule, page = 1): Promise<DocumentJournalPage> {
+    return this.request<DocumentJournalPage>(
+      '/api/v1/accounting/document-journals/' + module + '/documents?page=' + page,
+      { method: 'GET' }, true,
+    );
+  }
+
+  public async postDocumentJournal(module: DocumentJournalModule, payload: DocumentJournalInput): Promise<DocumentJournalRecord> {
+    const response = await this.request<{ data: DocumentJournalRecord }>(
+      '/api/v1/accounting/document-journals/' + module + '/documents',
+      { method: 'POST', body: JSON.stringify(payload) }, true,
+    );
+    return response.data;
+  }
+
+  public async fetchTaxRegister(module: DocumentJournalModule, period: string, page = 1): Promise<TaxRegisterPage> {
+    const query = new URLSearchParams({ period, page: String(page) });
+    return this.request<TaxRegisterPage>(
+      '/api/v1/accounting/document-journals/' + module + '/tax-register?' + query,
+      { method: 'GET' }, true,
+    );
+  }
+
+  public async fetchTaxRegisterSummary(module: DocumentJournalModule, period: string): Promise<TaxRegisterSummary> {
+    const result = await this.request<{ data: TaxRegisterSummary }>(
+      '/api/v1/accounting/document-journals/' + module + '/tax-register/summary?period=' + encodeURIComponent(period),
+      { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
+  public async findDocumentJournalEntities(module: DocumentJournalModule, search = ''): Promise<DocumentJournalEntityPage> {
+    const query = buildDocumentJournalEntityQuery(module, search);
+    return this.request<DocumentJournalEntityPage>('/api/v1/company/entities?' + query, { method: 'GET' }, true);
+  }
+
   public async fetchCompanySubdiaries(activeOnly = false, signal?: AbortSignal): Promise<readonly CompanySubdiaryItem[]> {
     const response = await this.request<{ data: CompanySubdiaryItem[] }>(
       `/api/v1/company/subdiaries${activeOnly ? '?active_only=1' : ''}`, { method: 'GET', signal }, true,
@@ -755,6 +809,30 @@ export class AccountingApiClient {
   /**
    * Obtiene los tipos de cambio de las monedas secundarias configuradas para una fecha contable.
    */
+  /** Importación explícita, segura e idempotente desde tipoCambio.txt de SUNAT. */
+  public async importSunatExchangeRate(date: string): Promise<{
+    status: 'imported' | 'existing' | 'date_mismatch' | 'unavailable' | 'unsupported';
+    date: string;
+    currency: 'USD';
+    buy_rate?: string;
+    sell_rate?: string;
+    published_date?: string;
+  }> {
+    const response = await this.request<{ message: string; data: {
+      status: 'imported' | 'existing' | 'date_mismatch' | 'unavailable' | 'unsupported';
+      date: string;
+      currency: 'USD';
+      buy_rate?: string;
+      sell_rate?: string;
+      published_date?: string;
+    } }>(
+      '/api/v1/company/exchange-rates/import-sunat',
+      { method: 'POST', body: JSON.stringify({ rate_date: date }) },
+      true,
+    );
+    return response.data;
+  }
+
   public async fetchCompanyExchangeRates(date: string): Promise<CompanyExchangeRatesResponse> {
     const rawPayload = await this.request<{ data: CompanyExchangeRatesResponse }>(
       `/api/v1/company/exchange-rates?date=${encodeURIComponent(date)}`,

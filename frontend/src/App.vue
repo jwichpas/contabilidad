@@ -2,6 +2,7 @@
 import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { Loader2 } from 'lucide-vue-next';
+import { Toaster } from 'vue-sonner';
 
 
 
@@ -51,6 +52,13 @@ const SunatReferencesView = defineAsyncComponent({
 
 const JournalEntryView = defineAsyncComponent({
   loader: () => import('./modules/accounting/views/JournalEntryView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const DocumentJournalView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/DocumentJournalView.vue'),
   loadingComponent: UiViewLoading,
   errorComponent: UiViewLoadError,
   delay: 120,
@@ -191,6 +199,8 @@ function resolveModuleFromHash(): NavigationModule {
   const hash = window.location.hash.toLowerCase();
   if (hash.includes('catalogos-see')) return 'see-references';
   if (hash.includes('catalogos-sunat')) return 'sunat-references';
+  if (hash.includes('registro-compras')) return 'purchases';
+  if (hash.includes('registro-ventas')) return 'sales';
   if (hash.includes('subdiarios') || hash.includes('subdiaries')) return 'subdiaries';
   if (hash.includes('centros-costo') || hash.includes('cost-centers')) return 'cost-centers';
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
@@ -222,6 +232,10 @@ function handleNavigate(mod: NavigationModule): void {
   currentModule.value = mod;
   if (mod === 'journal') {
     window.location.hash = '#diario';
+  } else if (mod === 'purchases') {
+    window.location.hash = '#registro-compras';
+  } else if (mod === 'sales') {
+    window.location.hash = '#registro-ventas';
   } else if (mod === 'catalog') {
     window.location.hash = '#plan-cuentas';
   } else if (mod === 'see-references') {
@@ -389,6 +403,16 @@ watch(
           :get-access-token="() => accessToken"
           @posting-change="isJournalSubmitting = $event"
         />
+        <DocumentJournalView
+          v-else-if="currentModule === 'purchases' || currentModule === 'sales'"
+          :key="'documents-' + currentModule + '-' + activeCompanyId"
+          :module="currentModule === 'purchases' ? 'purchases' : 'sales'"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-configure="canDeactivateEntities"
+          :can-post="canManageEntities"
+          @posting-change="isJournalSubmitting = $event"
+        />
         <FiscalPeriodsView
           v-else-if="currentModule === 'fiscal-periods'"
           :key="`periods-${activeCompanyId}`"
@@ -475,5 +499,6 @@ watch(
       </div>
     </div>
   </div>
+  <Toaster :theme="isDarkMode ? 'dark' : 'light'" position="top-right"
+    :visible-toasts="4" :duration="4800" close-button rich-colors />
 </template>
-
