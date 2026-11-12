@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\V1\Accounting\ChangeFiscalPeriodStatusController;
 use App\Http\Controllers\Api\V1\Accounting\ListFiscalPeriodsController;
 use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
 use App\Http\Controllers\Api\V1\Accounting\CreateJournalEntryController;
+use App\Http\Controllers\Api\V1\Accounting\DocumentJournalSettingsController;
+use App\Http\Controllers\Api\V1\Accounting\DocumentJournalController;
 use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\GetFinancialSnapshotController;
 use App\Http\Controllers\Api\V1\Accounting\GetCashFlowStatementController;
@@ -180,6 +182,18 @@ Route::prefix('v1')->group(function (): void {
                     ->whereNumber('entryId')
                     ->name('api.v1.accounting.journal-entries.reverse');
             });
+
+            // Registros de compras y ventas: configuraciones separadas, asientos en diario único.
+            Route::get('/accounting/document-journals/{module}/settings', [DocumentJournalSettingsController::class, 'show'])
+                ->whereIn('module', ['purchases', 'sales']);
+            Route::put('/accounting/document-journals/{module}/settings', [DocumentJournalSettingsController::class, 'update'])
+                ->whereIn('module', ['purchases', 'sales'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+            Route::get('/accounting/document-journals/{module}/documents', [DocumentJournalController::class, 'index'])
+                ->whereIn('module', ['purchases', 'sales']);
+            Route::post('/accounting/document-journals/{module}/documents', [DocumentJournalController::class, 'store'])
+                ->whereIn('module', ['purchases', 'sales'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
 
             Route::get('/company/subdiaries', [CompanySubdiaryMasterController::class, 'index'])
                 ->name('api.v1.company.subdiaries.index');
