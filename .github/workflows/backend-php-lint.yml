@@ -88,6 +88,26 @@ jobs:
       - name: Verificar sintaxis PHP de guardia para actualización Docker
         run: php -l backend/scripts/verificar-actualizacion-pg18-local.php
 
+      - name: Verificar sintaxis de carga PCGE y empresa local
+        run: |
+          php -l backend/scripts/cargar-pcge-referencias-pg18-local.php
+          php -l backend/scripts/crear-empresa-pcge-pg18-local.php
+
+      - name: Verificar sintaxis PowerShell de preparación PCGE Docker
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/backend/scripts/preparar-pcge-pg18-local.ps1",
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
       - name: Verificar sintaxis PowerShell de actualización Docker PG18
         shell: pwsh
         run: |
