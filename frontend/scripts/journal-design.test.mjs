@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { formatAccountingDate, journalEntryStatusLabel, journalEntryTypeLabel, peruAccountingDate } from '../src/modules/accounting/utils/journalPresentation.ts';
+import { selectRecordedUsdPenRate } from '../src/modules/accounting/utils/headerExchangeRate.ts';
 
 const view = readFileSync(new URL('../src/modules/accounting/views/JournalEntryView.vue', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/assets/main.css', import.meta.url), 'utf8');
