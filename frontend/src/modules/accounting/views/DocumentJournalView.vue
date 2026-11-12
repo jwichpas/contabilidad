@@ -8,6 +8,7 @@ import DocumentPostingConfirmDialog from '../components/DocumentPostingConfirmDi
 import { createDocumentJournalDraftSchema, type DocumentJournalDraftValues } from '../schemas/documentJournalDraft.schema';
 import UiSelect from '@/shared/ui/UiSelect.vue';
 import { AccountingApiClient } from '../api/httpClient';
+import { isDocumentFxReady } from '../api/documentJournalFx';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { JournalEditorAccount } from '../types/journalEntry.types';
 import type { CashFlowAreaItem, CompanyAreaItem, CostCenterItem } from '../types/catalogs.types';
@@ -210,9 +211,8 @@ const amountBase = computed(() => taxAllocations.value.reduce((sum, row) => sum 
 const amountTax = computed(() => taxAllocations.value.reduce((sum, row) => sum + Number(row.tax_amount || 0), 0));
 const amountTotal = computed(() => amountBase.value + amountTax.value);
 const secondaryRates = computed(() => fxSnapshot.value?.required_currencies ?? []);
-const fxReady = computed(() => !fxLoading.value && !fxError.value && fxSnapshot.value?.rate_date === draft.entry_date
-  && secondaryRates.value.every(rate => rate.is_recorded_for_date &&
-    Number(rate.buy_rate) > 0 && Number(rate.sell_rate) > 0));
+const fxReady = computed(() => !fxLoading.value && !fxError.value &&
+  isDocumentFxReady(fxSnapshot.value, draft.entry_date));
 const fxSourceLabel = (rate: RequiredExchangeRateItem): string =>
   rate.is_recorded_for_date ? 'Registrado para esta fecha'
     : rate.source === 'LATEST_HISTORICAL' ? 'Referencia histórica; no registrada para el día'
@@ -628,11 +628,11 @@ onMounted(() => { void load(); });
               </div>
               <div class="mt-2 grid grid-cols-2 gap-3">
                 <div>
-                  <p class="text-xs text-muted">Compra · referencial</p>
+                  <p class="text-xs text-muted">Compra · informativa</p>
                   <p class="font-mono text-base tabular-nums">{{ formatRate(rate.buy_rate) }}</p>
                 </div>
                 <div>
-                  <p class="text-xs text-muted">Venta · utilizada al contabilizar</p>
+                  <p class="text-xs text-muted">Venta · requerida para contabilizar</p>
                   <p class="font-mono text-base tabular-nums">{{ formatRate(rate.sell_rate) }}</p>
                 </div>
               </div>
