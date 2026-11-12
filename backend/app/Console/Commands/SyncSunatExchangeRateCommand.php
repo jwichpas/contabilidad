@@ -57,8 +57,10 @@ final class SyncSunatExchangeRateCommand extends Command
         }
 
         $date = (string) ($this->option('date') ?: CarbonImmutable::now('America/Lima')->toDateString());
+        $parts = explode('-', $date);
         if (! preg_match('/^\d{4}-\d{2}-\d{2}$/D', $date)
-            || CarbonImmutable::createFromFormat('!Y-m-d', $date)?->toDateString() !== $date) {
+            || count($parts) !== 3
+            || ! checkdate((int) ($parts[1] ?? 0), (int) ($parts[2] ?? 0), (int) ($parts[0] ?? 0))) {
             $this->error('Fecha inválida. Formato requerido YYYY-MM-DD.');
             return self::INVALID;
         }
