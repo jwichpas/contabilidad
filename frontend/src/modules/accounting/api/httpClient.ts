@@ -29,6 +29,7 @@ import type {
   OperationalAccount,
 } from '../types/journalEntry.types';
 import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo, SeeCompanyVisibility, SeeCompanyVisibilityRevision } from '../types/seeReferences.types';
+import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
 import type { CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
@@ -444,6 +445,43 @@ export class AccountingApiClient {
       { method: 'GET' }, true,
     );
     return result.data;
+  }
+
+  /** Parámetros de cuentas y subdiario exclusivos de cada registro por empresa. */
+  public async fetchDocumentJournalSettings(module: DocumentJournalModule): Promise<DocumentJournalSettings> {
+    const response = await this.request<{ data: DocumentJournalSettings }>(
+      '/api/v1/accounting/document-journals/' + module + '/settings', { method: 'GET' }, true,
+    );
+    return response.data;
+  }
+
+  public async saveDocumentJournalSettings(module: DocumentJournalModule, payload: UpdateDocumentJournalSettings): Promise<DocumentJournalSettings> {
+    const response = await this.request<{ data: DocumentJournalSettings }>(
+      '/api/v1/accounting/document-journals/' + module + '/settings',
+      { method: 'PUT', body: JSON.stringify(payload) }, true,
+    );
+    return response.data;
+  }
+
+  public async fetchDocumentJournalRecords(module: DocumentJournalModule, page = 1): Promise<DocumentJournalPage> {
+    return this.request<DocumentJournalPage>(
+      '/api/v1/accounting/document-journals/' + module + '/documents?page=' + page,
+      { method: 'GET' }, true,
+    );
+  }
+
+  public async postDocumentJournal(module: DocumentJournalModule, payload: DocumentJournalInput): Promise<DocumentJournalRecord> {
+    const response = await this.request<{ data: DocumentJournalRecord }>(
+      '/api/v1/accounting/document-journals/' + module + '/documents',
+      { method: 'POST', body: JSON.stringify(payload) }, true,
+    );
+    return response.data;
+  }
+
+  public async findDocumentJournalEntities(module: DocumentJournalModule, search = ''): Promise<DocumentJournalEntityPage> {
+    const query = new URLSearchParams({ per_page: '100', search });
+    query.set(module === 'purchases' ? 'is_supplier' : 'is_client', '1');
+    return this.request<DocumentJournalEntityPage>('/api/v1/company/entities?' + query, { method: 'GET' }, true);
   }
 
   public async fetchCompanySubdiaries(activeOnly = false, signal?: AbortSignal): Promise<readonly CompanySubdiaryItem[]> {
