@@ -374,7 +374,7 @@ onMounted(() => { void load(); });
       <div>
         <p class="text-xs font-semibold uppercase tracking-widest text-muted">Contabilidad / Comprobantes</p>
         <h2 class="mt-1 text-2xl font-semibold tracking-tight">{{ title }}</h2>
-        <p class="mt-1 text-sm text-muted">Parametrización independiente por empresa y asiento integrado en el Libro Diario Bimoneda.</p>
+        <p class="mt-1 text-sm text-muted">Libro Diario contable + Registro tributario interno RCE/RVIE, diferenciados por clasificación SUNAT.</p>
       </div>
       <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm hover:bg-hover"
         :disabled="loading" @click="load">
@@ -393,11 +393,11 @@ onMounted(() => { void load(); });
           role="tab" :aria-selected="tab === t"
           :class="['inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm',
             tab === t ? 'bg-brand/10 font-semibold text-foreground' : 'text-muted hover:bg-hover']"
-          @click="tab = t; error = ''; success = ''">
+          @click="selectTab(t)">
           <FilePlus2 v-if="t === 'register'" class="size-4" />
-          <BookOpenCheck v-else-if="t === 'history'" class="size-4" />
+          <BookOpenCheck v-else-if="t === 'history' || t === 'tax'" class="size-4" />
           <Settings2 v-else class="size-4" />
-          {{ t === 'register' ? 'Nuevo comprobante' : t === 'history' ? 'Documentos contabilizados' : 'Parámetros del módulo' }}
+          {{ t === 'register' ? 'Nuevo comprobante' : t === 'tax' ? 'Registro SUNAT interno' : t === 'history' ? 'Asientos generados' : 'Parámetros del módulo' }}
         </button>
       </div>
 
@@ -427,6 +427,20 @@ onMounted(() => { void load(); });
               :disabled="!canConfigure" class="w-full rounded-lg border border-line bg-background px-3 py-2 text-foreground" />
           </label>
         </div>
+        <div class="mt-6 border-t border-line pt-5">
+          <h4 class="font-semibold">Cuenta principal por clasificación tributaria</h4>
+          <p class="mt-1 text-xs text-muted">
+            Opcional: asigne cuentas distintas a compras gravadas/no gravadas, ventas exoneradas, inafectas o exportaciones.
+            Las categorías sin cuenta específica usarán la cuenta principal.
+          </p>
+          <div class="mt-4 grid gap-3 md:grid-cols-2">
+            <label v-for="category in categoryOptions" :key="category.value" class="space-y-1.5 text-sm">
+              <span class="font-medium">{{ category.label }}</span>
+              <UiSelect v-model="categoryAccountMap[category.value]" :options="categoryAccountOptions"
+                :disabled="!canConfigure" searchable />
+            </label>
+          </div>
+        </div>
         <p class="mt-4 text-xs text-muted">La tasa es referencial para calcular un borrador. El usuario verifica el IGV del comprobante; la deducibilidad tributaria y notas de crédito requieren sus propias reglas.</p>
         <button type="button" class="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           :disabled="!canConfigure || saving" @click="saveSettings">{{ saving ? 'Guardando…' : 'Guardar parámetros' }}</button>
@@ -451,6 +465,12 @@ onMounted(() => { void load(); });
           <label class="space-y-1.5 text-sm"><span class="font-medium">Moneda</span>
             <UiSelect v-model="draft.currency" :options="currencyOptions" />
           </label>
+          <label class="space-y-1.5 text-sm"><span class="font-medium">Período tributario SUNAT</span>
+            <input v-model="draft.tax_period" type="month" class="w-full rounded-lg border border-line bg-background px-3 py-2" />
+          </label>
+          <label class="space-y-1.5 text-sm"><span class="font-medium">Fecha de vencimiento (opcional)</span>
+            <input v-model="draft.due_date" type="date" class="w-full rounded-lg border border-line bg-background px-3 py-2" />
+          </label>
           <label class="space-y-1.5 text-sm"><span class="font-medium">Serie</span>
             <input v-model="draft.series" maxlength="20" placeholder="F001"
               class="w-full rounded-lg border border-line bg-background px-3 py-2 uppercase" />
@@ -473,36 +493,90 @@ onMounted(() => { void load(); });
           </label>
         </div>
 
-        <h3 class="mt-7 font-semibold">Distribución contable</h3>
-        <p class="mt-1 text-xs text-muted">Importes positivos de la factura o boleta. No incluye notas de crédito ni operaciones exoneradas especiales en esta primera versión.</p>
-        <p v-if="isPurchase && draft.document_type === '03'" class="mt-3 rounded-lg border border-line bg-soft p-3 text-xs text-muted">
-          La boleta de compra no se contabiliza como crédito fiscal en este flujo. Coloque el importe total en base imponible y registre IGV 0.
-        </p>
-        <div class="mt-4 grid gap-4 sm:grid-cols-3">
-          <label class="space-y-1.5 text-sm"><span class="font-medium">Base imponible</span>
-            <input v-model="draft.taxable_amount" inputmode="decimal" type="number" step="0.01" min="0.01"
-              class="w-full rounded-lg border border-line bg-background px-3 py-2" placeholder="100.00" />
-          </label>
-          <div class="space-y-1.5">
-            <label class="text-sm font-medium" for="doc-tax-amount">IGV del comprobante</label>
-            <div class="flex gap-2">
-              <input id="doc-tax-amount" v-model="draft.tax_amount" inputmode="decimal" type="number" step="0.01" min="0"
-                class="min-w-0 w-full rounded-lg border border-line bg-background px-3 py-2" />
-              <button type="button" :disabled="isPurchase && draft.document_type === '03'" title="Calcular con tasa referencial" class="shrink-0 rounded-lg border border-line px-2 text-xs hover:bg-hover"
-                @click="calculateTax">Calcular</button>
+        <div class="mt-7 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="font-semibold">Clasificación tributaria SUNAT</h3>
+            <p class="mt-1 text-xs text-muted">El comprobante puede desglosarse en distintas categorías. La sumatoria se registrará también en el Libro Diario.</p>
+          </div>
+          <button type="button" class="rounded-lg border border-line bg-background px-3 py-2 text-sm hover:bg-hover disabled:opacity-50"
+            :disabled="availableCategories.length === 0" @click="addTaxAllocation">
+            Agregar clasificación
+          </button>
+        </div>
+        <div class="mt-4 space-y-3">
+          <div v-for="(row, index) in taxAllocations" :key="index" class="rounded-lg border border-line bg-soft p-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs font-semibold uppercase tracking-wide text-muted">Clasificación {{ index + 1 }}</span>
+              <button v-if="taxAllocations.length > 1" type="button" class="text-xs text-danger underline"
+                @click="removeTaxAllocation(index)">Quitar</button>
             </div>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <label class="space-y-1.5 text-sm sm:col-span-2">
+                <span class="font-medium">Tipo de operación</span>
+                <UiSelect v-model="row.category" :options="categoryOptions" searchable
+                  @update:model-value="taxCategoryChanged(row)" />
+              </label>
+              <label class="space-y-1.5 text-sm">
+                <span class="font-medium">Base de la operación</span>
+                <input v-model="row.base_amount" type="number" inputmode="decimal" step="0.01" min="0.01"
+                  class="w-full rounded-lg border border-line bg-background px-3 py-2" placeholder="100.00" />
+              </label>
+              <div class="space-y-1.5 text-sm">
+                <label class="font-medium" :for="'tax-amount-' + index">IGV del comprobante</label>
+                <div class="flex gap-2">
+                  <input :id="'tax-amount-' + index" v-model="row.tax_amount" type="number" inputmode="decimal"
+                    step="0.01" min="0" :disabled="!isTaxedCategory(row.category)"
+                    class="min-w-0 w-full rounded-lg border border-line bg-background px-3 py-2 disabled:opacity-60" />
+                  <button type="button" :disabled="!isTaxedCategory(row.category)"
+                    class="shrink-0 rounded-lg border border-line bg-background px-2 text-xs hover:bg-hover disabled:opacity-50"
+                    title="Calcular con tasa IGV referencial" @click="calculateTax(row)">Calcular</button>
+                </div>
+              </div>
+              <label v-if="isPurchaseCreditCategory(row.category)" class="space-y-1.5 text-sm sm:col-span-2">
+                <span class="font-medium">IGV considerado crédito fiscal</span>
+                <input v-if="isPurchaseMixed(row.category)" v-model="row.creditable_tax_amount" type="number"
+                  inputmode="decimal" min="0" step="0.01"
+                  class="w-full rounded-lg border border-line bg-background px-3 py-2" />
+                <div v-else class="rounded-lg border border-line bg-background px-3 py-2 tabular-nums">
+                  {{ money(Number(row.tax_amount)) }} <span class="text-xs text-muted">· potencial, sujeto a validación</span>
+                </div>
+              </label>
+            </div>
+            <p v-if="isPurchaseMixed(row.category)" class="mt-2 text-xs text-muted">
+              Indique el crédito fiscal calculado por prorrata. No se supone el derecho al 100 % del IGV.
+            </p>
+            <p v-if="isPurchase && draft.document_type === '03' && isPurchaseExclusive(row.category)"
+              class="mt-2 text-xs text-danger">
+              Las boletas de compra no admiten crédito fiscal automático. Use la categoría gravada sin crédito.
+            </p>
+            <p v-if="row.category === 'S_EXPORT'" class="mt-2 text-xs text-muted">
+              Exportación: operación sin IGV trasladado. Para este flujo se requiere factura (01).
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+          <div class="rounded-lg border border-line bg-soft p-3">
+            <p class="text-xs text-muted">Total bases {{ draft.currency }}</p>
+            <p class="mt-1 text-lg font-semibold tabular-nums">{{ money(amountBase) }}</p>
           </div>
           <div class="rounded-lg border border-line bg-soft p-3">
-            <p class="text-xs text-muted">Total {{ draft.currency }}</p>
+            <p class="text-xs text-muted">Total IGV {{ draft.currency }}</p>
+            <p class="mt-1 text-lg font-semibold tabular-nums">{{ money(amountTax) }}</p>
+          </div>
+          <div class="rounded-lg border border-line bg-soft p-3">
+            <p class="text-xs text-muted">Total comprobante {{ draft.currency }}</p>
             <p class="mt-1 text-xl font-semibold tabular-nums">{{ money(amountTotal) }}</p>
           </div>
+        </div>
+        <div class="mt-4 grid gap-4 sm:grid-cols-3">
           <label v-if="needsCostCenter" class="space-y-1.5 text-sm"><span class="font-medium">Centro de costo obligatorio</span>
             <UiSelect v-model="draft.cost_center_id" :options="centersOptions" searchable />
           </label>
-          <label v-if="mainAccount?.requires_company_area" class="space-y-1.5 text-sm"><span class="font-medium">Área de empresa</span>
+          <label v-if="needsCompanyArea" class="space-y-1.5 text-sm"><span class="font-medium">Área de empresa</span>
             <UiSelect v-model="draft.company_area_id" :options="companyAreaOptions" searchable />
           </label>
-          <label v-if="mainAccount?.requires_cash_flow_area" class="space-y-1.5 text-sm"><span class="font-medium">Área de flujo de efectivo</span>
+          <label v-if="needsCashFlowArea" class="space-y-1.5 text-sm"><span class="font-medium">Área de flujo de efectivo</span>
             <UiSelect v-model="draft.cash_flow_area_id" :options="cashFlowOptions" searchable />
           </label>
           <label class="space-y-1.5 text-sm sm:col-span-3"><span class="font-medium">Glosa adicional (opcional)</span>
@@ -511,11 +585,98 @@ onMounted(() => { void load(); });
           </label>
         </div>
         <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
-          <p class="text-xs text-muted">El tipo de cambio diario se toma de la configuración de la empresa. El asiento es inmutable.</p>
+          <p class="text-xs text-muted">Se crea un asiento contable y una anotación tributaria interna pendientes de conciliación SIRE. El asiento es inmutable.</p>
           <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             :disabled="!canPost || !configured || posting" @click="postDocument">
-            <FilePlus2 class="size-4" /> {{ posting ? 'Contabilizando…' : 'Registrar asiento contable' }}
+            <FilePlus2 class="size-4" /> {{ posting ? 'Contabilizando…' : 'Registrar en Diario y Registro Tributario' }}
           </button>
+        </div>
+      </section>
+
+      <section v-else-if="tab === 'tax'" class="space-y-4">
+        <div class="rounded-xl border border-line bg-surface p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="font-semibold">{{ isPurchase ? 'Registro de Compras · RCE' : 'Registro de Ventas e Ingresos · RVIE' }}</h3>
+              <p class="mt-1 text-xs text-muted">Libro tributario interno. Pendiente de comparación con la propuesta SUNAT/SIRE.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input v-model="taxPeriodFilter" type="month" aria-label="Filtrar período tributario"
+                class="rounded-lg border border-line bg-background px-3 py-2 text-sm" />
+              <button type="button" class="rounded-lg border border-line px-3 py-2 text-sm hover:bg-hover"
+                :disabled="taxLoading || !taxPeriodFilter" @click="refreshTaxRegister()">Consultar</button>
+            </div>
+          </div>
+          <div v-if="taxLoading" role="status" class="py-8 text-center text-sm text-muted">Consultando registro tributario…</div>
+          <template v-else>
+            <h4 class="mt-6 text-sm font-semibold">Resumen por clasificación y moneda</h4>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full min-w-[600px] text-left text-sm">
+                <thead class="bg-soft text-xs text-muted">
+                  <tr><th class="p-3">Operación</th><th class="p-3">Moneda</th>
+                    <th class="p-3 text-right">Base</th><th class="p-3 text-right">IGV</th>
+                    <th v-if="isPurchase" class="p-3 text-right">IGV potencial / prorrata</th>
+                    <th class="p-3 text-right">Documentos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in taxSummary?.breakdown ?? []" :key="item.category + item.currency" class="border-t border-line">
+                    <td class="p-3">{{ TAX_CATEGORY_LABELS[item.category] }}</td>
+                    <td class="p-3 font-mono">{{ item.currency }}</td>
+                    <td class="p-3 text-right tabular-nums">{{ money(Number(item.base_amount)) }}</td>
+                    <td class="p-3 text-right tabular-nums">{{ money(Number(item.tax_amount)) }}</td>
+                    <td v-if="isPurchase" class="p-3 text-right tabular-nums">{{ money(Number(item.creditable_tax_amount)) }}</td>
+                    <td class="p-3 text-right tabular-nums">{{ item.document_count }}</td>
+                  </tr>
+                  <tr v-if="!taxSummary?.breakdown.length">
+                    <td :colspan="isPurchase ? 6 : 5" class="p-6 text-center text-muted">Sin información tributaria en el período.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+        <div v-if="!taxLoading" class="overflow-hidden rounded-xl border border-line bg-surface">
+          <div class="flex items-center justify-between border-b border-line p-4">
+            <h4 class="font-semibold">Detalle de anotaciones tributarias</h4>
+            <span class="text-xs text-muted">{{ taxRegister?.total ?? 0 }} comprobantes</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[950px] text-left text-sm">
+              <thead class="bg-soft text-xs text-muted">
+                <tr>
+                  <th class="p-3">Emisión</th><th class="p-3">Comprobante</th>
+                  <th class="p-3">Cliente / proveedor (snapshot)</th><th class="p-3">Clasificación</th>
+                  <th class="p-3 text-right">Base</th><th class="p-3 text-right">IGV</th>
+                  <th class="p-3 text-right">Crédito</th><th class="p-3">Voucher</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="record in taxRegister?.data ?? []" :key="record.id">
+                  <tr v-for="allocation in record.allocations" :key="allocation.id" class="border-t border-line">
+                    <td class="p-3 tabular-nums">{{ record.document.issue_date }}</td>
+                    <td class="p-3 whitespace-nowrap">{{ record.document.document_type }} {{ record.document.series }}-{{ record.document.number }}</td>
+                    <td class="p-3">{{ record.counterparty_tax_id }} · {{ record.counterparty_name }}</td>
+                    <td class="p-3">{{ TAX_CATEGORY_LABELS[allocation.category] }}</td>
+                    <td class="p-3 text-right tabular-nums">{{ record.document.currency }} {{ money(Number(allocation.base_amount)) }}</td>
+                    <td class="p-3 text-right tabular-nums">{{ money(Number(allocation.tax_amount)) }}</td>
+                    <td class="p-3 text-right tabular-nums">{{ money(Number(allocation.creditable_tax_amount)) }}</td>
+                    <td class="p-3 font-mono text-xs">{{ record.document.journal?.entry_number }}</td>
+                  </tr>
+                </template>
+                <tr v-if="!taxRegister?.data.length">
+                  <td colspan="8" class="p-7 text-center text-muted">No hay documentos tributarios en el período.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="taxRegister && taxRegister.last_page > 1" class="flex items-center justify-end gap-3 border-t border-line p-3 text-sm">
+            <button type="button" class="rounded border border-line px-3 py-1.5 disabled:opacity-50"
+              :disabled="taxRegister.current_page <= 1" @click="refreshTaxRegister(taxRegister.current_page - 1)">Anterior</button>
+            <span>{{ taxRegister.current_page }} / {{ taxRegister.last_page }}</span>
+            <button type="button" class="rounded border border-line px-3 py-1.5 disabled:opacity-50"
+              :disabled="taxRegister.current_page >= taxRegister.last_page" @click="refreshTaxRegister(taxRegister.current_page + 1)">Siguiente</button>
+          </div>
         </div>
       </section>
 
