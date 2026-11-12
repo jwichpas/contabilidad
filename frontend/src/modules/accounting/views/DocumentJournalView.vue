@@ -213,7 +213,6 @@ const secondaryRates = computed(() => fxSnapshot.value?.required_currencies ?? [
 const fxReady = computed(() => !fxLoading.value && !fxError.value && fxSnapshot.value?.rate_date === draft.entry_date
   && secondaryRates.value.every(rate => rate.is_recorded_for_date &&
     Number(rate.buy_rate) > 0 && Number(rate.sell_rate) > 0));
-const missingRates = computed(() => secondaryRates.value.filter(rate => !rate.is_recorded_for_date));
 const fxSourceLabel = (rate: RequiredExchangeRateItem): string =>
   rate.is_recorded_for_date ? 'Registrado para esta fecha'
     : rate.source === 'LATEST_HISTORICAL' ? 'Referencia histórica; no registrada para el día'
