@@ -487,9 +487,6 @@ onMounted(() => { void load(); });
     </header>
 
     <div v-if="error" role="alert" class="rounded-lg border border-danger/40 bg-surface p-3 text-sm text-danger">{{ error }}</div>
-    <div v-if="success" role="status" class="flex items-center gap-2 rounded-lg border border-line bg-surface p-3 text-sm text-pos">
-      <CheckCircle2 class="size-4 shrink-0" />{{ success }}
-    </div>
     <div v-if="loading" role="status" class="rounded-xl border border-line bg-surface p-8 text-sm text-muted">Cargando cuentas, subdiarios y comprobantes de la empresa…</div>
     <template v-else>
       <div class="flex flex-wrap gap-2 border-b border-line pb-3" role="tablist" :aria-label="title">
@@ -598,6 +595,57 @@ onMounted(() => { void load(); });
           </label>
         </div>
 
+        <!-- La vista previa usa el mismo endpoint autorizado de tipos de cambio del ERP.
+             La fuente histórica y el valor sugerido NO equivalen a tasa registrada. -->
+        <section class="mt-5 rounded-xl border border-line bg-soft p-4" aria-label="Tipo de cambio de la fecha contable">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="flex items-start gap-2">
+              <ArrowLeftRight class="mt-0.5 size-4 shrink-0 text-violet-600 dark:text-violet-200" />
+              <div>
+                <h3 class="text-sm font-semibold">Tipo de cambio del {{ draft.entry_date }} · Libro Diario bimoneda</h3>
+                <p class="mt-1 text-xs text-muted">
+                  Moneda del documento: {{ draft.currency }} · Moneda base: {{ fxSnapshot?.base_currency.code ?? 'PEN' }}.
+                  También se requiere la tasa de la moneda secundaria cuando el comprobante está en PEN.
+                </p>
+              </div>
+            </div>
+            <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs hover:bg-hover disabled:opacity-50"
+              :disabled="fxLoading" @click="refreshFx">
+              <RefreshCw class="size-3.5" :class="{ 'animate-spin': fxLoading }" /> Consultar tasa
+            </button>
+          </div>
+          <p v-if="fxLoading" class="mt-3 text-xs text-muted" role="status">Consultando cotización registrada para la fecha…</p>
+          <p v-else-if="fxError" class="mt-3 text-xs text-danger" role="alert">{{ fxError }}</p>
+          <template v-else-if="fxSnapshot">
+            <p v-if="!secondaryRates.length" class="mt-3 text-xs text-pos">
+              No existe una moneda secundaria activa; el registro no necesita conversión.
+            </p>
+            <div v-for="rate in secondaryRates" :key="rate.code" class="mt-3 rounded-lg border border-line bg-surface p-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="font-semibold text-sm">{{ rate.code }}/{{ fxSnapshot.base_currency.code }}</p>
+                <span :class="['text-xs font-medium', rate.is_recorded_for_date ? 'text-pos' : 'text-danger']">
+                  {{ fxSourceLabel(rate) }}
+                </span>
+              </div>
+              <div class="mt-2 grid grid-cols-2 gap-3">
+                <div>
+                  <p class="text-xs text-muted">Compra · referencial</p>
+                  <p class="font-mono text-base tabular-nums">{{ formatRate(rate.buy_rate) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-muted">Venta · utilizada al contabilizar</p>
+                  <p class="font-mono text-base tabular-nums">{{ formatRate(rate.sell_rate) }}</p>
+                </div>
+              </div>
+              <p v-if="!rate.is_recorded_for_date" class="mt-2 flex items-start gap-2 text-xs text-danger" role="alert">
+                <AlertTriangle class="mt-0.5 size-3.5 shrink-0" />
+                Debe registrar y guardar este tipo de cambio en el módulo «Tipos de Cambio» para la fecha contable.
+                Las cifras mostradas son únicamente una referencia y no pueden utilizarse para contabilizar.
+              </p>
+            </div>
+          </template>
+        </section>
+
         <div class="mt-7 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 class="font-semibold">Clasificación tributaria SUNAT</h3>
@@ -689,10 +737,16 @@ onMounted(() => { void load(); });
               placeholder="Si se deja vacío se genera con comprobante y tercero" />
           </label>
         </div>
+        <div v-if="Object.keys(validationErrors).length" class="mt-4 rounded-lg border border-danger/40 bg-surface p-3" role="alert">
+          <p class="text-sm font-semibold text-danger">Revise los datos antes de continuar:</p>
+          <ul class="mt-1 list-inside list-disc text-xs text-danger">
+            <li v-for="(message, field) in validationErrors" :key="field">{{ message }}</li>
+          </ul>
+        </div>
         <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
           <p class="text-xs text-muted">Se crea un asiento contable y una anotación tributaria interna pendientes de conciliación SIRE. El asiento es inmutable.</p>
           <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-            :disabled="!canPost || !configured || posting" @click="postDocument">
+            :disabled="!canPost || !configured || posting || fxLoading" @click="preparePosting">
             <FilePlus2 class="size-4" /> {{ posting ? 'Contabilizando…' : 'Registrar en Diario y Registro Tributario' }}
           </button>
         </div>
@@ -818,5 +872,14 @@ onMounted(() => { void load(); });
         </div>
       </section>
     </template>
+    <DocumentPostingConfirmDialog
+      :open="confirmOpen"
+      :busy="posting"
+      :document-label="(draft.series || '—') + '-' + (draft.number || '—')"
+      :currency="draft.currency"
+      :total="money(amountTotal)"
+      @cancel="confirmOpen = false"
+      @confirm="postDocument"
+    />
   </div>
 </template>
