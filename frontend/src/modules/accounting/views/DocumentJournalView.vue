@@ -43,6 +43,7 @@ const error = ref('');
 const success = ref('');
 const confirmOpen = ref(false);
 const fxLoading = ref(false);
+const fxImporting = ref(false);
 const fxError = ref('');
 const fxSnapshot = ref<CompanyExchangeRatesResponse | null>(null);
 let fxRequestId = 0;
@@ -163,6 +164,37 @@ async function refreshFx(): Promise<void> {
     if (requestId === fxRequestId) fxLoading.value = false;
   }
 }
+/**
+ * La importación es un POST autorizado; jamás mutar la BD desde el GET del
+ * formulario. El endpoint SUNAT solo publica una fecha, por lo que una fecha
+ * histórica se rechaza sin copiar el valor del día actual.
+ */
+async function importSunatFx(showSuccess = true): Promise<boolean> {
+  if (fxImporting.value || fxLoading.value || posting.value) return false;
+  const targetDate = draft.entry_date;
+  const companyId = props.activeCompanyId;
+  fxImporting.value = true;
+  try {
+    const result = await api.importSunatExchangeRate(targetDate);
+    if (targetDate !== draft.entry_date || companyId !== props.activeCompanyId) return false;
+    await refreshFx();
+    if (showSuccess && fxReady.value) {
+      toast.success(result.status === 'imported' ? 'Tipo de cambio SUNAT importado.' : 'El tipo de cambio ya estaba registrado.', {
+        description: 'USD/PEN · ' + targetDate + ' · Compra ' + result.buy_rate + ' · Venta ' + result.sell_rate,
+      });
+    }
+    return fxReady.value;
+  } catch (e) {
+    if (targetDate === draft.entry_date && companyId === props.activeCompanyId) {
+      const detail = e instanceof Error ? e.message : 'No fue posible consultar SUNAT.';
+      toast.warning('No se pudo importar el tipo de cambio de SUNAT.', { description: detail });
+    }
+    return false;
+  } finally {
+    fxImporting.value = false;
+  }
+}
+
 watch(() => [draft.entry_date, props.activeCompanyId], () => {
   void refreshFx();
 }, { flush: 'sync' });
@@ -413,6 +445,10 @@ async function preparePosting(): Promise<void> {
   // La validación aquí es una vista previa: backend vuelve a comprobar la tasa
   // exacta en su transacción; nunca aceptar valores históricos ni presets.
   await refreshFx();
+  if (!fxReady.value && !fxError.value && secondaryRates.value.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)) {
+    // El usuario está confirmando un comprobante; se intenta importar solo aquí.
+    await importSunatFx(false);
+  }
   if (!fxReady.value) {
     toast.warning('Falta registrar el tipo de cambio diario.', {
       description: 'El Libro Diario es bimoneda incluso cuando el comprobante está en PEN. Registre la tasa de la fecha antes de contabilizar.',
@@ -619,10 +655,18 @@ onMounted(() => { void load(); });
                 </p>
               </div>
             </div>
-            <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs hover:bg-hover disabled:opacity-50"
-              :disabled="fxLoading" @click="refreshFx">
-              <RefreshCw class="size-3.5" :class="{ 'animate-spin': fxLoading }" /> Consultar tasa
-            </button>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs hover:bg-hover disabled:opacity-50"
+                :disabled="fxLoading || fxImporting" @click="refreshFx">
+                <RefreshCw class="size-3.5" :class="{ 'animate-spin': fxLoading }" /> Actualizar
+              </button>
+              <button v-if="secondaryRates.some(rate => rate.code === 'USD' && !rate.is_recorded_for_date)"
+                type="button" class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                :disabled="fxLoading || fxImporting || posting"
+                @click="importSunatFx()">
+                {{ fxImporting ? 'Consultando SUNAT…' : 'Importar tasa SUNAT' }}
+              </button>
+            </div>
           </div>
           <p v-if="fxLoading" class="mt-3 text-xs text-muted" role="status">Consultando cotización registrada para la fecha…</p>
           <p v-else-if="fxError" class="mt-3 text-xs text-danger" role="alert">{{ fxError }}</p>
@@ -756,7 +800,7 @@ onMounted(() => { void load(); });
         <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
           <p class="text-xs text-muted">Se crea un asiento contable y una anotación tributaria interna pendientes de conciliación SIRE. El asiento es inmutable.</p>
           <button type="button" class="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-            :disabled="!canPost || !configured || posting || fxLoading" @click="preparePosting">
+            :disabled="!canPost || !configured || posting || fxLoading || fxImporting" @click="preparePosting">
             <FilePlus2 class="size-4" /> {{ posting ? 'Contabilizando…' : 'Registrar en Diario y Registro Tributario' }}
           </button>
         </div>
