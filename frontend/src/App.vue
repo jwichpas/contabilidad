@@ -2,6 +2,7 @@
 import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { Loader2 } from 'lucide-vue-next';
+import { Toaster } from 'vue-sonner';
 
 
 
@@ -498,5 +499,6 @@ watch(
       </div>
     </div>
   </div>
+  <Toaster :theme="isDarkMode ? 'dark' : 'light'" position="top-right"
+    :visible-toasts="4" :duration="4800" close-button rich-colors />
 </template>
-
