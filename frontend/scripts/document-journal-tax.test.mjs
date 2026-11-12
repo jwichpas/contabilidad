@@ -116,7 +116,8 @@ test('VueSonner, VeeValidate and live registered FX rate are used before POST', 
   assert.match(view, /const result = await validate\(\)/);
   assert.match(view, /await refreshFx\(\)/);
   assert.match(view, /rate\.is_recorded_for_date/);
-  assert.match(view, /toast\.warning\('Falta registrar el tipo de cambio diario/);
+  assert.match(view, /'Falta registrar el tipo de cambio diario/);
+  assert.match(view, /'No se pudo verificar el tipo de cambio registrado/);
   assert.match(view, /:disabled="!canPost \|\| !configured \|\| posting \|\| fxLoading \|\| fxImporting"/);
   assert.doesNotMatch(view, /window\.confirm/);
   assert.match(dialog, /<Dialog/);
