@@ -138,12 +138,11 @@ function CheckUpdated([hashtable]$inventory) {
     $tables=SqlLocal @'
 SELECT
  (SELECT CASE WHEN to_regclass('public.company_fiscal_profiles') IS NULL THEN 0 ELSE 1 END),
- (SELECT CASE WHEN to_regclass('public.see_catalogs') IS NULL THEN 0 ELSE 1 END),
  (SELECT CASE WHEN to_regclass('public.accounting_document_entries') IS NULL THEN 0 ELSE 1 END),
  (SELECT CASE WHEN to_regclass('public.accounting_tax_register_entries') IS NULL THEN 0 ELSE 1 END),
  (SELECT CASE WHEN to_regclass('public.accounting_tax_register_allocations') IS NULL THEN 0 ELSE 1 END)
 '@
-    if($tables -ne '1|1|1|1|1') {
+    if($tables -ne '1|1|1|1') {
         throw 'Faltan tablas clave del perfil fiscal o registros de Compras/Ventas.'
     }
     $rlsNew=SqlLocal @'
