@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import { AlertTriangle, ArrowLeftRight, BookOpenCheck, FilePlus2, RefreshCw, Settings2 } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 import { useForm } from 'vee-validate';
@@ -29,6 +30,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ (e: 'posting-change', value: boolean): void }>();
 
+const queryClient = useQueryClient();
 const api = new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
   getActiveCompanyId: () => props.activeCompanyId,
@@ -178,6 +180,7 @@ async function importSunatFx(showSuccess = true): Promise<boolean> {
     const result = await api.importSunatExchangeRate(targetDate);
     if (targetDate !== draft.entry_date || companyId !== props.activeCompanyId) return false;
     await refreshFx();
+    if (fxReady.value) await queryClient.invalidateQueries({ queryKey: ['header-exchange-rates', props.activeCompanyId] });
     if (showSuccess && fxReady.value) {
       toast.success(result.status === 'imported' ? 'Tipo de cambio SUNAT importado.' : 'El tipo de cambio ya estaba registrado.', {
         description: 'USD/PEN · ' + targetDate + ' · Compra ' + result.buy_rate + ' · Venta ' + result.sell_rate,

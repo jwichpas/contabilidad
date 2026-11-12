@@ -25,6 +25,7 @@ import JournalAccountCombobox from '../components/JournalAccountCombobox.vue';
 import { entityMatches, entityRequired } from '../utils/journalEntity';
 import { cashFlowMatches } from '../utils/journalArea';
 import { resetAccountDimensions } from '../utils/journalLine';
+import { formatAccountingDate, journalEntryStatusLabel, journalEntryTypeLabel } from '../utils/journalPresentation';
 import { reconcileForeignRounding, reconcileLocalRounding, type ForeignRoundingAdjustment } from '../utils/journalForeignRounding';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import { SystemDecimal } from '../../../shared/types/numeric.types';
@@ -1448,15 +1449,14 @@ onBeforeUnmount(() => {
                     {{ entry.entry_number }}
                   </td>
 
-                  <td class="py-2.5 px-3 num text-muted">
-                    {{ entry.entry_date }}
+                  <td class="py-2.5 px-3 num text-muted whitespace-nowrap">
+                    <time :datetime="entry.entry_date.slice(0, 10)">{{ formatAccountingDate(entry.entry_date) }}</time>
                   </td>
 
-                  <td class="py-2.5 px-3">
-                    <span
-                      class="tag font-mono text-[10px] text-muted border-line bg-soft"
-                    >
-                      {{ entry.entry_type }} · {{ subdiaries.find(s => s.code === entry.subdiary_code)?.name ?? entry.subdiary_code ?? 'General' }}
+                  <td class="py-2.5 px-3 min-w-[170px]">
+                    <span class="block font-medium text-foreground whitespace-nowrap">{{ journalEntryTypeLabel(entry.entry_type) }}</span>
+                    <span class="block text-[11px] text-muted whitespace-nowrap" :title="entry.subdiary_code">
+                      {{ subdiaries.find(s => s.code === entry.subdiary_code)?.name ?? entry.subdiary_code ?? 'General' }}
                     </span>
                   </td>
 
@@ -1477,7 +1477,7 @@ onBeforeUnmount(() => {
                       class="tag text-[10px]"
                       :class="entry.status === 'POSTED' ? 'ok' : 'er'"
                     >
-                      {{ entry.status }}
+                      {{ journalEntryStatusLabel(entry.status) }}
                     </span>
                   </td>
                 </tr>
