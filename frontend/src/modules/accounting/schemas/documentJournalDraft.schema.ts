@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { DocumentJournalModule, TaxCategory } from '../types/documentJournal.types';
+import type { DocumentJournalModule } from '../types/documentJournal.types';
 
 const amount = z.string().regex(/^\d+(?:\.\d{1,4})?$/, 'Ingrese un importe válido (hasta 4 decimales).');
 const positive = amount.refine(value => Number(value) > 0 && Number.isFinite(Number(value)), 'La base debe ser mayor a cero.');
