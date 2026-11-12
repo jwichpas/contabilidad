@@ -436,7 +436,8 @@ onMounted(() => { void load(); });
           <div class="mt-4 grid gap-3 md:grid-cols-2">
             <label v-for="category in categoryOptions" :key="category.value" class="space-y-1.5 text-sm">
               <span class="font-medium">{{ category.label }}</span>
-              <UiSelect v-model="categoryAccountMap[category.value]" :options="categoryAccountOptions"
+              <UiSelect :model-value="categoryAccountMap[category.value] ?? ''"
+                @update:model-value="categoryAccountMap[category.value] = $event" :options="categoryAccountOptions"
                 :disabled="!canConfigure" searchable />
             </label>
           </div>
