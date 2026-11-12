@@ -29,7 +29,7 @@ import type {
   OperationalAccount,
 } from '../types/journalEntry.types';
 import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo, SeeCompanyVisibility, SeeCompanyVisibilityRevision } from '../types/seeReferences.types';
-import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage } from '../types/documentJournal.types';
+import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage, TaxRegisterPage, TaxRegisterSummary } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
 import type { CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
@@ -476,6 +476,22 @@ export class AccountingApiClient {
       { method: 'POST', body: JSON.stringify(payload) }, true,
     );
     return response.data;
+  }
+
+  public async fetchTaxRegister(module: DocumentJournalModule, period: string, page = 1): Promise<TaxRegisterPage> {
+    const query = new URLSearchParams({ period, page: String(page) });
+    return this.request<TaxRegisterPage>(
+      '/api/v1/accounting/document-journals/' + module + '/tax-register?' + query,
+      { method: 'GET' }, true,
+    );
+  }
+
+  public async fetchTaxRegisterSummary(module: DocumentJournalModule, period: string): Promise<TaxRegisterSummary> {
+    const result = await this.request<{ data: TaxRegisterSummary }>(
+      '/api/v1/accounting/document-journals/' + module + '/tax-register/summary?period=' + encodeURIComponent(period),
+      { method: 'GET' }, true,
+    );
+    return result.data;
   }
 
   public async findDocumentJournalEntities(module: DocumentJournalModule, search = ''): Promise<DocumentJournalEntityPage> {
