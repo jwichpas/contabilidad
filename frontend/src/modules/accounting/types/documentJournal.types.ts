@@ -37,7 +37,7 @@ export interface DocumentJournalSettings {
 }
 
 export type UpdateDocumentJournalSettings = Pick<DocumentJournalSettings,
-  'subdiary_code' | 'main_account_id' | 'tax_account_id' | 'settlement_account_id' | 'default_tax_rate'>;
+  'subdiary_code' | 'main_account_id' | 'tax_account_id' | 'settlement_account_id' | 'default_tax_rate' | 'category_account_map'>;
 
 export interface DocumentJournalInput {
   readonly document_type: '01' | '03';
@@ -65,6 +65,7 @@ export interface DocumentJournalRecord {
   readonly series: string;
   readonly number: string;
   readonly entry_date: string;
+  readonly issue_date: string;
   readonly currency: string;
   readonly total_amount: string;
   readonly journal_entry_id: number;
