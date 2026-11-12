@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** Fuente documental inmutable del asiento registrado en el libro diario. */
 final class AccountingDocumentEntry extends Model
@@ -34,6 +35,11 @@ final class AccountingDocumentEntry extends Model
     public function journal(): BelongsTo
     {
         return $this->belongsTo(JournalEntry::class, 'journal_entry_id');
+    }
+
+    public function taxRegister(): HasOne
+    {
+        return $this->hasOne(AccountingTaxRegisterEntry::class, 'accounting_document_entry_id');
     }
 
     public function entity(): BelongsTo
