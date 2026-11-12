@@ -45,7 +45,7 @@ final readonly class ListEntitiesController
             $query->whereRaw('entities.is_tax_authority IS TRUE');
         }
 
-        $request->validate(['search' => ['sometimes', 'string', 'max:100'],
+        $request->validate(['search' => ['sometimes', 'nullable', 'string', 'max:100'],
             'per_page' => ['sometimes', 'integer', 'between:1,100']]);
 
         if ($search = $request->query('search')) {
