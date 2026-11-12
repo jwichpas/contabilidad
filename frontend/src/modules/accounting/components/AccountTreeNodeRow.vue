@@ -43,8 +43,14 @@ const levelPrefixBadge = (level: number): string => {
       return 'C2';
     case 3:
       return 'S3';
-    default:
+    case 4:
       return 'R4';
+    case 5:
+      return 'N5';
+    case 6:
+      return 'N6';
+    default:
+      return `N${level}`;
   }
 };
 
@@ -325,7 +331,7 @@ const shortRubricBadge = (rubric: string): string => {
         </button>
 
         <button
-          v-if="!row.node.is_operational && row.node.level < 4 && row.node.is_active"
+          v-if="!row.node.is_operational && row.node.level < 6 && row.node.is_active"
           type="button"
           class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-brand bg-brand/10 hover:bg-brand hover:text-white transition-colors cursor-pointer"
           title="Crear subcuenta hija (Alt+N)"
