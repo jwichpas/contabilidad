@@ -29,6 +29,7 @@ import type {
   OperationalAccount,
 } from '../types/journalEntry.types';
 import type { SeeCatalogItem, SeeCatalogSummary, SeePage, SeeUbigeo, SeeCompanyVisibility, SeeCompanyVisibilityRevision } from '../types/seeReferences.types';
+import { buildDocumentJournalEntityQuery } from './documentJournalEntityQuery';
 import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage, TaxRegisterPage, TaxRegisterSummary } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
@@ -495,8 +496,7 @@ export class AccountingApiClient {
   }
 
   public async findDocumentJournalEntities(module: DocumentJournalModule, search = ''): Promise<DocumentJournalEntityPage> {
-    const query = new URLSearchParams({ per_page: '100', search });
-    query.set(module === 'purchases' ? 'is_supplier' : 'is_client', '1');
+    const query = buildDocumentJournalEntityQuery(module, search);
     return this.request<DocumentJournalEntityPage>('/api/v1/company/entities?' + query, { method: 'GET' }, true);
   }
 
