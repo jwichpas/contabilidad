@@ -121,7 +121,7 @@ test('VueSonner, VeeValidate and live registered FX rate are used before POST', 
   assert.doesNotMatch(view, /window\.confirm/);
   assert.match(dialog, /<Dialog/);
   assert.match(app, /<Toaster/);
-  assert.match(client, /fetchCompanyExchangeRates\(date: string\)/);
+  assert.match(client, /fetchCompanyExchangeRates\(date: string, signal\?: AbortSignal\)/);
 });
 
 
