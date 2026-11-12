@@ -809,6 +809,30 @@ export class AccountingApiClient {
   /**
    * Obtiene los tipos de cambio de las monedas secundarias configuradas para una fecha contable.
    */
+  /** Importación explícita, segura e idempotente desde tipoCambio.txt de SUNAT. */
+  public async importSunatExchangeRate(date: string): Promise<{
+    status: 'imported' | 'existing' | 'date_mismatch' | 'unavailable' | 'unsupported';
+    date: string;
+    currency: 'USD';
+    buy_rate?: string;
+    sell_rate?: string;
+    published_date?: string;
+  }> {
+    const response = await this.request<{ message: string; data: {
+      status: 'imported' | 'existing' | 'date_mismatch' | 'unavailable' | 'unsupported';
+      date: string;
+      currency: 'USD';
+      buy_rate?: string;
+      sell_rate?: string;
+      published_date?: string;
+    } }>(
+      '/api/v1/company/exchange-rates/import-sunat',
+      { method: 'POST', body: JSON.stringify({ rate_date: date }) },
+      true,
+    );
+    return response.data;
+  }
+
   public async fetchCompanyExchangeRates(date: string): Promise<CompanyExchangeRatesResponse> {
     const rawPayload = await this.request<{ data: CompanyExchangeRatesResponse }>(
       `/api/v1/company/exchange-rates?date=${encodeURIComponent(date)}`,
