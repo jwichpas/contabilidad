@@ -20,6 +20,10 @@ return new class extends Migration
             $table->jsonb('category_account_map')->nullable();
         });
 
+        Schema::table('accounting_document_entries', function (Blueprint $table): void {
+            $table->unique(['company_id', 'id'], 'uq_accounting_document_tenant_id');
+        });
+
         Schema::create('accounting_tax_register_entries', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('company_id')->constrained('companies')->restrictOnDelete();
