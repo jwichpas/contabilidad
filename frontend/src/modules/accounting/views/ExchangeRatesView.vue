@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -28,6 +29,8 @@ const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly getAccessToken: () => string | null;
 }>();
+
+const queryClient = useQueryClient();
 
 const apiClient = computed(
   () =>
@@ -154,6 +157,7 @@ async function handleSave(): Promise<void> {
       rate_date: selectedDate.value,
       rates: ratesArray,
     });
+    await queryClient.invalidateQueries({ queryKey: ['header-exchange-rates', props.activeCompanyId] });
 
     successMessage.value = `¡Tipos de cambio del día ${selectedDate.value} guardados y auditados exitosamente en el Libro Mayor!`;
     // Recargar datos actualizados
