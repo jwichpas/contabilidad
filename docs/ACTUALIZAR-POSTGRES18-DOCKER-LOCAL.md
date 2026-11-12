@@ -1,4 +1,4 @@
-# PostgreSQL 18 local (Docker): ampliación protegida de 25 a 61 migraciones
+# PostgreSQL 18 local (Docker): ampliación protegida de 25 a 28 migraciones
 
 ## Estado detectado el 12/11/2026
 
@@ -30,7 +30,7 @@ locales. En \`backend\`:
 \`\`\`
 
 El Plan consulta exclusivamente SQL de catálogo en **Docker local** y muestra
-las 36 migraciones adicionales que faltan; no usa credenciales de Neon,
+las 3 migraciones contables adicionales que faltan; no usa credenciales de Neon,
 no ejecuta Laravel ni realiza escrituras.
 
 Una vez revisado el plan y autorizado el cambio en esta base local:
@@ -54,13 +54,16 @@ Se crea automáticamente un \`pg_dump\` binario personalizado en
 \`%LOCALAPPDATA%\Contabilidad\Backups\` **fuera del repositorio** antes de la
 primera migración. Nunca contiene ni imprime contraseñas en el resultado.
 Si falla el respaldo no comienza ningún cambio. Después aplica **solo las
-36 migraciones explícitamente permitidas**, una por una, verificando cada
+3 migraciones contables explícitamente permitidas**, una por una, verificando cada
 registro en \`public.migrations\`. Ante cualquier fallo se detiene. No se
 reintenta una actualización parcialmente aplicada de forma automática.
 
-Las actualizaciones incluyen el perfil fiscal por empresa; catálogo SEE,
-versiones PLE/INEI y referencias; libros de Compras/Ventas y registros internos
-RCE/RVIE. **No** ejecuta cinco migraciones antiguas exclusivas de Supabase,
+La actualización incluye exclusivamente el perfil fiscal por empresa,
+los libros de Compras/Ventas y los registros internos RCE/RVIE. Los catálogos
+SEE/PLE/INEI quedan **pendientes**: las migraciones de reconciliación PLE
+requieren registros de SUNAT anteriores que el instalador base no sembró.
+No se permite una actualización masiva de catálogos sobre esta base sin un
+procedimiento de referencias versionado, con validación previa de contenido. **No** ejecuta cinco migraciones antiguas exclusivas de Supabase,
 ni migraciones especiales de Neon (\`database/neon_migrations\` y las
 migraciones portables condicionadas a credenciales/host Neon).
 El registro opcional \`portable_migrations/2026_10_21_040000...\` sigue
@@ -100,5 +103,5 @@ personal, control de versiones del esquema y validación RLS.
   migraciones con Neon mientras se actualiza Docker.
 
 > Verificación disponible en CI: sintaxis PowerShell y PHP.
-> Falta ejecutar las 36 migraciones en el contenedor local del usuario y
+> Falta ejecutar las 3 migraciones en el contenedor local del usuario y
 > realizar pruebas de integración/funcionamiento de los módulos.
