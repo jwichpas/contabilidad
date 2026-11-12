@@ -25,6 +25,7 @@ final class SunatCurrentExchangeRateClient
     {
         try {
             $response = Http::accept('text/plain')
+                ->withoutRedirecting()
                 ->connectTimeout(2)
                 ->timeout(4)
                 ->get(self::SOURCE_URL);
