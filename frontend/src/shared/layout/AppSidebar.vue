@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import {
   ArrowLeftRight,
   BookOpen,
+  ShoppingCart,
+  Receipt,
   CalendarRange,
   Building2,
   CirclePlus,
@@ -253,6 +255,24 @@ const activeCompanyIdString = computed<string>({
                   Libro Diario Bimoneda
                 </span>
               </span>
+            </button>
+
+            <!-- Registro de comprobantes y sus asientos vinculados al libro diario -->
+            <button type="button"
+              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
+                currentModule === 'purchases' ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
+              :aria-current="currentModule === 'purchases' ? 'page' : undefined"
+              title="Comprobantes y asientos de compras" @click="emit('navigate', 'purchases')">
+              <ShoppingCart class="size-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Registro de Compras</span>
+            </button>
+            <button type="button"
+              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
+                currentModule === 'sales' ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
+              :aria-current="currentModule === 'sales' ? 'page' : undefined"
+              title="Comprobantes y asientos de ventas" @click="emit('navigate', 'sales')">
+              <Receipt class="size-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Registro de Ventas</span>
             </button>
 
             <!-- Gestión de períodos contables (F2.3) -->
