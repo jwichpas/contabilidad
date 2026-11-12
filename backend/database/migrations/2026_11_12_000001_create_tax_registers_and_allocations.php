@@ -54,6 +54,13 @@ return new class extends Migration
             $table->unique(['company_id', 'tax_register_entry_id', 'category'], 'uq_tax_register_category');
         });
 
+        // Las ventas las emite la empresa; serie + número no se repiten aunque cambie el cliente.
+        DB::unprepared(<<<'INDEXSQL'
+            CREATE UNIQUE INDEX uq_sale_document_number_per_company
+              ON public.accounting_document_entries(company_id, document_type, series, number)
+              WHERE module = 'SALE';
+            INDEXSQL);
+
         DB::unprepared(<<<'SQL'
             ALTER TABLE public.accounting_tax_register_entries
               ADD CONSTRAINT chk_tax_register_module CHECK (module IN ('PURCHASE', 'SALE')),
