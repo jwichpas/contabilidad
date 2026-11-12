@@ -74,18 +74,19 @@ final class SunatCurrentExchangeRateClient
             return null;
         }
 
-        $buy = (float) $matches[4];
-        $sell = (float) $matches[5];
-
-        if (! is_finite($buy) || ! is_finite($sell)
-            || $buy <= 0 || $sell <= 0 || $buy > 20 || $sell > 20 || $buy > $sell) {
+        // Validación monetaria exacta: evitar float en tipos NUMERIC(14,6).
+        $buy = $matches[4];
+        $sell = $matches[5];
+        if (bccomp($buy, '0', 6) <= 0 || bccomp($sell, '0', 6) <= 0
+            || bccomp($buy, '20', 6) > 0 || bccomp($sell, '20', 6) > 0
+            || bccomp($buy, $sell, 6) > 0) {
             return null;
         }
 
         return [
             'date' => CarbonImmutable::create($year, $month, $day)->toDateString(),
-            'buy' => number_format($buy, 6, '.', ''),
-            'sell' => number_format($sell, 6, '.', ''),
+            'buy' => bcadd($buy, '0', 6),
+            'sell' => bcadd($sell, '0', 6),
         ];
     }
 }
