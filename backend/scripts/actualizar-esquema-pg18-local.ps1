@@ -144,9 +144,22 @@ SELECT
  (SELECT CASE WHEN to_regclass('public.accounting_tax_register_allocations') IS NULL THEN 0 ELSE 1 END)
 '@
     if($tables -ne '1|1|1|1|1') {
-        throw 'Faltan tablas clave de catalogos o registros de Compras/Ventas.'
+        throw 'Faltan tablas clave del perfil fiscal o registros de Compras/Ventas.'
     }
-    Write-Host '[PASS] 28 migraciones y tablas de Compras/Ventas presentes en Docker.'
+    $rlsNew=SqlLocal @'
+SELECT count(*)
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+WHERE n.nspname='public'
+  AND c.relname IN ('company_fiscal_profiles','company_document_journal_settings',
+    'accounting_document_entries','accounting_tax_register_entries',
+    'accounting_tax_register_allocations')
+  AND c.relrowsecurity AND c.relforcerowsecurity
+'@
+    if($rlsNew -ne '5') {
+        throw 'Las cinco tablas nuevas no tienen todas FORCE RLS.'
+    }
+    Write-Host '[PASS] 28 migraciones, tablas contables y FORCE RLS en Docker.'
 }
 function BackupLocal {
     $backupRoot=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Contabilidad\Backups'
@@ -226,6 +239,7 @@ try {
             throw 'El preflight Laravel local no paso; ninguna migracion iniciada.'
         }
         Write-Host '[PASS] Conexion Laravel administrativa comprobada exclusivamente sobre Docker local.'
+        $previousBusinessCounts=SqlLocal "SELECT (SELECT count(*) FROM public.companies),(SELECT count(*) FROM public.users),(SELECT count(*) FROM public.exchange_rates)"
         BackupLocal
         foreach($migration in $updates) {
             Write-Host ('[MIGRACION] '+$migration)
@@ -239,7 +253,11 @@ try {
             Write-Host '[PASS] Migracion registrada.'
         }
         CheckUpdated (CheckMigrationInventory)
-        Write-Host '[PASS] Datos existentes conservados; .env remoto no fue modificado.'
+        $currentBusinessCounts=SqlLocal "SELECT (SELECT count(*) FROM public.companies),(SELECT count(*) FROM public.users),(SELECT count(*) FROM public.exchange_rates)"
+        if($currentBusinessCounts -ne $previousBusinessCounts) {
+            throw 'Los conteos de empresas, usuarios o tasas cambiaron; detener y revisar respaldo.'
+        }
+        Write-Host '[PASS] Empresas, usuarios y tasas conservados; .env remoto no fue modificado.'
         $success=$true
     }
 } catch {
