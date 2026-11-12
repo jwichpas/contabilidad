@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
 use App\Http\Controllers\Api\V1\Accounting\CreateJournalEntryController;
 use App\Http\Controllers\Api\V1\Accounting\DocumentJournalSettingsController;
 use App\Http\Controllers\Api\V1\Accounting\DocumentJournalController;
+use App\Http\Controllers\Api\V1\Accounting\TaxRegisterController;
 use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\GetFinancialSnapshotController;
 use App\Http\Controllers\Api\V1\Accounting\GetCashFlowStatementController;
@@ -189,6 +190,11 @@ Route::prefix('v1')->group(function (): void {
             Route::put('/accounting/document-journals/{module}/settings', [DocumentJournalSettingsController::class, 'update'])
                 ->whereIn('module', ['purchases', 'sales'])
                 ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+            // RCE y RVIE internos: registro tributario separado del Libro Diario, aún sin presentación a SUNAT.
+            Route::get('/accounting/document-journals/{module}/tax-register', [TaxRegisterController::class, 'index'])
+                ->whereIn('module', ['purchases', 'sales']);
+            Route::get('/accounting/document-journals/{module}/tax-register/summary', [TaxRegisterController::class, 'summary'])
+                ->whereIn('module', ['purchases', 'sales']);
             Route::get('/accounting/document-journals/{module}/documents', [DocumentJournalController::class, 'index'])
                 ->whereIn('module', ['purchases', 'sales']);
             Route::post('/accounting/document-journals/{module}/documents', [DocumentJournalController::class, 'store'])
