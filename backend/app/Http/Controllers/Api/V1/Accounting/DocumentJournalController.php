@@ -116,6 +116,13 @@ final readonly class DocumentJournalController
 
         $base = Decimal::ofMonetary((string) $data['taxable_amount']);
         $taxAmount = Decimal::ofMonetary((string) $data['tax_amount']);
+        // La boleta de compra no se imputa automáticamente como crédito fiscal.
+        // En esta versión conservadora, el monto completo se lleva a la cuenta principal.
+        if ($kind === 'PURCHASE' && $data['document_type'] === '03' && $taxAmount->isPositive()) {
+            throw ValidationException::withMessages(['tax_amount' => [
+                'La boleta de compra no habilita crédito fiscal en este flujo. Consigne el importe total en la cuenta de compra y tributo 0.',
+            ]]);
+        }
         if ($taxAmount->isPositive() && $tax === null) {
             throw ValidationException::withMessages(['tax_amount' => ['Configure una cuenta tributaria o registre tributo cero.']]);
         }
