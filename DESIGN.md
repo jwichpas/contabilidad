@@ -114,6 +114,16 @@ Además de las pruebas: revisar modo claro/oscuro, foco y teclado, zoom 200%, te
 3. Mejora de layout, dashboard y editor de asientos sin tocar reglas del dominio.
 4. Reportes y presentaciones con Frontend Slides; landing externa opcional con Scroll World.
 
+### Login — revisión del 12/11/2026
+
+- `LoginView.vue` adopta los tokens vigentes: superficies zinc y acción violeta en ambos temas. Conserva la marca ContaPerú que muestra actualmente el acceso.
+- Composición de dos columnas en escritorio, título y formulario con jerarquías distintas, y referencia tipográfica al libro diario sin cifras ficticias. Se retiran gradientes, órbitas y el documento de cristal.
+- En móvil se reduce el bloque introductorio y se oculta la composición decorativa; campos con texto de 16px y controles táctiles de al menos 44px.
+- Se mantienen eventos, contrato de autenticación y avisos de sesión. Se añaden asociación accesible del error, estado ocupado del formulario y protección frente a envíos duplicados durante la carga.
+- Las cinco referencias orientan la revisión. Frontend Slides aporta criterios de composición; Scroll World se considera como referencia de continuidad visual, sin introducir vídeo, 3D ni navegación por scroll en el acceso.
+- Verificado: `pnpm typecheck`, `pnpm test:unit` (129/129), `pnpm build`, `pnpm check:bundle` y `git diff --check`. JS inicial: 238.43 kB; gzip: 77.69 kB.
+- Pendiente: inspección visual en navegador, teclado, móvil y ambos temas. Chromium no inicia en este entorno: `socket() failed: Operation not permitted`. La compilación no sustituye esta comprobación; entregar como PR borrador hasta completarla.
+
 
 ## 7. Iteración 2 — Layout, menú lateral y encabezado
 
