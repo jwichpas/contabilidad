@@ -117,12 +117,20 @@ Además de las pruebas: revisar modo claro/oscuro, foco y teclado, zoom 200%, te
 ### Login — revisión del 12/11/2026
 
 - `LoginView.vue` adopta los tokens vigentes: superficies zinc y acción violeta en ambos temas. Conserva la marca ContaPerú que muestra actualmente el acceso.
-- Composición de dos columnas en escritorio, título y formulario con jerarquías distintas, y referencia tipográfica al libro diario sin cifras ficticias. Se retiran gradientes, órbitas y el documento de cristal.
-- En móvil se reduce el bloque introductorio y se oculta la composición decorativa; campos con texto de 16px y controles táctiles de al menos 44px.
+- Composición de dos columnas en escritorio, título y formulario con jerarquías distintas. Se retiran gradientes, órbitas y el documento de cristal.
+- En móvil se reduce el bloque introductorio y la composición SVG; campos con texto de 16px y controles táctiles de al menos 44px.
 - Se mantienen eventos, contrato de autenticación y avisos de sesión. Se añaden asociación accesible del error, estado ocupado del formulario y protección frente a envíos duplicados durante la carga.
 - Las cinco referencias orientan la revisión. Frontend Slides aporta criterios de composición; Scroll World se considera como referencia de continuidad visual, sin introducir vídeo, 3D ni navegación por scroll en el acceso.
 - Verificado: `pnpm typecheck`, `pnpm test:unit` (129/129), `pnpm build`, `pnpm check:bundle` y `git diff --check`. JS inicial: 238.43 kB; gzip: 77.69 kB.
 - Pendiente: inspección visual en navegador, teclado, móvil y ambos temas. Chromium no inicia en este entorno: `socket() failed: Operation not permitted`. La compilación no sustituye esta comprobación; entregar como PR borrador hasta completarla.
+
+#### Ajuste tras captura — 13/11/2026
+
+- La captura del usuario corresponde al login anterior a esta rama: conserva el fondo fijo azul/violeta, la etiqueta superior y el documento de cristal. El cambio se entrega en `design/login-ui-ux-refresh`, PR #13, todavía sin fusionar.
+- El panel izquierdo cambia explícitamente con `isDarkMode`: violeta-50 y texto violeta-950 en claro; zinc-900 y texto zinc-50 en oscuro. Papel, contornos y acentos del SVG también usan variantes de tema de la paleta compartida.
+- `LoginAccountingVisual.vue` dibuja documentos, libro y balance en SVG nativo. La secuencia de trazos dura 3.3 segundos y se reproduce al montar o cambiar de tema; el libro entra suavemente y el símbolo de equilibrio completa la secuencia. No hay bucle permanente y `prefers-reduced-motion` la desactiva.
+- Los paneles conservan altura según contenido en vez de estirarse a toda la altura de la pantalla. El SVG se reduce a un máximo de 280px en móvil.
+- Validación repetida: build con comprobación TypeScript y 129/129 pruebas. JS inicial: 239.90 kB; gzip: 78.30 kB. Se inspeccionaron renders estáticos del SVG claro/oscuro con Sharp; esos renders no verifican el layout de la página ni la animación en navegador. Chromium sigue bloqueado por la restricción de sockets del entorno.
 
 
 ## 7. Iteración 2 — Layout, menú lateral y encabezado
