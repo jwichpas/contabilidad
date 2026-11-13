@@ -126,6 +126,16 @@ const activeRubricOptions = computed<readonly UiSelectOption<FinancialStatementR
 
 const selectedCostCenterCode = shallowRef<string>('');
 
+const selectedRubricLabel = computed(() => {
+  const selected = activeRubricOptions.value.find(
+    (option) => option.value === form.financial_statement_rubric,
+  );
+  // Preserve the full, current catalog label, including its statement group.
+  return selected
+    ? [selected.badge, selected.label].filter(Boolean).join(' · ')
+    : FINANCIAL_STATEMENT_RUBRIC_LABELS[form.financial_statement_rubric];
+});
+
 const codeInputRef = useTemplateRef<HTMLInputElement>('codeInput');
 
 const parentAccount = computed(() => props.parentRow?.node ?? null);
@@ -178,6 +188,9 @@ const touched = shallowRef(false);
 const resetFormFromContext = (): void => {
   touched.value = false;
   fieldErrors.value = {};
+  // This selector applies a preset, it is not a persisted per-account field.
+  // Never carry a preset from another account into the current edit session.
+  selectedCostCenterCode.value = '';
 
   if (props.mode === 'edit' && editingAccount.value) {
     const acc = editingAccount.value;
@@ -399,7 +412,7 @@ function handleSubmit(): void {
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
               <span class="tag ok font-mono text-[10px]">
-                Nivel {{ targetLevel }} · Int16
+                Nivel {{ targetLevel }} · {{ form.is_operational ? 'Cuenta operativa' : 'Cuenta agrupadora' }}
               </span>
               <span v-if="parentAccount" class="text-xs font-mono text-white/80 truncate">
                 Padre {{ parentAccount.code }} · {{ parentAccount.name }}
@@ -592,7 +605,7 @@ function handleSubmit(): void {
                 </label>
               </div>
 
-              <div v-if="costCenterOptions && costCenterOptions.length > 0" class="pt-1">
+              <div v-if="form.requires_cost_center && costCenterOptions && costCenterOptions.length > 0" class="pt-1">
                 <label class="ui-label text-[11px]" for="acc-cost-center-select">
                   Centro de Costo configurado en la Empresa
                 </label>
@@ -687,8 +700,16 @@ function handleSubmit(): void {
                 <p v-if="fieldErrors.financial_statement_rubric" class="ui-error">
                   {{ fieldErrors.financial_statement_rubric }}
                 </p>
+                <p
+                  v-else-if="form.financial_statement_rubric !== 'NONE'"
+                  class="ui-hint break-words"
+                  :title="selectedRubricLabel"
+                >
+                  <span class="font-medium text-foreground">Rubro asignado a {{ form.code || 'esta cuenta' }}:</span>
+                  {{ selectedRubricLabel }}
+                </p>
                 <p v-else class="ui-hint">
-                  Ej. <strong class="text-foreground">1041 → Efectivo y equivalentes de efectivo</strong>.
+                  Sin rubro asignado. Selecciona el rubro que corresponda a la cuenta.
                 </p>
               </section>
             </div>
