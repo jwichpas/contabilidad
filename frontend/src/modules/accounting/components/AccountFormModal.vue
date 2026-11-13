@@ -269,7 +269,11 @@ const applyCostCenterPreset = (code: string): void => {
 };
 
 const validationPayload = computed<CreateAccountingAccountFormValues>(() => ({
-  parent_id: parentAccount.value ? parentAccount.value.id : null,
+  // Editing a deep PCGE account must retain its actual parent id for Zod's
+  // level-2-to-6 hierarchy check. The parentRow prop is only set for CREATE.
+  parent_id: props.mode === 'edit'
+    ? (editingAccount.value?.parent_id ?? null)
+    : (parentAccount.value?.id ?? null),
   parent_code: parentAccount.value ? parentAccount.value.code : null,
   parent_level: parentAccount.value ? parentAccount.value.level : null,
   parent_is_operational: parentAccount.value ? parentAccount.value.is_operational : null,
@@ -502,7 +506,7 @@ function handleSubmit(): void {
                   v-model="form.is_operational"
                   type="checkbox"
                   class="ui-switch"
-                  :disabled="targetLevel < 3"
+                  :disabled="targetLevel < 3 || (mode === 'edit' && editingRow?.hasChildren === true)"
                 />
               </label>
             </section>
