@@ -231,3 +231,98 @@ it('impide desactivar una cuenta padre mientras tenga subcuentas hijas activas',
         ->assertOk()
         ->assertJsonPath('data.is_active', false);
 });
+
+
+it('crea y actualiza 401110 operativa en nivel 6 sin romper las cuentas agrupadoras', function (): void {
+    $headers = ['X-Company-Id' => (string) $this->company->id];
+    $parentId = null;
+    $rootId = null;
+
+    // La jerarquía PCGE real utiliza los seis niveles; sólo la hoja tiene
+    // movimientos. En el antiguo editor se rechazaban nivel 5/6 y su UPDATE.
+    foreach ([
+        [1, '4'], [2, '40'], [3, '401'],
+        [4, '4011'], [5, '40111'], [6, '401110'],
+    ] as [$level, $code]) {
+        $operational = $level === 6;
+        $response = $this->postJson('/api/v1/accounting/accounts', [
+            'parent_id' => $parentId,
+            'code' => $code,
+            'name' => $operational ? 'IGV - Cuenta propia - Movimiento' : 'Agrupadora '.$code,
+            'level' => $level,
+            'account_type' => AccountType::Liability->value,
+            'balance_type' => BalanceType::Credit->value,
+            'currency_mode' => AccountCurrencyMode::Pen->value,
+            'requires_currency' => false,
+            'requires_auxiliary' => $operational,
+            'entity_requirement_type' => $operational
+                ? EntityRequirementType::TaxAuthority->value
+                : EntityRequirementType::None->value,
+            'requires_cost_center' => false,
+            'requires_company_area' => false,
+            'has_automatic_destination' => false,
+            'destination_debit_code' => null,
+            'destination_credit_code' => null,
+            'requires_cash_flow_area' => false,
+            'cash_flow_category' => CashFlowCategory::None->value,
+            'financial_statement_rubric' => $operational
+                ? FinancialStatementRubric::TaxesAndContributionsPayable->value
+                : FinancialStatementRubric::None->value,
+            'is_operational' => $operational,
+        ], $headers)->assertCreated()
+            ->assertJsonPath('data.code', $code)
+            ->assertJsonPath('data.level', $level)
+            ->assertJsonPath('data.is_operational', $operational);
+        $parentId = (int) $response->json('data.id');
+        if ($level === 1) {
+            $rootId = $parentId;
+        }
+    }
+
+    // Guardar la configuración de una hoja previamente creada en nivel 6
+    // debe resultar 200, sin modificar su código, nivel o tenant.
+    $this->putJson("/api/v1/accounting/accounts/{$parentId}", [
+        'name' => 'IGV - Cuenta propia - Movimiento validado',
+        'account_type' => AccountType::Liability->value,
+        'balance_type' => BalanceType::Credit->value,
+        'currency_mode' => AccountCurrencyMode::Pen->value,
+        'requires_currency' => false,
+        'requires_auxiliary' => true,
+        'entity_requirement_type' => EntityRequirementType::TaxAuthority->value,
+        'requires_cost_center' => false,
+        'requires_company_area' => false,
+        'has_automatic_destination' => false,
+        'destination_debit_code' => null,
+        'destination_credit_code' => null,
+        'requires_cash_flow_area' => false,
+        'cash_flow_category' => CashFlowCategory::None->value,
+        'financial_statement_rubric' => FinancialStatementRubric::TaxesAndContributionsPayable->value,
+        'is_operational' => true,
+        'is_active' => true,
+    ], $headers)->assertOk()
+        ->assertJsonPath('data.code', '401110')
+        ->assertJsonPath('data.level', 6)
+        ->assertJsonPath('data.is_operational', true)
+        ->assertJsonPath('data.name', 'IGV - Cuenta propia - Movimiento validado');
+
+    $this->putJson("/api/v1/accounting/accounts/{$rootId}", [
+        'name' => 'Pasivo',
+        'account_type' => AccountType::Liability->value,
+        'balance_type' => BalanceType::Credit->value,
+        'currency_mode' => AccountCurrencyMode::Pen->value,
+        'requires_currency' => false,
+        'requires_auxiliary' => false,
+        'entity_requirement_type' => EntityRequirementType::None->value,
+        'requires_cost_center' => false,
+        'requires_company_area' => false,
+        'has_automatic_destination' => false,
+        'destination_debit_code' => null,
+        'destination_credit_code' => null,
+        'requires_cash_flow_area' => false,
+        'cash_flow_category' => CashFlowCategory::None->value,
+        'financial_statement_rubric' => FinancialStatementRubric::None->value,
+        'is_operational' => true,
+        'is_active' => true,
+    ], $headers)->assertUnprocessable()
+        ->assertJsonValidationErrors('is_operational');
+});
