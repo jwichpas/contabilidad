@@ -6,34 +6,46 @@ use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\Security\AuditLoggerService;
-use Illuminate\Support\Facades\RateLimiter;
+use App\Support\Tenant\TenantContext;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function (): void {
-    RateLimiter::clear(sha1('throttle:10,1'));
+    // Fixtures exclusivos de cada test; Pest.php revierte la transacción.
+    // No reutilizar ni modificar cuentas o empresas existentes.
+    $this->company = Company::query()->create([
+        'tax_id' => '20'.(string) random_int(100000000, 999999999),
+        'business_name' => 'Empresa de prueba de seguridad',
+        'legal_address' => 'Dirección de prueba',
+        'is_active' => DB::raw('TRUE'),
+    ]);
 
-    $this->company = Company::query()->firstOrCreate(
-        ['tax_id' => '20601234567'],
-        [
-            'business_name' => 'Corporación Peruana de Distribución S.A.C.',
-            'legal_address' => 'Av. Javier Prado Este 2450, San Borja, Lima',
-            'is_active' => true,
-        ]
-    );
+    $this->user = User::query()->create([
+        'email' => 'security-'.bin2hex(random_bytes(8)).'@example.test',
+        'name' => 'Usuario de prueba de seguridad',
+        'password' => 'Contabilidad2026!',
+        'current_company_id' => null,
+    ]);
 
-    $this->user = User::query()->firstOrCreate(
-        ['email' => 'contador@corporacionperu.pe'],
-        [
-            'name' => 'Contador General CPC',
-            'password' => 'Contabilidad2026!',
-            'current_company_id' => $this->company->id,
-        ]
-    );
+    app(TenantContext::class)->run($this->company->id, function (): void {
+        DB::table('company_user')->insert([
+            'company_id' => $this->company->id,
+            'user_id' => $this->user->id,
+            'role' => 'ACCOUNTANT',
+            'is_active' => DB::raw('TRUE'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // La FK compuesta exige crear la membresía antes de asignar empresa.
+        $this->user->update(['current_company_id' => $this->company->id]);
+    });
 });
 
 describe('ISO/IEC 27001:2023 Security & SGSI Controls', function (): void {
     test('Control 8.24 & 8.26: Inyecta encabezados de seguridad HTTP estrictos y previene caché en endpoints API', function (): void {
         $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'contador@corporacionperu.pe',
+            'email' => $this->user->email,
             'password' => 'Contabilidad2026!',
         ]);
 
@@ -51,35 +63,58 @@ describe('ISO/IEC 27001:2023 Security & SGSI Controls', function (): void {
     });
 
     test('Control 8.15: Registra en audit_logs los eventos de inicio de sesión exitoso y fallido con severidad adecuada', function (): void {
+        $failedWrites = [];
+        // RLS impide leer eventos globales (company_id NULL). Observar el
+        // INSERT ejecutado, sin relajar políticas ni usar un rol privilegiado.
+        DB::listen(function (QueryExecuted $query) use (&$failedWrites): void {
+            if (! preg_match('/^insert into "audit_logs"\s*\(([^)]+)\)/i', $query->sql, $matches)) {
+                return;
+            }
+
+            $columns = array_map(static fn (string $column): string => trim($column, ' "'), explode(',', $matches[1]));
+            if (count($columns) !== count($query->bindings)) {
+                return;
+            }
+
+            $values = array_combine($columns, $query->bindings);
+            if (($values['event_type'] ?? null) === 'AUTH_LOGIN_FAILED') {
+                $failedWrites[] = $values + ['executed_sql' => $query->sql];
+            }
+        });
+
         // Intento fallido
         $failedResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => 'contador@corporacionperu.pe',
+            'email' => $this->user->email,
             'password' => 'PasswordInvalido123!',
         ]);
 
         $failedResponse->assertStatus(422);
 
-        $failedLog = AuditLog::query()
-            ->where('event_type', 'AUTH_LOGIN_FAILED')
-            ->latest('id')
-            ->first();
-
-        expect($failedLog)->not->toBeNull();
-        expect($failedLog->severity)->toBe('WARNING');
-        expect($failedLog->new_values['attempted_email'] ?? null)->toBe('contador@corporacionperu.pe');
+        expect($failedWrites)->toHaveCount(1);
+        $failedLog = $failedWrites[0];
+        expect($failedLog['severity'])->toBe('WARNING')
+            ->and((int) $failedLog['user_id'])->toBe($this->user->id)
+            ->and($failedLog['company_id'])->toBeNull()
+            ->and(strtolower($failedLog['executed_sql']))->not->toContain('returning')
+            ->and(json_decode($failedLog['new_values'], true, 512, JSON_THROW_ON_ERROR)['attempted_email'])
+            ->toBe($this->user->email);
 
         // Intento exitoso
         $successResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => 'contador@corporacionperu.pe',
+            'email' => $this->user->email,
             'password' => 'Contabilidad2026!',
         ]);
 
         $successResponse->assertOk();
 
-        $successLog = AuditLog::query()
-            ->where('event_type', 'AUTH_LOGIN')
-            ->latest('id')
-            ->first();
+        $successLog = app(TenantContext::class)->run($this->company->id, function (): ?AuditLog {
+            return AuditLog::query()
+                ->where('company_id', $this->company->id)
+                ->where('user_id', $this->user->id)
+                ->where('event_type', 'AUTH_LOGIN')
+                ->latest('id')
+                ->first();
+        });
 
         expect($successLog)->not->toBeNull();
         expect($successLog->severity)->toBe('INFO');
@@ -114,7 +149,7 @@ describe('ISO/IEC 27001:2023 Security & SGSI Controls', function (): void {
         // Enviar 10 intentos con contraseñas erróneas
         for ($i = 0; $i < 10; $i++) {
             $response = $this->postJson('/api/v1/auth/login', [
-                'email' => 'contador@corporacionperu.pe',
+                'email' => $this->user->email,
                 'password' => 'WrongPass_' . $i,
             ]);
             $response->assertStatus(422);
@@ -122,7 +157,7 @@ describe('ISO/IEC 27001:2023 Security & SGSI Controls', function (): void {
 
         // El intento 11 debe ser bloqueado por HTTP 429 Too Many Requests
         $throttledResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => 'contador@corporacionperu.pe',
+            'email' => $this->user->email,
             'password' => 'WrongPass_11',
         ]);
 

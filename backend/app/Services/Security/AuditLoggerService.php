@@ -74,7 +74,7 @@ final readonly class AuditLoggerService
                 $userAgent,
                 $severity
             ): void {
-                AuditLog::query()->create([
+                $auditLog = new AuditLog([
                     'company_id' => $companyId,
                     'user_id' => $userId,
                     'event_type' => $eventType,
@@ -86,6 +86,17 @@ final readonly class AuditLoggerService
                     'user_agent' => substr($userAgent, 0, 500),
                     'severity' => in_array($severity, ['INFO', 'WARNING', 'CRITICAL'], true) ? $severity : 'INFO',
                 ]);
+
+                if ($companyId === null) {
+                    // Los eventos globales admiten INSERT pero no SELECT por
+                    // RLS. create()/save() usa RETURNING id en PostgreSQL y
+                    // exigiría leer esa fila. Conservar casts y fecha sin
+                    // solicitar el ID ni ampliar la política de lectura.
+                    $auditLog->setCreatedAt($auditLog->freshTimestamp());
+                    $auditLog->newQuery()->insert($auditLog->getAttributes());
+                } else {
+                    $auditLog->save();
+                }
             };
 
             if ($companyId !== null) {
