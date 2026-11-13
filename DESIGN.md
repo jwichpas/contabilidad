@@ -129,8 +129,14 @@ Además de las pruebas: revisar modo claro/oscuro, foco y teclado, zoom 200%, te
 - La captura del usuario corresponde al login anterior a esta rama: conserva el fondo fijo azul/violeta, la etiqueta superior y el documento de cristal. El cambio se entrega en `design/login-ui-ux-refresh`, PR #13, todavía sin fusionar.
 - El panel izquierdo cambia explícitamente con `isDarkMode`: violeta-50 y texto violeta-950 en claro; zinc-900 y texto zinc-50 en oscuro. Papel, contornos y acentos del SVG también usan variantes de tema de la paleta compartida.
 - `LoginAccountingVisual.vue` dibuja documentos, libro y balance en SVG nativo. La secuencia de trazos dura 3.3 segundos y se reproduce al montar o cambiar de tema; el libro entra suavemente y el símbolo de equilibrio completa la secuencia. No hay bucle permanente y `prefers-reduced-motion` la desactiva.
-- Los paneles conservan altura según contenido en vez de estirarse a toda la altura de la pantalla. El SVG se reduce a un máximo de 280px en móvil.
+- Los paneles conservan altura según contenido en vez de estirarse a toda la altura de la pantalla.
 - Validación repetida: build con comprobación TypeScript y 129/129 pruebas. JS inicial: 239.90 kB; gzip: 78.30 kB. Se inspeccionaron renders estáticos del SVG claro/oscuro con Sharp; esos renders no verifican el layout de la página ni la animación en navegador. Chromium sigue bloqueado por la restricción de sockets del entorno.
+
+#### Ajuste móvil y foco — 13/11/2026
+
+- La captura del usuario confirma la nueva versión y muestra demasiado espacio antes del formulario en móvil. Hasta 760px se oculta el SVG, la cabecera pasa de 84 a 64px y el panel introductorio queda como una franja de título de 18–22px con padding de 14px. El formulario se alinea al inicio del área disponible.
+- El foco del input elimina el outline separado y el halo. Un único borde de 2px usa `--nav-active`, con contraste adecuado al tema; el padding compensa el cambio de grosor para mantener la posición del texto. Los botones conservan su foco independiente.
+- El SVG y su movimiento permanecen en escritorio. Pendiente confirmar ambos ajustes en el navegador del usuario.
 
 
 ## 7. Iteración 2 — Layout, menú lateral y encabezado

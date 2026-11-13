@@ -423,9 +423,9 @@ async function handleLogin(): Promise<void> {
   border-color: var(--nav-active);
 }
 .login-input-wrap input:focus {
-  outline: 2px solid var(--focus-color);
-  outline-offset: 2px;
-  border-color: var(--focus-color);
+  outline: none;
+  border: 2px solid var(--nav-active);
+  padding: 11px 47px;
   box-shadow: none;
 }
 .login-input-wrap input:disabled {
@@ -571,33 +571,32 @@ async function handleLogin(): Promise<void> {
     width: min(480px, calc(100% - 40px));
   }
   .login-topbar {
-    min-height: 84px;
+    min-height: 64px;
   }
   .login-main {
     grid-template-columns: minmax(0, 1fr);
-    align-content: center;
+    align-content: start;
     gap: 0;
-    padding-block: 16px 32px;
+    padding-block: 8px 24px;
   }
   .login-story {
-    padding: 24px;
-    margin-bottom: 16px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
   }
   .login-story h1 {
     max-width: 420px;
     margin: 0;
-    font-size: clamp(26px, 6.5vw, 34px);
-    line-height: 1.15;
+    font-size: clamp(18px, 4.7vw, 22px);
+    line-height: 1.25;
   }
   .login-story-description, .login-story-foot {
     display: none;
   }
   .login-accounting-visual {
-    max-width: 280px;
-    margin-block: 8px 0;
+    display: none;
   }
   .login-panel {
-    padding: 28px 24px;
+    padding: 24px 20px;
   }
   .login-heading {
     margin-bottom: 24px;
