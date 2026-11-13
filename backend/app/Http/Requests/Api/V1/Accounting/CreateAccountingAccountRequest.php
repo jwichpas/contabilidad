@@ -40,7 +40,7 @@ final class CreateAccountingAccountRequest extends FormRequest
             'parent_id' => ['nullable', 'integer', 'min:1'],
             'code' => ['required', 'string', 'min:1', 'max:20', 'regex:/^[A-Za-z0-9]+$/'],
             'name' => ['required', 'string', 'min:2', 'max:180'],
-            'level' => ['required', 'integer', 'between:1,4'],
+            'level' => ['required', 'integer', 'between:1,6'],
             'account_type' => ['required', 'string', Rule::enum(AccountType::class)],
             'balance_type' => ['required', 'string', Rule::enum(BalanceType::class)],
             'currency_mode' => ['sometimes', 'string', Rule::enum(AccountCurrencyMode::class)],
@@ -80,11 +80,11 @@ final class CreateAccountingAccountRequest extends FormRequest
                 $requiresCashFlowArea = (bool) $this->input('requires_cash_flow_area', false);
                 $cashFlowCategory = (string) $this->input('cash_flow_category', CashFlowCategory::None->value);
 
-                // Regla 1: Solo el nivel 4 (registro) puede ser operativo.
-                if ($isOperational && $level !== 4) {
+                // Regla 1: Las cuentas de niveles 3 a 6 pueden ser operativas si son hojas.
+                if ($isOperational && $level < 3) {
                     $validator->errors()->add(
                         'is_operational',
-                        'Solo las cuentas de nivel 4 (registro) pueden marcarse como operativas.'
+                        'Solo las cuentas a partir del nivel 3 pueden marcarse como operativas.'
                     );
                 }
 
@@ -97,7 +97,7 @@ final class CreateAccountingAccountRequest extends FormRequest
                 if (($requiresCostCenter || $hasAutoDest) && ! $isOperational) {
                     $validator->errors()->add(
                         'requires_cost_center',
-                        'Solo las cuentas operativas (nivel 4) pueden exigir Centro de Costos o destino automático al Elemento 9.'
+                        'Solo las cuentas operativas pueden exigir Centro de Costos o destino automático al Elemento 9.'
                     );
                 }
 
@@ -137,7 +137,7 @@ final class CreateAccountingAccountRequest extends FormRequest
                 if ($level > 1 && $parentId === null) {
                     $validator->errors()->add(
                         'parent_id',
-                        'Las cuentas de nivel 2, 3 y 4 requieren obligatoriamente una cuenta padre.'
+                        'Las cuentas de nivel 2 a 6 requieren obligatoriamente una cuenta padre.'
                     );
 
                     return;

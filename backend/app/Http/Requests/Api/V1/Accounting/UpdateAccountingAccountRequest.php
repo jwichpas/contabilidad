@@ -77,10 +77,10 @@ final class UpdateAccountingAccountRequest extends FormRequest
                 $destDebit = $this->input('destination_debit_code');
                 $destCredit = $this->input('destination_credit_code');
 
-                if ($isOperational && $account->level !== 4) {
+                if ($isOperational && $account->level < 3) {
                     $validator->errors()->add(
                         'is_operational',
-                        'Solo las cuentas de nivel 4 (registro) pueden marcarse como operativas.'
+                        'Solo las cuentas a partir del nivel 3 pueden marcarse como operativas.'
                     );
                 }
 

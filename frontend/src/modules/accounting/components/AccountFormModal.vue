@@ -203,6 +203,8 @@ const resetFormFromContext = (): void => {
   const lvl = targetLevel.value;
   const isElem10 = parent !== null && parent.code.startsWith('10');
   const isElem6 = parent !== null && parent.code.startsWith('6');
+  // New six-digit PCGE leaves are operational by default; intermediate nodes
+  // stay non-operational so users can continue growing the hierarchy.
 
   form.code = parent ? `${parent.code}1` : '';
   form.name = '';
@@ -210,15 +212,15 @@ const resetFormFromContext = (): void => {
   form.balance_type = parent ? parent.balance_type : 'DEBIT';
   form.currency_mode = parent ? parent.currency_mode : 'PEN';
   form.entity_requirement_type =
-    lvl === 4 && isElem10 ? 'FINANCIAL_INSTITUTION' : parent ? parent.entity_requirement_type : 'NONE';
-  form.requires_cost_center = lvl === 4 && isElem6;
+    lvl === 6 && isElem10 ? 'FINANCIAL_INSTITUTION' : parent ? parent.entity_requirement_type : 'NONE';
+  form.requires_cost_center = lvl === 6 && isElem6;
   form.requires_company_area = false;
-  form.has_automatic_destination = lvl === 4 && isElem6;
+  form.has_automatic_destination = lvl === 6 && isElem6;
   form.destination_debit_code = isElem6 ? '9411' : '';
   form.destination_credit_code = isElem6 ? '7911' : '';
-  form.requires_cash_flow_area = lvl === 4 && isElem10;
+  form.requires_cash_flow_area = lvl === 6 && isElem10;
   form.cash_flow_category =
-    lvl === 4 && isElem10 ? 'OPERATING' : parent ? parent.cash_flow_category : 'NONE';
+    lvl === 6 && isElem10 ? 'OPERATING' : parent ? parent.cash_flow_category : 'NONE';
   form.financial_statement_rubric =
     parent && parent.financial_statement_rubric !== 'NONE'
       ? parent.financial_statement_rubric
@@ -227,7 +229,7 @@ const resetFormFromContext = (): void => {
         : isElem6
           ? 'ERN_SERV_TERCEROS'
           : 'NONE';
-  form.is_operational = lvl === 4;
+  form.is_operational = lvl === 6;
 };
 
 watch(
@@ -267,7 +269,11 @@ const applyCostCenterPreset = (code: string): void => {
 };
 
 const validationPayload = computed<CreateAccountingAccountFormValues>(() => ({
-  parent_id: parentAccount.value ? parentAccount.value.id : null,
+  // Editing a deep PCGE account must retain its actual parent id for Zod's
+  // level-2-to-6 hierarchy check. The parentRow prop is only set for CREATE.
+  parent_id: props.mode === 'edit'
+    ? (editingAccount.value?.parent_id ?? null)
+    : (parentAccount.value?.id ?? null),
   parent_code: parentAccount.value ? parentAccount.value.code : null,
   parent_level: parentAccount.value ? parentAccount.value.level : null,
   parent_is_operational: parentAccount.value ? parentAccount.value.is_operational : null,
@@ -493,14 +499,14 @@ function handleSubmit(): void {
                     Cuenta imputable en asientos (hoja operativa)
                   </span>
                   <span class="block text-[11px] text-muted">
-                    Solo las cuentas de nivel 4 reciben movimientos; no pueden tener hijas.
+                    Las cuentas operativas (niveles 3 a 6) reciben movimientos y no pueden tener hijas.
                   </span>
                 </span>
                 <input
                   v-model="form.is_operational"
                   type="checkbox"
                   class="ui-switch"
-                  :disabled="targetLevel !== 4 && mode === 'create'"
+                  :disabled="targetLevel < 3 || (mode === 'edit' && editingRow?.hasChildren === true)"
                 />
               </label>
             </section>

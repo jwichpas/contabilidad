@@ -217,7 +217,7 @@ const openCreateRootModal = async (): Promise<void> => {
 };
 
 const openCreateChildModal = async (parentRow: FlattenedAccountRow): Promise<void> => {
-  if (parentRow.node.is_operational || parentRow.node.level >= 4) return;
+  if (parentRow.node.is_operational || parentRow.node.level >= 6) return;
   await ensureEditingCatalogs();
   modalMode.value = 'create';
   modalParentRow.value = parentRow;
@@ -285,7 +285,7 @@ const onGlobalKeydown = (event: KeyboardEvent): void => {
     if (
       focusedRow.value !== null &&
       !focusedRow.value.node.is_operational &&
-      focusedRow.value.node.level < 4
+      focusedRow.value.node.level < 6
     ) {
       openCreateChildModal(focusedRow.value);
     } else {
@@ -494,7 +494,7 @@ onBeforeUnmount(() => {
             @click="onlyOperational = !onlyOperational"
           >
             <Layers class="w-3.5 h-3.5" />
-            Solo Operativas (N4)
+            Solo operativas
           </button>
 
           <button

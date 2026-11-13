@@ -96,3 +96,28 @@ test('las pantallas distinguen búsquedas pendientes y totales del árbol sin mo
   assert.match(catalog, /filas visibles/);
   assert.match(catalog, /cuentas en el plan/);
 });
+
+
+test('editor PCGE conserva el padre al editar 401110 y permite nivel 6 sin perder jerarquía', () => {
+  const form = read('../src/modules/accounting/components/AccountFormModal.vue');
+  const row = read('../src/modules/accounting/components/AccountTreeNodeRow.vue');
+  const createRequest = read('../../backend/app/Http/Requests/Api/V1/Accounting/CreateAccountingAccountRequest.php');
+  const updateRequest = read('../../backend/app/Http/Requests/Api/V1/Accounting/UpdateAccountingAccountRequest.php');
+
+  assert.match(form, /parent_id: props\.mode === 'edit'/);
+  assert.match(form, /editingAccount\.value\?\.parent_id \?\? null/);
+  assert.match(form, /form\.is_operational = lvl === 6/);
+  assert.match(form, /targetLevel < 3 \|\| \(mode === 'edit' && editingRow\?\.hasChildren === true\)/);
+  assert.match(form, /Las cuentas operativas \(niveles 3 a 6\)/);
+  assert.doesNotMatch(form, /Solo las cuentas de nivel 4 reciben movimientos/);
+
+  assert.match(catalog, /parentRow\.node\.level >= 6/);
+  assert.match(catalog, /focusedRow\.value\.node\.level < 6/);
+  assert.match(catalog, /Solo operativas/);
+  assert.doesNotMatch(catalog, /Solo Operativas \(N4\)/);
+  assert.match(row, /row\.node\.level < 6 && row\.node\.is_active/);
+  assert.match(row, /case 6:\s+return 'N6';/);
+  assert.match(createRequest, /'level' => \['required', 'integer', 'between:1,6'\]/);
+  assert.match(createRequest, /if \(\$isOperational && \$level < 3\)/);
+  assert.match(updateRequest, /if \(\$isOperational && \$account->level < 3\)/);
+});
