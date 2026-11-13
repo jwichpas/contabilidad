@@ -121,3 +121,30 @@ test('editor PCGE conserva el padre al editar 401110 y permite nivel 6 sin perde
   assert.match(createRequest, /if \(\$isOperational && \$level < 3\)/);
   assert.match(updateRequest, /if \(\$isOperational && \$account->level < 3\)/);
 });
+
+
+test('el modal PCGE presenta etiquetas contables claras y ayuda contextual sin alterar el guardado', () => {
+  const form = read('../src/modules/accounting/components/AccountFormModal.vue');
+  assert.match(form, /Nivel \{\{ targetLevel \}\} · \{\{ form\.is_operational \? 'Cuenta operativa' : 'Cuenta agrupadora' \}\}/);
+  assert.doesNotMatch(form, /Nivel \{\{ targetLevel \}\} · Int16/);
+  assert.match(form, /v-if="form\.requires_cost_center && costCenterOptions && costCenterOptions\.length > 0"/);
+  assert.match(form, /selectedCostCenterCode\.value = '';/);
+  assert.match(form, /@update:model-value="applyCostCenterPreset"/);
+
+  assert.match(form, /const selectedRubricLabel = computed\(\(\) => \{/);
+  assert.match(form, /activeRubricOptions\.value\.find\(/);
+  assert.match(form, /FINANCIAL_STATEMENT_RUBRIC_LABELS\[form\.financial_statement_rubric\]/);
+  assert.match(form, /v-else-if="form\.financial_statement_rubric !== 'NONE'"/);
+  assert.match(form, /Rubro asignado a \{\{ form\.code \|\| 'esta cuenta' \}\}/);
+  assert.match(form, /\{\{ selectedRubricLabel \}\}/);
+  assert.match(form, /:title="selectedRubricLabel"/);
+  assert.doesNotMatch(form, /Ej\. <strong class="text-foreground">1041 →/);
+
+  // An update continues emitting the exact existing payload, without changing
+  // account identifiers or introducing the transient cost center preset.
+  assert.match(form, /emit\('submit', \{/);
+  assert.match(form, /is_operational: form\.is_operational/);
+  assert.match(form, /requires_cost_center: form\.requires_cost_center/);
+  assert.match(form, /financial_statement_rubric: form\.financial_statement_rubric/);
+  assert.doesNotMatch(form, /selectedCostCenterCode: selectedCostCenterCode\.value/);
+});
