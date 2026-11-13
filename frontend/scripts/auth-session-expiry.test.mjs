@@ -47,5 +47,5 @@ test('the accounting API reports 401 and App verifies restored Bearers before sh
   const app = readFileSync(new URL('../src/App.vue', import.meta.url), 'utf8');
   assert.match(client, /response\.status === 401/);
   assert.match(client, /reportUnauthorizedBearer\(requestToken\)/);
-  assert.match(app, /v-if="!isSessionVerifiedOnLoad"/);
+  assert.match(app, /v-if="!isSessionVerifiedOnLoad \|\| sessionVerification === 'verifying'"/);
 });

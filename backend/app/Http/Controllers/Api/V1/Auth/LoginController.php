@@ -60,6 +60,22 @@ final readonly class LoginController
         // Reutiliza la misma politica RLS y SQL BOOLEAN que /tenant/companies.
         $companies = $this->companyListing->forUser($user);
 
+        // Este login no pasa por SessionGuard: actualizar explícitamente el
+        // coste/algoritmo después de verificar la contraseña. La comparación
+        // del hash anterior evita sobrescribir un cambio concurrente de clave.
+        if (Hash::needsRehash($user->password)) {
+            $updated = User::query()
+                ->whereKey($user->getKey())
+                ->where('password', $user->password)
+                ->update(['password' => Hash::make($validated['password'])]);
+
+            if ($updated !== 1) {
+                throw ValidationException::withMessages([
+                    'email' => ['Las credenciales proporcionadas son incorrectas.'],
+                ]);
+            }
+        }
+
         $deviceName = $validated['device_name'] ?? 'spa-web-client';
         // Fecha individual de expiracion (12 h) + limite global 720 min de
         // Sanctum: incluso tokens antiguos con expires_at NULL dejaran de ser

@@ -2,6 +2,7 @@
 import { ref, shallowRef } from 'vue';
 import {
   AlertTriangle,
+  CircleCheck,
   Eye,
   EyeOff,
   KeyRound,
@@ -28,7 +29,7 @@ const emit = defineEmits<{
   (e: 'toggle-dark'): void;
 }>();
 
-const { login, isLoading, authError, sessionNotice } = useAuthSession();
+const { login, isLoading, authError, sessionNotice, logoutStatus } = useAuthSession();
 
 const email = ref('');
 const password = ref('');
@@ -139,9 +140,11 @@ async function handleLogin(): Promise<void> {
           <div
             v-if="sessionNotice"
             class="login-notice"
-            role="alert"
+            :role="logoutStatus === 'pending' || logoutStatus === 'revoked' ? 'status' : 'alert'"
           >
-            <AlertTriangle aria-hidden="true" />
+            <Loader2 v-if="logoutStatus === 'pending'" class="login-spinner" aria-hidden="true" />
+            <CircleCheck v-else-if="logoutStatus === 'revoked'" aria-hidden="true" />
+            <AlertTriangle v-else aria-hidden="true" />
             <p>{{ sessionNotice }}</p>
           </div>
 

@@ -72,12 +72,20 @@ const authError = shallowRef<string | null>(null);
 const isLiveConnected = shallowRef(false);
 const lastAuditTimestamp = shallowRef<string | null>(null);
 const sessionNotice = shallowRef<string | null>(null);
+const sessionVerification = shallowRef<'anonymous' | 'unverified' | 'verifying' | 'verified' | 'unavailable'>(
+  accessToken.value?.trim() ? 'unverified' : 'anonymous',
+);
+const logoutStatus = shallowRef<'idle' | 'pending' | 'revoked' | 'unconfirmed'>('idle');
+let sessionSequence = 0;
+let companyListSequence = 0;
 
 /**
  * El vencimiento de Bearer es distinto del logout deliberado.
  * Un borrador puede conservarse solo para el mismo usuario autenticado.
  */
 function clearLocalSession(expired: boolean): void {
+  ++sessionSequence;
+  ++companyListSequence;
   ++companySwitchSequence;
   isSwitchingCompany.value = false;
   companySwitchError.value = null;
@@ -90,6 +98,8 @@ function clearLocalSession(expired: boolean): void {
   }
 
   accessToken.value = null;
+  sessionVerification.value = 'anonymous';
+  logoutStatus.value = 'idle';
   currentUser.value = null;
   userCompanies.value = [];
   activeCompanyId.value = asCompanyId(1);
@@ -117,12 +127,14 @@ setUnauthorizedHandler((requestToken) => {
  * con revocación explícita y auditoría de eventos.
  */
 export function useAuthSession() {
-  const isAuthenticated = computed(() => accessToken.value !== null && accessToken.value.trim() !== '');
+  const isAuthenticated = computed(() => sessionVerification.value === 'verified'
+    && accessToken.value !== null && accessToken.value.trim() !== '');
 
   /**
    * Inicio de sesión seguro contra /api/v1/auth/login
    */
   async function login(email: string, password: string): Promise<boolean> {
+    const sequence = ++sessionSequence;
     ++companySwitchSequence;
     isSwitchingCompany.value = false;
     companySwitchError.value = null;
@@ -142,8 +154,10 @@ export function useAuthSession() {
           password,
           device_name: 'erp-spa-iso27001',
         }),
+        signal: AbortSignal.timeout(15_000),
       });
 
+      if (sequence !== sessionSequence) return false;
       if (!response.ok) {
         // Diferenciar credenciales inválidas (422) de fallas reales del API.
         // No mostrar detalles internos del servidor ni exponer consultas SQL.
@@ -169,6 +183,7 @@ export function useAuthSession() {
 
       const json = await response.json();
       const data = json.data as LoginResponseData;
+      if (sequence !== sessionSequence) return false;
 
       // Nunca exponer el borrador de una persona a otro usuario.
       const draftOwner = sessionStorage.getItem(STORAGE_DRAFT_OWNER_KEY);
@@ -179,6 +194,8 @@ export function useAuthSession() {
       sessionStorage.removeItem(STORAGE_DRAFT_OWNER_KEY);
       accessToken.value = data.token;
       currentUser.value = data.user;
+      sessionVerification.value = 'verified';
+      logoutStatus.value = 'idle';
       sessionNotice.value = null;
       activeCompanyId.value = asCompanyId(data.user.current_company_id ?? 1);
       isLiveConnected.value = true;
@@ -201,11 +218,12 @@ export function useAuthSession() {
 
       return true;
     } catch (e) {
+      if (sequence !== sessionSequence) return false;
       authError.value = e instanceof Error ? e.message : 'Error al autenticar.';
       isLiveConnected.value = false;
       return false;
     } finally {
-      isLoading.value = false;
+      if (sequence === sessionSequence) isLoading.value = false;
     }
   }
 
@@ -215,6 +233,10 @@ export function useAuthSession() {
   async function fetchUserCompanies(): Promise<readonly UserCompany[]> {
     const token = accessToken.value;
     if (!token) return [];
+    const sequence = ++companyListSequence;
+    const authSequence = sessionSequence;
+    const isCurrentRequest = () => accessToken.value === token
+      && authSequence === sessionSequence && sequence === companyListSequence;
 
     try {
       const response = await fetch('/api/v1/tenant/companies', {
@@ -223,18 +245,20 @@ export function useAuthSession() {
           Authorization: `Bearer ${token}`,
           'X-Requested-With': 'XMLHttpRequest',
         },
+        signal: AbortSignal.timeout(10_000),
       });
 
-      if (accessToken.value !== token) return userCompanies.value;
+      if (!isCurrentRequest()) return userCompanies.value;
       if (response.ok) {
         const json = await response.json();
-        if (accessToken.value !== token) return userCompanies.value;
+        if (!isCurrentRequest()) return userCompanies.value;
         const companies = (json.data as UserCompany[]).map((c) => ({
           ...c,
           id: asCompanyId(c.id),
         }));
         userCompanies.value = companies;
         sessionStorage.setItem(STORAGE_COMPANIES_KEY, JSON.stringify(companies));
+        sessionVerification.value = 'verified';
         isLiveConnected.value = true;
         return companies;
       }
@@ -243,9 +267,12 @@ export function useAuthSession() {
         return [];
       }
       isLiveConnected.value = false;
+      if (sessionVerification.value !== 'verified') sessionVerification.value = 'unavailable';
     } catch {
+      if (!isCurrentRequest()) return userCompanies.value;
       // Un problema de red no implica que el Bearer haya caducado.
       isLiveConnected.value = false;
+      if (sessionVerification.value !== 'verified') sessionVerification.value = 'unavailable';
     }
 
     return userCompanies.value;
@@ -269,18 +296,29 @@ export function useAuthSession() {
     const token = accessToken.value;
     // No dejar visibles datos privados mientras se espera la revocación HTTP.
     clearLocalSession(false);
+    const sequence = sessionSequence;
     if (token) {
+      logoutStatus.value = 'pending';
+      sessionNotice.value = 'Sesión cerrada en este dispositivo. Confirmando el cierre en el servidor…';
       try {
-        await fetch('/api/v1/auth/logout', {
+        const response = await fetch('/api/v1/auth/logout', {
           method: 'POST',
           headers: {
             Accept: 'application/json',
             Authorization: `Bearer ${token}`,
             'X-Requested-With': 'XMLHttpRequest',
           },
+          signal: AbortSignal.timeout(10_000),
         });
+        // Un 401 confirma que este Bearer ya no autoriza el acceso.
+        if (!response.ok && response.status !== 401) throw new Error('Revocación no confirmada');
+        if (sequence !== sessionSequence) return;
+        logoutStatus.value = 'revoked';
+        sessionNotice.value = 'Sesión cerrada. Esta sesión ya no permite acceder al servidor.';
       } catch {
-        // Silencioso ante fallo de red durante logout
+        if (sequence !== sessionSequence) return;
+        logoutStatus.value = 'unconfirmed';
+        sessionNotice.value = 'Sesión cerrada en este dispositivo. No pudimos confirmar el cierre en el servidor; la sesión podría seguir activa hasta su vencimiento.';
       }
     }
   }
@@ -352,13 +390,15 @@ export function useAuthSession() {
    * Si no existe, no realiza bypass automático: requiere que el usuario ingrese sus credenciales.
    */
   async function ensureAuthenticated(): Promise<boolean> {
-    if (isAuthenticated.value && accessToken.value) {
+    if (accessToken.value?.trim()) {
+      if (sessionVerification.value !== 'verified') sessionVerification.value = 'verifying';
       // El caché no demuestra que el Bearer continúe vigente en Sanctum.
       await fetchUserCompanies();
       return isAuthenticated.value;
     }
 
     isLiveConnected.value = false;
+    sessionVerification.value = 'anonymous';
     return false;
   }
 
@@ -375,6 +415,8 @@ export function useAuthSession() {
     isLiveConnected,
     lastAuditTimestamp,
     sessionNotice,
+    sessionVerification,
+    logoutStatus,
     login,
     logout,
     switchCompany,

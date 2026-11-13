@@ -134,6 +134,7 @@ const {
   userCompanies,
   activeCompanyId,
   isAuthenticated,
+  sessionVerification,
   isLiveConnected,
   isSwitchingCompany,
   companySwitchError,
@@ -353,7 +354,7 @@ watch(
 <template>
   <!-- No mostrar datos en caché hasta validar la sesión restaurada. -->
   <div
-    v-if="!isSessionVerifiedOnLoad"
+    v-if="!isSessionVerifiedOnLoad || sessionVerification === 'verifying'"
     class="min-h-screen bg-background p-4 text-sm text-muted sm:p-6"
     role="status"
     aria-label="Verificando sesión segura"
@@ -365,6 +366,29 @@ watch(
       <div class="ui-skeleton h-40 w-full" />
     </div>
     <span class="sr-only">Verificando sesión segura…</span>
+  </div>
+  <div
+    v-else-if="sessionVerification === 'unavailable'"
+    class="min-h-screen bg-background px-4 py-16 text-foreground sm:px-6"
+  >
+    <section class="workspace-section mx-auto max-w-md space-y-4 p-6" aria-labelledby="session-unavailable-title">
+      <h1 id="session-unavailable-title" class="text-lg font-semibold">No pudimos verificar tu sesión</h1>
+      <p class="text-sm text-muted" role="alert">
+        Comprueba tu conexión y vuelve a intentarlo. Tus datos permanecerán ocultos hasta confirmar el acceso.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <button
+          type="button"
+          class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          @click="ensureAuthenticated"
+        >Reintentar</button>
+        <button
+          type="button"
+          class="rounded-lg border border-border px-4 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          @click="logout"
+        >Cerrar sesión en este dispositivo</button>
+      </div>
+    </section>
   </div>
   <LoginView
     v-else-if="!isAuthenticated"
