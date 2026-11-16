@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Company\CompanySeeVisibilityController;
 use App\Http\Controllers\Api\V1\Company\InitializeCompanyChartOfAccountsController;
 use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\CompanyCashFlowPresentationController;
+use App\Http\Controllers\Api\V1\Company\CompanyFinancialReportLayoutController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\CostCenterMasterController;
@@ -274,6 +275,13 @@ Route::prefix('v1')->group(function (): void {
                 Route::put('/cash-flow-presentation', [CompanyCashFlowPresentationController::class, 'update'])
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
                     ->name('api.v1.company.cash-flow-presentation.update');
+                Route::get('/financial-layout/{statement}', [CompanyFinancialReportLayoutController::class, 'show'])
+                    ->where('statement', 'ESF|ERI|EFE|ECP')
+                    ->name('api.v1.company.financial-layout.show');
+                Route::put('/financial-layout/{statement}', [CompanyFinancialReportLayoutController::class, 'update'])
+                    ->where('statement', 'ESF|ERI|EFE|ECP')
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->name('api.v1.company.financial-layout.update');
 
                 // Historial tributario por ejercicio: sólo revisiones inmutables.
                 Route::get('/fiscal-profiles', [CompanyFiscalProfileController::class, 'index'])
