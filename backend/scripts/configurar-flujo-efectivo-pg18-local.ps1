@@ -80,7 +80,7 @@ function Inventory {
 function PrivateEnv {
     if(-not (Test-Path -LiteralPath $privateConfig)){throw 'Falta el archivo privado local PG18.'}
     $values=@{}
-    foreach($line in Get-Content -LiteralPath $privateConfig) {
+    foreach($line in (Get-Content -LiteralPath $privateConfig)) {
         if($line.Trim() -eq '' -or $line.StartsWith('#')){continue}
         $pair=$line -split '=',2
         if($pair.Count -ne 2 -or $values.ContainsKey($pair[0])){throw 'Configuración privada mal formada.'}
