@@ -12,6 +12,7 @@ export interface ComprehensiveIncomePrintInput {
   readonly companyTaxId: string;
   readonly companyAddress: string;
   readonly layout?: FinancialReportLayoutSettings | null;
+  readonly layoutRevision?: number;
 }
 function escapeHtml(text: string): string {
   return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -70,6 +71,7 @@ ${input.companyAddress ? '<p class="identity">' + e(input.companyAddress) + '</p
 <h1>Estado de Resultados Integrales</h1>
 <p class="subtitle">${e(formatIncomePeriod(r.from,r.to))}</p>
 <p class="subtitle">${e(currencyPositionLabel(r.currency))}</p>
+<p class="subtitle">Revisión de estructura de empresa: ${input.layoutRevision ?? 0}</p>
 <p class="notice">PRELIMINAR · RESULTADOS INTEGRALES TOTALES PENDIENTES DE VALIDAR ORI</p>
 </header>
 <table aria-label="Estado de Resultados Integrales">
