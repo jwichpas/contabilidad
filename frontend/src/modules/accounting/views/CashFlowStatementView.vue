@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue';
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, RefreshCw, AlertCircle } from 'lucide-vue-next';
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, RefreshCw, AlertCircle, Printer } from 'lucide-vue-next';
 import UiSelect from '../../../shared/ui/UiSelect.vue';
 import CashFlowMovements from '../components/CashFlowMovements.vue';
 import { useCashFlowReport } from '../composables/useCashFlowReport';
@@ -8,8 +8,10 @@ import { CASH_FLOW_LABELS } from '../types/cashFlow.types';
 import type { CashFlowFilter, CashFlowQuery } from '../types/cashFlow.types';
 import type { CompanyId } from '../types/accountingAccount.types';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
+import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
 
-const props = defineProps<{ readonly activeCompanyId: CompanyId; readonly getAccessToken: () => string | null }>();
+const props = defineProps<{ readonly activeCompanyId: CompanyId; readonly companyName: string; readonly getAccessToken: () => string | null }>();
+const printNotice = shallowRef<string | null>(null);
 const now = new Date();
 const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 const from = shallowRef(`${now.getFullYear()}-01-01`);
@@ -36,6 +38,46 @@ const reconciliation = computed(() => report.value ? [
   { label: 'Efectivo final en libros', value: report.value.totals.closing_local },
 ] : []);
 const money = (value: string): string => formatExactLocalAmount(value, report.value?.currency ?? 'PEN');
+
+function printCashFlow(): void {
+  const data = report.value;
+  if (!data || pending.value) return;
+  const amount = (value: string): string => formatExactLocalAmount(value, data.currency);
+  const ok = openFinancialReportPrintDialog({
+    title: 'Estado de flujos de efectivo · Método directo',
+    company: props.companyName,
+    period: `Del ${data.from} al ${data.to}`,
+    currency: data.currency,
+    sections: [
+      { heading: 'Actividades de operación, inversión y financiamiento', rows: [
+        { label: 'Actividades de operación', value: amount(data.totals.operating_local) },
+        { label: 'Actividades de inversión', value: amount(data.totals.investing_local) },
+        { label: 'Actividades de financiamiento', value: amount(data.totals.financing_local) },
+        { label: 'Flujo neto del periodo', value: amount(data.totals.net_flow_local) },
+      ] },
+      { heading: 'Áreas y movimientos clasificados', rows: data.groups.map((group) => ({
+        label: `${group.section} · ${group.name} · Cobros ${amount(group.inflow_local)} · Pagos ${amount(group.outflow_local)}`,
+        value: amount(group.net_local),
+      })) },
+      { heading: 'Conciliación del efectivo', rows: [
+        { label: 'Efectivo inicial', value: amount(data.totals.opening_local) },
+        { label: 'Flujo neto de actividades', value: amount(data.totals.net_flow_local) },
+        { label: 'Efecto de cambio', value: amount(data.totals.exchange_effect_local) },
+        { label: 'Otros ajustes', value: amount(data.totals.other_adjustments_local) },
+        { label: 'Efectivo final calculado', value: amount(data.totals.expected_closing_local) },
+        { label: 'Efectivo final en libros', value: amount(data.totals.closing_local) },
+        { label: 'Diferencia por explicar', value: amount(data.totals.difference_local) },
+      ] },
+    ],
+    notices: [
+      'Informe preliminar desde movimientos efectivamente contabilizados en cuentas de efectivo y equivalentes.',
+      'No incluye estados comparativos ni notas financieras completas.',
+      ...(data.classification_complete ? [] : ['Existen movimientos no clasificados; revisar el detalle dentro del ERP.']),
+      ...(data.is_reconciled ? [] : ['La conciliación no está completa: revisar antes de utilizar externamente.']),
+    ],
+  });
+  printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes para este sitio.';
+}
 
 function consult(): void {
   query.value = { from: from.value, to: to.value, section: 'ALL', page: 1 };
@@ -72,9 +114,15 @@ watch(() => props.activeCompanyId, () => {
           <input id="cash-flow-to" v-model="to" type="date" :min="from || '2000-01-01'" max="2100-12-31" required class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground" />
         </label>
         <button type="submit" :disabled="pending" class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50"><RefreshCw class="h-4 w-4" :class="{ 'animate-spin': pending }" />Consultar</button>
+        <button type="button" :disabled="pending || !report"
+          class="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground disabled:opacity-40"
+          title="Abrir impresión; seleccionar Guardar como PDF" @click="printCashFlow">
+          <Printer class="h-4 w-4" /> Imprimir / Guardar PDF
+        </button>
       </form>
     </header>
 
+    <p v-if="printNotice" role="alert" class="mb-3 text-sm text-danger">{{ printNotice }}</p>
     <div v-if="pending" role="status" aria-label="Calculando flujo de efectivo" class="space-y-3"><div class="ui-skeleton h-24 rounded-xl" /><div class="ui-skeleton h-60 rounded-xl" /></div>
     <div v-else-if="error" role="alert" class="rounded-xl border border-danger p-4 text-sm text-danger">{{ error }} <button type="button" class="ml-2 underline" @click="load(query)">Reintentar</button></div>
     <template v-else-if="report">
