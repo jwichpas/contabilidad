@@ -81,3 +81,30 @@ test('imprimible A3 horizontal escapa datos sensibles y marca estado preliminar'
   assert.match(html, /Hasta Marzo/);
   assert.match(html, /PRELIMINAR/);
 });
+
+
+test('cobranza comercial contra cuenta 12 se presenta en 1102 aunque el área sea OPE-IN', () => {
+  const data = report();
+  data.monthly[0].groups.push({
+    section: 'OPERATING', area_id: 2, code: 'OPE-IN',
+    name: 'Cobranza clientes', concept_code: '1102', concept_source: 'COUNTERPART',
+    inflow_local: '10000.0000', outflow_local: zero, net_local: '10000.0000', count: 1,
+  });
+  const rows = buildAnnualCashFlowMatrix(data);
+  const row = (code) => rows.find((item) => item.code === code);
+  assert.equal(row('1102').values[0], '10250.1250');
+  assert.equal(row('1198').values[0], '100.0001');
+  assert.equal(row('1199').values[0], '10350.1251');
+});
+
+test('pago a proveedor contra 42 se presenta en 1201 y no como pago sin desglose', () => {
+  const data = report();
+  data.monthly[0].groups.push({
+    section: 'OPERATING', area_id: 3, code: 'OPE-OUT',
+    name: 'Pago proveedores', concept_code: '1201', concept_source: 'COUNTERPART',
+    inflow_local: zero, outflow_local: '6000.0000', net_local: '-6000.0000', count: 1,
+  });
+  const rows = buildAnnualCashFlowMatrix(data);
+  assert.equal(rows.find((row) => row.code === '1201').values[0], '-6000.0000');
+  assert.equal(rows.find((row) => row.code === '1298').values[0], '-40.0100');
+});
