@@ -102,6 +102,12 @@ function toggleHidden(code: string, checked: boolean): void {
     ? [...new Set([...draft.value.hidden_codes, code])]
     : draft.value.hidden_codes.filter((value) => value !== code);
 }
+function removeCustomLine(code: string): void {
+  draft.value.custom_lines = draft.value.custom_lines.filter((item) => item.code !== code);
+  draft.value.hidden_codes = draft.value.hidden_codes.filter((item) => item !== code);
+  draft.value.account_rules = draft.value.account_rules.filter((item) => item.target_code !== code);
+  draft.value.area_rules = draft.value.area_rules.filter((item) => item.target_code !== code);
+}
 function addLine(): void {
   const code = newLine.code.trim().toUpperCase();
   const label = newLine.label.trim();
@@ -209,9 +215,16 @@ onScopeDispose(() => { version++; });
         <h4 class="mb-2 text-sm font-semibold">Conceptos adicionales para uso interno</h4>
         <p class="mb-3 text-xs text-muted">Usa códigos propios C0001–C9999; no se presentarán como códigos SUNAT.</p>
         <div class="space-y-2">
-          <div v-for="(line,index) in draft.custom_lines" :key="line.code" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-2 text-xs">
-            <span>{{ line.code }} · {{ line.label }} · {{ line.section }} · {{ line.direction }}</span>
-            <button type="button" :disabled="!canEdit" @click="draft.custom_lines.splice(index,1)" class="text-danger underline">Quitar</button>
+          <div v-for="line in draft.custom_lines" :key="line.code" class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-2 text-xs">
+            <span class="font-mono font-semibold">{{ line.code }}</span>
+            <input v-model="line.label" :disabled="!canEdit" maxlength="120"
+              :aria-label="'Nombre concepto '+line.code" class="min-w-36 flex-1 rounded border border-border bg-surface px-2 py-1.5" />
+            <span class="text-muted">{{ line.section }} · {{ line.direction }}</span>
+            <label class="flex items-center gap-1 text-muted">
+              <input type="checkbox" :disabled="!canEdit" :checked="draft.hidden_codes.includes(line.code)"
+                @change="toggleHidden(line.code, ($event.target as HTMLInputElement).checked)" />Ocultar si vacío
+            </label>
+            <button type="button" :disabled="!canEdit" @click="removeCustomLine(line.code)" class="text-danger underline">Quitar</button>
           </div>
         </div>
         <div v-if="canEdit" class="mt-3 flex flex-wrap items-end gap-2">
