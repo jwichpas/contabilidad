@@ -1,6 +1,8 @@
 import type {
   FinancialSnapshot, FinancialSnapshotRubric,
 } from '../types/financialSnapshot.types';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
+import { applyFinancialReportLayout } from './financialLayout.ts';
 
 export type PositionGroupKey = 'ACTIVO_CORRIENTE' | 'ACTIVO_NO_CORRIENTE' | 'ACTIVO_SIN_CLASIFICAR'
   | 'PASIVO_CORRIENTE' | 'PASIVO_NO_CORRIENTE' | 'PASIVO_SIN_CLASIFICAR' | 'PATRIMONIO';
@@ -116,7 +118,7 @@ function normalizedGroup(
  * versioned ESF rubric catalog and posted journal lines.
  * No account-prefix guesses, fictitious notes or invented amounts.
  */
-export function buildFinancialPositionPresentation(data: FinancialSnapshot): FinancialPositionPresentation {
+export function buildFinancialPositionPresentation(data: FinancialSnapshot, layout?: FinancialReportLayoutSettings | null): FinancialPositionPresentation {
   const accountGroups: Record<string, FinancialSnapshotRubric> = {};
   const actualRubrics = data.rubrics.filter((rubric) =>
     ['assets','liabilities','equity'].includes(rubric.section));
@@ -149,10 +151,17 @@ export function buildFinancialPositionPresentation(data: FinancialSnapshot): Fin
         code: rubric.code, label: rubric.code === 'NONE' ? 'Sin rubro ESF asignado (revisar)' : rubric.name,
         value: rubric.amount_local, accountIds: rubric.account_ids, note: null, requiresReview: true,
       }));
+    const all = [...standard, ...unmatched];
+    const eligible = new Set(standard.map((line) => line.code));
     return {
       key, label: CURRENT_GROUPS[key],
-      rows: [...standard, ...unmatched],
-      subtotal: sumPositionMoney([...standard, ...unmatched].map((row) => row.value)),
+      rows: applyFinancialReportLayout(
+        all, layout,
+        (code) => eligible.has(code) ? key : null,
+        (code) => eligible.has(code),
+        (line) => isPositionZero(line.value),
+      ),
+      subtotal: sumPositionMoney(all.map((row) => row.value)),
     };
   };
 
