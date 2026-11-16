@@ -1,5 +1,5 @@
 import type {
-  FinancialSnapshot, FinancialSnapshotAccount, FinancialSnapshotRubric,
+  FinancialSnapshot, FinancialSnapshotRubric,
 } from '../types/financialSnapshot.types';
 
 export type PositionGroupKey = 'ACTIVO_CORRIENTE' | 'ACTIVO_NO_CORRIENTE' | 'ACTIVO_SIN_CLASIFICAR'
