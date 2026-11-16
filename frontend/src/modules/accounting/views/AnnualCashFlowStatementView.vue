@@ -14,6 +14,7 @@ const props = defineProps<{
   readonly getAccessToken: () => string | null;
 }>();
 const year = ref(new Date().getFullYear());
+const throughMonth = ref(new Date().getMonth() + 1);
 const report = shallowRef<AnnualCashFlowReport | null>(null);
 const pending = shallowRef(false);
 const error = shallowRef<string | null>(null);
@@ -36,6 +37,10 @@ async function loadYear(): Promise<void> {
     error.value = 'Indica un año entre 2000 y 2100.';
     return;
   }
+  if (!Number.isInteger(throughMonth.value) || throughMonth.value < 1 || throughMonth.value > 12) {
+    error.value = 'Indica un mes de corte válido.';
+    return;
+  }
   const version = ++requestVersion;
   const tenant = props.activeCompanyId;
   report.value = null;
@@ -43,7 +48,7 @@ async function loadYear(): Promise<void> {
   pending.value = true;
   printError.value = null;
   try {
-    const result = await client.value.fetchAnnualCashFlowReport(y);
+    const result = await client.value.fetchAnnualCashFlowReport(y, throughMonth.value);
     if (version === requestVersion && tenant === props.activeCompanyId) report.value = result;
   } catch (cause) {
     if (version === requestVersion && tenant === props.activeCompanyId)
@@ -56,6 +61,7 @@ function printYear(): void {
   if (!report.value || pending.value) return;
   const ok = openAnnualCashFlowPrint({
     year: report.value.year,
+    throughMonth: report.value.through_month,
     company: props.companyName,
     taxId: props.companyTaxId,
     currency: report.value.currency,
@@ -69,7 +75,8 @@ function exportCsv(): void {
   if (!report.value) return;
   const header = ['Código', 'Concepto', ...months, 'Total'];
   const cell = (value: string) => '"' + value.replace(/"/g, '""') + '"';
-  const csv = [header, ...rows.value.map((row) => [row.code, row.label, ...row.values, row.total])]
+  const csv = [header, ...rows.value.map((row) => [row.code, row.label, ...row.values.map((value, index) =>
+    index < report.value!.through_month ? value : ''), row.total])]
     .map((row) => row.map(cell).join(';')).join('\r\n');
   const file = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(file);
@@ -96,6 +103,13 @@ onScopeDispose(() => { requestVersion++; });
         <label for="annual-cash-flow-year" class="flex flex-col gap-1 text-xs text-muted">Ejercicio
           <input id="annual-cash-flow-year" v-model.number="year" type="number" min="2000" max="2100"
             class="w-28 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground" />
+        </label>
+        <label for="annual-cash-flow-through-month" class="flex flex-col gap-1 text-xs text-muted">Hasta mes
+          <select id="annual-cash-flow-through-month" v-model.number="throughMonth"
+            class="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground">
+            <option v-for="(name,index) in ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre']"
+              :key="index" :value="index+1">{{ name }}</option>
+          </select>
         </label>
         <button type="submit" :disabled="pending" class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white disabled:opacity-40">
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': pending }" /> Consultar
@@ -145,7 +159,7 @@ onScopeDispose(() => { requestVersion++; });
 
       <div class="rounded-lg border border-border bg-surface">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-xs text-muted">
-          <span>Empresa: {{ companyName }} · RUC {{ companyTaxId }} · {{ report.year }} · {{ report.currency }} · 4 decimales exactos</span>
+          <span>Empresa: {{ companyName }} · RUC {{ companyTaxId }} · {{ report.year }} hasta {{ months[report.through_month - 1] }} · {{ report.currency }} · 4 decimales exactos</span>
           <span>Desplaza horizontalmente para ver los 12 meses y el total anual</span>
         </div>
         <div class="max-w-full overflow-x-auto">
@@ -172,7 +186,7 @@ onScopeDispose(() => { requestVersion++; });
                 </td>
                 <td v-for="(value, index) in item.values" :key="index" class="border-b border-border px-2 py-2 text-right font-mono"
                   :class="item.kind === 'summary' ? 'bg-brand/10' : item.kind === 'balance' ? 'bg-soft' : ''">
-                  {{ ['section','subheading'].includes(item.kind) ? '' : format(value) }}
+                  {{ index >= report.through_month || ['section','subheading'].includes(item.kind) ? '' : format(value) }}
                 </td>
                 <td class="border-b border-l border-border px-3 py-2 text-right font-mono font-semibold"
                   :class="item.kind === 'summary' ? 'bg-brand/10' : item.kind === 'balance' ? 'bg-soft' : ''">
