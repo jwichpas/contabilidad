@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\Company\GetCompanySettingsController;
 use App\Http\Controllers\Api\V1\Company\CompanySeeVisibilityController;
 use App\Http\Controllers\Api\V1\Company\InitializeCompanyChartOfAccountsController;
 use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
+use App\Http\Controllers\Api\V1\Company\CompanyCashFlowPresentationController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\CostCenterMasterController;
@@ -268,6 +269,11 @@ Route::prefix('v1')->group(function (): void {
 
                 Route::get('/cash-flow-areas', ListCashFlowAreasController::class)
                     ->name('api.v1.company.cash-flow-areas.index');
+                Route::get('/cash-flow-presentation', [CompanyCashFlowPresentationController::class, 'show'])
+                    ->name('api.v1.company.cash-flow-presentation.show');
+                Route::put('/cash-flow-presentation', [CompanyCashFlowPresentationController::class, 'update'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->name('api.v1.company.cash-flow-presentation.update');
 
                 // Historial tributario por ejercicio: sólo revisiones inmutables.
                 Route::get('/fiscal-profiles', [CompanyFiscalProfileController::class, 'index'])
