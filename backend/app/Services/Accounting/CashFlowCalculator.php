@@ -200,12 +200,18 @@ final class CashFlowCalculator
                                 $conceptCode = $conceptResolver->resolve(
                                     $cash, $noncash, $kind, $amount, $isReversal, $accountPresentationRules
                                 );
-                                $conceptSource = $conceptCode === null ? null
-                                    : (array_filter($accountPresentationRules, static fn (array $rule): bool =>
-                                        $rule['target_code'] === $conceptCode
-                                        && $rule['section'] === $kind
-                                        && $rule['direction'] === ($side === 'inflow_local' ? 'INFLOW' : 'OUTFLOW'))
-                                        !== [] ? 'COUNTERPART_OR_COMPANY_ACCOUNT' : 'COUNTERPART');
+                                $conceptSource = $conceptCode === null ? null : 'COUNTERPART';
+                                if ($conceptCode !== null && count($noncash) === 1) {
+                                    foreach ($accountPresentationRules as $rule) {
+                                        if ($rule['account_code'] === (string) $noncash[0]->account_code
+                                            && $rule['target_code'] === $conceptCode
+                                            && $rule['section'] === $kind
+                                            && $rule['direction'] === ($side === 'inflow_local' ? 'INFLOW' : 'OUTFLOW')) {
+                                            $conceptSource = 'COMPANY_ACCOUNT';
+                                            break;
+                                        }
+                                    }
+                                }
                             }
                         }
                         // Different meanings can share OPE-IN/OUT. They must
