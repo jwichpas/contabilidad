@@ -84,11 +84,21 @@ cd backend
 .\scripts\configurar-flujo-efectivo-pg18-local.ps1 -Accion Verificar
 ```
 
-El script requiere **28 migraciones locales previas** (las 25 iniciales
-más las tres de la actualización fiscal). Si el entorno conserva 25,
-primero ejecutar `backend/scripts/actualizar-esquema-pg18-local.ps1`
-en Plan y luego Aplicar/Verificar, siguiendo su propio protocolo de
-respaldo. No intercalar la nueva migración con una actualización parcial.
+El script requiere **29 migraciones locales previas** verificadas:
+25 iniciales, 3 fiscales y la migración portable F2
+`2026_10_21_040000_create_reference_data_versions`.
+Esta última la instala el cargador de catálogos PCGE: **no debe volver a
+ejecutarse ni eliminarse**. Además de comprobar los nombres, el diagnóstico
+verifica que exista la tabla `reference_data_versions` con sus siete columnas,
+y que `app_backend` no pueda leer el registro global.
+
+En el laboratorio Docker del usuario se observaron precisamente estas **29**
+migraciones. Después de actualizar la rama, ejecutar el diagnóstico
+`configurar-flujo-efectivo-pg18-local.ps1 -Accion Plan`. **No ejecutar
+`actualizar-esquema-pg18-local.ps1 -Accion Aplicar` sobre este esquema ya
+actualizado**. El plan y `Verificar` de ese script aceptan la migración F2
+para reconocer el estado de 29, sin volver a escribir las 3 migraciones fiscales.
+Un esquema parcial o distinto continuará bloqueado.
 
 El script verifica etiqueta, volumen, puerto y PostgreSQL 18 **Docker
 local**, migraciones base conocidas y FORCE RLS; crea un respaldo local
