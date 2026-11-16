@@ -6,6 +6,8 @@ import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { FinancialSnapshot, FinancialSnapshotAccount, GeneralLedgerPage } from '../types/financialSnapshot.types';
 import CashFlowStatementView from './CashFlowStatementView.vue';
+import FinancialPositionSheet from './FinancialPositionSheet.vue';
+import { openFinancialPositionPrintDialog } from '../utils/printFinancialPosition';
 import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
 
 const props = defineProps<{
@@ -13,6 +15,7 @@ const props = defineProps<{
   readonly getAccessToken: () => string | null;
   readonly companyName: string;
   readonly companyTaxId: string;
+  readonly companyAddress: string;
   readonly canConfigureCashFlow: boolean;
   readonly initialReport: 'snapshot' | 'cash-flow';
 }>();
@@ -122,6 +125,18 @@ function accountLabel(account: FinancialSnapshotAccount): string {
   return `${account.code} · ${account.name}`;
 }
 
+function printEsf(): void {
+  const data = snapshot.value;
+  if (!data || loading.value || selectedAccount.value) return;
+  const ok = openFinancialPositionPrintDialog({
+    snapshot: data,
+    companyName: props.companyName,
+    companyTaxId: props.companyTaxId,
+    companyAddress: props.companyAddress,
+  });
+  printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes.';
+}
+
 function printSnapshot(): void {
   const data = snapshot.value;
   if (!data || loading.value || selectedAccount.value) return;
@@ -202,9 +217,15 @@ onMounted(() => { void load(); });
         </button>
         <button type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
           class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
-          title="Abrir impresión; seleccionar Guardar como PDF"
+          title="Estado de Situación Financiera formal en A4 horizontal"
+          @click="printEsf">
+          <Printer class="h-4 w-4" /> PDF ESF formal
+        </button>
+        <button type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
+          class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
+          title="Resumen técnico de situación y resultados"
           @click="printSnapshot">
-          <Printer class="h-4 w-4" /> Imprimir / Guardar PDF
+          <Printer class="h-4 w-4" /> PDF resumen y resultados
         </button>
       </form>
     </header>
@@ -258,7 +279,18 @@ onMounted(() => { void load(); });
         No hay partidas contabilizadas hasta {{ snapshot.as_of }} en esta empresa.
       </div>
       <template v-else>
-        <div class="grid gap-4 lg:grid-cols-2">
+        <FinancialPositionSheet
+          :snapshot="snapshot"
+          :company-name="companyName"
+          :company-tax-id="companyTaxId"
+          :company-address="companyAddress"
+          @open-ledger="openLedger"
+        />
+        <details class="rounded-xl border border-border bg-surface p-4">
+          <summary class="cursor-pointer text-sm font-semibold text-brand">
+            Ver desglose contable adicional por cuentas y Libro Mayor
+          </summary>
+          <div class="mt-4 grid gap-4 lg:grid-cols-2">
           <section v-for="section in grouped" :key="section.key" class="min-w-0 rounded-xl border border-border bg-surface p-4">
             <h2 class="text-base font-semibold text-foreground">{{ section.label }}</h2>
             <div v-if="section.rubrics.length" class="mt-3 divide-y divide-border">
@@ -284,7 +316,8 @@ onMounted(() => { void load(); });
             <p v-else class="mt-3 text-sm text-muted">Sin movimientos.</p>
             <div class="mt-3 flex justify-between gap-2 border-t border-border pt-3 font-semibold"><span>Total</span><span class="font-mono tabular-nums">{{ money(section.total) }}</span></div>
           </section>
-        </div>
+          </div>
+        </details>
         <div class="rounded-xl border border-border bg-soft p-4 text-sm">
           <div class="flex flex-wrap justify-between gap-2"><span>Activo</span><strong class="font-mono tabular-nums">{{ money(snapshot.totals.assets) }}</strong></div>
           <div class="mt-2 flex flex-wrap justify-between gap-2"><span>Pasivo + patrimonio + resultado</span><strong class="font-mono tabular-nums">{{ money(snapshot.totals.liabilities_equity_result) }}</strong></div>
