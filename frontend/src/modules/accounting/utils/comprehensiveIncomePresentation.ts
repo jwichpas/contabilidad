@@ -1,5 +1,7 @@
 import type { FinancialSnapshot, FinancialSnapshotAccount } from '../types/financialSnapshot.types';
 import { formatPositionDate } from './financialPositionPresentation.ts';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
+import { applyFinancialReportLayout } from './financialLayout.ts';
 
 /**
  * Presentation by function, only when the account has evidence of that
@@ -133,7 +135,7 @@ export function formatIncomePeriod(from: string, to: string): string {
     formatPositionDate(to).replace(/^Al /, '');
 }
 
-export function buildComprehensiveIncomePresentation(data: FinancialSnapshot): ComprehensiveIncomePresentation {
+export function buildComprehensiveIncomePresentation(data: FinancialSnapshot, layout?: FinancialReportLayoutSettings | null): ComprehensiveIncomePresentation {
   const totals = Object.fromEntries(KEYS.map((key) => [key, ZERO])) as Record<IncomeLineKey, string>;
   const sources = Object.fromEntries(KEYS.map((key) => [key, [] as number[]])) as Record<IncomeLineKey, number[]>;
   const warnings: string[] = [];
@@ -188,11 +190,23 @@ export function buildComprehensiveIncomePresentation(data: FinancialSnapshot): C
     amount: key === 'oci' || key === 'total_comprehensive' ? null : totals[key],
     note: null, accountIds: sources[key],
   }));
+  const group: Partial<Record<IncomeLineKey, string>> = {
+    sales:'SALES', discounts:'SALES', cost_of_sales:'COST',
+    other_operating_income:'OPERATING', selling:'OPERATING', administration:'OPERATING',
+    financial_income:'FINANCIAL', financial_expense:'FINANCIAL',
+    exchange_difference:'FINANCIAL', other_nonoperating:'FINANCIAL', income_tax:'TAX',
+  };
+  const decorated = applyFinancialReportLayout(
+    lines.map((line) => ({...line, code:line.key})), layout,
+    (code) => group[code as IncomeLineKey] ?? null,
+    (code) => Boolean(group[code as IncomeLineKey]),
+    (line) => line.amount === ZERO,
+  );
   return {
     from: data.income_statement.from,
     to: data.income_statement.to,
     currency: data.currency,
-    lines,
+    lines: decorated,
     netProfit: totals.net_profit,
     preTaxProfit: totals.profit_before_tax,
     grossProfit: totals.gross_profit,
