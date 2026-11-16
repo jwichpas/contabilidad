@@ -1,5 +1,5 @@
 import type {
-  AnnualCashFlowMonth, AnnualCashFlowReport, CashFlowGroup,
+  AnnualCashFlowMonth, AnnualCashFlowReport, CashFlowGroup, CashFlowPresentationSettings,
 } from '../types/cashFlow.types';
 
 export type AnnualRowKind = 'section' | 'subheading' | 'detail' | 'subtotal' | 'summary' | 'balance' | 'warning';
@@ -115,7 +115,7 @@ function areaCode(code: string | null): string | null {
   return match?.[1] ?? null;
 }
 
-function lineValue(line: LineDefinition, m: AnnualCashFlowMonth): string {
+function lineValue(line: LineDefinition, m: AnnualCashFlowMonth, definitions: readonly LineDefinition[]): string {
   if (line.kind === 'section' || line.kind === 'subheading') return ZERO;
   if (line.field) return m[line.field];
   const section = line.section;
@@ -128,7 +128,7 @@ function lineValue(line: LineDefinition, m: AnnualCashFlowMonth): string {
     if (group.section !== section) return false;
     if (line.kind === 'subtotal') return true;
     const mapped = areaCode(group.code) ?? group.concept_code ?? null;
-    const recognized = ANNUAL_FLOW_LINES.some((candidate) =>
+    const recognized = definitions.some((candidate) =>
       candidate.kind === 'detail' && candidate.code === mapped
       && candidate.section === section && candidate.direction === direction);
     return line.code === (recognized ? mapped : residualCode);
@@ -140,13 +140,31 @@ export function buildAnnualCashFlowMatrix(report: AnnualCashFlowReport): readonl
   if (report.monthly.length !== 12 || report.monthly.some((month, index) => month.month !== index + 1)) {
     throw new Error('Matriz de 12 meses incompleta o desordenada.');
   }
-  return ANNUAL_FLOW_LINES.map((line) => {
-    const values = report.monthly.map((month) => lineValue(line, month));
+  const settings: CashFlowPresentationSettings = report.presentation?.settings ?? {
+    hide_zero: false, labels: {}, hidden_codes: [], custom_lines: [], account_rules: [], area_rules: [],
+  };
+  const custom: LineDefinition[] = settings.custom_lines.map((line) => ({ ...line, kind: 'detail' }));
+  // Custom lines appear immediately before the residual line of their
+  // activity/direction, so every classified movement stays visible.
+  const residual = (code: string): LineDefinition[] => {
+    const line = ANNUAL_FLOW_LINES.find((item) => item.code === code);
+    return line ? custom.filter((item) =>
+      item.section === line.section && item.direction === line.direction) : [];
+  };
+  const definitions = ANNUAL_FLOW_LINES.flatMap((line): LineDefinition[] =>
+    ['1198', '1298', '1498', '1598', '1798', '1898'].includes(line.code)
+      ? [...residual(line.code), line] : [line]);
+  return definitions.map((line) => {
+    const values = report.monthly.map((month) => lineValue(line, month, definitions));
     let total = addMoney(values);
     if (line.field === 'opening_local') total = report.totals.opening_local;
     if (line.field === 'closing_local') total = report.totals.closing_local;
     if (line.field === 'difference_local') total = report.totals.difference_local;
-    return { code: line.code, label: line.label, kind: line.kind, values, total };
+    return { code: line.code, label: settings.labels[line.code] ?? line.label, kind: line.kind, values, total };
+  }).filter((row) => {
+    if (row.kind !== 'detail') return true;
+    if (row.values.some((value) => scaled(value) !== 0n)) return true;
+    return !(settings.hide_zero || settings.hidden_codes.includes(row.code));
   });
 }
 export function formatMatrixAmount(value: string): string {
