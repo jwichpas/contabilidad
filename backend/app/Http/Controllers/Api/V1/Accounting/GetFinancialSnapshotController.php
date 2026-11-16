@@ -76,6 +76,10 @@ final readonly class GetFinancialSnapshotController
                 str_starts_with((string) $row->code, '9'),
                 str_starts_with((string) $row->code, '79'),
                 $row->account_type === 'MEMORANDUM' => 'excluded',
+                // PCGE 88 (impuesto a las ganancias) es gasto del periodo.
+                // El maestro historico marca todo el elemento 8 como EQUITY:
+                // no trasladar 881 al patrimonio ni inflar el resultado neto.
+                str_starts_with((string) $row->code, '88') => 'result',
                 $row->account_type === 'ASSET' => 'assets',
                 $row->account_type === 'LIABILITY' => 'liabilities',
                 $row->account_type === 'EQUITY' => 'equity',
@@ -140,7 +144,10 @@ final readonly class GetFinancialSnapshotController
                 continue;
             }
 
-            $rubricCode = $account['rubric'];
+            // El impuesto a las ganancias corriente/diferido tiene un rubro
+            // oficial propio aunque el PCGE_2019 ya inicializado no lo mapee.
+            $rubricCode = str_starts_with($account['code'], '88')
+                ? 'ER_IMPUESTO_RENTA' : $account['rubric'];
             $definition = $rubricDefinitions->get($rubricCode);
             if ($rubricCode === 'NONE' || $definition === null) {
                 $unmappedAccountIds[] = $account['id'];
