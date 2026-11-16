@@ -35,7 +35,7 @@ function report() {
     months[i].closing_local='710.1151';
   }
   return {
-    year: 2026, monthly: months,
+    year: 2026, through_month: 3, monthly: months,
     totals: { opening_local: '400.0000', closing_local: '710.1151',
       operating_local: '310.1151', investing_local: zero, financing_local: zero,
       net_flow_local: '310.1151', difference_local: zero,
@@ -68,6 +68,7 @@ test('no acepta doce meses desordenados o parciales', () => {
 test('imprimible A3 horizontal escapa datos sensibles y marca estado preliminar', () => {
   const html = buildAnnualCashFlowPrintHtml({
     year: 2026,
+    throughMonth: 3,
     company: '<img src=x onerror=alert(1)>',
     currency: 'PEN',
     rows: buildAnnualCashFlowMatrix(report()),
@@ -77,5 +78,6 @@ test('imprimible A3 horizontal escapa datos sensibles y marca estado preliminar'
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(html, /<img src=x/);
   assert.match(html, /Diciembre/);
+  assert.match(html, /Hasta Marzo/);
   assert.match(html, /PRELIMINAR/);
 });
