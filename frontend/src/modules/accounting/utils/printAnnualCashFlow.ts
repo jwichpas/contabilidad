@@ -3,6 +3,7 @@ import { formatMatrixAmount } from './annualCashFlowMatrix.ts';
 
 export interface AnnualCashFlowPrintInput {
   readonly year: number;
+  readonly throughMonth: number;
   readonly company: string;
   readonly taxId?: string;
   readonly currency: string;
@@ -24,7 +25,8 @@ export function buildAnnualCashFlowPrintHtml(input: AnnualCashFlowPrintInput): s
   const body = input.rows.map((row) =>
     '<tr class="' + safe(row.kind) + '"><th scope="row">' + safe(row.code) + '</th>'
     + '<td class="concept">' + safe(row.label) + '</td>'
-    + row.values.map((value) => '<td class="amount">' + safe(formatMatrixAmount(value)) + '</td>').join('')
+    + row.values.map((value, index) => '<td class="amount">'
+      + (index < input.throughMonth ? safe(formatMatrixAmount(value)) : '') + '</td>').join('')
     + '<td class="amount total">' + safe(formatMatrixAmount(row.total)) + '</td></tr>'
   ).join('');
   const notices = [
@@ -64,7 +66,7 @@ ul { padding-left: 15px; margin-top: 4px; }
 @media screen { body { padding: 18px; min-width: 1400px; } }
 </style></head><body>
 <header><p>LIBRO DE INVENTARIOS Y BALANCES · REFERENCIA VISUAL FORMATO 3.18</p>
-<h1>Estado de flujos de efectivo — Método directo — ${input.year}</h1>
+<h1>Estado de flujos de efectivo — Método directo — ${input.year} · Hasta ${MONTHS[input.throughMonth - 1] ?? ''}</h1>
 <p><strong>Empresa:</strong> ${safe(input.company)}
 <strong>Moneda:</strong> ${safe(input.currency)} · ${input.taxId ? '<strong>RUC:</strong> ' + safe(input.taxId) : ''}</p>
 <p class="badge">PRELIMINAR · NO APTO PARA PRESENTACIÓN SUNAT</p></header>
