@@ -11,7 +11,10 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final readonly class CashFlowReportService
 {
-    public function __construct(private CashFlowCalculator $calculator) {}
+    public function __construct(
+        private CashFlowCalculator $calculator,
+        private CashFlowPresentationSettingsService $presentationSettings,
+    ) {}
 
     /** @return array<string, mixed> */
     public function get(string $from, string $to, string $section = 'ALL', ?int $areaId = null, int $page = 1, bool $includeMonthly = false): array
@@ -68,6 +71,12 @@ final readonly class CashFlowReportService
             ->orderBy('j.entry_date')->orderBy('j.id')->orderBy('l.line_number')->orderBy('l.id')
             ->cursor();
         $fxIds = array_values(array_map('intval', array_filter([$settings->fx_gain_account_id, $settings->fx_loss_account_id])));
-        return ['currency' => (string) $settings->currency] + $this->calculator->calculate($rows, $from, $to, $fxIds, $section, $areaId, $page, $includeMonthly);
+        $presentation = $includeMonthly ? $this->presentationSettings->latest() : null;
+        return ['currency' => (string) $settings->currency]
+            + ($includeMonthly ? ['presentation' => $presentation] : [])
+            + $this->calculator->calculate(
+                $rows, $from, $to, $fxIds, $section, $areaId, $page,
+                $includeMonthly, $presentation['settings'] ?? []
+            );
     }
 }
