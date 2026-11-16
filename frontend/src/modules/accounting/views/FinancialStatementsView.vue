@@ -502,7 +502,7 @@ watch(() => props.activeCompanyId, () => {
   <NiifNotesView v-if="activeReport === 'notes'"
     :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
     :company-name="companyName" :company-tax-id="companyTaxId" :as-of="asOf"
-    :snapshot="snapshot" :can-edit="canConfigureCashFlow"/>
+    :snapshot="snapshot?.as_of === asOf ? snapshot : null" :can-edit="canConfigureCashFlow"/>
   </div>
 </template>
 
