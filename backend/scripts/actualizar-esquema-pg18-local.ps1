@@ -91,8 +91,11 @@ function CheckMigrationInventory {
     $unexpected=@($applied | Where-Object { $_ -notin $baseline -and $_ -notin $updates })
     $done=@($updates | Where-Object { $_ -in $applied })
     $pending=@($updates | Where-Object { $_ -notin $applied })
+    Write-Host ('[INVENTARIO] Migraciones registradas='+$applied.Count+' | base='+(25-$missingBase.Count)+'/25 | adicionales='+$done.Count+'/3')
+    foreach($migration in $missingBase){Write-Host ('[FALTA BASE] '+$migration)}
+    foreach($migration in $unexpected){Write-Host ('[NO RECONOCIDA] '+$migration)}
     if($missingBase.Count -gt 0 -or $unexpected.Count -gt 0) {
-        throw 'El historial no coincide con las migraciones revisadas; no modificar automaticamente.'
+        throw 'Inventario diferente del revisado; detener hasta identificar cada migracion mostrada.'
     }
     Write-Host ('[ESTADO] Base inicial 25/25 | adicionales '+$done.Count+'/'+$updates.Count+' | pendientes '+$pending.Count)
     return @{applied=$applied;done=$done;pending=$pending}
