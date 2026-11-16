@@ -43,19 +43,25 @@ Descargar CSV (punto y coma + BOM, números sin cambiar su valor) o
 Se respetan como etiquetas **referenciales** las secciones 1100, 1200, 1301,
 1400, 1500, 1601, 1700, 1800, 1901, 2001 y 2999 de la captura.
 
-**Regla de integridad:** una partida de flujo no se identifica como venta, compra,
-tributo, préstamo o dividendo únicamente por su descripción, importe o cuenta
-contrapartida. El desglose específico exige **código explícito del área de flujo**:
-`F318-1102`, `F318-1201`, `F318-1703` (o el código de cuatro dígitos sin prefijo),
-siempre dentro de la categoría y dirección correcta. La cuenta 10 conserva
-la categoría económica que ya asignó el motor de cálculo.
+**Regla de integridad:** la categoría de operación, inversión o financiación
+proviene siempre del área asignada a la cuenta 10. El desglose por concepto se
+obtiene de un código de área explícito (`F318-1102`, `F318-1201`, `F318-1703`)
+o mediante **inferencia prudente a partir del asiento** si existe una única
+partida de caja y una contrapartida o combinación de venta+IGV que cuadre
+exactamente. Nunca se infiere por glosa ni se altera un voucher para imprimirlo.
+Cuando un asiento es mixto o ambiguo, se mantiene en la línea interna de
+«pendientes de desagregación» con pista de auditoría.
 
 Ejemplos:
 - Cobros por venta con área **F318-1102** → 1102.
 - Pagos a proveedor con área **F318-1201** → 1201.
 - Desembolso del préstamo con área **F318-1703** → 1703.
-- Área genérica existente `OPE-IN` → 1198 «Cobros pendientes de desagregación».
-- Área genérica `FIN-IN` → 1798 «Cobros de financiación pendientes de desagregación».
+- Área genérica `OPE-IN` + voucher Debe 10 / Haber 12 → **1102**.
+- Área genérica `OPE-OUT` + voucher Debe 42 / Haber 10 → **1201**.
+- Área genérica `FIN-IN` + voucher Debe 10 / Haber 451 → **1703**.
+- Área genérica `FIN-OUT` + voucher Debe 451 / Haber 10 → **1802**.
+- Área genérica `OPE-IN` con varias contrapartidas sin relación inequívoca → 1198
+  «Cobros pendientes de desagregación».
 
 Estos residuos son **flujos clasificados correctamente por actividad**, pero no
 desglosados por concepto específico. No deben mezclarse con partidas de efectivo
@@ -77,9 +83,11 @@ Los 14 vouchers F5 de enero 2026 ya registrados sirven como regresión:
 - Febrero, saldo inicial: **S/ 62,560.00** si no hay movimientos.
 
 Los importes proceden del endpoint real; la vista no usa esos valores de forma
-fija. La mayoría de áreas del fixture `OPE-IN/OPE-OUT/FIN-IN` son
-genéricas y los movimientos aparecerán correctamente como pendientes de
-desagregación. No se modifican los vouchers ni se crean documentos SUNAT.
+fija. Las áreas originales `OPE-IN/OPE-OUT/FIN-IN/FIN-OUT` siguen siendo
+genéricas, pero el reporte identifica **J07 cobranzas S/ 10,000 → 1102**,
+**J08 proveedores S/ 6,000 → 1201**, **J02 préstamo S/ 24,000 → 1703**
+y **J09 amortización S/ 4,000 → 1802**. Las operaciones mixtas o dudosas
+siguen visibles como pendientes. No se modifican vouchers ni documentos SUNAT.
 
 ## Revisión
 
