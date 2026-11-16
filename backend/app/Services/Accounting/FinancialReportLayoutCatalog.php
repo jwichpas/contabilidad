@@ -83,10 +83,21 @@ final class FinancialReportLayoutCatalog
             return $result;
         }
 
-        // ECP view/calculation is not in this branch yet. No editable report
-        // should be offered until its accounting reconciliations are defined.
         if ($statement === 'ECP') {
-            return [];
+            // Same immutable component keys as EquityChangesCalculator.
+            // Income, opening bridge and closing subtotals remain protected.
+            return [
+                'CAPITAL' => ['label' => 'Capital social', 'group' => 'PATRIMONIO', 'kind' => 'detail'],
+                'ADDITIONAL_CAPITAL' => ['label' => 'Capital adicional', 'group' => 'PATRIMONIO', 'kind' => 'detail'],
+                'UNREALIZED' => ['label' => 'Resultados no realizados (revisar ORI)', 'group' => 'PATRIMONIO', 'kind' => 'detail'],
+                'SURPLUS' => ['label' => 'Excedente de revaluación', 'group' => 'PATRIMONIO', 'kind' => 'detail'],
+                'RESERVES' => ['label' => 'Reservas', 'group' => 'PATRIMONIO', 'kind' => 'detail'],
+                'RETAINED' => ['label' => 'Resultados acumulados', 'group' => 'PATRIMONIO', 'kind' => 'detail'],
+                'OTHER_EQUITY' => ['label' => 'Otro patrimonio sin asignación específica', 'group' => 'PATRIMONIO', 'kind' => 'detail'],
+                'PRIOR_UNCLOSED' => ['label' => 'Resultado anterior no cerrado', 'group' => 'RESULTADO', 'kind' => 'protected'],
+                'PERIOD_RESULT' => ['label' => 'Resultado del ejercicio', 'group' => 'RESULTADO', 'kind' => 'protected'],
+                'EQUITY_TOTAL' => ['label' => 'Patrimonio final incluyendo resultado', 'group' => 'TOTAL', 'kind' => 'protected'],
+            ];
         }
         abort(404, 'Estado financiero desconocido.');
     }
