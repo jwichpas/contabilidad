@@ -5,6 +5,7 @@ export interface AnnualCashFlowPrintInput {
   readonly year: number;
   readonly throughMonth: number;
   readonly presentationRevision?: number;
+  readonly layoutRevision?: number;
   readonly company: string;
   readonly taxId?: string;
   readonly currency: string;
@@ -70,7 +71,7 @@ ul { padding-left: 15px; margin-top: 4px; }
 <h1>Estado de flujos de efectivo — Método directo — ${input.year} · Hasta ${MONTHS[input.throughMonth - 1] ?? ''}</h1>
 <p><strong>Empresa:</strong> ${safe(input.company)}
 <strong>Moneda:</strong> ${safe(input.currency)} · ${input.taxId ? '<strong>RUC:</strong> ' + safe(input.taxId) : ''}</p>
-<p>Revisión de presentación por empresa: ${input.presentationRevision ?? 0}</p>
+<p>Revisión de presentación por empresa: ${input.presentationRevision ?? 0} · Revisión de estructura: ${input.layoutRevision ?? 0}</p>
 <p class="badge">PRELIMINAR · NO APTO PARA PRESENTACIÓN SUNAT</p></header>
 <table><thead><tr><th>Cód.</th><th>Concepto</th>${header}<th>Total</th></tr></thead>
 <tbody>${body}</tbody></table>
