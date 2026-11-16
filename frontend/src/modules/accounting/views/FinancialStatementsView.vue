@@ -7,6 +7,8 @@ import type { CompanyId } from '../types/accountingAccount.types';
 import type { FinancialSnapshot, FinancialSnapshotAccount, GeneralLedgerPage } from '../types/financialSnapshot.types';
 import CashFlowStatementView from './CashFlowStatementView.vue';
 import FinancialPositionSheet from './FinancialPositionSheet.vue';
+import ComprehensiveIncomeSheet from './ComprehensiveIncomeSheet.vue';
+import { openComprehensiveIncomePrintDialog } from '../utils/printComprehensiveIncome';
 import { openFinancialPositionPrintDialog } from '../utils/printFinancialPosition';
 import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
 
@@ -20,11 +22,11 @@ const props = defineProps<{
   readonly initialReport: 'snapshot' | 'cash-flow';
 }>();
 const emit = defineEmits<{ 'select-report': [tab: 'snapshot' | 'cash-flow'] }>();
-const activeReport = shallowRef<'snapshot' | 'cash-flow'>(props.initialReport);
+const activeReport = shallowRef<'snapshot' | 'income' | 'cash-flow'>(props.initialReport);
 watch(() => props.initialReport, (tab) => { activeReport.value = tab; });
-function selectReport(tab: 'snapshot' | 'cash-flow'): void {
+function selectReport(tab: 'snapshot' | 'income' | 'cash-flow'): void {
   activeReport.value = tab;
-  emit('select-report', tab);
+  if (tab !== 'income') emit('select-report', tab);
 }
 
 const client = computed(() => new AccountingApiClient('', {
@@ -125,6 +127,18 @@ function accountLabel(account: FinancialSnapshotAccount): string {
   return `${account.code} · ${account.name}`;
 }
 
+function printIncome(): void {
+  const data = snapshot.value;
+  if (!data || loading.value || selectedAccount.value) return;
+  const ok = openComprehensiveIncomePrintDialog({
+    snapshot: data,
+    companyName: props.companyName,
+    companyTaxId: props.companyTaxId,
+    companyAddress: props.companyAddress,
+  });
+  printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes.';
+}
+
 function printEsf(): void {
   const data = snapshot.value;
   if (!data || loading.value || selectedAccount.value) return;
@@ -195,16 +209,17 @@ onMounted(() => { void load(); });
   <div>
     <nav aria-label="Seleccionar estado financiero" class="mb-5 flex flex-wrap gap-2 border-b border-border pb-3">
       <button type="button" :aria-pressed="activeReport === 'snapshot'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'snapshot' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('snapshot')">Situación financiera y resultados</button>
+      <button type="button" :aria-pressed="activeReport === 'income'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'income' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('income')">Estado de Resultados Integrales</button>
       <button type="button" :aria-pressed="activeReport === 'cash-flow'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'cash-flow' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('cash-flow')">Flujo de efectivo</button>
     </nav>
     <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :company-name="companyName" :company-tax-id="companyTaxId" :can-configure-cash-flow="canConfigureCashFlow" :get-access-token="getAccessToken" />
-  <div v-show="activeReport === 'snapshot'" class="space-y-5">
+  <div v-show="activeReport !== 'cash-flow'" class="space-y-5">
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="flex items-start gap-3">
         <div class="rounded-xl bg-brand/10 p-3 text-brand"><FileBarChart2 class="h-5 w-5" /></div>
         <div>
-          <h1 class="text-xl font-semibold text-foreground">Estado de situación financiera preliminar</h1>
-          <p class="mt-1 max-w-3xl text-sm text-muted">Saldos de los asientos contabilizados de esta empresa hasta la fecha elegida. Cifras en moneda funcional de la empresa con cuatro decimales.</p>
+          <h1 class="text-xl font-semibold text-foreground">{{ activeReport === 'income' ? 'Estado de Resultados Integrales preliminar' : 'Estado de situación financiera preliminar' }}</h1>
+          <p class="mt-1 max-w-3xl text-sm text-muted">Saldos reales de los asientos de la empresa hasta la fecha elegida; importes exactos a cuatro decimales y presentación formal a dos.</p>
         </div>
       </div>
       <form class="flex flex-wrap items-end gap-2" @submit.prevent="load">
@@ -215,17 +230,23 @@ onMounted(() => { void load(); });
         <button type="submit" :disabled="loading" class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" /> Consultar
         </button>
-        <button type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
+        <button v-if="activeReport === 'snapshot'" type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
           class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
           title="Estado de Situación Financiera formal en A4 horizontal"
           @click="printEsf">
           <Printer class="h-4 w-4" /> PDF ESF formal
         </button>
-        <button type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
+        <button v-if="activeReport === 'snapshot'" type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
           class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
           title="Resumen técnico de situación y resultados"
           @click="printSnapshot">
           <Printer class="h-4 w-4" /> PDF resumen y resultados
+        </button>
+        <button v-if="activeReport === 'income'" type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
+          class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
+          title="Imprimir el Estado de Resultados Integrales preliminar en A4"
+          @click="printIncome">
+          <Printer class="h-4 w-4" /> PDF Resultados Integrales
         </button>
       </form>
     </header>
@@ -259,7 +280,12 @@ onMounted(() => { void load(); });
           </template>
         </div>
       </section>
-      <template v-else>
+      <ComprehensiveIncomeSheet v-if="activeReport === 'income' && !selectedAccount"
+        :snapshot="snapshot" :company-name="companyName"
+        :company-tax-id="companyTaxId" :company-address="companyAddress"
+        @open-ledger="openLedger"
+      />
+      <template v-if="activeReport === 'snapshot' && !selectedAccount">
       <p class="rounded-lg border border-border bg-soft p-3 text-sm text-muted">
         Vista preliminar. El resultado incluye ingresos, gastos y costos acumulados aún sin asiento de cierre.
         Los ajustes y las notas de presentación siguen pendientes de conciliación.
