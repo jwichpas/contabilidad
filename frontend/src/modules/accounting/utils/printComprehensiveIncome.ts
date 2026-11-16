@@ -1,4 +1,5 @@
 import type { FinancialSnapshot } from '../types/financialSnapshot.types';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
 import {
   buildComprehensiveIncomePresentation, formatIncomeAmount, formatIncomePercent,
   formatIncomePeriod,
@@ -10,13 +11,14 @@ export interface ComprehensiveIncomePrintInput {
   readonly companyName: string;
   readonly companyTaxId: string;
   readonly companyAddress: string;
+  readonly layout?: FinancialReportLayoutSettings | null;
 }
 function escapeHtml(text: string): string {
   return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 export function buildComprehensiveIncomePrintHtml(input: ComprehensiveIncomePrintInput): string {
-  const r = buildComprehensiveIncomePresentation(input.snapshot);
+  const r = buildComprehensiveIncomePresentation(input.snapshot,input.layout);
   const netSales = r.lines.find((line) => line.key === 'net_sales')?.amount ?? '0.0000';
   const body = r.lines.map((line) => {
     const kind = escapeHtml(line.kind);
