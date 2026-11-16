@@ -298,6 +298,12 @@ watch(() => props.activeCompanyId, () => {
       :statement="activeReport === 'snapshot' ? 'ESF' : 'ERI'"
       :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
       :can-edit="canConfigureCashFlow" @saved="saveLayoutLocally" />
+    <p v-if="activeReport === 'snapshot' && esfLayout" class="text-xs text-muted">
+      Estructura de ESF: revisión {{ esfRevision }} · Empresa activa
+    </p>
+    <p v-if="activeReport === 'income' && eriLayout" class="text-xs text-muted">
+      Estructura de ERI: revisión {{ eriRevision }} · Empresa activa
+    </p>
     <p v-if="layoutWarning" role="status" class="rounded-lg border border-border p-3 text-xs text-muted">{{ layoutWarning }}</p>
     <p v-if="printNotice" role="alert" class="mb-3 text-sm text-danger">{{ printNotice }}</p>
     <div v-if="loading" role="status" class="space-y-3" aria-label="Calculando estado financiero">
