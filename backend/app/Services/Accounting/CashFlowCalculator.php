@@ -32,6 +32,7 @@ final class CashFlowCalculator
         $detailCount = 0;
         $entry = [];
         $previousId = null;
+        $conceptResolver = $includeMonthly ? new CashFlowConceptResolver() : null;
         // Annual matrix is derived from the SAME SQL cursor and classifier as the
         // ordinary report: never make 12 independent history queries or infer
         // categories from descriptions or opposite-side accounts.
@@ -49,7 +50,7 @@ final class CashFlowCalculator
             }
         }
 
-        $consume = function (array $lines) use ($from, $to, $fxAccountIds, $section, $areaId, $page, &$totals, &$counts, &$groups, &$accounts, &$unconfigured, &$details, &$detailCount, &$monthly, $includeMonthly): void {
+        $consume = function (array $lines) use ($from, $to, $fxAccountIds, $section, $areaId, $page, &$totals, &$counts, &$groups, &$accounts, &$unconfigured, &$details, &$detailCount, &$monthly, $includeMonthly, $conceptResolver): void {
             if ($lines === []) {
                 return;
             }
@@ -177,15 +178,27 @@ final class CashFlowCalculator
                     $groups[$key]['net_local'] = bcadd($groups[$key]['net_local'], $amount, 4);
                     $groups[$key]['count']++;
                     if ($includeMonthly) {
-                        $monthly[$month]['groups'][$key] ??= [
+                        // The *economic activity* always comes from the cash-side
+                        // area; only the presentation concept is inferred from
+                        // unequivocal counterparty accounting codes.
+                        $explicitAreaCode = preg_match('/^(?:F318-)?[0-9]{4}$/i', (string) $line->area_code) === 1;
+                        $conceptCode = $explicitAreaCode ? null
+                            : $conceptResolver->resolve($cash, $noncash, $kind, $amount, $isReversal);
+                        // Different meanings can share OPE-IN/OUT. They must
+                        // remain separate to avoid mixing client collections,
+                        // supplier payments and unidentified cash flows.
+                        $monthlyKey = $key.'|'.($conceptCode ?? 'NO_DETAIL');
+                        $monthly[$month]['groups'][$monthlyKey] ??= [
                             'section' => $kind, 'area_id' => (int) $line->area_id,
                             'code' => $line->area_code, 'name' => $line->area_name,
+                            'concept_code' => $conceptCode,
+                            'concept_source' => $conceptCode === null ? null : 'COUNTERPART',
                             'inflow_local' => '0.0000', 'outflow_local' => '0.0000',
                             'net_local' => '0.0000', 'count' => 0,
                         ];
-                        $monthly[$month]['groups'][$key][$side] = bcadd($monthly[$month]['groups'][$key][$side], $sideAmount, 4);
-                        $monthly[$month]['groups'][$key]['net_local'] = bcadd($monthly[$month]['groups'][$key]['net_local'], $amount, 4);
-                        $monthly[$month]['groups'][$key]['count']++;
+                        $monthly[$month]['groups'][$monthlyKey][$side] = bcadd($monthly[$month]['groups'][$monthlyKey][$side], $sideAmount, 4);
+                        $monthly[$month]['groups'][$monthlyKey]['net_local'] = bcadd($monthly[$month]['groups'][$monthlyKey]['net_local'], $amount, 4);
+                        $monthly[$month]['groups'][$monthlyKey]['count']++;
                     }
                 }
                 if (($section === 'ALL' || $section === $kind) && ($areaId === null || (int) $line->area_id === $areaId)) {
