@@ -13,6 +13,8 @@
   cuentas patrimoniales y utilidad del ejercicio **sin cierre**. Se muestran
   movimientos cuya naturaleza legal (aporte/dividendo/reserva) sigue
   indeterminada. No se atribuye un importe OCI (ORI) inventado. PDF horizontal.
+  Los nombres y orden de los detalles ECP se personalizan por empresa mediante
+  el editor de estructuras EEFF; no pueden alterarse los totales o la utilidad.
 - **EFE por método indirecto NIC 7** `GET /api/v1/accounting/reports/cash-flow/indirect?from=2026-01-01&to=2026-01-31`.
   Parte de utilidad neta contable, adiciona depreciación 684, ajusta cuentas
   por cobrar, inventario, proveedores y obligaciones operativas e impuestos,
