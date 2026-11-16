@@ -9,9 +9,11 @@ import type { CashFlowFilter, CashFlowQuery } from '../types/cashFlow.types';
 import type { CompanyId } from '../types/accountingAccount.types';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
+import AnnualCashFlowStatementView from './AnnualCashFlowStatementView.vue';
 
 const props = defineProps<{ readonly activeCompanyId: CompanyId; readonly companyName: string; readonly getAccessToken: () => string | null }>();
 const printNotice = shallowRef<string | null>(null);
+const reportView = shallowRef<'annual' | 'period'>('annual');
 const now = new Date();
 const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 const from = shallowRef(`${now.getFullYear()}-01-01`);
@@ -100,6 +102,17 @@ watch(() => props.activeCompanyId, () => {
 
 <template>
   <div class="space-y-5">
+    <nav aria-label="Modalidad de flujo de efectivo" class="flex flex-wrap gap-2 border-b border-border pb-3">
+      <button type="button" :aria-pressed="reportView === 'annual'" @click="reportView = 'annual'"
+        :class="reportView === 'annual' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        class="rounded-lg px-3 py-2 text-sm font-medium">Anual detallado · Formato 3.18 referencial</button>
+      <button type="button" :aria-pressed="reportView === 'period'" @click="reportView = 'period'"
+        :class="reportView === 'period' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        class="rounded-lg px-3 py-2 text-sm font-medium">Detalle por período</button>
+    </nav>
+    <AnnualCashFlowStatementView v-if="reportView === 'annual'"
+      :active-company-id="activeCompanyId" :company-name="companyName" :get-access-token="getAccessToken" />
+    <template v-else>
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="max-w-2xl">
         <p class="text-xs font-medium text-brand">Estados financieros · Método directo</p>
@@ -169,6 +182,7 @@ watch(() => props.activeCompanyId, () => {
         <p v-if="selectedArea" class="my-3 text-xs text-muted">Área: {{ selectedArea }} <button type="button" class="ml-2 text-brand underline" @click="selectDetails(filter)">Quitar filtro de área</button></p>
         <div class="mt-4"><CashFlowMovements :details="report.details" :currency="report.currency" @page="changePage" /></div>
       </section>
+    </template>
     </template>
   </div>
 </template>
