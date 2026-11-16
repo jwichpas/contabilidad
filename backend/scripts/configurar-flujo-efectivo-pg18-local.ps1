@@ -13,6 +13,7 @@ $backend=Split-Path -Parent $PSScriptRoot
 $name='contabilidad-pg18-local'
 $volume='contabilidad-pg18-local-data'
 $target='2026_11_16_120000_create_company_cash_flow_presentation_revisions'
+$referenceLedger='2026_10_21_040000_create_reference_data_versions'
 $privateConfig=Join-Path $backend '.env.pg18.local'
 $priorEnv=@{}
 $ok=$false
@@ -71,9 +72,12 @@ function Inventory {
         '2026_11_12_000001_create_tax_registers_and_allocations'
     )
     $missingBase=@($base | Where-Object { $_ -notin $applied })
-    $unknown=@($applied | Where-Object { $_ -notin $base -and $_ -notin $optional -and $_ -ne $target })
+    # Migration F2: ledger of immutable global references (portable_migrations).
+    # It is part of the documented Docker PCGE installer, not an unknown migration.
+    $unknown=@($applied | Where-Object { $_ -notin $base -and $_ -notin $optional -and $_ -ne $referenceLedger -and $_ -ne $target })
     $done=@($optional | Where-Object { $_ -in $applied })
-    Write-Host ('[INVENTARIO] Migraciones registradas='+$applied.Count+' | base='+($base.Count-$missingBase.Count)+'/25 | actualización fiscal='+$done.Count+'/3')
+    $ledgerPresent=($referenceLedger -in $applied)
+    Write-Host ('[INVENTARIO] Migraciones registradas='+$applied.Count+' | base='+($base.Count-$missingBase.Count)+'/25 | actualización fiscal='+$done.Count+'/3 | ledger F2='+[int]$ledgerPresent+'/1')
     foreach($migration in $missingBase){Write-Host ('[FALTA BASE] '+$migration)}
     foreach($migration in $unknown){Write-Host ('[NO RECONOCIDA] '+$migration)}
     if($missingBase.Count -gt 0 -or $unknown.Count -gt 0){
@@ -81,9 +85,27 @@ function Inventory {
     }
     if($done.Count -ne 3){
         foreach($migration in ($optional | Where-Object { $_ -notin $applied })){Write-Host ('[PENDIENTE FISCAL] '+$migration)}
-        throw 'Primero completar 28 migraciones autorizadas con actualizar-esquema-pg18-local.ps1; no aplicar esta ampliación en una base parcial.'
+        throw 'Primero completar las tres migraciones fiscales autorizadas; no aplicar sobre esquema parcial.'
     }
-    return ($target -in $applied)
+    if(-not $ledgerPresent){throw 'Falta el ledger F2 registrado por el instalador de referencias PCGE: detener.'}
+    # Match the exact expected migration set before any writes.
+    $installed=($target -in $applied)
+    if($applied.Count -ne (29+[int]$installed)){throw 'Número de migraciones distinto de 29/30 esperado.'}
+    $ledgerTable=Sql "SELECT CASE WHEN to_regclass('public.reference_data_versions') IS NULL THEN 0 ELSE 1 END"
+    if($ledgerTable -ne '1'){throw 'La migración F2 figura aplicada, pero falta su tabla de versiones.'}
+    $ledgerStructure=Sql @'
+SELECT
+ (SELECT count(*) FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='reference_data_versions'
+   AND column_name IN ('dataset_key','manifest_sha256','source_sha256',
+     'expected_counts','verified_counts','content_sha256','installed_at')),
+ (SELECT count(*) FROM pg_catalog.pg_class
+   WHERE oid='public.reference_data_versions'::regclass AND relkind='r'),
+ has_table_privilege('app_backend','public.reference_data_versions','SELECT')
+'@
+    if($ledgerStructure -ne '7|1|f'){throw 'Estructura o protección del ledger F2 distinta de la migración portable revisada.'}
+    Write-Host '[PASS] Migración F2 reconocida, estructura del ledger y acceso restringido verificados.'
+    return $installed
 }
 function PrivateEnv {
     if(-not (Test-Path -LiteralPath $privateConfig)){throw 'Falta el archivo privado local PG18.'}
