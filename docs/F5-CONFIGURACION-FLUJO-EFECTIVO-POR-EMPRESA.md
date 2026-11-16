@@ -84,6 +84,12 @@ cd backend
 .\scripts\configurar-flujo-efectivo-pg18-local.ps1 -Accion Verificar
 ```
 
+El script requiere **28 migraciones locales previas** (las 25 iniciales
+más las tres de la actualización fiscal). Si el entorno conserva 25,
+primero ejecutar `backend/scripts/actualizar-esquema-pg18-local.ps1`
+en Plan y luego Aplicar/Verificar, siguiendo su propio protocolo de
+respaldo. No intercalar la nueva migración con una actualización parcial.
+
 El script verifica etiqueta, volumen, puerto y PostgreSQL 18 **Docker
 local**, migraciones base conocidas y FORCE RLS; crea un respaldo local
 antes de aplicar **solo** la migración
