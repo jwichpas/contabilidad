@@ -572,9 +572,10 @@ export class AccountingApiClient {
     return result.data;
   }
 
-  public async fetchAnnualCashFlowReport(year: number): Promise<AnnualCashFlowReport> {
+  public async fetchAnnualCashFlowReport(year: number, throughMonth = 12): Promise<AnnualCashFlowReport> {
+    const params = new URLSearchParams({ year: String(year), through_month: String(throughMonth) });
     const result = await this.request<{ data: AnnualCashFlowReport }>(
-      `/api/v1/accounting/reports/cash-flow/annual?year=${encodeURIComponent(String(year))}`,
+      `/api/v1/accounting/reports/cash-flow/annual?${params}`,
       { method: 'GET' }, true,
     );
     return result.data;
