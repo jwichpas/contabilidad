@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { FinancialSnapshot, FinancialSnapshotAccount } from '../types/financialSnapshot.types';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
 import {
   buildFinancialPositionPresentation, currencyPositionLabel,
   formatPositionAmount, formatPositionDate, isPositionZero,
@@ -11,9 +12,10 @@ const props = defineProps<{
   readonly companyName: string;
   readonly companyTaxId: string;
   readonly companyAddress: string;
+  readonly layout?: FinancialReportLayoutSettings | null;
 }>();
 const emit = defineEmits<{ openLedger: [account: FinancialSnapshotAccount] }>();
-const model = computed(() => buildFinancialPositionPresentation(props.snapshot));
+const model = computed(() => buildFinancialPositionPresentation(props.snapshot,props.layout));
 const accounts = computed(() => new Map(props.snapshot.accounts.map((account) => [account.id, account])));
 const year = computed(() => props.snapshot.as_of.slice(0, 4));
 const currencyLabel = computed(() => currencyPositionLabel(props.snapshot.currency));
