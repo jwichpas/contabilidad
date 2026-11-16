@@ -77,3 +77,30 @@ export const CASH_FLOW_REASONS: Readonly<Record<string, string>> = {
   LATE_OPENING: 'Apertura dentro del período: revisar para evitar duplicar saldos.',
   CLOSING_CASH: 'El asiento de cierre mueve efectivo y requiere revisión.',
 };
+
+// Twelve months are calculated server-side using a single tenant-scoped cash-flow
+// statement snapshot, never guessed from counterpart descriptions.
+export interface AnnualCashFlowMonth {
+  readonly month: number;
+  readonly cash_delta_local: string;
+  readonly opening_entries_local: string;
+  readonly opening_local: string;
+  readonly closing_local: string;
+  readonly operating_local: string;
+  readonly investing_local: string;
+  readonly financing_local: string;
+  readonly net_flow_local: string;
+  readonly exchange_effect_local: string;
+  readonly other_adjustments_local: string;
+  readonly unclassified_local: string;
+  readonly expected_closing_local: string;
+  readonly difference_local: string;
+  readonly unclassified_count: number;
+  readonly other_adjustments_count: number;
+  readonly is_reconciled: boolean;
+  readonly groups: readonly CashFlowGroup[];
+}
+export interface AnnualCashFlowReport extends CashFlowReport {
+  readonly year: number;
+  readonly monthly: readonly AnnualCashFlowMonth[];
+}
