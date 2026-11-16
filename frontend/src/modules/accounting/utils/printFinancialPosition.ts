@@ -1,4 +1,5 @@
 import type { FinancialSnapshot } from '../types/financialSnapshot.types';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
 import type { PositionGroup, PositionLine } from './financialPositionPresentation.ts';
 import {
   buildFinancialPositionPresentation, currencyPositionLabel,
@@ -10,6 +11,7 @@ export interface FinancialPositionPrintInput {
   readonly companyName: string;
   readonly companyTaxId: string;
   readonly companyAddress: string;
+  readonly layout?: FinancialReportLayoutSettings | null;
 }
 
 function escapeHtml(value: string): string {
@@ -46,7 +48,7 @@ function table(head: string, year: string, currency: string, body: string): stri
 export function buildFinancialPositionPrintHtml(input: FinancialPositionPrintInput): string {
   const e = escapeHtml;
   const data = input.snapshot;
-  const model = buildFinancialPositionPresentation(data);
+  const model = buildFinancialPositionPresentation(data,input.layout);
   const assetBody = model.assetGroups.map(group).join('') +
     total('TOTAL ACTIVO', model.assetTotal);
   const liabilitiesBody = model.liabilityGroups.map(group).join('') +
