@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef } from 'vue';
-import { FileBarChart2, RefreshCw } from 'lucide-vue-next';
+import { computed, onMounted, ref, shallowRef, watch } from 'vue';
+import { FileBarChart2, Printer, RefreshCw } from 'lucide-vue-next';
 import { AccountingApiClient } from '../api/httpClient';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { FinancialSnapshot, FinancialSnapshotAccount, GeneralLedgerPage } from '../types/financialSnapshot.types';
 import CashFlowStatementView from './CashFlowStatementView.vue';
+import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
 
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly getAccessToken: () => string | null;
+  readonly companyName: string;
+  readonly initialReport: 'snapshot' | 'cash-flow';
 }>();
-
-const activeReport = shallowRef<'snapshot' | 'cash-flow'>('snapshot');
+const emit = defineEmits<{ 'select-report': [tab: 'snapshot' | 'cash-flow'] }>();
+const activeReport = shallowRef<'snapshot' | 'cash-flow'>(props.initialReport);
+watch(() => props.initialReport, (tab) => { activeReport.value = tab; });
+function selectReport(tab: 'snapshot' | 'cash-flow'): void {
+  activeReport.value = tab;
+  emit('select-report', tab);
+}
 
 const client = computed(() => new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
@@ -23,6 +31,7 @@ const asOf = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart
 const snapshot = shallowRef<FinancialSnapshot | null>(null);
 const loading = shallowRef(false);
 const error = shallowRef<string | null>(null);
+const printNotice = shallowRef<string | null>(null);
 const showTrialBalance = shallowRef(false);
 const selectedAccount = shallowRef<FinancialSnapshotAccount | null>(null);
 const ledger = shallowRef<GeneralLedgerPage | null>(null);
@@ -111,16 +120,68 @@ function accountLabel(account: FinancialSnapshotAccount): string {
   return `${account.code} · ${account.name}`;
 }
 
+function printSnapshot(): void {
+  const data = snapshot.value;
+  if (!data || loading.value || selectedAccount.value) return;
+  const amount = (value: string): string => formatExactLocalAmount(value, data.currency);
+  const totals = data.totals;
+  const taxAccounts = data.accounts.filter((account) => account.code.startsWith('88'));
+  const taxExpense = taxAccounts.reduce(
+    (sum, account) => sum + Number(account.period_amount_local ?? '0'), 0,
+  );
+  const warnings = [
+    'Estado preliminar sin comparativos, cierre anual ni notas completas NIIF.',
+    'El estado de resultados es una vista por naturaleza del Libro Diario, no un juego integral de cuatro estados financieros.',
+    ...(data.unmapped_account_ids.length
+      ? [`Hay ${data.unmapped_account_ids.length} cuentas sin rubro financiero configurado.`] : []),
+    ...(data.analytic_routing_status !== 'ACTIVE'
+      ? ['La distribución analítica 94/95 no está activa en esta empresa.'] : []),
+    ...(totals.difference !== '0.0000' || totals.trial_difference !== '0.0000'
+      ? ['Existen diferencias de conciliación: revisar antes de cualquier uso externo.'] : []),
+  ];
+  const ok = openFinancialReportPrintDialog({
+    title: 'Situación financiera y resultados · Preliminar',
+    company: props.companyName,
+    period: `Al ${data.as_of} · Resultados desde ${data.income_statement.from}`,
+    currency: data.currency,
+    sections: [
+      { heading: 'Estado de situación financiera', rows: [
+        { label: 'Total activo', value: amount(totals.assets) },
+        { label: 'Total pasivo', value: amount(totals.liabilities) },
+        { label: 'Patrimonio sin resultado del periodo', value: amount(totals.equity) },
+        { label: 'Resultado del periodo sin cerrar', value: amount(totals.result) },
+        { label: 'Diferencia de presentación', value: amount(totals.difference) },
+      ] },
+      { heading: 'Estado de resultados por naturaleza', rows: [
+        { label: 'Ingresos', value: amount(data.income_statement.revenue) },
+        { label: 'Gastos y costos (incluye impuesto a las ganancias)', value: amount(data.income_statement.expenses) },
+        { label: 'Impuesto a las ganancias incluido en gastos (grupo 88)', value: amount(taxExpense.toFixed(4)) },
+        { label: 'Resultado neto del periodo', value: amount(data.income_statement.net) },
+      ] },
+      { heading: 'Detalle contable por rubros', rows: data.rubrics
+        .filter((rubric) => ['assets','liabilities','equity','result'].includes(rubric.section))
+        .map((rubric) => ({ label: rubric.name, value: amount(rubric.amount_local) })) },
+      { heading: 'Balance de comprobación', rows: [
+        { label: 'Movimientos en el Debe', value: amount(totals.debit_local) },
+        { label: 'Movimientos en el Haber', value: amount(totals.credit_local) },
+        { label: 'Diferencia de movimientos', value: amount(totals.trial_difference) },
+      ] },
+    ],
+    notices: warnings,
+  });
+  printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes para este sitio.';
+}
+
 onMounted(() => { void load(); });
 </script>
 
 <template>
   <div>
     <nav aria-label="Seleccionar estado financiero" class="mb-5 flex flex-wrap gap-2 border-b border-border pb-3">
-      <button type="button" :aria-pressed="activeReport === 'snapshot'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'snapshot' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="activeReport = 'snapshot'">Situación financiera y resultados</button>
-      <button type="button" :aria-pressed="activeReport === 'cash-flow'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'cash-flow' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="activeReport = 'cash-flow'">Flujo de efectivo</button>
+      <button type="button" :aria-pressed="activeReport === 'snapshot'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'snapshot' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('snapshot')">Situación financiera y resultados</button>
+      <button type="button" :aria-pressed="activeReport === 'cash-flow'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'cash-flow' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('cash-flow')">Flujo de efectivo</button>
     </nav>
-    <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :get-access-token="getAccessToken" />
+    <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :company-name="companyName" :get-access-token="getAccessToken" />
   <div v-show="activeReport === 'snapshot'" class="space-y-5">
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="flex items-start gap-3">
@@ -138,9 +199,16 @@ onMounted(() => { void load(); });
         <button type="submit" :disabled="loading" class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" /> Consultar
         </button>
+        <button type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
+          class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
+          title="Abrir impresión; seleccionar Guardar como PDF"
+          @click="printSnapshot">
+          <Printer class="h-4 w-4" /> Imprimir / Guardar PDF
+        </button>
       </form>
     </header>
 
+    <p v-if="printNotice" role="alert" class="mb-3 text-sm text-danger">{{ printNotice }}</p>
     <div v-if="loading" role="status" class="space-y-3" aria-label="Calculando estado financiero">
       <div class="ui-skeleton h-20 rounded-xl" /><div class="ui-skeleton h-40 rounded-xl" /><div class="ui-skeleton h-40 rounded-xl" />
     </div>
