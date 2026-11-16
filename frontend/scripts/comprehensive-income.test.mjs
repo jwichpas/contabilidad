@@ -113,3 +113,26 @@ test('pestaña ERI coexiste con ESF y flujo de efectivo y conserva navegación a
   assert.match(text,/@open-ledger="openLedger"/);
   assert.match(text,/PDF Resultados Integrales/);
 });
+
+
+test('ERI personalizado renombra y reordena sin modificar utilidad, impuesto ni PDF',()=>{
+  const settings={
+    labels:{financial_expense:'Costos financieros Empresa A'},
+    hidden_codes:['discounts'],
+    line_order:['financial_expense','financial_income'],
+    hide_zero:false,
+  };
+  const modified=buildComprehensiveIncomePresentation(fixture(),settings);
+  const labels=modified.lines.map((row)=>row.key);
+  assert.ok(labels.indexOf('financial_expense')<labels.indexOf('financial_income'));
+  assert.equal(modified.lines.find((row)=>row.key==='financial_expense').label,'Costos financieros Empresa A');
+  assert.equal(modified.netProfit,'3849.3000');
+  assert.equal(modified.preTaxProfit,'5460.0000');
+  assert.equal(modified.lines.find((row)=>row.key==='discounts'),undefined);
+  const standard=buildComprehensiveIncomePresentation(fixture());
+  assert.equal(standard.lines.find((row)=>row.key==='financial_expense').label,'Gastos financieros');
+  const html=buildComprehensiveIncomePrintHtml({snapshot:fixture(),companyName:'Empresa A',
+    companyTaxId:'20999990101',companyAddress:'Local',layout:settings});
+  assert.match(html,/Costos financieros Empresa A/);
+  assert.match(html,/3,849\.30/);
+});
