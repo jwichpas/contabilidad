@@ -92,6 +92,7 @@ function printYear(): void {
     year: report.value.year,
     throughMonth: report.value.through_month,
     presentationRevision: report.value.presentation.revision,
+    layoutRevision: layoutRevision.value,
     company: props.companyName,
     taxId: props.companyTaxId,
     currency: report.value.currency,
