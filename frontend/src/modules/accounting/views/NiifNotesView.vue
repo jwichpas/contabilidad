@@ -55,7 +55,7 @@ const evidence=computed(()=>{
     ['N07','Costo neto contable (33 menos 39)',signedValue(['33','39'],false)],
     ['N08','Saldo de obligaciones financieras (45)',signedValue(['45'],true)],
     ['N09','Saldo neto de tributos (40)',signedValue(['40'],true)],
-    ['N10','Patrimonio incluido resultado sin cierre',signedValue(['50','52','56','57','58','59'],true)],
+    ['N10','Saldo de cuentas patrimoniales, sin resultado del ejercicio',signedValue(['50','52','56','57','58','59'],true)],
     ['N11','Ventas del ejercicio',source.income_statement.revenue],
     ['N12','Efectivo conciliable con balance',signedValue(['10'],false)],
   ] as const;
