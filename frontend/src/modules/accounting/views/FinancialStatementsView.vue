@@ -8,6 +8,8 @@ import type { FinancialSnapshot, FinancialSnapshotAccount, GeneralLedgerPage } f
 import CashFlowStatementView from './CashFlowStatementView.vue';
 import FinancialPositionSheet from './FinancialPositionSheet.vue';
 import ComprehensiveIncomeSheet from './ComprehensiveIncomeSheet.vue';
+import FinancialContinuationView from './FinancialContinuationView.vue';
+import NiifNotesView from './NiifNotesView.vue';
 import FinancialLayoutSettingsPanel from './FinancialLayoutSettingsPanel.vue';
 import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
 import { openComprehensiveIncomePrintDialog } from '../utils/printComprehensiveIncome';
@@ -24,11 +26,11 @@ const props = defineProps<{
   readonly initialReport: 'snapshot' | 'cash-flow';
 }>();
 const emit = defineEmits<{ 'select-report': [tab: 'snapshot' | 'cash-flow'] }>();
-const activeReport = shallowRef<'snapshot' | 'income' | 'cash-flow'>(props.initialReport);
+const activeReport = shallowRef<'snapshot' | 'income' | 'cash-flow' | 'trial' | 'equity' | 'notes'>(props.initialReport);
 watch(() => props.initialReport, (tab) => { activeReport.value = tab; });
-function selectReport(tab: 'snapshot' | 'income' | 'cash-flow'): void {
+function selectReport(tab: 'snapshot' | 'income' | 'cash-flow' | 'trial' | 'equity' | 'notes'): void {
   activeReport.value = tab;
-  if (tab !== 'income') emit('select-report', tab);
+  if (tab === 'snapshot' || tab === 'cash-flow') emit('select-report',tab);
 }
 
 const client = computed(() => new AccountingApiClient('', {
@@ -146,6 +148,12 @@ function openLedger(account: FinancialSnapshotAccount): void {
   void loadLedger(1);
 }
 
+function openLedgerById(id: number): void {
+  const account = snapshot.value?.accounts.find(row => row.id === id);
+  if (!account) return;
+  selectReport('snapshot');
+  openLedger(account);
+}
 function closeLedger(): void {
   ledgerVersion++;
   selectedAccount.value = null;
@@ -247,10 +255,19 @@ watch(() => props.activeCompanyId, () => {
     <nav aria-label="Seleccionar estado financiero" class="mb-5 flex flex-wrap gap-2 border-b border-border pb-3">
       <button type="button" :aria-pressed="activeReport === 'snapshot'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'snapshot' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('snapshot')">Situación financiera y resultados</button>
       <button type="button" :aria-pressed="activeReport === 'income'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'income' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('income')">Estado de Resultados Integrales</button>
+      <button type="button" :aria-pressed="activeReport === 'equity'" class="rounded-lg px-3 py-2 text-sm font-medium"
+        :class="activeReport === 'equity' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        @click="selectReport('equity')">Cambios en el Patrimonio</button>
+      <button type="button" :aria-pressed="activeReport === 'trial'" class="rounded-lg px-3 py-2 text-sm font-medium"
+        :class="activeReport === 'trial' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        @click="selectReport('trial')">Balance de comprobación</button>
+      <button type="button" :aria-pressed="activeReport === 'notes'" class="rounded-lg px-3 py-2 text-sm font-medium"
+        :class="activeReport === 'notes' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        @click="selectReport('notes')">Notas NIIF</button>
       <button type="button" :aria-pressed="activeReport === 'cash-flow'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'cash-flow' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('cash-flow')">Flujo de efectivo</button>
     </nav>
     <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :company-name="companyName" :company-tax-id="companyTaxId" :can-configure-cash-flow="canConfigureCashFlow" :get-access-token="getAccessToken" />
-  <div v-show="activeReport !== 'cash-flow'" class="space-y-5">
+  <div v-show="activeReport === 'snapshot' || activeReport === 'income'" class="space-y-5">
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="flex items-start gap-3">
         <div class="rounded-xl bg-brand/10 p-3 text-brand"><FileBarChart2 class="h-5 w-5" /></div>
@@ -478,6 +495,14 @@ watch(() => props.activeCompanyId, () => {
       </template>
     </template>
   </div>
+  <FinancialContinuationView v-if="activeReport === 'trial' || activeReport === 'equity'"
+    :kind="activeReport" :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
+    :company-name="companyName" :company-tax-id="companyTaxId" :as-of="asOf"
+    @ledger="openLedgerById"/>
+  <NiifNotesView v-if="activeReport === 'notes'"
+    :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
+    :company-name="companyName" :company-tax-id="companyTaxId" :as-of="asOf"
+    :snapshot="snapshot" :can-edit="canConfigureCashFlow"/>
   </div>
 </template>
 
