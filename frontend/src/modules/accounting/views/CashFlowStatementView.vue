@@ -10,10 +10,11 @@ import type { CompanyId } from '../types/accountingAccount.types';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
 import AnnualCashFlowStatementView from './AnnualCashFlowStatementView.vue';
+import IndirectCashFlowView from './IndirectCashFlowView.vue';
 
 const props = defineProps<{ readonly activeCompanyId: CompanyId; readonly companyName: string; readonly companyTaxId: string; readonly canConfigureCashFlow: boolean; readonly getAccessToken: () => string | null }>();
 const printNotice = shallowRef<string | null>(null);
-const reportView = shallowRef<'annual' | 'period'>('annual');
+const reportView = shallowRef<'annual' | 'period' | 'indirect'>('annual');
 const now = new Date();
 const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 const from = shallowRef(`${now.getFullYear()}-01-01`);
@@ -106,13 +107,16 @@ watch(() => props.activeCompanyId, () => {
       <button type="button" :aria-pressed="reportView === 'annual'" @click="reportView = 'annual'"
         :class="reportView === 'annual' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
         class="rounded-lg px-3 py-2 text-sm font-medium">Anual detallado · Formato 3.18 referencial</button>
+      <button type="button" :aria-pressed="reportView === 'indirect'" @click="reportView = 'indirect'"
+        :class="reportView === 'indirect' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        class="rounded-lg px-3 py-2 text-sm font-medium">Método indirecto · NIC 7</button>
       <button type="button" :aria-pressed="reportView === 'period'" @click="reportView = 'period'"
         :class="reportView === 'period' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
         class="rounded-lg px-3 py-2 text-sm font-medium">Detalle por período</button>
     </nav>
     <AnnualCashFlowStatementView v-if="reportView === 'annual'"
       :active-company-id="activeCompanyId" :company-name="companyName" :company-tax-id="companyTaxId" :can-configure-cash-flow="canConfigureCashFlow" :get-access-token="getAccessToken" />
-    <template v-else>
+    <template v-else-if="reportView === 'period'">
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="max-w-2xl">
         <p class="text-xs font-medium text-brand">Estados financieros · Método directo</p>
@@ -184,5 +188,8 @@ watch(() => props.activeCompanyId, () => {
       </section>
     </template>
     </template>
+    <IndirectCashFlowView v-else
+      :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
+      :company-name="companyName" :company-tax-id="companyTaxId" />
   </div>
 </template>
