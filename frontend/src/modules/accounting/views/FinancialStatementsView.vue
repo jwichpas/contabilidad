@@ -498,6 +498,7 @@ watch(() => props.activeCompanyId, () => {
   <FinancialContinuationView v-if="activeReport === 'trial' || activeReport === 'equity'"
     :kind="activeReport" :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
     :company-name="companyName" :company-tax-id="companyTaxId" :as-of="asOf"
+    :can-edit="canConfigureCashFlow"
     @ledger="openLedgerById"/>
   <NiifNotesView v-if="activeReport === 'notes'"
     :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
