@@ -1,5 +1,5 @@
 import type { AnnualCashFlowMatrixRow } from './annualCashFlowMatrix';
-import { formatMatrixAmount } from './annualCashFlowMatrix';
+import { formatMatrixAmount } from './annualCashFlowMatrix.ts';
 
 export interface AnnualCashFlowPrintInput {
   readonly year: number;
