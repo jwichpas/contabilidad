@@ -22,7 +22,8 @@ final class CashFlowConceptResolver
         array $nonCashLines,
         string $activity,
         string $cashAmount,
-        bool $isReversal
+        bool $isReversal,
+        array $accountRules = []
     ): ?string {
         if (! in_array($activity, ['OPERATING', 'INVESTING', 'FINANCING'], true)
             || count($cashLines) !== 1 || $nonCashLines === []
@@ -71,6 +72,16 @@ final class CashFlowConceptResolver
         }
 
         $code = $codes[0];
+        // Company overrides are exact account codes, activity and cash
+        // direction. The voucher has already passed exclusive cash/counterpart
+        // matching and equal-and-opposite amount validation above.
+        foreach ($accountRules as $rule) {
+            if ($rule['account_code'] === $code
+                && $rule['section'] === $activity
+                && $rule['direction'] === ($inflow ? 'INFLOW' : 'OUTFLOW')) {
+                return $rule['target_code'];
+            }
+        }
         if ($activity === 'OPERATING' && $inflow
             && (str_starts_with($code, '12') || str_starts_with($code, '13')
                 || str_starts_with($code, '70'))) {
