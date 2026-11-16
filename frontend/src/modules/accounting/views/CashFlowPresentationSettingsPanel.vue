@@ -146,17 +146,19 @@ async function save(): Promise<void> {
   try {
     const data = await client.value.saveCashFlowPresentation(draft.value, fetched.value.data.revision);
     if (request === version && tenant === props.activeCompanyId) {
-      notice.value = 'Configuración guardada. Revisión ' + data.revision + '.';
       emit('saved');
       await reload();
+      if (tenant === props.activeCompanyId) {
+        notice.value = 'Configuración guardada. Revisión ' + data.revision + '.';
+      }
     }
   } catch(cause) {
     if (request === version && tenant === props.activeCompanyId) {
       error.value = cause instanceof Error ? cause.message : 'No se pudo guardar. Revise los datos.';
     }
-  } finally { if (request === version) saving.value = false; }
+  } finally { if (tenant === props.activeCompanyId) saving.value = false; }
 }
-watch(() => props.activeCompanyId, () => { void reload(); }, { immediate:true, flush:'sync' });
+watch(() => props.activeCompanyId, () => { saving.value = false; void reload(); }, { immediate:true, flush:'sync' });
 onScopeDispose(() => { version++; });
 </script>
 
