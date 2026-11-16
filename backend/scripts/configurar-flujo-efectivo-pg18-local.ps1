@@ -74,7 +74,7 @@ function Inventory {
     $unknown=@($applied | Where-Object { $_ -notin $base -and $_ -notin $optional -and $_ -ne $target })
     if($unknown.Count -gt 0){throw 'Migraciones inesperadas: no modificar automáticamente.'}
     $done=@($optional | Where-Object { $_ -in $applied })
-    if($done.Count -ne 0 -and $done.Count -ne 3){throw 'Actualización fiscal parcialmente aplicada; detener.'}
+    if($done.Count -ne 3){throw 'Primero completar 28 migraciones con actualizar-esquema-pg18-local.ps1; no aplicar esta ampliación en una base parcial.'}
     return ($target -in $applied)
 }
 function PrivateEnv {
