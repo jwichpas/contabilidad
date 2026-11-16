@@ -6,11 +6,13 @@ import type { CompanyId } from '../types/accountingAccount.types';
 import type { AnnualCashFlowReport } from '../types/cashFlow.types';
 import { buildAnnualCashFlowMatrix, formatMatrixAmount } from '../utils/annualCashFlowMatrix';
 import { openAnnualCashFlowPrint } from '../utils/printAnnualCashFlow';
+import CashFlowPresentationSettingsPanel from './CashFlowPresentationSettingsPanel.vue';
 
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly companyName: string;
   readonly companyTaxId: string;
+  readonly canConfigureCashFlow: boolean;
   readonly getAccessToken: () => string | null;
 }>();
 const year = ref(new Date().getFullYear());
@@ -19,6 +21,7 @@ const report = shallowRef<AnnualCashFlowReport | null>(null);
 const pending = shallowRef(false);
 const error = shallowRef<string | null>(null);
 const printError = shallowRef<string | null>(null);
+const showPresentationSettings = shallowRef(false);
 let requestVersion = 0;
 const client = computed(() => new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
@@ -125,6 +128,16 @@ onScopeDispose(() => { requestVersion++; });
       </form>
     </div>
 
+    <div v-if="canConfigureCashFlow" class="flex justify-end">
+      <button type="button" @click="showPresentationSettings = !showPresentationSettings"
+        :aria-expanded="showPresentationSettings"
+        class="rounded-lg border border-border bg-surface px-4 py-2 text-xs font-medium text-brand">
+        {{ showPresentationSettings ? 'Cerrar configuración' : 'Configuración del Flujo de Efectivo' }}
+      </button>
+    </div>
+    <CashFlowPresentationSettingsPanel v-if="showPresentationSettings && canConfigureCashFlow"
+      :active-company-id="activeCompanyId" :get-access-token="getAccessToken" :can-edit="canConfigureCashFlow"
+      @saved="loadYear" />
     <p v-if="printError" role="alert" class="text-sm text-danger">{{ printError }}</p>
     <div v-if="pending" role="status" class="rounded-lg border border-border p-8 text-sm text-muted">Consultando movimientos y conciliación de los doce meses…</div>
     <p v-else-if="error" role="alert" class="rounded-lg border border-danger p-4 text-sm text-danger">{{ error }}</p>
