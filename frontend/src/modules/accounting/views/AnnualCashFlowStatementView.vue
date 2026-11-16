@@ -65,6 +65,7 @@ function printYear(): void {
   const ok = openAnnualCashFlowPrint({
     year: report.value.year,
     throughMonth: report.value.through_month,
+    presentationRevision: report.value.presentation.revision,
     company: props.companyName,
     taxId: props.companyTaxId,
     currency: report.value.currency,
@@ -85,7 +86,7 @@ function exportCsv(): void {
   const url = URL.createObjectURL(file);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `flujo-efectivo-${report.value.year}-preliminar.csv`;
+  link.download = `flujo-efectivo-${report.value.year}-rev${report.value.presentation.revision}-preliminar.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -174,7 +175,7 @@ onScopeDispose(() => { requestVersion++; });
 
       <div class="rounded-lg border border-border bg-surface">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-xs text-muted">
-          <span>Empresa: {{ companyName }} · RUC {{ companyTaxId }} · {{ report.year }} hasta {{ months[report.through_month - 1] }} · {{ report.currency }} · 4 decimales exactos</span>
+          <span>Empresa: {{ companyName }} · RUC {{ companyTaxId }} · {{ report.year }} hasta {{ months[report.through_month - 1] }} · {{ report.currency }} · Revisión {{ report.presentation.revision }} · 4 decimales exactos</span>
           <span>Desplaza horizontalmente para ver los 12 meses y el total anual</span>
         </div>
         <div class="max-w-full overflow-x-auto">
