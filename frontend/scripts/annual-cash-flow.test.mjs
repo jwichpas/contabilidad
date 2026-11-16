@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAnnualCashFlowMatrix } from '../src/modules/accounting/utils/annualCashFlowMatrix.ts';
+import { readFileSync } from 'node:fs';
+import { ANNUAL_FLOW_LINES, buildAnnualCashFlowMatrix } from '../src/modules/accounting/utils/annualCashFlowMatrix.ts';
 import { buildAnnualCashFlowPrintHtml } from '../src/modules/accounting/utils/printAnnualCashFlow.ts';
 
 const zero = '0.0000';
@@ -148,4 +149,11 @@ test('ocultar cero no oculta movimientos mensuales compensados en el total del a
   assert.equal(rows.find((row) => row.code === '1102').values[0], '250.1250');
   assert.equal(rows.find((row) => row.code === '1102').values[1], '-250.1250');
   assert.equal(rows.find((row) => row.code === '1102').total, '0.0000');
+});
+
+
+test('catálogo global backend y frontend conserva los mismos 56 códigos', () => {
+  const php = readFileSync(new URL('../../backend/app/Services/Accounting/CashFlowPresentationCatalog.php', import.meta.url), 'utf8');
+  const codes = [...php.matchAll(/^\s*'([A-Z0-9]+)' => \['label' =>/gm)].map((match) => match[1]);
+  assert.deepEqual(codes, ANNUAL_FLOW_LINES.map((line) => line.code));
 });
