@@ -74,7 +74,9 @@ it('protects formulas, subtotal codes and disclosure warnings', function (): voi
     $settings = incomeLayoutSettings();
     $settings['line_order'][] = 'gross_profit';
     $this->putJson($route, ['expected_revision'=>0,'settings'=>$settings])->assertUnprocessable();
-    $this->getJson('/api/v1/company/financial-layout/ECP')->assertStatus(409);
+    $this->getJson('/api/v1/company/financial-layout/ECP')->assertOk()
+        ->assertJsonPath('catalog.CAPITAL.kind', 'detail')
+        ->assertJsonPath('catalog.EQUITY_TOTAL.kind', 'protected');
 });
 
 it('restricts write access and rejects impersonation of another company', function (): void {
