@@ -17,7 +17,7 @@ final class CashFlowCalculator
      * @param list<int> $fxAccountIds Configured gain/loss accounts of this company.
      * @return array<string, mixed>
      */
-    public function calculate(iterable $rows, string $from, string $to, array $fxAccountIds = [], string $section = 'ALL', ?int $areaId = null, int $page = 1, bool $includeMonthly = false): array
+    public function calculate(iterable $rows, string $from, string $to, array $fxAccountIds = [], string $section = 'ALL', ?int $areaId = null, int $page = 1, bool $includeMonthly = false, array $presentationSettings = []): array
     {
         $totals = array_fill_keys([
             'opening_book_local', 'opening_entries_local', 'opening_local', 'closing_local',
@@ -33,6 +33,8 @@ final class CashFlowCalculator
         $entry = [];
         $previousId = null;
         $conceptResolver = $includeMonthly ? new CashFlowConceptResolver() : null;
+        $areaPresentationRules = $presentationSettings['area_rules'] ?? [];
+        $accountPresentationRules = $presentationSettings['account_rules'] ?? [];
         // Annual matrix is derived from the SAME SQL cursor and classifier as the
         // ordinary report: never make 12 independent history queries or infer
         // categories from descriptions or opposite-side accounts.
@@ -50,7 +52,7 @@ final class CashFlowCalculator
             }
         }
 
-        $consume = function (array $lines) use ($from, $to, $fxAccountIds, $section, $areaId, $page, &$totals, &$counts, &$groups, &$accounts, &$unconfigured, &$details, &$detailCount, &$monthly, $includeMonthly, $conceptResolver): void {
+        $consume = function (array $lines) use ($from, $to, $fxAccountIds, $section, $areaId, $page, &$totals, &$counts, &$groups, &$accounts, &$unconfigured, &$details, &$detailCount, &$monthly, $includeMonthly, $conceptResolver, $areaPresentationRules, $accountPresentationRules): void {
             if ($lines === []) {
                 return;
             }
@@ -182,8 +184,30 @@ final class CashFlowCalculator
                         // area; only the presentation concept is inferred from
                         // unequivocal counterparty accounting codes.
                         $explicitAreaCode = preg_match('/^(?:F318-)?[0-9]{4}$/i', (string) $line->area_code) === 1;
-                        $conceptCode = $explicitAreaCode ? null
-                            : $conceptResolver->resolve($cash, $noncash, $kind, $amount, $isReversal);
+                        $conceptCode = null;
+                        $conceptSource = null;
+                        if (! $explicitAreaCode) {
+                            foreach ($areaPresentationRules as $rule) {
+                                if ($rule['area_code'] === (string) $line->area_code
+                                    && $rule['section'] === $kind
+                                    && $rule['direction'] === ($side === 'inflow_local' ? 'INFLOW' : 'OUTFLOW')) {
+                                    $conceptCode = $rule['target_code'];
+                                    $conceptSource = 'COMPANY_AREA';
+                                    break;
+                                }
+                            }
+                            if ($conceptCode === null) {
+                                $conceptCode = $conceptResolver->resolve(
+                                    $cash, $noncash, $kind, $amount, $isReversal, $accountPresentationRules
+                                );
+                                $conceptSource = $conceptCode === null ? null
+                                    : (array_filter($accountPresentationRules, static fn (array $rule): bool =>
+                                        $rule['target_code'] === $conceptCode
+                                        && $rule['section'] === $kind
+                                        && $rule['direction'] === ($side === 'inflow_local' ? 'INFLOW' : 'OUTFLOW'))
+                                        !== [] ? 'COUNTERPART_OR_COMPANY_ACCOUNT' : 'COUNTERPART');
+                            }
+                        }
                         // Different meanings can share OPE-IN/OUT. They must
                         // remain separate to avoid mixing client collections,
                         // supplier payments and unidentified cash flows.
@@ -192,7 +216,7 @@ final class CashFlowCalculator
                             'section' => $kind, 'area_id' => (int) $line->area_id,
                             'code' => $line->area_code, 'name' => $line->area_name,
                             'concept_code' => $conceptCode,
-                            'concept_source' => $conceptCode === null ? null : 'COUNTERPART',
+                            'concept_source' => $conceptSource,
                             'inflow_local' => '0.0000', 'outflow_local' => '0.0000',
                             'net_local' => '0.0000', 'count' => 0,
                         ];
