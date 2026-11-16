@@ -326,17 +326,20 @@ const activeCompanyIdString = computed<string>({
               Tesorería y reportes
             </p>
 
-            <div
-              class="flex items-center gap-2.5 px-3 py-2 rounded-md text-muted text-xs cursor-default"
-              title="Áreas de Flujo de Efectivo Cuenta 10 (NIC 7)"
+            <button
+              type="button"
+              :class="['flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-colors',
+                currentModule === 'cash-flow' ? 'bg-brand/10 font-semibold text-foreground shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
+              title="Estado de flujos de efectivo: movimientos de efectivo y equivalentes (NIC 7)"
+              aria-label="Flujo de efectivo"
+              :aria-current="currentModule === 'cash-flow' ? 'page' : undefined"
+              @click="emit('navigate', 'cash-flow')"
             >
-              <span class="flex min-w-0 items-center gap-2.5">
-                <Wallet class="w-4 h-4 shrink-0 text-muted" />
-                <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                  Flujo de Efectivo (Cta. 10)
-                </span>
+              <Wallet class="h-4 w-4 shrink-0" />
+              <span v-if="!isCollapsed || isOpenMobile" class="truncate">
+                Flujo de Efectivo (Cta. 10)
               </span>
-            </div>
+            </button>
 
             <button
               type="button"
