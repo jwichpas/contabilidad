@@ -126,3 +126,40 @@ it('derives client collections and supplier payments from PCGE without changing 
     expect($report['totals']['closing_local'])->toBe('62560.0000');
     expect($report['is_reconciled'])->toBeTrue();
 });
+
+
+it('applies scoped account and area presentation rules without altering cash totals', function (): void {
+    $z = '0.0000';
+    $rows = [
+        flowRow(1, 1, '2026-01-04', 'STANDARD', '104100', 'ASSET', '100.0000', $z, 'OPE-IN', 'OPERATING', 'INFLOW'),
+        flowRow(1, 2, '2026-01-04', 'STANDARD', '121200', 'ASSET', $z, '100.0000'),
+        flowRow(2, 3, '2026-01-06', 'STANDARD', '104100', 'ASSET', '50.0000', $z, 'OPE-OTHER', 'OPERATING', 'INFLOW'),
+        flowRow(2, 4, '2026-01-06', 'STANDARD', '121200', 'ASSET', $z, '50.0000'),
+    ];
+    $defaults = (new CashFlowCalculator())->calculate(
+        $rows, '2026-01-01', '2026-12-31', [], 'ALL', null, 1, true
+    );
+    $company = (new CashFlowCalculator())->calculate(
+        $rows, '2026-01-01', '2026-12-31', [], 'ALL', null, 1, true, [
+            'area_rules' => [[
+                'area_code' => 'OPE-IN', 'section' => 'OPERATING',
+                'direction' => 'INFLOW', 'target_code' => 'C0001',
+            ]],
+            'account_rules' => [[
+                'account_code' => '121200', 'section' => 'OPERATING',
+                'direction' => 'INFLOW', 'target_code' => '1107',
+            ]],
+        ]
+    );
+    $get = static function (array $statement, string $target): array {
+        $candidates = array_values(array_filter($statement['monthly'][0]['groups'],
+            static fn (array $group): bool => ($group['concept_code'] ?? null) === $target));
+        expect($candidates)->toHaveCount(1);
+        return $candidates[0];
+    };
+    expect($get($company, 'C0001')['inflow_local'])->toBe('100.0000');
+    expect($get($company, '1107')['inflow_local'])->toBe('50.0000');
+    expect($get($defaults, '1102')['inflow_local'])->toBe('100.0000');
+    expect($defaults['totals'])->toBe($company['totals']);
+    expect($company['is_reconciled'])->toBeTrue();
+});
