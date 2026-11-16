@@ -108,3 +108,44 @@ test('pago a proveedor contra 42 se presenta en 1201 y no como pago sin desglose
   assert.equal(rows.find((row) => row.code === '1201').values[0], '-6000.0000');
   assert.equal(rows.find((row) => row.code === '1298').values[0], '-40.0100');
 });
+
+
+test('códigos globales se conservan y cada empresa aplica su propia configuración sin alterar los totales', () => {
+  const first = report();
+  first.presentation = { revision: 3, settings: {
+    hide_zero: true, labels: { '1102': 'Cobranza de clientes HISA' },
+    hidden_codes: ['1105'],
+    custom_lines: [{ code: 'C0001', label: 'Otros ingresos internos', section: 'OPERATING', direction: 'INFLOW' }],
+    account_rules: [], area_rules: [],
+  }};
+  first.monthly[0].groups.push({
+    section: 'OPERATING', area_id: 6, code: 'OPE-IN', name: 'Cobros clasificados',
+    concept_code: 'C0001', concept_source: 'COMPANY_AREA',
+    inflow_local: '12.3400', outflow_local: zero, net_local: '12.3400', count: 1,
+  });
+  const customized = buildAnnualCashFlowMatrix(first);
+  const standard = buildAnnualCashFlowMatrix(report());
+  assert.equal(customized.find((row) => row.code === '1102').label, 'Cobranza de clientes HISA');
+  assert.equal(standard.find((row) => row.code === '1102').label, 'Venta de bienes y prestación de servicios');
+  assert.equal(customized.find((row) => row.code === 'C0001').values[0], '12.3400');
+  assert.equal(standard.find((row) => row.code === 'C0001'), undefined);
+  assert.equal(customized.find((row) => row.code === '1105'), undefined);
+  assert.equal(customized.find((row) => row.code === '1301').total, '310.1151');
+  assert.equal(customized.find((row) => row.code === '2999').total, '710.1151');
+  assert.equal(customized.find((row) => row.code === '1199').total, '362.4651');
+});
+
+test('ocultar cero no oculta movimientos mensuales compensados en el total del año', () => {
+  const data = report();
+  data.presentation = { revision: 1, settings: {
+    hide_zero: true, hidden_codes: ['1102'], labels: {}, custom_lines: [], account_rules: [], area_rules: [],
+  }};
+  data.monthly[1].groups = [{
+    section: 'OPERATING', area_id: 1, code: 'F318-1102', name: 'Extorno cobro',
+    inflow_local: '-250.1250', outflow_local: zero, net_local: '-250.1250', count: 1,
+  }];
+  const rows = buildAnnualCashFlowMatrix(data);
+  assert.equal(rows.find((row) => row.code === '1102').values[0], '250.1250');
+  assert.equal(rows.find((row) => row.code === '1102').values[1], '-250.1250');
+  assert.equal(rows.find((row) => row.code === '1102').total, '0.0000');
+});
