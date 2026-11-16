@@ -41,6 +41,6 @@ test('Notas NIIF solo aceptan borradores y disponen de edición por empresa',()=
   assert.match(code,/company=props.activeCompanyId/);
   assert.match(code,/canEdit/);
   assert.match(code,/saveNiifNote/);
-  assert.match(code,/expectedRevision/);
+  assert.match(code,/note\.revision/);
   assert.match(code,/no está aprobado/);
 });
