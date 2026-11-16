@@ -135,7 +135,7 @@ export function formatIncomePeriod(from: string, to: string): string {
 
 export function buildComprehensiveIncomePresentation(data: FinancialSnapshot): ComprehensiveIncomePresentation {
   const totals = Object.fromEntries(KEYS.map((key) => [key, ZERO])) as Record<IncomeLineKey, string>;
-  const sources = Object.fromEntries(KEYS.map((key) => [key, []])) as Record<IncomeLineKey, number[]>;
+  const sources = Object.fromEntries(KEYS.map((key) => [key, [] as number[]])) as Record<IncomeLineKey, number[]>;
   const warnings: string[] = [];
   const recorded = data.accounts.filter((account) => account.section === 'result');
   for (const account of recorded) {
@@ -178,7 +178,7 @@ export function buildComprehensiveIncomePresentation(data: FinancialSnapshot): C
   }
   warnings.push(
     'Los otros resultados integrales (ORI) no se calculan en el módulo actual. Hasta validar partidas ORI, el total de resultados integrales permanece pendiente.',
-    'Estado preliminar sin comparativos ni notas aprobadas. Impuesto de enero 2026 en DEMO: supuesto contable, no liquidación tributaria.',
+    'Estado preliminar sin comparativos ni notas aprobadas. Los importes de impuesto deben verificarse contra su determinación fiscal.',
   );
 
   const lines: ComprehensiveIncomeLine[] = KEYS.map((key) => ({
