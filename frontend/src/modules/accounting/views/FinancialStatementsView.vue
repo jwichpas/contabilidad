@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, ref, shallowRef, watch } from 'vue';
 import { FileBarChart2, Printer, RefreshCw } from 'lucide-vue-next';
 import { AccountingApiClient } from '../api/httpClient';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
@@ -8,6 +8,8 @@ import type { FinancialSnapshot, FinancialSnapshotAccount, GeneralLedgerPage } f
 import CashFlowStatementView from './CashFlowStatementView.vue';
 import FinancialPositionSheet from './FinancialPositionSheet.vue';
 import ComprehensiveIncomeSheet from './ComprehensiveIncomeSheet.vue';
+import FinancialLayoutSettingsPanel from './FinancialLayoutSettingsPanel.vue';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
 import { openComprehensiveIncomePrintDialog } from '../utils/printComprehensiveIncome';
 import { openFinancialPositionPrintDialog } from '../utils/printFinancialPosition';
 import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
@@ -39,6 +41,17 @@ const snapshot = shallowRef<FinancialSnapshot | null>(null);
 const loading = shallowRef(false);
 const error = shallowRef<string | null>(null);
 const printNotice = shallowRef<string | null>(null);
+const layoutWarning = shallowRef<string | null>(null);
+const esfLayout = shallowRef<FinancialReportLayoutSettings | null>(null);
+const eriLayout = shallowRef<FinancialReportLayoutSettings | null>(null);
+const esfRevision = shallowRef(0);
+const eriRevision = shallowRef(0);
+const showLayoutEditor = shallowRef(false);
+function saveLayoutLocally(settings: FinancialReportLayoutSettings, revision: number): void {
+  if (activeReport.value === 'snapshot') {esfLayout.value = settings; esfRevision.value = revision;}
+  if (activeReport.value === 'income') {eriLayout.value = settings; eriRevision.value = revision;}
+  layoutWarning.value = null;
+}
 const showTrialBalance = shallowRef(false);
 const selectedAccount = shallowRef<FinancialSnapshotAccount | null>(null);
 const ledger = shallowRef<GeneralLedgerPage | null>(null);
@@ -81,9 +94,26 @@ async function load(): Promise<void> {
   loading.value = true;
   error.value = null;
   snapshot.value = null;
+  esfLayout.value = null; eriLayout.value = null;
+  esfRevision.value = 0; eriRevision.value = 0;
+  layoutWarning.value = null;
   try {
-    const response = await client.value.fetchFinancialSnapshot(asOf.value);
-    if (version === requestVersion && companyId === props.activeCompanyId) snapshot.value = response;
+    const [balance, esf, eri] = await Promise.allSettled([
+      client.value.fetchFinancialSnapshot(asOf.value),
+      client.value.fetchFinancialReportLayout('ESF'),
+      client.value.fetchFinancialReportLayout('ERI'),
+    ]);
+    if (balance.status === 'rejected') throw balance.reason;
+    if (version === requestVersion && companyId === props.activeCompanyId) {
+      snapshot.value = balance.value;
+      esfLayout.value = esf.status === 'fulfilled' ? esf.value.data.settings : null;
+      eriLayout.value = eri.status === 'fulfilled' ? eri.value.data.settings : null;
+      esfRevision.value = esf.status === 'fulfilled' ? esf.value.data.revision : 0;
+      eriRevision.value = eri.status === 'fulfilled' ? eri.value.data.revision : 0;
+      if (esf.status !== 'fulfilled' || eri.status !== 'fulfilled') {
+        layoutWarning.value = 'No fue posible consultar alguna estructura personalizada. Se está mostrando el formato estándar.';
+      }
+    }
   } catch (cause) {
     if (version === requestVersion) error.value = cause instanceof Error ? cause.message : 'No se pudieron consultar los saldos.';
   } finally {
@@ -135,6 +165,7 @@ function printIncome(): void {
     companyName: props.companyName,
     companyTaxId: props.companyTaxId,
     companyAddress: props.companyAddress,
+    layout: eriLayout.value,
   });
   printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes.';
 }
@@ -147,6 +178,7 @@ function printEsf(): void {
     companyName: props.companyName,
     companyTaxId: props.companyTaxId,
     companyAddress: props.companyAddress,
+    layout: esfLayout.value,
   });
   printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes.';
 }
@@ -202,7 +234,10 @@ function printSnapshot(): void {
   printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes para este sitio.';
 }
 
-onMounted(() => { void load(); });
+watch(() => props.activeCompanyId, () => {
+  showLayoutEditor.value = false;
+  void load();
+}, {immediate:true});
 </script>
 
 <template>
@@ -251,6 +286,19 @@ onMounted(() => { void load(); });
       </form>
     </header>
 
+    <div v-if="canConfigureCashFlow && (activeReport === 'snapshot' || activeReport === 'income')" class="flex justify-end">
+      <button type="button" @click="showLayoutEditor = !showLayoutEditor"
+        :aria-expanded="showLayoutEditor"
+        class="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-brand">
+        {{ showLayoutEditor ? 'Cerrar personalización' : 'Personalizar estructura de esta empresa' }}
+      </button>
+    </div>
+    <FinancialLayoutSettingsPanel
+      v-if="showLayoutEditor && canConfigureCashFlow && (activeReport === 'snapshot' || activeReport === 'income')"
+      :statement="activeReport === 'snapshot' ? 'ESF' : 'ERI'"
+      :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
+      :can-edit="canConfigureCashFlow" @saved="saveLayoutLocally" />
+    <p v-if="layoutWarning" role="status" class="rounded-lg border border-border p-3 text-xs text-muted">{{ layoutWarning }}</p>
     <p v-if="printNotice" role="alert" class="mb-3 text-sm text-danger">{{ printNotice }}</p>
     <div v-if="loading" role="status" class="space-y-3" aria-label="Calculando estado financiero">
       <div class="ui-skeleton h-20 rounded-xl" /><div class="ui-skeleton h-40 rounded-xl" /><div class="ui-skeleton h-40 rounded-xl" />
@@ -281,7 +329,7 @@ onMounted(() => { void load(); });
         </div>
       </section>
       <ComprehensiveIncomeSheet v-if="activeReport === 'income' && !selectedAccount"
-        :snapshot="snapshot" :company-name="companyName"
+        :layout="eriLayout" :snapshot="snapshot" :company-name="companyName"
         :company-tax-id="companyTaxId" :company-address="companyAddress"
         @open-ledger="openLedger"
       />
@@ -306,6 +354,7 @@ onMounted(() => { void load(); });
       </div>
       <template v-else>
         <FinancialPositionSheet
+          :layout="esfLayout"
           :snapshot="snapshot"
           :company-name="companyName"
           :company-tax-id="companyTaxId"
