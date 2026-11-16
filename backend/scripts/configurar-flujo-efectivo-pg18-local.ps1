@@ -70,11 +70,19 @@ function Inventory {
         '2026_11_12_000000_create_document_journal_modules'
         '2026_11_12_000001_create_tax_registers_and_allocations'
     )
-    if(@($base | Where-Object { $_ -notin $applied }).Count -ne 0){throw 'Falta alguna migración base del Docker PG18.'}
+    $missingBase=@($base | Where-Object { $_ -notin $applied })
     $unknown=@($applied | Where-Object { $_ -notin $base -and $_ -notin $optional -and $_ -ne $target })
-    if($unknown.Count -gt 0){throw 'Migraciones inesperadas: no modificar automáticamente.'}
     $done=@($optional | Where-Object { $_ -in $applied })
-    if($done.Count -ne 3){throw 'Primero completar 28 migraciones con actualizar-esquema-pg18-local.ps1; no aplicar esta ampliación en una base parcial.'}
+    Write-Host ('[INVENTARIO] Migraciones registradas='+$applied.Count+' | base='+($base.Count-$missingBase.Count)+'/25 | actualización fiscal='+$done.Count+'/3')
+    foreach($migration in $missingBase){Write-Host ('[FALTA BASE] '+$migration)}
+    foreach($migration in $unknown){Write-Host ('[NO RECONOCIDA] '+$migration)}
+    if($missingBase.Count -gt 0 -or $unknown.Count -gt 0){
+        throw 'Inventario distinto del revisado: detener y analizar cada nombre mostrado antes de modificar el esquema.'
+    }
+    if($done.Count -ne 3){
+        foreach($migration in ($optional | Where-Object { $_ -notin $applied })){Write-Host ('[PENDIENTE FISCAL] '+$migration)}
+        throw 'Primero completar 28 migraciones autorizadas con actualizar-esquema-pg18-local.ps1; no aplicar esta ampliación en una base parcial.'
+    }
     return ($target -in $applied)
 }
 function PrivateEnv {
