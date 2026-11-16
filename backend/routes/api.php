@@ -15,6 +15,9 @@ use App\Http\Controllers\Api\V1\Accounting\GetFinancialSnapshotController;
 use App\Http\Controllers\Api\V1\Accounting\GetCashFlowStatementController;
 use App\Http\Controllers\Api\V1\Accounting\GetAnnualCashFlowStatementController;
 use App\Http\Controllers\Api\V1\Accounting\GetGeneralLedgerController;
+use App\Http\Controllers\Api\V1\Accounting\GetTrialBalanceController;
+use App\Http\Controllers\Api\V1\Accounting\GetEquityChangesController;
+use App\Http\Controllers\Api\V1\Accounting\GetIndirectCashFlowController;
 use App\Http\Controllers\Api\V1\Accounting\GetNextJournalEntryNumberController;
 use App\Http\Controllers\Api\V1\Accounting\GetJournalEditorBootstrapController;
 use App\Http\Controllers\Api\V1\Accounting\ListAccountingAccountTreeController;
@@ -168,6 +171,12 @@ Route::prefix('v1')->group(function (): void {
                 ->name('api.v1.accounting.reports.cash-flow-annual');
             Route::get('/accounting/reports/general-ledger', GetGeneralLedgerController::class)
                 ->name('api.v1.accounting.reports.general-ledger');
+            Route::get('/accounting/reports/trial-balance', GetTrialBalanceController::class)
+                ->name('api.v1.accounting.reports.trial-balance');
+            Route::get('/accounting/reports/equity-changes', GetEquityChangesController::class)
+                ->name('api.v1.accounting.reports.equity-changes');
+            Route::get('/accounting/reports/cash-flow/indirect', GetIndirectCashFlowController::class)
+                ->name('api.v1.accounting.reports.cash-flow-indirect');
 
             // Asientos Contables / Libro Diario Bimoneda (Voucher)
             Route::prefix('accounting/journal-entries')->group(function (): void {
