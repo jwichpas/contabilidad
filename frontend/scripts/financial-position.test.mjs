@@ -112,3 +112,25 @@ test('vista ESF formal reutiliza mismo modelo y mantiene acceso al Libro Mayor',
   assert.match(vue, /PDF ESF formal/);
   assert.match(vue, /PDF resumen y resultados/);
 });
+
+
+test('ESF personalizado por empresa conserva igualdad, rubros obligatorios y PDF', () => {
+  const settings={labels:{'ESF_ACT_CORR_EFE':'Caja de Empresa A'},
+    hidden_codes:['ESF_ACT_CORR_GAS_ANT'],
+    line_order:['ESF_ACT_CORR_INV','ESF_ACT_CORR_EFE'],
+    hide_zero:false};
+  const result=buildFinancialPositionPresentation(fixture(),settings);
+  const corriente=result.assetGroups.find((group)=>group.key==='ACTIVO_CORRIENTE');
+  assert.equal(corriente.rows[0].code,'ESF_ACT_CORR_INV');
+  assert.equal(corriente.rows[1].label,'Caja de Empresa A');
+  assert.equal(corriente.rows.find((row)=>row.code==='ESF_ACT_CORR_GAS_ANT'),undefined);
+  assert.equal(result.assetTotal,'94340.0000');
+  assert.equal(result.equityTotal,'63849.3000');
+  assert.equal(result.difference,'0.0000');
+  assert.equal(buildFinancialPositionPresentation(fixture()).assetGroups[0].rows[0].label,'Efectivo y Equivalentes de Efectivo');
+  const html=buildFinancialPositionPrintHtml({snapshot:fixture(),companyName:'Empresa A',
+    companyTaxId:'20999990101',companyAddress:'Local',layout:settings});
+  assert.match(html,/Caja de Empresa A/);
+  assert.doesNotMatch(html,/Gastos pagados por anticipado/);
+  assert.match(html,/94,340\.00/);
+});
