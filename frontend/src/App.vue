@@ -493,6 +493,7 @@ watch(
           :key="`financial-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
           :company-name="activeCompany.businessName"
+          :company-tax-id="activeCompany.taxId"
           :initial-report="currentModule === 'cash-flow' ? 'cash-flow' : 'snapshot'"
           :get-access-token="() => accessToken"
           @select-report="handleNavigate($event === 'cash-flow' ? 'cash-flow' : 'financial-statements')"
