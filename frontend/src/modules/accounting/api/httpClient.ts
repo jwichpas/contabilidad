@@ -33,6 +33,7 @@ import { buildDocumentJournalEntityQuery } from './documentJournalEntityQuery';
 import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage, TaxRegisterPage, TaxRegisterSummary } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
+import type { TrialBalanceReport, EquityChangesReport, IndirectCashFlowReport, NiifNotesResponse } from '../types/financialContinuation.types';
 import type { FinancialReportCode, FinancialReportLayoutResponse, FinancialReportLayoutSettings } from '../types/financialLayout.types';
 import type { AnnualCashFlowReport, CashFlowPresentationResponse, CashFlowPresentationSettings, CashFlowPresentationRevision, CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
 import type {
@@ -563,6 +564,49 @@ export class AccountingApiClient {
       { method: 'GET' }, true,
     );
     return result.data;
+  }
+
+  public async fetchTrialBalance(from: string, to: string): Promise<TrialBalanceReport> {
+    const query = new URLSearchParams({from,to});
+    const response = await this.request<{data:TrialBalanceReport}>(
+      `/api/v1/accounting/reports/trial-balance?${query}`, {method:'GET'}, true,
+    );
+    return response.data;
+  }
+
+  public async fetchEquityChanges(asOf: string): Promise<EquityChangesReport> {
+    const response = await this.request<{data:EquityChangesReport}>(
+      `/api/v1/accounting/reports/equity-changes?as_of=${encodeURIComponent(asOf)}`,
+      {method:'GET'}, true,
+    );
+    return response.data;
+  }
+
+  public async fetchIndirectCashFlow(from: string, to: string): Promise<IndirectCashFlowReport> {
+    const query = new URLSearchParams({from,to});
+    const response = await this.request<{data:IndirectCashFlowReport}>(
+      `/api/v1/accounting/reports/cash-flow/indirect?${query}`, {method:'GET'}, true,
+    );
+    return response.data;
+  }
+
+  public async fetchNiifNotes(year: number): Promise<NiifNotesResponse> {
+    const response = await this.request<{data:NiifNotesResponse}>(
+      `/api/v1/company/niif-notes?year=${year}`, {method:'GET'}, true,
+    );
+    return response.data;
+  }
+
+  public async saveNiifNote(year: number, code: string, narrative: string, expectedRevision: number): Promise<{
+    note_code:string;year:number;revision:number;narrative:string;status:'DRAFT';
+  }> {
+    const response = await this.request<{data:{
+      note_code:string;year:number;revision:number;narrative:string;status:'DRAFT';
+    }}>(`/api/v1/company/niif-notes/${encodeURIComponent(code)}`, {
+      method:'PUT',
+      body:JSON.stringify({year,narrative,expected_revision:expectedRevision}),
+    }, true);
+    return response.data;
   }
 
   public async fetchGeneralLedger(accountId: number, from: string, to: string, page: number): Promise<GeneralLedgerPage> {
