@@ -1,6 +1,8 @@
 import type {
   AnnualCashFlowMonth, AnnualCashFlowReport, CashFlowGroup, CashFlowPresentationSettings,
 } from '../types/cashFlow.types';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
+import { applyFinancialReportLayout } from './financialLayout.ts';
 
 export type AnnualRowKind = 'section' | 'subheading' | 'detail' | 'subtotal' | 'summary' | 'balance' | 'warning';
 export type AnnualFlowSection = 'OPERATING' | 'INVESTING' | 'FINANCING';
@@ -136,7 +138,7 @@ function lineValue(line: LineDefinition, m: AnnualCashFlowMonth, definitions: re
   return addMoney(values);
 }
 
-export function buildAnnualCashFlowMatrix(report: AnnualCashFlowReport): readonly AnnualCashFlowMatrixRow[] {
+export function buildAnnualCashFlowMatrix(report: AnnualCashFlowReport, layout?: FinancialReportLayoutSettings | null): readonly AnnualCashFlowMatrixRow[] {
   if (report.monthly.length !== 12 || report.monthly.some((month, index) => month.month !== index + 1)) {
     throw new Error('Matriz de 12 meses incompleta o desordenada.');
   }
@@ -154,7 +156,7 @@ export function buildAnnualCashFlowMatrix(report: AnnualCashFlowReport): readonl
   const definitions = ANNUAL_FLOW_LINES.flatMap((line): LineDefinition[] =>
     ['1198', '1298', '1498', '1598', '1798', '1898'].includes(line.code)
       ? [...residual(line.code), line] : [line]);
-  return definitions.map((line) => {
+  const base = definitions.map((line) => {
     const values = report.monthly.map((month) => lineValue(line, month, definitions));
     let total = addMoney(values);
     if (line.field === 'opening_local') total = report.totals.opening_local;
@@ -166,6 +168,14 @@ export function buildAnnualCashFlowMatrix(report: AnnualCashFlowReport): readonl
     if (row.values.some((value) => scaled(value) !== 0n)) return true;
     return !(settings.hide_zero || settings.hidden_codes.includes(row.code));
   });
+  const eligible = new Map(ANNUAL_FLOW_LINES
+    .filter((line) => line.kind === 'detail'
+      && !['1198','1298','1498','1598','1798','1898'].includes(line.code))
+    .map((line) => [line.code, line.section + '|' + line.direction]));
+  return applyFinancialReportLayout(
+    base, layout, (code) => eligible.get(code) ?? null, (code) => eligible.has(code),
+    (line) => line.values.every((amount) => scaled(amount) === 0n),
+  );
 }
 export function formatMatrixAmount(value: string): string {
   if (scaled(value) === 0n) return '–';
