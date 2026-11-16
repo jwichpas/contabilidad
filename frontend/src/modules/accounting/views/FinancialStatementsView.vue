@@ -12,6 +12,7 @@ const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly getAccessToken: () => string | null;
   readonly companyName: string;
+  readonly companyTaxId: string;
   readonly initialReport: 'snapshot' | 'cash-flow';
 }>();
 const emit = defineEmits<{ 'select-report': [tab: 'snapshot' | 'cash-flow'] }>();
@@ -180,7 +181,7 @@ onMounted(() => { void load(); });
       <button type="button" :aria-pressed="activeReport === 'snapshot'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'snapshot' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('snapshot')">Situación financiera y resultados</button>
       <button type="button" :aria-pressed="activeReport === 'cash-flow'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'cash-flow' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('cash-flow')">Flujo de efectivo</button>
     </nav>
-    <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :company-name="companyName" :get-access-token="getAccessToken" />
+    <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :company-name="companyName" :company-tax-id="companyTaxId" :get-access-token="getAccessToken" />
   <div v-show="activeReport === 'snapshot'" class="space-y-5">
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="flex items-start gap-3">
