@@ -7,6 +7,8 @@ import type { AnnualCashFlowReport } from '../types/cashFlow.types';
 import { buildAnnualCashFlowMatrix, formatMatrixAmount } from '../utils/annualCashFlowMatrix';
 import { openAnnualCashFlowPrint } from '../utils/printAnnualCashFlow';
 import CashFlowPresentationSettingsPanel from './CashFlowPresentationSettingsPanel.vue';
+import FinancialLayoutSettingsPanel from './FinancialLayoutSettingsPanel.vue';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
 
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
@@ -22,13 +24,22 @@ const pending = shallowRef(false);
 const error = shallowRef<string | null>(null);
 const printError = shallowRef<string | null>(null);
 const showPresentationSettings = shallowRef(false);
+const showLayoutSettings = shallowRef(false);
+const layout = shallowRef<FinancialReportLayoutSettings | null>(null);
+const layoutRevision = shallowRef(0);
+const layoutWarning = shallowRef<string | null>(null);
+function savedLayout(settings: FinancialReportLayoutSettings, revision: number): void {
+  layout.value = settings;
+  layoutRevision.value = revision;
+  layoutWarning.value = null;
+}
 let requestVersion = 0;
 const client = computed(() => new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
   getActiveCompanyId: () => props.activeCompanyId,
 }));
 const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const rows = computed(() => report.value ? buildAnnualCashFlowMatrix(report.value) : []);
+const rows = computed(() => report.value ? buildAnnualCashFlowMatrix(report.value,layout.value) : []);
 const notDetailedCodes = ['1198','1298','1498','1598','1798','1898'];
 const incompleteDetail = computed(() =>
   rows.value.some((row) => notDetailedCodes.includes(row.code) && row.total !== '0.0000'));
@@ -47,12 +58,27 @@ async function loadYear(): Promise<void> {
   const version = ++requestVersion;
   const tenant = props.activeCompanyId;
   report.value = null;
+  layout.value = null;
+  layoutRevision.value = 0;
+  layoutWarning.value = null;
   error.value = null;
   pending.value = true;
   printError.value = null;
   try {
-    const result = await client.value.fetchAnnualCashFlowReport(y, throughMonth.value);
-    if (version === requestVersion && tenant === props.activeCompanyId) report.value = result;
+    const [cash, settings] = await Promise.allSettled([
+      client.value.fetchAnnualCashFlowReport(y, throughMonth.value),
+      client.value.fetchFinancialReportLayout('EFE'),
+    ]);
+    if (cash.status === 'rejected') throw cash.reason;
+    if (version === requestVersion && tenant === props.activeCompanyId) {
+      report.value = cash.value;
+      if (settings.status === 'fulfilled') {
+        layout.value = settings.value.data.settings;
+        layoutRevision.value = settings.value.data.revision;
+      } else {
+        layoutWarning.value = 'Estructura personalizada no disponible. Se muestra el diseño estándar del flujo.';
+      }
+    }
   } catch (cause) {
     if (version === requestVersion && tenant === props.activeCompanyId)
       error.value = cause instanceof Error ? cause.message : 'No se pudo consultar el estado anual.';
@@ -91,7 +117,11 @@ function exportCsv(): void {
   URL.revokeObjectURL(url);
 }
 
-watch(() => props.activeCompanyId, () => { void loadYear(); }, { immediate: true, flush: 'sync' });
+watch(() => props.activeCompanyId, () => {
+  showPresentationSettings.value = false;
+  showLayoutSettings.value = false;
+  void loadYear();
+}, { immediate: true, flush: 'sync' });
 onScopeDispose(() => { requestVersion++; });
 </script>
 
@@ -136,6 +166,18 @@ onScopeDispose(() => { requestVersion++; });
         {{ showPresentationSettings ? 'Cerrar configuración' : 'Configuración del Flujo de Efectivo' }}
       </button>
     </div>
+    <div v-if="canConfigureCashFlow" class="flex justify-end">
+      <button type="button" @click="showLayoutSettings = !showLayoutSettings"
+        :aria-expanded="showLayoutSettings"
+        class="rounded-lg border border-border bg-surface px-4 py-2 text-xs font-medium text-brand">
+        {{ showLayoutSettings ? 'Cerrar diseño del reporte' : 'Personalizar estructura del EFE' }}
+      </button>
+    </div>
+    <FinancialLayoutSettingsPanel v-if="showLayoutSettings && canConfigureCashFlow"
+      statement="EFE" :active-company-id="activeCompanyId"
+      :get-access-token="getAccessToken" :can-edit="canConfigureCashFlow"
+      @saved="savedLayout" />
+    <p v-if="layoutWarning" role="status" class="text-xs text-muted">{{ layoutWarning }}</p>
     <CashFlowPresentationSettingsPanel v-if="showPresentationSettings && canConfigureCashFlow"
       :active-company-id="activeCompanyId" :get-access-token="getAccessToken" :can-edit="canConfigureCashFlow"
       @saved="loadYear" />
@@ -175,7 +217,7 @@ onScopeDispose(() => { requestVersion++; });
 
       <div class="rounded-lg border border-border bg-surface">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-xs text-muted">
-          <span>Empresa: {{ companyName }} · RUC {{ companyTaxId }} · {{ report.year }} hasta {{ months[report.through_month - 1] }} · {{ report.currency }} · Revisión {{ report.presentation.revision }} · 4 decimales exactos</span>
+          <span>Empresa: {{ companyName }} · RUC {{ companyTaxId }} · {{ report.year }} hasta {{ months[report.through_month - 1] }} · {{ report.currency }} · Revisión contable {{ report.presentation.revision }} · Diseño {{ layoutRevision }} · 4 decimales exactos</span>
           <span>Desplaza horizontalmente para ver los 12 meses y el total anual</span>
         </div>
         <div class="max-w-full overflow-x-auto">
