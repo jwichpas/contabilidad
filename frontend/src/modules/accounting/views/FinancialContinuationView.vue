@@ -6,10 +6,13 @@ import type { CompanyId } from '../types/accountingAccount.types';
 import type { TrialBalanceReport, EquityChangesReport } from '../types/financialContinuation.types';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import { openStatementTablePrint } from '../utils/printStatementTable';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
+import { applyFinancialReportLayout } from '../utils/financialLayout';
+import FinancialLayoutSettingsPanel from './FinancialLayoutSettingsPanel.vue';
 
 const props=defineProps<{
   kind:'trial'|'equity';activeCompanyId:CompanyId;getAccessToken:()=>string|null;
-  companyName:string;companyTaxId:string;asOf:string;
+  companyName:string;companyTaxId:string;asOf:string;canEdit:boolean;
 }>();
 const emit=defineEmits<{ledger:[id:number]}>();
 const trial=shallowRef<TrialBalanceReport|null>(null);
@@ -17,6 +20,21 @@ const equity=shallowRef<EquityChangesReport|null>(null);
 const pending=shallowRef(false);
 const error=shallowRef<string|null>(null);
 const printNotice=shallowRef<string|null>(null);
+const layout=shallowRef<FinancialReportLayoutSettings|null>(null);
+const layoutRevision=shallowRef(0);
+const layoutWarning=shallowRef<string|null>(null);
+const showEditor=shallowRef(false);
+const displayComponents=computed(()=>{
+  const components=equity.value?.components.map(x=>({...x,code:x.key}))??[];
+  return applyFinancialReportLayout(
+    components,layout.value,()=> 'PATRIMONIO',()=>true,
+    (row)=>[row.opening,row.opening_entries,row.other_movements,row.closing]
+      .every(x=>x==='0.0000'),
+  );
+});
+function saveLayout(settings:FinancialReportLayoutSettings,revision:number){
+  layout.value=settings;layoutRevision.value=revision;layoutWarning.value=null;
+}
 const client=computed(()=>new AccountingApiClient('',{
   getActiveCompanyId:()=>props.activeCompanyId,
   getAccessToken:props.getAccessToken,
@@ -25,19 +43,29 @@ let version=0;
 const money=(amount:string)=>formatExactLocalAmount(amount,trial.value?.currency??equity.value?.currency??'PEN');
 async function load(){
   const v=++version, company=props.activeCompanyId, kind=props.kind, asOf=props.asOf;
-  trial.value=null;equity.value=null;error.value=null;printNotice.value=null;pending.value=true;
+  trial.value=null;equity.value=null;layout.value=null;layoutRevision.value=0;error.value=null;printNotice.value=null;pending.value=true;
   try{
     const result=kind==='trial'
       ? await client.value.fetchTrialBalance(asOf.slice(0,4)+'-01-01',asOf)
       : await client.value.fetchEquityChanges(asOf);
     if(v!==version||company!==props.activeCompanyId||kind!==props.kind||asOf!==props.asOf)return;
     if(kind==='trial')trial.value=result as TrialBalanceReport;
-    else equity.value=result as EquityChangesReport;
+    else {
+      equity.value=result as EquityChangesReport;
+      try {
+        const configured=await client.value.fetchFinancialReportLayout('ECP');
+        if(v===version&&company===props.activeCompanyId){
+          layout.value=configured.data.settings;layoutRevision.value=configured.data.revision;
+        }
+      }catch {
+        if(v===version)layoutWarning.value='No se pudo cargar la personalización ECP. Se usa el formato estándar.';
+      }
+    }
   }catch(e){
     if(v===version)error.value=e instanceof Error?e.message:'No fue posible consultar este estado.';
   }finally{if(v===version)pending.value=false;}
 }
-watch([()=>props.activeCompanyId,()=>props.asOf,()=>props.kind],()=>{void load();},{immediate:true,flush:'sync'});
+watch([()=>props.activeCompanyId,()=>props.asOf,()=>props.kind],()=>{showEditor.value=false;void load();},{immediate:true,flush:'sync'});
 onScopeDispose(()=>{version++;});
 function print(){
   const t=trial.value,e=equity.value;
@@ -61,7 +89,7 @@ function print(){
     title:'Estado de Cambios en el Patrimonio · Preliminar',
     period:`Del ${e!.from} al ${e!.to}`,currency:e!.currency,
     columns:['Componente','Saldo anterior','Asientos de apertura','Otros movimientos','Saldo al cierre'],
-    rows:[...e!.components.map(x=>[
+    rows:[...displayComponents.value.map(x=>[
       x.label,format(x.opening),format(x.opening_entries),format(x.other_movements),format(x.closing),
     ]),['Resultado del ejercicio (sin cierre)','—','—',format(e!.period_result),format(e!.period_result)],
       ['Patrimonio total incluido resultado',format(e!.opening_equity),format(e!.opening_entries),
@@ -97,6 +125,17 @@ function print(){
         </button>
       </div>
     </header>
+    <div v-if="kind==='equity' && canEdit" class="flex justify-end">
+      <button type="button" @click="showEditor=!showEditor"
+        class="rounded-lg border border-border px-3 py-2 text-sm text-brand">
+        {{showEditor?'Cerrar editor':'Personalizar estructura ECP de esta empresa'}}
+      </button>
+    </div>
+    <FinancialLayoutSettingsPanel v-if="kind==='equity' && canEdit && showEditor"
+      statement="ECP" :active-company-id="activeCompanyId"
+      :get-access-token="getAccessToken" :can-edit="canEdit" @saved="saveLayout"/>
+    <p v-if="layoutWarning" class="text-xs text-muted">{{ layoutWarning }}</p>
+    <p v-if="equity" class="text-xs text-muted">Revisión de estructura ECP: {{layoutRevision}}</p>
     <p v-if="pending" role="status" class="text-sm text-muted">Consultando asientos de esta empresa…</p>
     <p v-if="error" role="alert" class="text-sm text-danger">{{ error }}</p>
     <p v-if="printNotice" role="alert" class="text-sm text-danger">{{ printNotice }}</p>
@@ -147,7 +186,7 @@ function print(){
             <th class="p-3 text-right">Apertura</th><th class="p-3 text-right">Movimientos</th>
             <th class="p-3 text-right">Final</th></tr></thead>
           <tbody>
-            <tr v-for="item in equity.components" :key="item.key" class="border-t border-border">
+            <tr v-for="item in displayComponents" :key="item.key" class="border-t border-border">
               <td class="p-3 font-medium">{{ item.label }}</td>
               <td class="p-3 text-right font-mono">{{ money(item.opening) }}</td>
               <td class="p-3 text-right font-mono">{{ money(item.opening_entries) }}</td>
