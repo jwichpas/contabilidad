@@ -75,3 +75,54 @@ it('does not hide unknown cash flow areas even when their amounts offset', funct
     expect($annual['monthly'][0]['unclassified_count'])->toBe(2);
     expect($annual['monthly'][0]['is_reconciled'])->toBeFalse();
 });
+
+
+it('derives client collections and supplier payments from PCGE without changing OPE areas', function (): void {
+    $z = '0.0000';
+    $rows = [
+        // Demo J01: opening cash must not become revenue.
+        flowRow(1, 1, '2026-01-01', 'OPENING', '104100', 'ASSET', '40000.0000', $z, 'OPE-IN', 'OPERATING', 'INFLOW'),
+        flowRow(1, 2, '2026-01-01', 'OPENING', '501100', 'EQUITY', $z, '40000.0000'),
+        // Demo J02: bank loan draw.
+        flowRow(2, 3, '2026-01-05', 'STANDARD', '104100', 'ASSET', '24000.0000', $z, 'FIN-IN', 'FINANCING', 'INFLOW'),
+        flowRow(2, 4, '2026-01-05', 'STANDARD', '451100', 'LIABILITY', $z, '24000.0000'),
+        // Demo J07: customer trade receivable collected. This is NOT 16000 accrued sales.
+        flowRow(3, 5, '2026-01-20', 'STANDARD', '104100', 'ASSET', '10000.0000', $z, 'OPE-IN', 'OPERATING', 'INFLOW'),
+        flowRow(3, 6, '2026-01-20', 'STANDARD', '121200', 'ASSET', $z, '10000.0000'),
+        // Demo J08: settlement of trade payables.
+        flowRow(4, 7, '2026-01-22', 'STANDARD', '421200', 'LIABILITY', '6000.0000', $z),
+        flowRow(4, 8, '2026-01-22', 'STANDARD', '104100', 'ASSET', $z, '6000.0000', 'OPE-OUT', 'OPERATING', 'OUTFLOW'),
+        // Demo J09: repayment of bank principal.
+        flowRow(5, 9, '2026-01-25', 'STANDARD', '451100', 'LIABILITY', '4000.0000', $z),
+        flowRow(5, 10, '2026-01-25', 'STANDARD', '104100', 'ASSET', $z, '4000.0000', 'FIN-OUT', 'FINANCING', 'OUTFLOW'),
+        // Demo J11: payment of interest classified as operating by company policy.
+        flowRow(6, 11, '2026-01-25', 'STANDARD', '455110', 'LIABILITY', '240.0000', $z),
+        flowRow(6, 12, '2026-01-25', 'STANDARD', '104100', 'ASSET', $z, '240.0000', 'OPE-OUT', 'OPERATING', 'OUTFLOW'),
+        // Demo J12: expense paid on account 63 (rented services).
+        flowRow(7, 13, '2026-01-27', 'STANDARD', '635200', 'EXPENSE', '1200.0000', $z),
+        flowRow(7, 14, '2026-01-27', 'STANDARD', '104100', 'ASSET', $z, '1200.0000', 'OPE-OUT', 'OPERATING', 'OUTFLOW'),
+    ];
+    $report = (new CashFlowCalculator())->calculate($rows, '2026-01-01', '2026-12-31', [], 'ALL', null, 1, true);
+    $groups = $report['monthly'][0]['groups'];
+    $get = static function (string $concept) use ($groups): array {
+        $matches = array_values(array_filter($groups, static fn (array $g): bool =>
+            ($g['concept_code'] ?? '') === $concept));
+        expect($matches)->not->toBeEmpty();
+        return [
+            'inflow_local' => array_reduce($matches, static fn (string $sum, array $g): string =>
+                bcadd($sum, $g['inflow_local'], 4), '0.0000'),
+            'outflow_local' => array_reduce($matches, static fn (string $sum, array $g): string =>
+                bcadd($sum, $g['outflow_local'], 4), '0.0000'),
+        ];
+    };
+    expect($get('1102')['inflow_local'])->toBe('10000.0000');
+    expect($get('1201')['outflow_local'])->toBe('7200.0000'); // proveedores 6000 + alquiler 1200
+    expect($get('1703')['inflow_local'])->toBe('24000.0000');
+    expect($get('1802')['outflow_local'])->toBe('4000.0000');
+    expect($get('1206')['outflow_local'])->toBe('240.0000');
+    expect($report['totals']['operating_local'])->toBe('2560.0000');
+    expect($report['totals']['financing_local'])->toBe('20000.0000');
+    expect($report['totals']['opening_local'])->toBe('40000.0000');
+    expect($report['totals']['closing_local'])->toBe('62560.0000');
+    expect($report['is_reconciled'])->toBeTrue();
+});
