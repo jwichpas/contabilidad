@@ -13,7 +13,7 @@ líneas sin clasificación ni controles de conciliación.
 | ESF | Dos columnas, corriente/no corriente, patrimonio | Sí, por rubro de detalle dentro de su grupo |
 | ERI | Por función, subtotales y OCI pendiente | Sí, por detalle del mismo bloque |
 | EFE | Anual y 12 meses, operación/inversión/financiación | Sí, por concepto dentro de la actividad y sentido |
-| ECP | **Aún no implementado** | Modelo reservado, edición bloqueada hasta existir la vista y conciliación |
+| ECP | Estado de Cambios en el Patrimonio preliminar implementado | Sí, detalles de componentes patrimoniales dentro de su grupo; resultados y totales protegidos |
 
 El EFE **conserva también su configuración preexistente de reglas por
 cuenta/área**. Esas reglas económicas no se modifican en el editor de
@@ -54,8 +54,9 @@ GET /api/v1/company/financial-layout/EFE
 PUT /api/v1/company/financial-layout/EFE
 ```
 
-`GET /api/v1/company/financial-layout/ECP` devuelve **409** hasta
-construir un ECP real. No se generan importes o reportes simulados.
+`GET /api/v1/company/financial-layout/ECP` está disponible para
+la personalización de rubros patrimoniales. La naturaleza legal de cada
+movimiento y otros resultados integrales sigue pendiente de sustento.
 
 Ejemplo de payload PUT (empresa deducida del contexto autenticado):
 
@@ -111,7 +112,7 @@ pnpm build
 ```
 
 Reiniciar frontend y backend. Abrir
-**Estados financieros → ESF o ERI → Personalizar estructura de esta
+**Estados financieros → ESF o ERI o ECP → Personalizar estructura de esta
 empresa**, o **Flujo de Efectivo → Anual detallado → Personalizar
 estructura del EFE**.
 
