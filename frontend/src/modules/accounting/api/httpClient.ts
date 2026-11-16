@@ -33,7 +33,7 @@ import { buildDocumentJournalEntityQuery } from './documentJournalEntityQuery';
 import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage, TaxRegisterPage, TaxRegisterSummary } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
-import type { AnnualCashFlowReport, CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
+import type { AnnualCashFlowReport, CashFlowPresentationResponse, CashFlowPresentationSettings, CashFlowPresentationRevision, CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
   SunatContributorType, SunatCiiuClass, SunatTaxCode,
@@ -570,6 +570,24 @@ export class AccountingApiClient {
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
     );
     return result.data;
+  }
+
+  public async fetchCashFlowPresentation(): Promise<CashFlowPresentationResponse> {
+    return this.request<CashFlowPresentationResponse>(
+      '/api/v1/company/cash-flow-presentation', { method: 'GET' }, true,
+    );
+  }
+
+  public async saveCashFlowPresentation(
+    settings: CashFlowPresentationSettings, expectedRevision: number,
+  ): Promise<CashFlowPresentationRevision> {
+    const response = await this.request<{ data: CashFlowPresentationRevision }>(
+      '/api/v1/company/cash-flow-presentation', {
+        method: 'PUT',
+        body: JSON.stringify({ settings, expected_revision: expectedRevision }),
+      }, true,
+    );
+    return response.data;
   }
 
   public async fetchAnnualCashFlowReport(year: number, throughMonth = 12): Promise<AnnualCashFlowReport> {
