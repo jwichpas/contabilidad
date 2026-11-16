@@ -166,6 +166,7 @@ function printIncome(): void {
     companyTaxId: props.companyTaxId,
     companyAddress: props.companyAddress,
     layout: eriLayout.value,
+    layoutRevision: eriRevision.value,
   });
   printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes.';
 }
@@ -179,6 +180,7 @@ function printEsf(): void {
     companyTaxId: props.companyTaxId,
     companyAddress: props.companyAddress,
     layout: esfLayout.value,
+    layoutRevision: esfRevision.value,
   });
   printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes.';
 }
