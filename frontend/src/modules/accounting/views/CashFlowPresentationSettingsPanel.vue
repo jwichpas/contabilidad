@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue';
-import { AlertTriangle, Plus, RefreshCw, Save, Trash2 } from 'lucide-vue-next';
+import { AlertTriangle, Plus, RefreshCw, Save } from 'lucide-vue-next';
 import { AccountingApiClient } from '../api/httpClient';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type {
