@@ -44,3 +44,13 @@ test('Notas NIIF solo aceptan borradores y disponen de edición por empresa',()=
   assert.match(code,/note\.revision/);
   assert.match(code,/no está aprobado/);
 });
+
+
+test('ECP reutiliza el editor de estructuras multiempresa sin mover subtotales',()=>{
+  const source=readFileSync(new URL('../src/modules/accounting/views/FinancialContinuationView.vue',import.meta.url),'utf8');
+  assert.match(source,/fetchFinancialReportLayout\('ECP'\)/);
+  assert.match(source,/applyFinancialReportLayout/);
+  assert.match(source,/<FinancialLayoutSettingsPanel/);
+  assert.match(source,/statement="ECP"/);
+  assert.match(source,/:can-edit="canEdit"/);
+});
