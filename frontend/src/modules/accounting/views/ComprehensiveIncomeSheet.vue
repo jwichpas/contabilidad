@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { FinancialSnapshot, FinancialSnapshotAccount } from '../types/financialSnapshot.types';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
 import {
   buildComprehensiveIncomePresentation, formatIncomeAmount,
   formatIncomePercent, formatIncomePeriod,
@@ -12,9 +13,10 @@ const props = defineProps<{
   readonly companyName: string;
   readonly companyTaxId: string;
   readonly companyAddress: string;
+  readonly layout?: FinancialReportLayoutSettings | null;
 }>();
 const emit = defineEmits<{openLedger: [account: FinancialSnapshotAccount]}>();
-const report = computed(() => buildComprehensiveIncomePresentation(props.snapshot));
+const report = computed(() => buildComprehensiveIncomePresentation(props.snapshot,props.layout));
 const byAccountId = computed(() => new Map(props.snapshot.accounts.map((a) => [a.id,a])));
 const sales = computed(() => report.value.lines.find((line) => line.key === 'net_sales')?.amount ?? '0.0000');
 function open(accountId: number): void {
