@@ -125,10 +125,9 @@ function printSnapshot(): void {
   if (!data || loading.value || selectedAccount.value) return;
   const amount = (value: string): string => formatExactLocalAmount(value, data.currency);
   const totals = data.totals;
-  const taxAccounts = data.accounts.filter((account) => account.code.startsWith('88'));
-  const taxExpense = taxAccounts.reduce(
-    (sum, account) => sum + Number(account.period_amount_local ?? '0'), 0,
-  );
+  // El backend conserva cifras decimales exactas y agrupa 88 en este rubro.
+  const taxExpense = data.rubrics.find((rubric) => rubric.code === 'ER_IMPUESTO_RENTA')
+    ?.period_amount_local ?? '0.0000';
   const warnings = [
     'Estado preliminar sin comparativos, cierre anual ni notas completas NIIF.',
     'El estado de resultados es una vista por naturaleza del Libro Diario, no un juego integral de cuatro estados financieros.',
@@ -155,7 +154,7 @@ function printSnapshot(): void {
       { heading: 'Estado de resultados por naturaleza', rows: [
         { label: 'Ingresos', value: amount(data.income_statement.revenue) },
         { label: 'Gastos y costos (incluye impuesto a las ganancias)', value: amount(data.income_statement.expenses) },
-        { label: 'Impuesto a las ganancias incluido en gastos (grupo 88)', value: amount(taxExpense.toFixed(4)) },
+        { label: 'Impuesto a las ganancias incluido en gastos (grupo 88)', value: amount(taxExpense) },
         { label: 'Resultado neto del periodo', value: amount(data.income_statement.net) },
       ] },
       { heading: 'Detalle contable por rubros', rows: data.rubrics
