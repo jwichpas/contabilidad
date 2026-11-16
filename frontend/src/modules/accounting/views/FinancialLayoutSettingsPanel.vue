@@ -101,7 +101,9 @@ async function save(): Promise<void> {
     if (id === requestId && company === props.activeCompanyId && statement === props.statement) {
       emit('saved', result.settings, result.revision);
       await reload();
-      message.value = 'Se guardó la revisión ' + result.revision + ' para esta empresa.';
+      if (company === props.activeCompanyId && statement === props.statement) {
+        message.value = 'Se guardó la revisión ' + result.revision + ' para esta empresa.';
+      }
     }
   } catch(cause) {
     if (id === requestId && company === props.activeCompanyId && statement === props.statement) {
