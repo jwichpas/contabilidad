@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Accounting\TaxRegisterController;
 use App\Http\Controllers\Api\V1\Accounting\DeactivateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\GetFinancialSnapshotController;
 use App\Http\Controllers\Api\V1\Accounting\GetCashFlowStatementController;
+use App\Http\Controllers\Api\V1\Accounting\GetAnnualCashFlowStatementController;
 use App\Http\Controllers\Api\V1\Accounting\GetGeneralLedgerController;
 use App\Http\Controllers\Api\V1\Accounting\GetNextJournalEntryNumberController;
 use App\Http\Controllers\Api\V1\Accounting\GetJournalEditorBootstrapController;
@@ -161,6 +162,8 @@ Route::prefix('v1')->group(function (): void {
                 ->name('api.v1.accounting.reports.financial-snapshot');
             Route::get('/accounting/reports/cash-flow', GetCashFlowStatementController::class)
                 ->name('api.v1.accounting.reports.cash-flow');
+            Route::get('/accounting/reports/cash-flow/annual', GetAnnualCashFlowStatementController::class)
+                ->name('api.v1.accounting.reports.cash-flow-annual');
             Route::get('/accounting/reports/general-ledger', GetGeneralLedgerController::class)
                 ->name('api.v1.accounting.reports.general-ledger');
 
