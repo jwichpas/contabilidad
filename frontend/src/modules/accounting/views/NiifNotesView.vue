@@ -55,12 +55,12 @@ const evidence=computed(()=>{
     ['N07','Costo neto contable (33 menos 39)',signedValue(['33','39'],false)],
     ['N08','Saldo de obligaciones financieras (45)',signedValue(['45'],true)],
     ['N09','Saldo neto de tributos (40)',signedValue(['40'],true)],
-    ['N10','Patrimonio incluido resultado sin cierre',source.totals.liabilities_equity_result],
+    ['N10','Patrimonio incluido resultado sin cierre',signedValue(['50','52','56','57','58','59'],true)],
     ['N11','Ventas del ejercicio',source.income_statement.revenue],
     ['N12','Efectivo conciliable con balance',signedValue(['10'],false)],
   ] as const;
-  return rows.filter((x):x is typeof x & {2:string}=>typeof x[2]==='string')
-    .map(([code,label,value])=>({code,label,value:value as string}));
+  return rows.flatMap(([code,label,value])=>
+    value===null?[]:[{code,label,value}]);
 });
 const selectedEvidence=computed(()=>evidence.value.filter(x=>x.code===selected.value));
 async function load(){
