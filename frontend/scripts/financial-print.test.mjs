@@ -27,6 +27,7 @@ test('ambos accesos al flujo de efectivo comparten vista con enlaces accesibles'
   assert.match(app, /hash\.includes\('flujo-efectivo'\)/);
   assert.match(app, /currentModule === 'financial-statements' \|\| currentModule === 'cash-flow'/);
   assert.match(report, /selectReport\('cash-flow'\)/);
-  assert.match(report, /Imprimir \/ Guardar PDF/);
+  assert.match(report, /PDF ESF formal/);
+  assert.match(report, /PDF resumen y resultados/);
   assert.match(report, /companyName/);
 });
