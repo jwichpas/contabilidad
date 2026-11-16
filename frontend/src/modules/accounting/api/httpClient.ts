@@ -33,6 +33,7 @@ import { buildDocumentJournalEntityQuery } from './documentJournalEntityQuery';
 import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage, TaxRegisterPage, TaxRegisterSummary } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
+import type { FinancialReportCode, FinancialReportLayoutResponse, FinancialReportLayoutSettings } from '../types/financialLayout.types';
 import type { AnnualCashFlowReport, CashFlowPresentationResponse, CashFlowPresentationSettings, CashFlowPresentationRevision, CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
@@ -570,6 +571,23 @@ export class AccountingApiClient {
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
     );
     return result.data;
+  }
+
+  public async fetchFinancialReportLayout(statement: FinancialReportCode): Promise<FinancialReportLayoutResponse> {
+    return this.request<FinancialReportLayoutResponse>(
+      `/api/v1/company/financial-layout/${encodeURIComponent(statement)}`,
+      { method: 'GET' }, true,
+    );
+  }
+
+  public async saveFinancialReportLayout(
+    statement: FinancialReportCode, settings: FinancialReportLayoutSettings, expectedRevision: number,
+  ): Promise<FinancialReportLayoutResponse['data']> {
+    const response = await this.request<{data: FinancialReportLayoutResponse['data']}>(
+      `/api/v1/company/financial-layout/${encodeURIComponent(statement)}`,
+      { method: 'PUT', body: JSON.stringify({settings, expected_revision: expectedRevision}) }, true,
+    );
+    return response.data;
   }
 
   public async fetchCashFlowPresentation(): Promise<CashFlowPresentationResponse> {
