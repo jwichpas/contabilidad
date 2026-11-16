@@ -33,7 +33,7 @@ import { buildDocumentJournalEntityQuery } from './documentJournalEntityQuery';
 import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage, TaxRegisterPage, TaxRegisterSummary } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
-import type { CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
+import type { AnnualCashFlowReport, CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
   SunatContributorType, SunatCiiuClass, SunatTaxCode,
@@ -568,6 +568,14 @@ export class AccountingApiClient {
     const query = new URLSearchParams({ account_id: String(accountId), from, to, page: String(page) });
     const result = await this.request<{ data: GeneralLedgerPage }>(
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
+  public async fetchAnnualCashFlowReport(year: number): Promise<AnnualCashFlowReport> {
+    const result = await this.request<{ data: AnnualCashFlowReport }>(
+      `/api/v1/accounting/reports/cash-flow/annual?year=${encodeURIComponent(String(year))}`,
+      { method: 'GET' }, true,
     );
     return result.data;
   }
