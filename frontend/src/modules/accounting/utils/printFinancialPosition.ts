@@ -12,6 +12,7 @@ export interface FinancialPositionPrintInput {
   readonly companyTaxId: string;
   readonly companyAddress: string;
   readonly layout?: FinancialReportLayoutSettings | null;
+  readonly layoutRevision?: number;
 }
 
 function escapeHtml(value: string): string {
@@ -95,6 +96,7 @@ ${input.companyAddress ? '<div class="meta">' + e(input.companyAddress) + '</div
 <h1>Estado de Situación Financiera</h1>
 <p class="subtitle">${e(formatPositionDate(data.as_of))}</p>
 <p class="subtitle">${e(currencyPositionLabel(data.currency))}</p>
+<p class="subtitle">Revisión de estructura de empresa: ${input.layoutRevision ?? 0}</p>
 <p class="preliminary">PRELIMINAR · SIN NOTAS EXPLICATIVAS COMPLETAS NI COMPARATIVOS</p>
 </header>
 <div class="two-columns">
