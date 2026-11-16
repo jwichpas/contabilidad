@@ -165,6 +165,7 @@ const activeCompany = computed<ActiveCompanyInfo>(() => {
       id: found.id,
       taxId: found.tax_id,
       businessName: found.business_name,
+      legalAddress: found.legal_address,
       fiscalRegime: found.fiscal_regime ?? 'Régimen General · PRICO',
     };
   }
@@ -494,6 +495,7 @@ watch(
           :active-company-id="activeCompanyId"
           :company-name="activeCompany.businessName"
           :company-tax-id="activeCompany.taxId"
+          :company-address="activeCompany.legalAddress ?? ''"
           :can-configure-cash-flow="canDeactivateEntities"
           :initial-report="currentModule === 'cash-flow' ? 'cash-flow' : 'snapshot'"
           :get-access-token="() => accessToken"
