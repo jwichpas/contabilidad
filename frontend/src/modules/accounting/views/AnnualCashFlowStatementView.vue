@@ -147,8 +147,10 @@ onScopeDispose(() => { requestVersion++; });
         <div>
           <strong>Presentación pendiente de revisión.</strong>
           <p v-if="incompleteDetail" class="mt-1 text-muted">
-            Hay cobros o pagos cuyo tipo exacto (ventas, proveedores, préstamos, etc.) no consta en el código del área.
-            Permanecen visibles en «pendientes de desagregación»; no se han atribuido por la glosa ni por la cuenta contrapartida.
+            Algunos cobros o pagos no pueden asociarse a un concepto específico con evidencia suficiente.
+            El sistema reconoce cobranzas comerciales (12/13), pagos a proveedores (42/43)
+            y préstamos (45) cuando el asiento permite una relación contable inequívoca.
+            Los casos ambiguos permanecen en «pendientes de desagregación».
           </p>
           <p v-if="!report.classification_complete" class="mt-1 text-muted">
             Existen movimientos sin clasificación o ajustes que impiden confirmar el flujo completo.
@@ -199,8 +201,10 @@ onScopeDispose(() => { requestVersion++; });
       </div>
       <p class="text-xs leading-relaxed text-muted">
         Los códigos se utilizan únicamente para esta presentación referencial inspirada en el Formato 3.18.
-        Para detallar una actividad, configura su área de flujo con el código específico (por ejemplo, F318-1102 para cobros por ventas)
-        antes de registrar los movimientos. Cambiar una etiqueta no reclasifica asientos históricos.
+        Los conceptos se obtienen del área de flujo explícita o de la contrapartida del mismo asiento, si es inequívoca.
+        Por ejemplo, una cobranza simple contra la cuenta 12 se presenta en 1102 y un pago a proveedores contra 42 en 1201.
+        Cuando hay varias posibles clasificaciones, el importe queda pendiente de desagregación hasta su revisión.
+        Esta presentación no altera el asiento histórico ni sustituye un archivo PLE homologado.
         La impresión es preliminar y no reemplaza un archivo PLE homologado ni las revelaciones requeridas por NIC 7.
       </p>
     </template>
