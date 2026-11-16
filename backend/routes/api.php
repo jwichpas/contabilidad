@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\V1\Company\InitializeCompanyChartOfAccountsControll
 use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\CompanyCashFlowPresentationController;
 use App\Http\Controllers\Api\V1\Company\CompanyFinancialReportLayoutController;
+use App\Http\Controllers\Api\V1\Company\CompanyNiifNotesController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\CostCenterMasterController;
@@ -291,6 +292,12 @@ Route::prefix('v1')->group(function (): void {
                     ->where('statement', 'ESF|ERI|EFE|ECP')
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
                     ->name('api.v1.company.financial-layout.update');
+                Route::get('/niif-notes', [CompanyNiifNotesController::class, 'index'])
+                    ->name('api.v1.company.niif-notes.index');
+                Route::put('/niif-notes/{code}', [CompanyNiifNotesController::class, 'save'])
+                    ->where('code', 'N(0[1-9]|1[0-6])')
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->name('api.v1.company.niif-notes.save');
 
                 // Historial tributario por ejercicio: sólo revisiones inmutables.
                 Route::get('/fiscal-profiles', [CompanyFiscalProfileController::class, 'index'])
