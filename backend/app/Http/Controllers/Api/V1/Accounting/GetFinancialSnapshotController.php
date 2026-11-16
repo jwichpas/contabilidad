@@ -135,8 +135,19 @@ final readonly class GetFinancialSnapshotController
 
         $rubricDefinitions = DB::table('financial_statement_rubrics')
             ->where('is_active', true)
-            ->get(['code', 'name', 'group_name', 'presentation_order'])
+            ->get(['code', 'name', 'group_name', 'presentation_order', 'statement_type'])
             ->keyBy('code');
+        // Only standard ESF reference rows; the amounts remain tenant-scoped,
+        // sourced exclusively from posted journal lines. This supplies the
+        // headings with blank lines shown in a formal balance sheet.
+        $esfCatalog = $rubricDefinitions->filter(
+            static fn ($rubric): bool => (string) $rubric->statement_type === 'ESF'
+        )->sortBy('presentation_order')->values()->map(static fn ($rubric): array => [
+            'code' => (string) $rubric->code,
+            'name' => (string) $rubric->name,
+            'group_name' => (string) $rubric->group_name,
+            'presentation_order' => (int) $rubric->presentation_order,
+        ])->all();
         $rubricTotals = [];
         $unmappedAccountIds = [];
         foreach ($accounts as $account) {
@@ -195,6 +206,7 @@ final readonly class GetFinancialSnapshotController
             'currency' => $currency,
             'accounts' => $accounts,
             'rubrics' => $rubrics,
+            'esf_catalog' => $esfCatalog,
             'unmapped_account_ids' => $unmappedAccountIds,
             'analytic_routing_status' => $analyticRoutingStatus,
             'totals' => array_merge($totals, [
