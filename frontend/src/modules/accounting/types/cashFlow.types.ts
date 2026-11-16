@@ -102,5 +102,6 @@ export interface AnnualCashFlowMonth {
 }
 export interface AnnualCashFlowReport extends CashFlowReport {
   readonly year: number;
+  readonly through_month: number;
   readonly monthly: readonly AnnualCashFlowMonth[];
 }
