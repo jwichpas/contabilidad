@@ -4,6 +4,7 @@ export interface ActiveCompanyInfo {
   readonly id: number;
   readonly taxId: string;
   readonly businessName: string;
+  readonly legalAddress?: string;
   readonly fiscalRegime: string;
 }
 
