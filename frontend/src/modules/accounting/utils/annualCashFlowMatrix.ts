@@ -127,7 +127,7 @@ function lineValue(line: LineDefinition, m: AnnualCashFlowMonth): string {
   const values = m.groups.filter((group: CashFlowGroup) => {
     if (group.section !== section) return false;
     if (line.kind === 'subtotal') return true;
-    const mapped = areaCode(group.code);
+    const mapped = areaCode(group.code) ?? group.concept_code ?? null;
     const recognized = ANNUAL_FLOW_LINES.some((candidate) =>
       candidate.kind === 'detail' && candidate.code === mapped
       && candidate.section === section && candidate.direction === direction);
