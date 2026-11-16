@@ -11,7 +11,7 @@ import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
 import AnnualCashFlowStatementView from './AnnualCashFlowStatementView.vue';
 
-const props = defineProps<{ readonly activeCompanyId: CompanyId; readonly companyName: string; readonly companyTaxId: string; readonly getAccessToken: () => string | null }>();
+const props = defineProps<{ readonly activeCompanyId: CompanyId; readonly companyName: string; readonly companyTaxId: string; readonly canConfigureCashFlow: boolean; readonly getAccessToken: () => string | null }>();
 const printNotice = shallowRef<string | null>(null);
 const reportView = shallowRef<'annual' | 'period'>('annual');
 const now = new Date();
@@ -111,7 +111,7 @@ watch(() => props.activeCompanyId, () => {
         class="rounded-lg px-3 py-2 text-sm font-medium">Detalle por período</button>
     </nav>
     <AnnualCashFlowStatementView v-if="reportView === 'annual'"
-      :active-company-id="activeCompanyId" :company-name="companyName" :company-tax-id="companyTaxId" :get-access-token="getAccessToken" />
+      :active-company-id="activeCompanyId" :company-name="companyName" :company-tax-id="companyTaxId" :can-configure-cash-flow="canConfigureCashFlow" :get-access-token="getAccessToken" />
     <template v-else>
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="max-w-2xl">
