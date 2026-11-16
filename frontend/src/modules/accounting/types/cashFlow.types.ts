@@ -28,7 +28,7 @@ export interface CashFlowGroup {
   readonly net_local: string;
   readonly count: number;
   readonly concept_code?: string | null;
-  readonly concept_source?: 'COUNTERPART' | 'COUNTERPART_OR_COMPANY_ACCOUNT' | 'COMPANY_AREA' | null;
+  readonly concept_source?: 'COUNTERPART' | 'COMPANY_ACCOUNT' | 'COMPANY_AREA' | null;
 }
 
 export interface CashFlowReport {
