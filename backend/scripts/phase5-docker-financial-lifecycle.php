@@ -111,6 +111,7 @@ try {
     $actor = User::query()->where('email', 'demo.pg18@example.test')->first();
     $check($company !== null && $actor !== null, 'No existe la empresa PCGE Docker o el usuario de laboratorio.');
     $companyId = (int)$company->id;
+    // Las arrow functions capturan variables automaticamente; las funciones tradicionales requieren use (...).
     $membership = $tenant->run($companyId, static fn (): bool =>
         $db->table('company_user')->where('company_id', $companyId)
             ->where('user_id', $actor->id)->where('role', 'ADMIN')
@@ -118,7 +119,7 @@ try {
     $check($membership, 'Usuario DEMO sin membresia ADMIN.');
 
     $phase = 'preflight tenant';
-    $data = $tenant->run($companyId, static function () use ($db,$mapping,$entries,$marker,$check): array {
+    $data = $tenant->run($companyId, static function () use ($db,$mapping,$entries,$marker,$check,$companyId): array {
         $accounts = $db->table('accounting_accounts')->whereIn('code', array_values($mapping))
             ->where('is_operational', true)->where('is_active', true)
             ->get()->keyBy('code');
