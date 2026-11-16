@@ -14,7 +14,7 @@ final readonly class CashFlowReportService
     public function __construct(private CashFlowCalculator $calculator) {}
 
     /** @return array<string, mixed> */
-    public function get(string $from, string $to, string $section = 'ALL', ?int $areaId = null, int $page = 1): array
+    public function get(string $from, string $to, string $section = 'ALL', ?int $areaId = null, int $page = 1, bool $includeMonthly = false): array
     {
         $companyId = app(TenantContext::class)->requireCompanyId(self::class);
         $settings = DB::table('company_settings as s')
@@ -68,6 +68,6 @@ final readonly class CashFlowReportService
             ->orderBy('j.entry_date')->orderBy('j.id')->orderBy('l.line_number')->orderBy('l.id')
             ->cursor();
         $fxIds = array_values(array_map('intval', array_filter([$settings->fx_gain_account_id, $settings->fx_loss_account_id])));
-        return ['currency' => (string) $settings->currency] + $this->calculator->calculate($rows, $from, $to, $fxIds, $section, $areaId, $page);
+        return ['currency' => (string) $settings->currency] + $this->calculator->calculate($rows, $from, $to, $fxIds, $section, $areaId, $page, $includeMonthly);
     }
 }
