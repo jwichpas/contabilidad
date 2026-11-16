@@ -157,3 +157,17 @@ test('catálogo global backend y frontend conserva los mismos 56 códigos', () =
   const codes = [...php.matchAll(/^\s*'([A-Z0-9]+)' => \['label' =>/gm)].map((match) => match[1]);
   assert.deepEqual(codes, ANNUAL_FLOW_LINES.map((line) => line.code));
 });
+
+
+test('EFE personalizado por empresa altera solo descripción de detalle y conserva flujos',()=>{
+  const data=report();
+  const settings={labels:{'1102':'Cobranzas comerciales Empresa A'},
+    hidden_codes:[],line_order:['1103','1102'],hide_zero:false};
+  const changed=buildAnnualCashFlowMatrix(data,settings);
+  const base=buildAnnualCashFlowMatrix(data);
+  assert.equal(changed.find((row)=>row.code==='1102').label,'Cobranzas comerciales Empresa A');
+  assert.equal(base.find((row)=>row.code==='1102').label,'Venta de bienes y prestación de servicios');
+  assert.equal(changed.find((row)=>row.code==='1301').total,base.find((row)=>row.code==='1301').total);
+  assert.equal(changed.find((row)=>row.code==='2999').total,'710.1151');
+  assert.equal(changed.find((row)=>row.code==='2998').total,'0.0000');
+});
