@@ -10,6 +10,7 @@ import { openAnnualCashFlowPrint } from '../utils/printAnnualCashFlow';
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly companyName: string;
+  readonly companyTaxId: string;
   readonly getAccessToken: () => string | null;
 }>();
 const year = ref(new Date().getFullYear());
@@ -56,6 +57,7 @@ function printYear(): void {
   const ok = openAnnualCashFlowPrint({
     year: report.value.year,
     company: props.companyName,
+    taxId: props.companyTaxId,
     currency: report.value.currency,
     rows: rows.value,
     classified: report.value.classification_complete && !incompleteDetail.value,
@@ -143,7 +145,7 @@ onScopeDispose(() => { requestVersion++; });
 
       <div class="rounded-lg border border-border bg-surface">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-xs text-muted">
-          <span>Empresa: {{ companyName }} · {{ report.year }} · {{ report.currency }} · 4 decimales exactos</span>
+          <span>Empresa: {{ companyName }} · RUC {{ companyTaxId }} · {{ report.year }} · {{ report.currency }} · 4 decimales exactos</span>
           <span>Desplaza horizontalmente para ver los 12 meses y el total anual</span>
         </div>
         <div class="max-w-full overflow-x-auto">
