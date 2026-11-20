@@ -48,14 +48,14 @@ export type PayrollParameterEntry = {
   kind: PayrollParameterKind;
   period: string;
   source: string;
-  url: string;
+  url?: string | null;
 } & ({ kind: 'rmv' | 'uit'; amount: string } | ({ kind: 'afp' } & PayrollAfpRates));
 export type PayrollParameterRevision = Revision<PayrollParameterEntry> & {
   created_at: string | null;
   created_by: number | null;
 };
 export type PayrollParameters = {
-  minimum: { amount: string; from: string; rule: string; url: string } | null;
+  minimum: { amount: string; from: string; rule: string; url: string | null } | null;
   family_allowance: string | null;
   night_minimum: string | null;
   uit: string | null;
@@ -66,7 +66,7 @@ export type PayrollParameters = {
   essalud: string;
   gratification_bonus: { essalud: string; eps: string };
   afp: {
-    source: string; url?: string; insurance: string; insurance_ceiling: string;
+    source: string; url?: string | null; insurance: string; insurance_ceiling: string;
     administrators: Record<string, { flow: string; balance: string }>;
   } | null;
 };

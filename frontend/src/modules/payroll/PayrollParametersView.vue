@@ -35,8 +35,9 @@ const pensionRows = computed(() => Object.entries(props.parameters?.afp?.adminis
     <section aria-labelledby="payroll-legal-base" class="overflow-hidden rounded-lg border border-line bg-surf">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
         <h2 id="payroll-legal-base" class="font-semibold">Remuneraciones y umbrales</h2>
-        <a v-if="parameters.minimum" :href="parameters.minimum.url" target="_blank" rel="noopener noreferrer"
+        <a v-if="parameters.minimum?.url" :href="parameters.minimum.url" target="_blank" rel="noopener noreferrer"
           class="text-sm text-brand underline">{{ parameters.minimum.rule }} · Desde {{ parameters.minimum.from }}</a>
+        <span v-else-if="parameters.minimum" class="text-sm text-muted">{{ parameters.minimum.rule }} · Desde {{ parameters.minimum.from }}</span>
       </div>
       <dl class="grid grid-cols-2 gap-px bg-line xl:grid-cols-4">
         <div v-for="{ title, value } in base" :key="title" class="min-w-0 bg-surf p-4">

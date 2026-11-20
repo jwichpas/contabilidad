@@ -90,7 +90,7 @@ final readonly class PayrollController
             'expected_revision' => self::REVISION,
             'period' => ['required', 'string', $kind === 'uit' ? $annual : $monthly],
             'source' => ['required', 'string', 'max:250'],
-            'url' => ['required', 'url:https', 'max:500'],
+            'url' => ['nullable', 'url:https', 'max:500'],
         ]);
         unset($data['period']);
 

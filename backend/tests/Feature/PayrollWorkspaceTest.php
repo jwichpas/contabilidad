@@ -157,7 +157,7 @@ it('uses the October 2026 increase and itemizes the family allowance and AFP bal
         ->assertJsonPath('data.data.totals.provision_total', '602.46')
         ->assertJsonPath('data.data.rows.0.amounts.employer_cost', '1987.07');
     $ratePath = '/api/v1/payroll/parameters/afp/2026-11';
-    $decree = ['source' => 'Publicación SBS de prueba', 'url' => 'https://www.sbs.gob.pe'];
+    $decree = ['source' => 'Publicación SBS de prueba'];
     $rates = $decree + [
         'expected_revision' => 0, 'contribution' => '11.00', 'insurance' => '1.47', 'insurance_ceiling' => '12000.00',
         'administrators' => [
@@ -197,11 +197,16 @@ it('resolves minimum wages by effective month and tax units by year inside each 
         ->assertUnprocessable()->assertJsonValidationErrors('period');
     $this->putJson($path.'/parameters/uit/2027-01', $data + ['amount' => '5600.00'])
         ->assertUnprocessable()->assertJsonValidationErrors('period');
-    $this->putJson($path.'/parameters/rmv/2027-03', $data + ['amount' => '1300.00'])->assertOk();
+    $rmv = ['expected_revision' => 0, 'source' => 'Norma de prueba', 'amount' => '1300.00'];
+    $this->putJson($path.'/parameters/rmv/2027-03', $rmv + ['url' => 'http://www.gob.pe'])
+        ->assertUnprocessable()->assertJsonValidationErrors('url');
+    $this->putJson($path.'/parameters/rmv/2027-03', $rmv + ['url' => ''])->assertOk()
+        ->assertJsonPath('data.data.url', null);
     $this->putJson($path.'/parameters/uit/2027', $data + ['amount' => '5600.00'])->assertOk();
     $this->getJson($path.'/periods/2027-02')->assertJsonPath('data.parameters.minimum', null)
         ->assertJsonPath('data.parameters.uit', '5600.00');
     $this->getJson($path.'/periods/2027-12')->assertJsonPath('data.parameters.minimum.amount', '1300.00')
+        ->assertJsonPath('data.parameters.minimum.url', null)
         ->assertJsonPath('data.parameters.family_allowance', '130.00')
         ->assertJsonPath('data.parameters.tax_deduction', '39200.00')
         ->assertJsonPath('data.parameters.afp', null);

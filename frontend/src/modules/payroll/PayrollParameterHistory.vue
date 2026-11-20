@@ -153,9 +153,9 @@ onMounted(refresh);
             <label class="ui-label">Saldo anual (%)<input v-model.trim="draft.administrators[code].balance" inputmode="decimal" required></label>
           </div>
         </template>
-        <label class="ui-label">Norma o publicación<input v-model.trim="draft.source" maxlength="250" required></label>
-        <label class="ui-label sm:col-span-2">Enlace a la fuente oficial
-          <input v-model.trim="draft.url" type="url" maxlength="500" placeholder="https://" required>
+        <label class="ui-label">Norma, publicación o referencia<input v-model.trim="draft.source" maxlength="250" required></label>
+        <label class="ui-label sm:col-span-2">Enlace a la fuente (opcional)
+          <input v-model.trim="draft.url" type="url" maxlength="500" placeholder="https://">
         </label>
       </fieldset>
       <p v-if="existing && !baseRevision" class="text-sm text-warn">
@@ -179,7 +179,8 @@ onMounted(refresh);
           <p v-if="revision.created_at" class="text-xs text-muted">
             Registrado el {{ readableTimestamp(revision.created_at) }} · Usuario #{{ revision.created_by }}
           </p>
-          <a class="text-brand underline wrap-anywhere" :href="revision.data.url" target="_blank" rel="noopener noreferrer">{{ revision.data.source }}</a>
+          <a v-if="revision.data.url" class="text-brand underline wrap-anywhere" :href="revision.data.url" target="_blank" rel="noopener noreferrer">{{ revision.data.source }}</a>
+          <p v-else class="wrap-anywhere">{{ revision.data.source }}</p>
           <template v-if="revision.data.kind === 'afp'">
             <p>Aporte {{ revision.data.contribution }}% · Prima {{ revision.data.insurance }}% · Tope {{ money(revision.data.insurance_ceiling) }}</p>
             <dl class="divide-y divide-line">

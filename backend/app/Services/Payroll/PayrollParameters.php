@@ -33,7 +33,7 @@ final readonly class PayrollParameters
         return [
             'minimum' => $minimum ? [
                 'amount' => $amount, 'from' => $minimum['data']['period'],
-                'rule' => $minimum['data']['source'], 'url' => $minimum['data']['url'],
+                'rule' => $minimum['data']['source'], 'url' => $minimum['data']['url'] ?? null,
             ] : null,
             'family_allowance' => $amount ? bcmul($amount, '0.10', 2) : null,
             'night_minimum' => $amount ? bcmul($amount, '1.35', 2) : null,
