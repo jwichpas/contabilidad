@@ -63,6 +63,15 @@ it('keeps company-specific and statement-specific layouts with immutable revisio
     });
 });
 
+it('accepts default layouts without overrides', function (): void {
+    $path = '/api/v1/company/financial-layout/ERI';
+    $settings = ['labels' => [], 'hidden_codes' => [], 'line_order' => [], 'hide_zero' => false];
+
+    $this->putJson($path, ['expected_revision' => 0, 'settings' => $settings])
+        ->assertOk()->assertJsonPath('data.revision', 1)
+        ->assertJsonPath('data.settings', $settings);
+});
+
 it('protects formulas, subtotal codes and disclosure warnings', function (): void {
     $route = '/api/v1/company/financial-layout/ERI';
     $settings = incomeLayoutSettings();

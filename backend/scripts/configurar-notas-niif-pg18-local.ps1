@@ -92,7 +92,7 @@ function Inventory {
     if(-not $ledgerPresent){throw 'Falta el ledger F2 registrado por el instalador de referencias PCGE: detener.'}
     # Match the exact expected migration set before any writes.
     $installed=($target -in $applied)
-    if($earlierTarget -notin $applied -or $previousTarget -notin $applied){throw 'Instale primero las configuraciones EFE y estructuras EEFF (30 y 31).'} 
+    if($earlierTarget -notin $applied -or $previousTarget -notin $applied){throw 'Instale primero las configuraciones EFE y estructuras EEFF (30 y 31).'}
     if($applied.Count -ne (31+[int]$installed)){throw 'Número de migraciones distinto de 31/32 esperado.'}
     $oldTable=Sql "SELECT count(*) FROM pg_catalog.pg_class WHERE oid='public.company_financial_report_layout_revisions'::regclass AND relrowsecurity AND relforcerowsecurity"
     if($oldTable -ne '1'){throw 'Falta RLS forzado en la estructura EEFF previa.'}
