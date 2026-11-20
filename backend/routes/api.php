@@ -213,6 +213,7 @@ Route::prefix('v1')->group(function (): void {
                         Route::get('/', 'show');
                         Route::put('/attendance/{worker}', 'attendance');
                         Route::put('/attendance/{worker}/days/{date}', 'day')->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
+                        Route::put('/inputs/{worker}', 'payrollInput');
                         Route::put('/calculation', 'run');
                         Route::post('/approval', 'approve');
                         Route::put('/benefits/{worker}/{benefit}', 'benefit')->whereIn('benefit', ['CTS', 'GRATIFICATION']);

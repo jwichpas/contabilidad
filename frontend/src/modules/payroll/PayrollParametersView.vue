@@ -69,7 +69,7 @@ const pensionRows = computed(() => Object.entries(props.parameters?.afp?.adminis
               <tbody><tr v-for="row in pensionRows" :key="row.name"><td>{{ row.name }}</td><td>{{ row.flow }}%</td><td>{{ row.balance }}%</td></tr></tbody>
             </table>
           </div>
-          <p v-else class="text-muted">Registra la prima, el tope y la comisión del devengue en Asistencia.</p>
+          <p v-else class="text-muted">Registra la prima, el tope y la comisión del devengue en los datos del trabajador de Planilla mensual.</p>
           <a :href="sbs" target="_blank" rel="noopener noreferrer" class="text-brand underline">Tasas publicadas por SBS</a>
         </div>
         <div class="space-y-2 rounded-md border border-line p-3 text-sm">
@@ -81,7 +81,7 @@ const pensionRows = computed(() => Object.entries(props.parameters?.afp?.adminis
               <dt>{{ threshold }}</dt><dd class="font-medium tabular-nums">{{ rate }}</dd>
             </div>
           </dl>
-          <p class="text-muted">Registra la retención del mes validada en Asistencia.</p>
+          <p class="text-muted">Registra la retención del mes validada en los datos del trabajador de Planilla mensual.</p>
           <a href="https://personas.sunat.gob.pe/trabajador-dependiente/como-me-deben-hacer-retencion-impuesto"
             target="_blank" rel="noopener noreferrer" class="text-brand underline">Cálculo mensual según SUNAT</a>
         </div>
@@ -112,7 +112,7 @@ const pensionRows = computed(() => Object.entries(props.parameters?.afp?.adminis
           <div><dt class="font-semibold">CTS</dt><dd>Mayo y noviembre. La base computable incorpora un sexto de la gratificación semestral percibida que corresponda.</dd></div>
           <div><dt class="font-semibold">Vacaciones</dt><dd>30 días calendario por año para el régimen general cuando se cumple el récord requerido.</dd></div>
         </dl>
-        <p class="text-xs text-muted">En Asistencia puedes registrar bases y tiempo computables para estimar provisiones. El resultado se muestra por separado en Planilla mensual.</p>
+        <p class="text-xs text-muted">En Planilla mensual puedes registrar bases y tiempo computables para estimar provisiones. El resultado se muestra por separado en Planilla mensual.</p>
         <a href="#gestion-de-planillas/beneficios" class="text-sm text-brand underline">Ir a CTS y gratificaciones</a>
       </section>
     </div>

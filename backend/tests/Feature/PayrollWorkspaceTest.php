@@ -228,3 +228,60 @@ it('resolves minimum wages by effective month and tax units by year inside each 
     $this->getJson($path.'/periods/2027-12')->assertJsonPath('data.parameters.minimum', null)
         ->assertJsonPath('data.parameters.uit', null);
 });
+
+
+it('calculates independent payroll without attendance and leaves the calendar available after approval', function (): void {
+    $path = '/api/v1/payroll';
+    $period = $path.'/periods/2026-11';
+    $this->putJson($path.'/workers/TR-MANUAL', [
+        'expected_revision' => 0, 'dni' => '01234560', 'surname' => 'Ruiz', 'given_names' => 'Elena',
+        'position' => 'Control', 'effective_month' => '2026-11', 'hired_on' => '2026-11-01',
+        'salary' => '3000', 'daily_hours' => 8, 'pension' => 'ONP', 'vacation_granted' => 0,
+        'reference' => 'Contrato',
+    ])->assertOk();
+    $this->putJson($period.'/calculation', [
+        'input_mode' => 'independent', 'expected_revision' => 0, 'health_minimum' => '1230', 'source' => 'Cierre',
+    ])->assertOk()->assertJsonPath('data.data.rows.0.attendance.paid_days', 30)
+        ->assertJsonPath('data.data.rows.0.amounts.gross', '3000.00');
+    $this->postJson($period.'/approval', ['expected_revision' => 1])->assertOk();
+    $this->get($period.'/exports/jor')->assertConflict();
+    $this->putJson($period.'/attendance/TR-MANUAL/days/2026-11-03', [
+        'expected_revision' => 0, 'date' => '2026-11-03', 'status' => 'ABSENT', 'ordinary' => 0, 'extra' => 0,
+    ])->assertOk()->assertJsonPath('data.data.status', 'ABSENT');
+    $this->getJson($period)->assertJsonPath('data.payroll.data.rows.0.attendance.paid_days', 30);
+});
+
+it('imports only the closed work inputs and keeps the copy independent of subsequent absence changes', function (): void {
+    $path = '/api/v1/payroll';
+    $period = $path.'/periods/2026-11';
+    $worker = 'TR-COPIA';
+    $this->putJson($path.'/workers/'.$worker, [
+        'expected_revision' => 0, 'dni' => '01234560', 'surname' => 'Ruiz', 'given_names' => 'Elena',
+        'position' => 'Control', 'effective_month' => '2026-11', 'hired_on' => '2026-11-01',
+        'salary' => '3000', 'daily_hours' => 8, 'pension' => 'ONP', 'vacation_granted' => 0,
+        'reference' => 'Contrato',
+    ])->assertOk();
+    $work = [
+        'paid_days' => 29, 'vacation_paid_days' => 0, 'ordinary_minutes' => 480, 'overtime_25' => 0, 'overtime_35' => 0,
+    ];
+    $this->putJson($period.'/attendance/'.$worker, $work + ['expected_revision' => 0])->assertOk()
+        ->assertJsonMissingPath('data.data.afp_rates');
+    $input = $work + [
+        'expected_revision' => 0, 'input_source' => 'attendance', 'jornada_confirmed' => false, 'import_attendance' => true,
+        'taxable_extra' => '0', 'nontaxable_extra' => '0', 'income_tax' => '0', 'other_deductions' => '50',
+    ];
+    $this->putJson($period.'/inputs/'.$worker, array_replace($input, ['paid_days' => 1]))
+        ->assertOk()->assertJsonPath('data.data.paid_days', 29)
+        ->assertJsonPath('data.data.imported_attendance_revision', 1);
+    $this->putJson($period.'/attendance/'.$worker.'/days/2026-11-03', [
+        'expected_revision' => 0, 'date' => '2026-11-03', 'status' => 'ABSENT', 'ordinary' => 0, 'extra' => 0,
+    ])->assertOk();
+    $this->putJson($period.'/inputs/'.$worker, array_replace($input, ['expected_revision' => 1, 'import_attendance' => false, 'other_deductions' => '55']))
+        ->assertOk()->assertJsonPath('data.data.paid_days', 29);
+    $this->putJson($period.'/calculation', [
+        'input_mode' => 'independent', 'expected_revision' => 0, 'health_minimum' => '1230', 'source' => 'Cierre',
+    ])->assertOk()->assertJsonPath('data.data.rows.0.amounts.gross', '2900.00')
+        ->assertJsonPath('data.data.rows.0.amounts.other_deductions', '55');
+    $this->postJson($period.'/approval', ['expected_revision' => 1])->assertOk();
+    $this->get($period.'/exports/jor')->assertOk();
+});

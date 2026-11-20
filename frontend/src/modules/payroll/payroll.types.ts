@@ -11,12 +11,18 @@ export type ProvisionInputs = {
   gratification_base: string; gratification_month: boolean; cts_base: string; prior_gratification: string;
   cts_days: number; vacation_base: string; vacation_days: number; coverage: 'ESSALUD' | 'EPS'; reference: string;
 };
-export type Attendance = {
+export type WorkInput = {
   worker: string; paid_days: number; vacation_paid_days: number; ordinary_minutes: number; overtime_25: number; overtime_35: number;
-  taxable_extra: string; nontaxable_extra: string; income_tax: string; other_deductions: string; reference: string;
+  reference: string | null;
+};
+type PayrollMoneyInput = {
+  taxable_extra: string; nontaxable_extra: string; income_tax: string; other_deductions: string;
   provisions?: ProvisionInputs | null;
   afp_rates: { insurance: string; commission: string; insurance_ceiling: string; source: string } | null;
 };
+export type Attendance = WorkInput & Partial<PayrollMoneyInput>;
+export type PayrollInput = WorkInput & PayrollMoneyInput & { input_source: 'manual' | 'attendance'; jornada_confirmed: boolean };
+export type PayrollInputDraft = PayrollInput & { expected_revision: number; import_attendance?: boolean };
 export type AttendanceDay = { worker: string; date: string; ordinary: number; extra: number; status: string; reference: string };
 export type Vacation = { worker: string; from: string; to: string; days: number; reference: string };
 export type Benefit = {
@@ -27,12 +33,13 @@ export type Benefit = {
 export type PayrollRow = {
   worker: Worker;
   worker_revision: number;
-  attendance_revision: number;
-  attendance: Attendance;
+  attendance_revision: number | null;
+  input_revision?: number;
+  attendance: WorkInput & PayrollMoneyInput & { jornada_confirmed?: boolean; input_source?: PayrollInput['input_source'] };
   amounts: Record<string, string>;
 };
 export type Payroll = {
-  approved: boolean; health_minimum: string; source: string; parameters?: PayrollParameters;
+  approved: boolean; input_mode?: 'independent'; health_minimum: string; source: string; parameters?: PayrollParameters;
   rows: PayrollRow[];
   totals: Record<string, string>; journal: TaxJournalDraft | null;
 };
@@ -75,6 +82,7 @@ export type PayrollWorkspace = {
   workers: Revision<Worker>[]; eligible: Revision<Worker>[]; attendance: Revision<Attendance>[];
   parameters?: PayrollParameters;
   parameters_changed?: boolean;
+  payroll_inputs?: Revision<PayrollInput>[];
   attendance_pending?: { worker: string; message: string }[];
   daily: Revision<AttendanceDay>[]; vacations: Revision<Vacation>[]; benefits: Revision<Benefit>[]; payroll: Revision<Payroll> | null;
 };

@@ -87,6 +87,7 @@ try {
     $migrations = [
         '2026_11_24_000000_create_company_payroll_revisions',
         '2026_11_24_000001_enable_payroll_parameter_history',
+        '2026_11_24_000002_enable_payroll_inputs',
     ];
     foreach ($migrations as $migration) {
         if (! is_file($root.'/database/migrations/'.$migration.'.php')) {
@@ -104,7 +105,7 @@ try {
         throw new RuntimeException('Migraciones pendientes.');
     }
 
-    fwrite(STDOUT, "[PASS] Las dos migraciones de Planillas están registradas en la base local.\n");
+    fwrite(STDOUT, "[PASS] Las migraciones de Planillas están registradas en la base local.\n");
 } catch (Throwable) {
     fwrite(STDERR, "No se pudo $phase. Verifica que Docker esté activo y el perfil local sea el correcto.\n");
     exit(1);

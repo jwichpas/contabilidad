@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { Plus } from 'lucide-vue-next';
+import PayrollAttendanceCalendar from './PayrollAttendanceCalendar.vue';
 import PayrollMonthlyView from './PayrollMonthlyView.vue';
 import PayrollParametersView from './PayrollParametersView.vue';
 import { payrollRoutes, type PayrollModule } from '@/shared/layout/navigation.types';
@@ -10,7 +11,7 @@ import type { CompanyId } from '@/modules/accounting/types/accountingAccount.typ
 import type { TaxJournalDraft } from '@/modules/accounting/types/annualTaxClose.types';
 import { formatAccountingDate, peruAccountingDate } from '@/modules/accounting/utils/journalPresentation';
 import { formatExactLocalAmount } from '@/modules/accounting/utils/formatExactLocalAmount';
-import type { Attendance, AttendanceDay, Benefit, PayrollParameterEntry, PayrollParameterRevision, PayrollWorkspace, Revision, Worker } from './payroll.types';
+import type { PayrollInputDraft, WorkInput, Benefit, PayrollParameterEntry, PayrollParameterRevision, PayrollWorkspace, Revision, Worker } from './payroll.types';
 
 const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => string | null; ruc: string; section: PayrollModule }>();
 const emit = defineEmits<{ journal: [draft: TaxJournalDraft]; navigate: [module: PayrollModule] }>();
@@ -32,37 +33,23 @@ const pensionOptions = [{ value: 'ONP', label: 'ONP' }, { value: 'AFP', label: '
 const afpOptions = [{ value: 'HA', label: 'Hábitat' }, { value: 'IN', label: 'Integra' },
   { value: 'PR', label: 'Profuturo' }, { value: 'RI', label: 'Prima' }];
 const afpCommissionOptions = [{ value: 'FLOW', label: 'Sobre flujo' }, { value: 'BALANCE', label: 'Sobre saldo' }] as const;
-const coverageOptions = [{ value: 'ESSALUD', label: 'EsSalud' }, { value: 'EPS', label: 'EPS' }] as const;
-const provisionFields = [
-  ['gratification_base', 'Base computable de la gratificación'],
-  ['cts_base', 'Base CTS antes de añadir la gratificación'],
-  ['prior_gratification', 'Gratificación previa computable'],
-  ['vacation_base', 'Base vacacional'],
-] as const;
 const kindOptions = [{ value: 'CTS', label: 'CTS' }, { value: 'GRATIFICATION', label: 'Gratificación' }] as const;
 
 const worker = ref<(Worker & { expected_revision: number })>();
 const workerCodePattern = String.raw`[A-Z0-9][A-Z0-9\-]{0,19}`;
 const workerText = [['code','Código interno'], ['dni','DNI'], ['given_names','Nombres'], ['surname','Apellido paterno'],
   ['second_surname','Apellido materno'], ['position','Cargo']] as const;
-const attendance = ref<Attendance & { expected_revision: number }>();
+const attendance = ref<WorkInput & { expected_revision: number }>();
 const selectedAttendance = ref('');
-const attendanceCommissionOnBalance = computed(() =>
-  workspace.value?.eligible.find(({ reference }) => reference === selectedAttendance.value)?.data.afp_commission === 'BALANCE',
-);
+const selectedPerson = computed(() => workspace.value?.eligible.find(({ reference }) => reference === selectedAttendance.value)?.data);
+const attendanceLocked = computed(() => !!monthly.value?.data.approved && monthly.value.data.input_mode !== 'independent');
 const day = ref({ date: '', ordinary: 0, extra: 0, status: 'WORKED', reference: '', expected_revision: 0 });
-const dayStatus = [{ value: 'WORKED', label: 'Laborado' }, { value: 'REST', label: 'Descanso' },
-  { value: 'VACATION', label: 'Vacaciones' }, { value: 'PAID_LEAVE', label: 'Licencia con goce' }, { value: 'UNPAID', label: 'Sin goce' }];
 const workerDays = computed(() => workspace.value?.daily.filter((entry) => entry.data.worker === selectedAttendance.value) ?? []);
 const minutesFields = [
   ['paid_days','Días equivalentes remunerados',30], ['vacation_paid_days','Días equivalentes de vacaciones incluidos',30],
   ['ordinary_minutes','Minutos ordinarios trabajados',21659], ['overtime_25','Minutos extra al 25%',21659],
   ['overtime_35','Minutos extra al 35%',21659],
 ] as const;
-const extraFields = [['taxable_extra','Otros ingresos afectos a pensión y salud'], ['nontaxable_extra', 'Otros ingresos inafectos a pensión y salud'],
-  ['income_tax','Retención de quinta validada'], ['other_deductions','Otros descuentos']] as const;
-const afpFields = [['insurance','Prima SBS (%)'], ['commission','Comisión sobre flujo (%)'],
-  ['insurance_ceiling','Remuneración máxima asegurable'], ['source','Fuente y vigencia de tasas SBS']] as const;
 const minimum = ref('');
 const source = ref('');
 const vacation = ref({ worker: '', from: '', to: '', reference: '' });
@@ -140,44 +127,39 @@ function saveWorker() {
 
 function selectAttendance(code: string) {
   selectedAttendance.value = code;
-  editDay();
+  day.value.date = '';
   const saved = workspace.value?.attendance.find((row) => row.data.worker === code);
-  const person = workspace.value?.eligible.find((row) => row.reference === code)?.data;
   const data = saved?.data;
-  const afp = monthly.value?.data.approved ? monthly.value.data.parameters?.afp : workspace.value?.parameters?.afp;
-  const rates = person?.afp ? afp?.administrators[person.afp] : undefined;
-  const balance = person?.afp_commission === 'BALANCE';
   attendance.value = {
-    worker: code, paid_days: 0, vacation_paid_days: 0, ordinary_minutes: 0, overtime_25: 0, overtime_35: 0, taxable_extra: '0',
-    nontaxable_extra: '0', income_tax: '0', other_deductions: '0', reference: '', ...data,
+    worker: code,
+    paid_days: data?.paid_days ?? 0,
+    vacation_paid_days: data?.vacation_paid_days ?? 0,
+    ordinary_minutes: data?.ordinary_minutes ?? 0,
+    overtime_25: data?.overtime_25 ?? 0,
+    overtime_35: data?.overtime_35 ?? 0,
+    reference: data?.reference ?? '',
     expected_revision: saved?.revision ?? 0,
-    provisions: data?.provisions ? { ...data.provisions } : null,
-    afp_rates: person?.pension === 'AFP' ? (afp && rates
-      ? { insurance: afp.insurance, commission: balance ? '0' : rates.flow,
-        insurance_ceiling: afp.insurance_ceiling, source: afp.source }
-      : { insurance: data?.afp_rates?.insurance ?? '', commission: balance ? '0' : data?.afp_rates?.commission ?? '',
-        insurance_ceiling: data?.afp_rates?.insurance_ceiling ?? '', source: data?.afp_rates?.source ?? '' }) : null,
   };
 }
 
-function openAttendance(code: string) {
-  selectAttendance(code);
-  emit('navigate', 'payroll-attendance');
-}
-
-function editDay(entry?: Revision<AttendanceDay>) {
-  const saved = entry?.data;
-  day.value = { date: saved?.date ?? month.value + '-01', ordinary: saved?.ordinary ?? 0, extra: saved?.extra ?? 0,
-    status: saved?.status ?? 'WORKED', reference: saved?.reference ?? '', expected_revision: entry?.revision ?? 0 };
+function editDay(date: string) {
+  const entry = workerDays.value.find(({ data }) => data.date === date);
+  day.value = { date, ordinary: entry?.data.ordinary ?? (selectedPerson.value?.daily_hours ?? 0) * 60,
+    extra: entry?.data.extra ?? 0, status: entry?.data.status ?? 'WORKED', reference: entry?.data.reference ?? '',
+    expected_revision: entry?.revision ?? 0 };
 }
 
 function saveDay() {
   if (!selectedAttendance.value || !day.value.date) return;
+  const data = { ...day.value };
+  if (data.status !== 'WORKED') {
+    data.ordinary = 0;
+    data.extra = 0;
+  }
   void run(async () => {
-    await api.payrollRequest(`periods/${month.value}/attendance/${selectedAttendance.value}/days/${day.value.date}`, 'PUT', day.value);
-    const date = day.value.date;
+    await api.payrollRequest(`periods/${month.value}/attendance/${selectedAttendance.value}/days/${data.date}`, 'PUT', data);
     await reload();
-    editDay(workerDays.value.find(({ data }) => data.date === date));
+    editDay(data.date);
     message.value = 'Día de asistencia guardado.';
   });
 }
@@ -193,23 +175,22 @@ function bringMinutes() {
   attendance.value.overtime_35 = totals.higher;
 }
 
-function toggleProvisions() {
-  if (!attendance.value) return;
-  attendance.value.provisions = attendance.value.provisions ? null : {
-    gratification_base: '', gratification_month: false, cts_base: '', prior_gratification: '',
-    cts_days: 0, vacation_base: '', vacation_days: 0, coverage: 'ESSALUD', reference: '',
-  };
-}
-
 function saveAttendance() {
   if (!attendance.value) return;
   const { worker: code, ...payload } = attendance.value;
-  if (payload.afp_rates && Object.values(payload.afp_rates).every((value) => value === '')) payload.afp_rates = null;
   void run(async () => {
     await api.payrollRequest(`periods/${month.value}/attendance/${code}`, 'PUT', payload);
     await reload();
-    selectAttendance(code);
-    message.value = 'Asistencia guardada.';
+    message.value = 'Cierre de asistencia guardado.';
+  });
+}
+
+function savePayrollInput(payload: PayrollInputDraft) {
+  const { worker: code, ...input } = payload;
+  void run(async () => {
+    await api.payrollRequest(`periods/${month.value}/inputs/${code}`, 'PUT', input);
+    await reload();
+    message.value = 'Datos de planilla guardados.';
   });
 }
 
@@ -231,6 +212,7 @@ function calculate() {
   void run(async () => {
     await api.payrollRequest(`periods/${month.value}/calculation`, 'PUT', {
       expected_revision: monthly.value?.revision ?? 0, health_minimum: minimum.value, source: source.value,
+      input_mode: 'independent',
     });
     await reload();
     message.value = 'Cálculo actualizado.';
@@ -296,6 +278,12 @@ function vacationBalance(person: Worker) {
   return person.vacation_granted - (workspace.value?.vacations.filter(({ data }) => data.worker === person.code)
     .reduce((days, { data }) => days + data.days, 0) ?? 0);
 }
+watch([() => props.section, currentWorkers], ([section, workers]) => {
+  const first = workers[0];
+  if (section === 'payroll-attendance' && !selectedAttendance.value && first && workers.length === 1) {
+    selectAttendance(first.value);
+  }
+});
 watch(() => props.section, () => {
   message.value = '';
   if (workspace.value) error.value = '';
@@ -366,71 +354,40 @@ void run(reload);
       </ul>
     </section>
 
-    <section v-if="workspace && section === 'payroll-attendance'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
-      <h2 class="font-semibold">Cierre de asistencia · {{ workspace.attendance.length }} / {{ workspace.eligible.length }}</h2>
-      <p class="text-sm text-muted">Registre los días equivalentes de pago y los minutos trabajados según el control diario. Incluya los días de descanso remunerado que correspondan.</p>
-      <div class="max-w-sm"><UiSelect aria-label="Trabajador vigente" :model-value="selectedAttendance" :options="currentWorkers" @update:model-value="selectAttendance" /></div>
-      <details v-if="attendance" class="space-y-2 rounded-md border border-line p-3">
-        <summary class="cursor-pointer font-medium">Control diario · {{ workerDays.length }} días registrados</summary>
-        <form class="space-y-2" @submit.prevent="saveDay">
-          <fieldset :disabled="busy || !!monthly?.data.approved" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <label class="ui-label">Fecha<input v-model="day.date" type="date" class="w-full" :readonly="day.expected_revision > 0" required></label>
-            <div><label for="payroll-day-status" class="ui-label">Estado</label><UiSelect id="payroll-day-status" v-model="day.status" :options="dayStatus" /></div>
-            <label class="ui-label">Minutos ordinarios<input v-model.number="day.ordinary" type="number" min="0" max="480" class="w-full" required></label>
-            <label class="ui-label">Minutos extra<input v-model.number="day.extra" type="number" min="0" max="960" class="w-full" required></label>
-            <label class="ui-label sm:col-span-2">Sustento<input v-model.trim="day.reference" class="w-full" maxlength="500" required></label>
+    <section v-if="workspace && section === 'payroll-attendance'" class="min-w-0 space-y-4 rounded-lg border border-line bg-surf p-3 sm:p-4">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="font-semibold">Calendario del trabajador</h2>
+          <p class="text-sm text-muted">Selecciona un día para registrar asistencia, falta, descanso o licencia.</p>
+        </div>
+        <div class="w-full max-w-sm">
+          <label for="payroll-attendance-worker" class="ui-label">Trabajador</label>
+          <UiSelect id="payroll-attendance-worker" :model-value="selectedAttendance" :options="currentWorkers"
+            :disabled="busy" @update:model-value="selectAttendance" />
+        </div>
+      </div>
+      <PayrollAttendanceCalendar v-if="selectedPerson" v-model:day="day"
+        :month="month" :today="today" :worker="selectedPerson" :records="workerDays" :disabled="busy || attendanceLocked"
+        @select="editDay" @save="saveDay" />
+      <p v-else class="rounded-lg border border-line bg-soft p-4 text-sm text-muted">
+        {{ currentWorkers.length ? 'Selecciona un trabajador para consultar el mes.' : 'No hay trabajadores vigentes en este periodo.' }}
+      </p>
+      <details v-if="attendance" class="space-y-3 rounded-lg border border-line p-3">
+        <summary class="cursor-pointer font-semibold">Cierre mensual para importar a Planilla</summary>
+        <form class="space-y-3" @submit.prevent="saveAttendance">
+          <fieldset class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" :disabled="busy || attendanceLocked">
+            <label v-for="[key, label, max] in minutesFields" :key="key" class="ui-label">{{ label }}
+              <input v-model.number="attendance[key]" class="w-full" type="number" min="0" :max="max" required>
+            </label>
+            <label class="ui-label">Referencia del cierre<input v-model.trim="attendance.reference" class="w-full" maxlength="500"></label>
           </fieldset>
-          <button class="ui-btn ui-btn-primary ui-btn-sm" type="submit" :disabled="busy || !!monthly?.data.approved">Guardar día</button>
-          <button class="ui-btn ui-btn-ghost ui-btn-sm" type="button" @click="editDay()">Nuevo día</button>
-        </form>
-        <ul class="divide-y divide-line">
-          <li v-for="entry in workerDays" :key="entry.reference" class="flex flex-wrap items-center justify-between gap-2 py-1 text-sm">
-            <span>{{ formatAccountingDate(entry.data.date) }} · {{ dayStatus.find(option => option.value === entry.data.status)?.label }} · {{ entry.data.ordinary }} min + {{ entry.data.extra }} extra</span>
-            <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm" @click="editDay(entry)">Ver día</button>
-          </li>
-        </ul>
-        <button v-if="workerDays.length" type="button" class="ui-btn ui-btn-secondary ui-btn-sm" :disabled="busy || !!monthly?.data.approved" @click="bringMinutes">Aplicar minutos al cierre</button>
-      </details>
-      <form v-if="attendance" class="space-y-3" @submit.prevent="saveAttendance">
-        <fieldset class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" :disabled="busy || !!monthly?.data.approved">
-          <label v-for="[key,label,max] in minutesFields" :key="key" class="ui-label">{{ label }}<input v-model.number="attendance[key]" class="w-full" type="number" min="0" :max="max" required></label>
-          <label v-for="[key,label] in extraFields" :key="key" class="ui-label">{{ label }}<input v-model.trim="attendance[key]" class="w-full" inputmode="decimal" required></label>
-          <template v-if="attendance.afp_rates">
-            <label v-for="[key,label] in afpFields" :key="key" class="ui-label">{{ label }}<input v-model.trim="attendance.afp_rates[key]" class="w-full"
-              :readonly="!!workspace.parameters?.afp || (key === 'commission' && attendanceCommissionOnBalance)" :required="attendance.paid_days > 0"></label>
-          </template>
-          <label class="ui-label sm:col-span-2">Referencia de asistencia y conceptos validados<input v-model.trim="attendance.reference" class="w-full" required maxlength="500"></label>
-        </fieldset>
-        <fieldset class="space-y-2 rounded-md border border-line p-3" :disabled="busy || !!monthly?.data.approved">
-          <legend class="px-1 text-sm font-semibold">Provisiones del mes</legend>
-          <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" :checked="!!attendance.provisions" @change="toggleProvisions"> Estimar con bases y tiempo computables validados
-          </label>
-          <div v-if="attendance.provisions" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <label v-for="[key, label] in provisionFields" :key="key" class="ui-label">{{ label }}
-              <input v-model.trim="attendance.provisions[key]" class="w-full" inputmode="decimal" required>
-            </label>
-            <label class="ui-label">Días equivalentes computables CTS
-              <input v-model.number="attendance.provisions.cts_days" type="number" min="0" max="30" required>
-            </label>
-            <label class="ui-label">Días equivalentes computables de vacaciones
-              <input v-model.number="attendance.provisions.vacation_days" type="number" min="0" max="30" required>
-            </label>
-            <div>
-              <label for="payroll-provision-coverage" class="ui-label">Cobertura para bonificación</label>
-              <UiSelect id="payroll-provision-coverage" v-model="attendance.provisions.coverage" :options="coverageOptions"
-                :disabled="busy || !!monthly?.data.approved" />
-            </div>
-            <label class="flex items-center gap-2 text-sm">
-              <input v-model="attendance.provisions.gratification_month" type="checkbox"> Mes completo computable para gratificación
-            </label>
-            <label class="ui-label sm:col-span-2">Sustento de las bases y días computables
-              <input v-model.trim="attendance.provisions.reference" class="w-full" maxlength="500" required>
-            </label>
+          <div class="flex flex-wrap gap-2">
+            <button v-if="workerDays.length" type="button" class="ui-btn ui-btn-secondary ui-btn-sm"
+              :disabled="busy || attendanceLocked" @click="bringMinutes">Traer minutos del calendario</button>
+            <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm" :disabled="busy || attendanceLocked">Guardar cierre de asistencia</button>
           </div>
-        </fieldset>
-        <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy || !!monthly?.data.approved">Guardar cierre de asistencia</button>
-      </form>
+        </form>
+      </details>
     </section>
 
     <PayrollParametersView v-if="workspace && section === 'payroll-parameters'"
@@ -448,7 +405,8 @@ void run(reload);
       @download="download"
       @journal="monthly?.data.journal && emit('journal', monthly.data.journal)"
       @workers="emit('navigate', 'payroll-workers')"
-      @attendance="openAttendance"
+      :month="month"
+      @save-input="savePayrollInput"
     />
 
     <section v-if="workspace && section === 'payroll-benefits'" class="space-y-3 rounded-lg border border-line bg-surf p-4">

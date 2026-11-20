@@ -51,6 +51,7 @@ final readonly class PayrollController
             'daily' => array_values($daily),
             'attendance' => array_values($attendance),
             'attendance_pending' => $pending,
+            'payroll_inputs' => array_values($this->ledger->records('payroll_input', $month.'-')),
             'parameters' => $parameters,
             'parameters_changed' => $payroll !== null && ! $payroll['data']['approved']
                 && ($payroll['data']['parameters']['revisions'] ?? []) != $parameters['revisions'],
@@ -147,17 +148,18 @@ final readonly class PayrollController
         $data = $request->validate([
             'expected_revision' => self::REVISION,
             'date' => ['required', 'date_format:Y-m-d'],
-            'status' => ['required', 'in:WORKED,REST,VACATION,PAID_LEAVE,UNPAID'],
+            'status' => ['required', 'in:WORKED,ABSENT,REST,VACATION,PAID_LEAVE,UNPAID'],
             'ordinary' => ['required', 'integer', 'between:0,480'],
             'extra' => ['required', 'integer', 'between:0,960'],
-            'reference' => ['required', 'string', 'max:500'],
+            'reference' => ['nullable', 'string', 'max:500'],
         ]);
+        $data['reference'] ??= '';
         $this->check($date !== $data['date'] || !str_starts_with($date, $month.'-'), 'date', 'La fecha debe pertenecer al periodo.');
         return $this->write($request, 'day', "$month-$worker-$date", $data, function (array $input) use ($month, $worker, $date): array {
             $person = $this->eligible($month)[$worker]['data'] ?? null;
             abort_unless($person && $date >= $person['hired_on'] && $date <= ($person['ended_on'] ?? '9999-12-31'),
                 404, 'La fecha está fuera del vínculo laboral.');
-            abort_if(($this->ledger->latest('payroll', $month)['data']['approved'] ?? false), 409, 'La planilla del periodo está aprobada.');
+            $this->guardLegacyAttendance($month);
             $this->check($input['ordinary'] > $person['daily_hours'] * 60 ||
                 ($input['status'] !== 'WORKED' && $input['ordinary'] + $input['extra'] !== 0),
                 'ordinary', 'Revise la jornada pactada y el estado del día.');
@@ -167,16 +169,86 @@ final readonly class PayrollController
 
     public function attendance(Request $request, string $month, string $worker): JsonResponse
     {
+        $data = $request->validate(['expected_revision' => self::REVISION]
+            + $this->workInputRules() + $this->payrollInputRules(false));
+        return $this->write($request, 'attendance', "$month-$worker", $data, function (array $input) use ($month, $worker): array {
+            $workerRecord = $this->eligible($month)[$worker] ?? null;
+            $person = $workerRecord['data'] ?? null;
+            abort_unless($person, 404, 'Trabajador sin vigencia para el periodo solicitado.');
+            $this->guardLegacyAttendance($month);
+            [$first, $last] = $this->bounds($month);
+            $vacation = 0;
+            foreach ($this->ledger->records('vacation', $worker.'-') as $record) {
+                $rest = $record['data'];
+                if ($rest['worker'] === $worker && $rest['from'] <= $last && $rest['to'] >= $first) {
+                    $vacation += (int) CarbonImmutable::parse(max($first, $rest['from']))->diffInDays(min($last, $rest['to'])) + 1;
+                }
+            }
+            $this->check($input['vacation_paid_days'] > $vacation, 'vacation_paid_days', 'Los días de vacaciones exceden el descanso registrado.');
+            $this->validateWorkInput($month, $person, $input);
+            $previous = $this->ledger->latest('attendance', "$month-$worker")['data'] ?? [];
+            $input += array_intersect_key($previous, $this->payrollInputRules(false));
+            return ['worker' => $worker, 'worker_revision' => $workerRecord['revision'], 'daily_versions' => $this->dayVersions($this->ledger->records('day', $month.'-'))[$worker] ?? []] + $input;
+        });
+    }
+
+    public function payrollInput(Request $request, string $month, string $worker): JsonResponse
+    {
         $data = $request->validate([
             'expected_revision' => self::REVISION,
+            'input_source' => ['required', 'in:manual,attendance'],
+            'jornada_confirmed' => ['required', 'boolean'],
+            'import_attendance' => ['sometimes', 'boolean'],
+        ] + $this->workInputRules() + $this->payrollInputRules(true));
+        return $this->write($request, 'payroll_input', "$month-$worker", $data, function (array $input) use ($month, $worker): array {
+            abort_if(($this->ledger->latest('payroll', $month)['data']['approved'] ?? false), 409, 'La planilla del periodo está aprobada.');
+            $person = $this->eligible($month)[$worker] ?? null;
+            abort_unless($person, 404, 'Trabajador sin vigencia para el periodo solicitado.');
+
+            $import = $input['import_attendance'] ?? false;
+            unset($input['import_attendance']);
+            if ($input['input_source'] === 'attendance') {
+                if ($import) {
+                    $attendance = $this->ledger->latest('attendance', "$month-$worker");
+                    $versions = $this->dayVersions($this->ledger->records('day', $month.'-'));
+                    $issue = $this->attendanceIssue($person, $attendance, $versions[$worker] ?? []);
+                    if ($issue !== null) {
+                        throw ValidationException::withMessages(['attendance' => $issue]);
+                    }
+                    $work = $attendance['data'];
+                    $input['imported_attendance_revision'] = $attendance['revision'];
+                } else {
+                    $work = $this->ledger->latest('payroll_input', "$month-$worker")['data'] ?? [];
+                    $this->check(! isset($work['imported_attendance_revision']), 'attendance', 'Selecciona un cierre de asistencia para importarlo.');
+                    $input['imported_attendance_revision'] = $work['imported_attendance_revision'];
+                }
+                $input = array_replace($input, array_intersect_key($work, $this->workInputRules()));
+                $input['jornada_confirmed'] = true;
+            }
+            $this->validateWorkInput($month, $person['data'], $input);
+
+            return ['worker' => $worker] + $input;
+        });
+    }
+
+    private function workInputRules(): array
+    {
+        return [
             'paid_days' => ['required', 'integer', 'between:0,30'],
             'vacation_paid_days' => ['required', 'integer', 'between:0,30', 'lte:paid_days'],
             'ordinary_minutes' => ['required', 'integer', 'between:0,21659'],
             'overtime_25' => ['required', 'integer', 'between:0,21659'],
             'overtime_35' => ['required', 'integer', 'between:0,21659'],
-            'taxable_extra' => self::MONEY, 'nontaxable_extra' => self::MONEY,
-            'income_tax' => self::MONEY, 'other_deductions' => self::MONEY,
-            'reference' => ['required', 'string', 'max:500'],
+        ];
+    }
+
+    private function payrollInputRules(bool $required): array
+    {
+        $money = $required ? self::MONEY : ['sometimes', ...self::MONEY];
+        return [
+            'taxable_extra' => $money, 'nontaxable_extra' => $money,
+            'income_tax' => $money, 'other_deductions' => $money,
+            'reference' => ['nullable', 'string', 'max:500'],
             'afp_rates' => ['nullable', 'array:insurance,commission,insurance_ceiling,source', 'required_array_keys:insurance,commission,insurance_ceiling,source'],
             'afp_rates.insurance' => ['required_with:afp_rates', ...array_slice(self::RATE, 1)],
             'afp_rates.commission' => ['required_with:afp_rates', ...array_slice(self::RATE, 1)],
@@ -193,37 +265,32 @@ final readonly class PayrollController
             'provisions.vacation_days' => ['required_with:provisions', 'integer', 'between:0,30'],
             'provisions.coverage' => ['required_with:provisions', 'in:ESSALUD,EPS'],
             'provisions.reference' => ['required_with:provisions', 'string', 'max:500'],
-        ]);
-        return $this->write($request, 'attendance', "$month-$worker", $data, function (array $input) use ($month, $worker): array {
-            $workerRecord = $this->eligible($month)[$worker] ?? null;
-            $person = $workerRecord['data'] ?? null;
-            abort_unless($person, 404, 'Trabajador sin vigencia para el periodo solicitado.');
-            abort_if(($this->ledger->latest('payroll', $month)['data']['approved'] ?? false), 409, 'La planilla del periodo está aprobada.');
-            [$first, $last] = $this->bounds($month);
-            $start = max($first, $person['hired_on']);
-            $end = min($last, $person['ended_on'] ?? $last);
-            $days = $start === $first && $end === $last ? 30 : min(30, (int) CarbonImmutable::parse($start)->diffInDays($end) + 1);
-            $vacation = 0;
-            foreach ($this->ledger->records('vacation', $worker.'-') as $record) {
-                $rest = $record['data'];
-                if ($rest['worker'] === $worker && $rest['from'] <= $last && $rest['to'] >= $first) {
-                    $vacation += (int) CarbonImmutable::parse(max($first, $rest['from']))->diffInDays(min($last, $rest['to'])) + 1;
-                }
-            }
-            $this->check($input['vacation_paid_days'] > $vacation, 'vacation_paid_days', 'Los días de vacaciones exceden el descanso registrado.');
-            $this->check($input['paid_days'] > $days || ($input['paid_days'] == 0 && $input['ordinary_minutes'] > 0),
-                'paid_days', 'Revise los días remunerados respecto de la jornada y el vínculo laboral.');
-            $this->check($input['vacation_paid_days'] > $input['paid_days'], 'vacation_paid_days',
-                'Los días de vacaciones deben estar incluidos en los días remunerados.');
-            $this->check($input['overtime_25'] + $input['overtime_35'] > 21659, 'overtime_35', 'El sobretiempo excede el máximo de la jornada PLAME.');
-            if (! array_key_exists('provisions', $input)) {
-                $previous = $this->ledger->latest('attendance', "$month-$worker")['data']['provisions'] ?? null;
-                if ($previous !== null) {
-                    $input['provisions'] = $previous;
-                }
-            }
-            return ['worker' => $worker, 'worker_revision' => $workerRecord['revision'], 'daily_versions' => $this->dayVersions($this->ledger->records('day', $month.'-'))[$worker] ?? []] + $input;
-        });
+        ];
+    }
+
+    private function payableDays(string $month, array $worker): int
+    {
+        [$first, $last] = $this->bounds($month);
+        $start = max($first, $worker['hired_on']);
+        $end = min($last, $worker['ended_on'] ?? $last);
+
+        return $start === $first && $end === $last ? 30 : min(30, (int) CarbonImmutable::parse($start)->diffInDays($end) + 1);
+    }
+
+    private function validateWorkInput(string $month, array $worker, array $input): void
+    {
+        $this->check($input['paid_days'] > $this->payableDays($month, $worker)
+            || ($input['paid_days'] == 0 && $input['ordinary_minutes'] > 0),
+            'paid_days', 'Revise los días remunerados respecto de la jornada y el vínculo laboral.');
+        $this->check($input['overtime_25'] + $input['overtime_35'] > 21659,
+            'overtime_35', 'El sobretiempo excede el máximo de la jornada PLAME.');
+    }
+
+    private function guardLegacyAttendance(string $month): void
+    {
+        $payroll = $this->ledger->latest('payroll', $month)['data'] ?? null;
+        abort_if(($payroll['approved'] ?? false) && ($payroll['input_mode'] ?? null) !== 'independent',
+            409, 'La planilla aprobada del periodo está vinculada al cierre de asistencia.');
     }
 
     public function run(Request $request, string $month): JsonResponse
@@ -231,6 +298,7 @@ final readonly class PayrollController
         $data = $request->validate([
             'expected_revision' => self::REVISION,
             'health_minimum' => [...self::MONEY, 'numeric', 'gt:0'],
+            'input_mode' => ['sometimes', 'in:independent'],
             'source' => ['required', 'string', 'max:500'],
         ]);
         return $this->write($request, 'payroll', $month, $data, function (array $input) use ($month): array {
@@ -260,9 +328,9 @@ final readonly class PayrollController
                 abort_if(bccomp($draft['health_minimum'], $minimum['amount'], 2) !== 0, 409,
                     'La base mínima del borrador difiere de la RMV del periodo. Recalcule la planilla.');
             }
-            $current = $this->snapshot($month, ['health_minimum' => $draft['health_minimum'], 'source' => $draft['source']],
+            $current = $this->snapshot($month, array_intersect_key($draft, array_flip(['health_minimum', 'source', 'input_mode'])),
                 $parameters, $draft['uses_parameter_catalog'] ?? false);
-            abort_if($current['rows'] != $draft['rows'], 409, 'Cambió un trabajador o su asistencia. Vuelva a calcular el periodo.');
+            abort_if($current['rows'] != $draft['rows'], 409, 'Cambió un trabajador o sus datos de planilla. Vuelva a calcular el periodo.');
             return array_replace($draft, ['approved' => true]);
         });
     }
@@ -341,6 +409,10 @@ final readonly class PayrollController
         abort_unless(preg_match('/^\d{11}$/D', $ruc), 422, 'Configure el RUC de la empresa.');
         $period = str_replace('-', '', $month);
         $name = $format === 'jor' ? "0601$period$ruc.jor" : "AFPNET-$ruc-$period.txt";
+        if ($format === 'jor' && ($payroll['input_mode'] ?? null) === 'independent') {
+            abort_if(collect($payroll['rows'])->contains(fn (array $row) => ! ($row['attendance']['jornada_confirmed'] ?? false)),
+                409, 'El archivo Jornada PLAME requiere jornada confirmada para todos los trabajadores de la planilla.');
+        }
         $content = $format === 'jor' ? $export->plame($payroll['rows']) : $export->afp($payroll['rows'], $month);
         return response($content, 200, ['Cache-Control' => 'no-store', 'Content-Type' => 'application/octet-stream',
             'Content-Disposition' => 'attachment; filename="'.$name.'"']);
@@ -350,19 +422,35 @@ final readonly class PayrollController
     {
         $eligible = $this->eligible($month);
         $this->check($eligible === [], 'workers', 'Registre trabajadores vigentes para el periodo.');
-        $attendance = $this->ledger->records('attendance', $month.'-');
-        $versions = $this->dayVersions($this->ledger->records('day', $month.'-'));
+        $independent = ($input['input_mode'] ?? null) === 'independent';
+        $records = $this->ledger->records($independent ? 'payroll_input' : 'attendance', $month.'-');
+        $versions = $independent ? [] : $this->dayVersions($this->ledger->records('day', $month.'-'));
         $rows = [];
         $totals = array_fill_keys(['gross','regular_expense','vacation_pay','net','pension','essalud','income_tax','other_deductions','employer_cost','onp','afp'], '0.00');
         foreach ($eligible as $person) {
-            $code = $person['data']['code'];
-            $daily = $attendance["$month-$code"] ?? null;
-            $issue = $this->attendanceIssue($person, $daily, $versions[$code] ?? []);
-            if ($issue !== null) {
-                throw ValidationException::withMessages(['attendance' => $code.' · '.$issue]);
-            }
             $worker = $person['data'];
-            $attendanceInput = $daily['data'];
+            $code = $worker['code'];
+            $record = $records["$month-$code"] ?? null;
+            if (! $independent) {
+                $issue = $this->attendanceIssue($person, $record, $versions[$code] ?? []);
+                if ($issue !== null) {
+                    throw ValidationException::withMessages(['attendance' => $code.' · '.$issue]);
+                }
+            }
+            $attendanceInput = ($record['data'] ?? []) + [
+                'worker' => $code, 'paid_days' => $this->payableDays($month, $worker), 'vacation_paid_days' => 0,
+                'ordinary_minutes' => 0, 'overtime_25' => 0, 'overtime_35' => 0, 'jornada_confirmed' => false,
+                'taxable_extra' => '0', 'nontaxable_extra' => '0', 'income_tax' => '0', 'other_deductions' => '0',
+                'reference' => '', 'afp_rates' => null,
+            ];
+            if ($independent) {
+                $this->validateWorkInput($month, $worker, $attendanceInput);
+            } else {
+                // Preserve the exact payload of already calculated legacy drafts.
+                $attendanceInput = $record['data'] + array_intersect_key($attendanceInput, array_flip([
+                    'taxable_extra', 'nontaxable_extra', 'income_tax', 'other_deductions',
+                ]));
+            }
             $afp = $parameters['afp'] ?? null;
             if ($useCatalog && $afp && $worker['pension'] === 'AFP') {
                 $attendanceInput['afp_rates'] = [
@@ -373,8 +461,9 @@ final readonly class PayrollController
                 ];
             }
             $amounts = $this->calculation->worker($worker, $attendanceInput, $input['health_minimum'], $parameters);
-            $rows[] = ['worker' => $worker, 'worker_revision' => $person['revision'], 'attendance_revision' => $daily['revision'],
-                'attendance' => $attendanceInput, 'amounts' => $amounts];
+            $rows[] = ['worker' => $worker, 'worker_revision' => $person['revision'], 'attendance_revision' => $independent ? null : $record['revision'],
+                'attendance' => $attendanceInput, 'amounts' => $amounts]
+                + ($independent ? ['input_revision' => $record['revision'] ?? 0] : []);
             if (isset($amounts['provision_total'])) {
                 $totals['provision_total'] ??= '0.00';
             }

@@ -41,7 +41,7 @@ final class PayrollCalculation
         } elseif (bccomp($gross, '0', 2) > 0) {
             $rates = $attendance['afp_rates'] ?? null;
             if ($rates === null) {
-                throw ValidationException::withMessages(['afp_rates' => 'Registre la prima, comisión y tope SBS del mes para '.$worker['code'].'.']);
+                throw ValidationException::withMessages(['afp_rates' => 'Registre las tasas SBS del mes en Parámetros o en los datos de planilla de '.$worker['code'].'.']);
             }
             $insured = bccomp($gross, $rates['insurance_ceiling'], 2) > 0 ? $rates['insurance_ceiling'] : $gross;
             $contribution = $this->percent($gross, $parameters['afp_contribution'] ?? PayrollParameters::AFP);
