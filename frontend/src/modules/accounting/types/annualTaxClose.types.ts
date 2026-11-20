@@ -95,3 +95,27 @@ export interface TaxClose extends TaxCloseRevision {
   result: TaxCloseResult | null;
   history: Array<TaxCloseRevision & { reason: string | null; created_by: number; created_at: string }>;
 }
+
+export type TaxOpeningSource = 'historical' | 'entry';
+
+export interface TaxBalanceAmounts {
+  opening_debit: string;
+  opening_credit: string;
+  movement_debit: string;
+  movement_credit: string;
+  transfer_debit: string;
+  transfer_credit: string;
+}
+
+export interface TaxCloseTrialBalance {
+  year: number;
+  opening_source: TaxOpeningSource | null;
+  opening_ambiguous: boolean;
+  historical_opening_available: boolean;
+  entry_opening_available: boolean;
+  rows: Array<TaxBalanceAmounts & { code: string; accounts: string[] }>;
+  unmapped: Array<TaxBalanceAmounts & { code: string; name: string }>;
+  totals: TaxBalanceAmounts;
+  mapped_totals: TaxBalanceAmounts;
+  balanced: boolean;
+}

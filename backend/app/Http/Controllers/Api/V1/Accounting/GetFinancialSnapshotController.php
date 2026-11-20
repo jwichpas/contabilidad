@@ -36,9 +36,18 @@ final readonly class GetFinancialSnapshotController
 
         // NUMERIC sums stay strings end to end. Include original REVERSED entries
         // alongside their posted reversal so the two movements cancel each other.
+        // Keep the annual result before reclassification and cancellation.
+        // Cross-year reversals remain movements of the current period.
+        $periodMovement = "j.entry_date >= ? AND (CASE
+            WHEN j.entry_type = 'REVERSAL' AND original.entry_date >= ?
+                THEN original.entry_type
+            ELSE j.entry_type END) NOT IN ('OPENING', 'CLOSING')";
         $rows = DB::table('journal_entry_lines as l')
             ->join('journal_entries as j', function ($join): void {
                 $join->on('j.id', '=', 'l.journal_entry_id')->on('j.company_id', '=', 'l.company_id');
+            })
+            ->leftJoin('journal_entries as original', function ($join): void {
+                $join->on('original.id', '=', 'j.reversed_entry_id')->on('original.company_id', '=', 'j.company_id');
             })
             ->join('accounting_accounts as a', function ($join): void {
                 $join->on('a.id', '=', 'l.accounting_account_id')->on('a.company_id', '=', 'l.company_id');
@@ -52,8 +61,8 @@ final readonly class GetFinancialSnapshotController
             ->select('a.id', 'a.code', 'a.name', 'a.account_type', 'a.financial_statement_rubric')
             ->selectRaw('SUM(l.debit_local) AS debit_local, SUM(l.credit_local) AS credit_local')
             ->selectRaw('SUM(l.debit_foreign) AS debit_foreign, SUM(l.credit_foreign) AS credit_foreign')
-            ->selectRaw('SUM(CASE WHEN j.entry_date >= ? THEN l.debit_local ELSE 0 END) AS period_debit_local', [$yearStart])
-            ->selectRaw('SUM(CASE WHEN j.entry_date >= ? THEN l.credit_local ELSE 0 END) AS period_credit_local', [$yearStart])
+            ->selectRaw("SUM(CASE WHEN $periodMovement THEN l.debit_local ELSE 0 END) AS period_debit_local", [$yearStart, $yearStart])
+            ->selectRaw("SUM(CASE WHEN $periodMovement THEN l.credit_local ELSE 0 END) AS period_credit_local", [$yearStart, $yearStart])
             ->get();
 
         $totals = array_fill_keys(['assets', 'liabilities', 'equity', 'result', 'unclassified', 'excluded', 'debit_local', 'credit_local', 'trial_debit_balance', 'trial_credit_balance'], '0.0000');

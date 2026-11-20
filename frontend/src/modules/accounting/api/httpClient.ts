@@ -1,4 +1,4 @@
-import type { TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseRevision } from '../types/annualTaxClose.types';
+import type { TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseRevision, TaxCloseTrialBalance, TaxOpeningSource } from '../types/annualTaxClose.types';
 import { reportUnauthorizedBearer } from '@/shared/auth/sessionInvalidation';
 import {
   accountingAccountTreeApiResponseSchema,
@@ -622,6 +622,14 @@ export class AccountingApiClient {
     const query = revision === undefined ? '' : `?revision=${revision}`;
     const result = await this.request<{ data: TaxClose }>(
       `/api/v1/accounting/annual-tax-close/${year}${query}`, { method: 'GET' },
+    );
+    return result.data;
+  }
+
+  public async fetchAnnualTaxTrialBalance(year: number, opening?: TaxOpeningSource): Promise<TaxCloseTrialBalance> {
+    const query = opening === undefined ? '' : `?opening=${opening}`;
+    const result = await this.request<{ data: TaxCloseTrialBalance }>(
+      `/api/v1/accounting/annual-tax-close/${year}/trial-balance${query}`, { method: 'GET' },
     );
     return result.data;
   }

@@ -167,6 +167,8 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'show'])
                 ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.show');
+            Route::get('/accounting/annual-tax-close/{year}/trial-balance', [AnnualTaxCloseController::class, 'trialBalance'])
+                ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.trial-balance');
             Route::put('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'save'])
                 ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
                 ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.save');

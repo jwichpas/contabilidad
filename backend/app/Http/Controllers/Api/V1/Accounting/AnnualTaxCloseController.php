@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Accounting;
 
 use App\Services\Accounting\AnnualTaxCloseCalculator;
+use App\Services\Accounting\AnnualTaxCloseTrialBalance;
 use App\Services\Security\AuditLoggerService;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -47,6 +48,14 @@ final readonly class AnnualTaxCloseController
             'result' => $row ? json_decode($row->result, true, 512, JSON_THROW_ON_ERROR) : null,
             'history' => $history,
         ]]);
+    }
+
+    public function trialBalance(Request $request, AnnualTaxCloseTrialBalance $balance, int $year): JsonResponse
+    {
+        $this->revisions($year);
+        $input = $request->validate(['opening' => ['nullable', 'in:historical,entry']]);
+
+        return response()->json(['data' => $balance->prepare($year, $input['opening'] ?? null)]);
     }
 
     public function save(Request $request, int $year): JsonResponse

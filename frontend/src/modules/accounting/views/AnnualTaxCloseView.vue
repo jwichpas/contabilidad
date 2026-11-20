@@ -6,6 +6,7 @@ import type { CompanyId } from '../types/accountingAccount.types';
 import type { DeferredTaxLine, TaxAdjustment, TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseResult } from '../types/annualTaxClose.types';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import { openStatementTablePrint } from '../utils/printStatementTable';
+import AnnualTaxTrialBalancePanel from './AnnualTaxTrialBalancePanel.vue';
 import UiSelect from '@/shared/ui/UiSelect.vue';
 
 const props = defineProps<{
@@ -337,6 +338,8 @@ void run(load);
           </table>
         </div>
       </details>
+
+      <AnnualTaxTrialBalancePanel :client="client" :year="year" />
 
       <details v-if="data.history.length" class="rounded-lg border border-border bg-surface p-4">
         <summary class="cursor-pointer font-semibold">Historial de revisiones</summary>
