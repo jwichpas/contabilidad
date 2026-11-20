@@ -129,7 +129,7 @@ describe('Design tokens OKLCH corporativos', () => {
     assert.match(sidebar, /app-sidebar-nav/);
     assert.match(sidebar, /currentModule === item.module \? 'page' : undefined/);
     assert.match(sidebar, /Buscar módulo/);
-    assert.match(styles, /\.app-sidebar-nav button\[aria-current="page"\]/);
+    assert.match(styles, /\.app-sidebar-nav :is\(button, a\)\[aria-current="page"\]/);
   });
 
   it('el menú ofrece más ancho y deja visibles datos de la empresa', () => {
@@ -137,7 +137,7 @@ describe('Design tokens OKLCH corporativos', () => {
     assert.match(sidebar, /RUC: \{\{ activeCompany\.taxId \}\}/);
     assert.doesNotMatch(sidebar, />\s*Vouchers\s*<\/span>/);
     assert.doesNotMatch(sidebar, />\s*Monedas\s*<\/span>/);
-    assert.match(styles, /\.app-sidebar-nav button \{/);
+    assert.match(styles, /\.app-sidebar-nav :is\(button, a\) \{/);
   });
 
   it('el encabezado no inventa certificación ni ejercicio fiscal activo', () => {

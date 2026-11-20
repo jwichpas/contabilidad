@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Download, FileCheck, Plus } from 'lucide-vue-next';
+import { payrollRoutes, type PayrollModule } from '@/shared/layout/navigation.types';
 import UiSelect from '@/shared/ui/UiSelect.vue';
 import { AccountingApiClient, ApiHttpError } from '@/modules/accounting/api/httpClient';
 import type { CompanyId } from '@/modules/accounting/types/accountingAccount.types';
@@ -9,13 +10,12 @@ import { formatAccountingDate, peruAccountingDate } from '@/modules/accounting/u
 import { formatExactLocalAmount } from '@/modules/accounting/utils/formatExactLocalAmount';
 import type { Attendance, AttendanceDay, Benefit, PayrollWorkspace, Revision, Worker } from './payroll.types';
 
-const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => string | null; ruc: string }>();
+const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => string | null; ruc: string; section: PayrollModule }>();
 const emit = defineEmits<{ (e: 'journal', draft: TaxJournalDraft): void }>();
 const api = new AccountingApiClient('', { getActiveCompanyId: () => props.activeCompanyId, getAccessToken: props.getAccessToken });
 const today = peruAccountingDate();
 const month = ref(today.slice(0, 7));
 const workspace = ref<PayrollWorkspace>();
-const tab = ref('workers');
 const busy = ref(false);
 const error = ref('');
 const message = ref('');
@@ -26,8 +26,6 @@ const currentWorkers = computed(() => workspace.value?.eligible.map(({data}) => 
   value: data.code, label: `${data.given_names} ${data.surname} · ${data.code}`,
 })) ?? []);
 const monthly = computed(() => workspace.value?.payroll);
-const tabs = [{ value: 'workers', label: 'Trabajadores' }, { value: 'attendance', label: 'Asistencia' },
-  { value: 'monthly', label: 'Planilla mensual' }, { value: 'benefits', label: 'Beneficios y vacaciones' }];
 const pensionOptions = [{ value: 'ONP', label: 'ONP' }, { value: 'AFP', label: 'AFP' }];
 const afpOptions = [{ value: 'HA', label: 'Hábitat' }, { value: 'IN', label: 'Integra' },
   { value: 'PR', label: 'Profuturo' }, { value: 'RI', label: 'Prima' }];
@@ -66,7 +64,13 @@ async function run(action: () => Promise<void>) {
   message.value = '';
   try { await action(); }
   catch (reason) {
-    error.value = reason instanceof ApiHttpError ? (Object.values(reason.validationErrors).flat()[0] ?? reason.message) : 'No se pudo completar la operación.';
+    if (reason instanceof ApiHttpError && reason.status === 503) {
+      error.value = 'Planillas no está disponible. Si la base está pendiente de actualizar, aplica la migración de Planillas y vuelve a intentar.';
+    } else if (reason instanceof ApiHttpError && reason.status < 500) {
+      error.value = Object.values(reason.validationErrors).flat()[0] ?? reason.message;
+    } else {
+      error.value = 'No se pudo completar la operación de planillas.';
+    }
   } finally { busy.value = false; }
 }
 
@@ -237,26 +241,26 @@ function vacationBalance(person: Worker) {
   return person.vacation_granted - (workspace.value?.vacations.filter(({ data }) => data.worker === person.code)
     .reduce((days, { data }) => days + data.days, 0) ?? 0);
 }
+watch(() => props.section, () => {
+  message.value = '';
+  if (workspace.value) error.value = '';
+});
 void run(reload);
 </script>
 
 <template>
   <div class="space-y-4">
     <header class="flex flex-wrap items-end justify-between gap-3">
-      <div><h1 class="text-xl font-bold">Gestión de planillas</h1><p class="text-sm text-muted">Régimen general privado · Remuneración mensual en soles</p></div>
+      <div><h1 class="text-xl font-bold">{{ payrollRoutes[section].label }}</h1><p class="text-sm text-muted">Régimen general privado · Remuneración mensual en soles</p></div>
       <label class="ui-label">Periodo <input type="month" :value="month" :disabled="busy" @change="selectMonth(($event.target as HTMLInputElement).value)"></label>
     </header>
-    <div class="flex flex-wrap gap-1 rounded-lg border border-line bg-surf p-1" aria-label="Secciones de planillas">
-      <button v-for="item in tabs" :key="item.value" type="button" class="ui-btn ui-btn-sm"
-        :aria-pressed="tab === item.value" :class="tab === item.value ? 'ui-btn-primary' : 'ui-btn-ghost'" @click="tab = item.value">{{ item.label }}</button>
-    </div>
     <p v-if="busy" role="status" class="text-sm text-muted">Procesando planillas…</p>
     <div v-if="error" role="alert" class="rounded-md border border-line bg-surf p-3 text-sm text-neg">
       {{ error }} <button v-if="!workspace" class="ui-btn ui-btn-ghost ui-btn-sm" @click="run(reload)">Reintentar</button>
     </div>
     <p v-if="message" role="status" class="text-sm text-pos">{{ message }}</p>
 
-    <section v-if="workspace && tab === 'workers'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
+    <section v-if="workspace && section === 'payroll-workers'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
       <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-semibold">{{ workspace.workers.length }} trabajadores</h2>
         <button type="button" class="ui-btn ui-btn-primary" :disabled="busy" @click="editWorker()"><Plus class="size-4" /> Trabajador</button></div>
       <form v-if="worker" class="space-y-3 rounded-md border border-line p-3" @submit.prevent="saveWorker">
@@ -291,7 +295,7 @@ void run(reload);
       </ul>
     </section>
 
-    <section v-if="workspace && tab === 'attendance'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
+    <section v-if="workspace && section === 'payroll-attendance'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
       <h2 class="font-semibold">Cierre de asistencia · {{ workspace.attendance.length }} / {{ workspace.eligible.length }}</h2>
       <p class="text-sm text-muted">Registre los días equivalentes de pago y los minutos trabajados según el control diario. Incluya los días de descanso remunerado que correspondan.</p>
       <div class="max-w-sm"><UiSelect aria-label="Trabajador vigente" :model-value="selectedAttendance" :options="currentWorkers" @update:model-value="selectAttendance" /></div>
@@ -329,7 +333,7 @@ void run(reload);
       </form>
     </section>
 
-    <section v-if="workspace && tab === 'monthly'" class="space-y-4 rounded-lg border border-line bg-surf p-4">
+    <section v-if="workspace && section === 'payroll-monthly'" class="space-y-4 rounded-lg border border-line bg-surf p-4">
       <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-semibold">Planilla del periodo</h2>
         <span v-if="monthly" class="text-sm text-muted">Revisión {{ monthly.revision }} · {{ monthly.data.approved ? 'Aprobada' : 'Borrador' }}</span></div>
       <form v-if="!monthly?.data.approved" class="flex flex-wrap items-end gap-3" @submit.prevent="calculate">
@@ -357,49 +361,45 @@ void run(reload);
       </template>
     </section>
 
-    <template v-if="workspace && tab === 'benefits'">
-      <section class="space-y-3 rounded-lg border border-line bg-surf p-4">
-        <h2 class="font-semibold">CTS y gratificaciones</h2>
-        <form class="space-y-3" @submit.prevent="saveBenefit">
-          <fieldset :disabled="busy" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <div><label class="ui-label" for="benefit-worker">Trabajador</label><UiSelect id="benefit-worker" :model-value="benefit.worker" :options="currentWorkers" @update:model-value="selectBenefit($event, benefit.kind)" /></div>
-            <div><label class="ui-label" for="benefit-kind">Beneficio</label><UiSelect id="benefit-kind" :model-value="benefit.kind" :options="kindOptions" @update:model-value="selectBenefit(benefit.worker, $event)" /></div>
-            <label class="ui-label">Remuneración computable validada<input v-model.trim="benefit.base" class="w-full" inputmode="decimal" required></label>
-            <label class="ui-label">Meses computables<input v-model.number="benefit.months" class="w-full" type="number" min="0" max="6" required></label>
-            <label class="ui-label">{{ benefit.kind === 'CTS' ? 'Días computables adicionales' : 'Días no computables dentro de esos meses' }}<input v-model.number="benefit.days" class="w-full" type="number" min="0" :max="benefit.kind === 'CTS' ? 29 : benefit.months * 30" required></label>
-            <label v-if="benefit.kind === 'CTS'" class="ui-label">Gratificación previa computable<input v-model.trim="benefit.previous_gratification" class="w-full" inputmode="decimal" required></label>
-            <template v-else>
-              <div><label class="ui-label" for="benefit-health">Cobertura</label><UiSelect id="benefit-health" v-model="benefit.health" :options="[{value:'ESSALUD',label:'EsSalud'},{value:'EPS',label:'EPS'}]" /></div>
-              <label class="ui-label">Retención de quinta validada<input v-model.trim="benefit.withholding" class="w-full" inputmode="decimal" required></label>
-            </template>
-            <label class="ui-label">Fecha contable<input v-model="benefit.posting_date" class="w-full" type="date" required></label>
-            <label class="ui-label">Sustento del cálculo<input v-model.trim="benefit.reference" class="w-full" required maxlength="500"></label>
-          </fieldset>
-          <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy || !benefit.worker">Calcular y guardar beneficio</button>
-        </form>
-        <ul class="divide-y divide-line">
-          <li v-for="{ reference, data } in workspace.benefits" :key="reference" class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-            <span>{{ data.worker }} · {{ data.kind === 'CTS' ? 'CTS' : 'Gratificación' }} · Neto {{ money(data.result.net) }}</span>
-            <button v-if="data.journal" type="button" class="ui-btn ui-btn-ghost ui-btn-sm" @click="emit('journal', data.journal)">Preparar asiento</button>
-          </li>
-        </ul>
-      </section>
-      <section class="space-y-3 rounded-lg border border-line bg-surf p-4">
-        <h2 class="font-semibold">Vacaciones</h2>
-        <form class="space-y-3" @submit.prevent="saveVacation">
-          <fieldset :disabled="busy" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <div><label class="ui-label" for="vacation-worker">Trabajador</label><UiSelect id="vacation-worker" v-model="vacation.worker" :options="workforce" /></div>
-            <label class="ui-label">Inicio<input v-model="vacation.from" type="date" class="w-full" required></label>
-            <label class="ui-label">Fin<input v-model="vacation.to" type="date" class="w-full" required></label>
-            <label class="ui-label sm:col-span-2">Acuerdo o referencia<input v-model.trim="vacation.reference" class="w-full" required maxlength="500"></label>
-          </fieldset>
-          <p v-if="vacation.worker" class="text-sm text-muted">Saldo reconocido disponible · {{ vacationBalance(workspace.workers.find(entry => entry.reference === vacation.worker)!.data) }} días</p>
-          <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy || !vacation.worker">Registrar descanso</button>
-        </form>
-        <ul class="divide-y divide-line">
-          <li v-for="{ reference, data } in workspace.vacations" :key="reference" class="py-2 text-sm">{{ data.worker }} · {{ formatAccountingDate(data.from) }} a {{ formatAccountingDate(data.to) }} · {{ data.days }} días</li>
-        </ul>
-      </section>
-    </template>
+    <section v-if="workspace && section === 'payroll-benefits'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
+      <form class="space-y-3" @submit.prevent="saveBenefit">
+        <fieldset :disabled="busy" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div><label class="ui-label" for="benefit-worker">Trabajador</label><UiSelect id="benefit-worker" :model-value="benefit.worker" :options="currentWorkers" @update:model-value="selectBenefit($event, benefit.kind)" /></div>
+          <div><label class="ui-label" for="benefit-kind">Beneficio</label><UiSelect id="benefit-kind" :model-value="benefit.kind" :options="kindOptions" @update:model-value="selectBenefit(benefit.worker, $event)" /></div>
+          <label class="ui-label">Remuneración computable validada<input v-model.trim="benefit.base" class="w-full" inputmode="decimal" required></label>
+          <label class="ui-label">Meses computables<input v-model.number="benefit.months" class="w-full" type="number" min="0" max="6" required></label>
+          <label class="ui-label">{{ benefit.kind === 'CTS' ? 'Días computables adicionales' : 'Días no computables dentro de esos meses' }}<input v-model.number="benefit.days" class="w-full" type="number" min="0" :max="benefit.kind === 'CTS' ? 29 : benefit.months * 30" required></label>
+          <label v-if="benefit.kind === 'CTS'" class="ui-label">Gratificación previa computable<input v-model.trim="benefit.previous_gratification" class="w-full" inputmode="decimal" required></label>
+          <template v-else>
+            <div><label class="ui-label" for="benefit-health">Cobertura</label><UiSelect id="benefit-health" v-model="benefit.health" :options="[{value:'ESSALUD',label:'EsSalud'},{value:'EPS',label:'EPS'}]" /></div>
+            <label class="ui-label">Retención de quinta validada<input v-model.trim="benefit.withholding" class="w-full" inputmode="decimal" required></label>
+          </template>
+          <label class="ui-label">Fecha contable<input v-model="benefit.posting_date" class="w-full" type="date" required></label>
+          <label class="ui-label">Sustento del cálculo<input v-model.trim="benefit.reference" class="w-full" required maxlength="500"></label>
+        </fieldset>
+        <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy || !benefit.worker">Calcular y guardar beneficio</button>
+      </form>
+      <ul class="divide-y divide-line">
+        <li v-for="{ reference, data } in workspace.benefits" :key="reference" class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+          <span>{{ data.worker }} · {{ data.kind === 'CTS' ? 'CTS' : 'Gratificación' }} · Neto {{ money(data.result.net) }}</span>
+          <button v-if="data.journal" type="button" class="ui-btn ui-btn-ghost ui-btn-sm" @click="emit('journal', data.journal)">Preparar asiento</button>
+        </li>
+      </ul>
+    </section>
+    <section v-if="workspace && section === 'payroll-vacations'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
+      <form class="space-y-3" @submit.prevent="saveVacation">
+        <fieldset :disabled="busy" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div><label class="ui-label" for="vacation-worker">Trabajador</label><UiSelect id="vacation-worker" v-model="vacation.worker" :options="workforce" /></div>
+          <label class="ui-label">Inicio<input v-model="vacation.from" type="date" class="w-full" required></label>
+          <label class="ui-label">Fin<input v-model="vacation.to" type="date" class="w-full" required></label>
+          <label class="ui-label sm:col-span-2">Acuerdo o referencia<input v-model.trim="vacation.reference" class="w-full" required maxlength="500"></label>
+        </fieldset>
+        <p v-if="vacation.worker" class="text-sm text-muted">Saldo reconocido disponible · {{ vacationBalance(workspace.workers.find(entry => entry.reference === vacation.worker)!.data) }} días</p>
+        <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy || !vacation.worker">Registrar descanso</button>
+      </form>
+      <ul class="divide-y divide-line">
+        <li v-for="{ reference, data } in workspace.vacations" :key="reference" class="py-2 text-sm">{{ data.worker }} · {{ formatAccountingDate(data.from) }} a {{ formatAccountingDate(data.to) }} · {{ data.days }} días</li>
+      </ul>
+    </section>
   </div>
 </template>

@@ -1262,7 +1262,7 @@
 }
 .app-content { max-width: none; }
 .app-sidebar { background: var(--side); color: var(--ink); border-color: var(--line); }
-.app-sidebar-nav button {
+.app-sidebar-nav :is(button, a) {
   min-height: 2.35rem;
   color: var(--mut);
   font-size: 0.8125rem;
@@ -1275,17 +1275,18 @@
 .app-sidebar-nav .truncate {
   min-width: 0;
 }
-.app-sidebar-nav button[aria-current="page"] {
+.app-sidebar-nav button[data-active="true"] { color: var(--nav-active); }
+.app-sidebar-nav :is(button, a)[aria-current="page"] {
   background: var(--soft);
   color: var(--nav-active);
   box-shadow: inset 3px 0 0 var(--brand);
   font-weight: 650;
 }
-.app-sidebar-nav button:not([aria-current="page"]):hover {
+.app-sidebar-nav :is(button, a):not([aria-current="page"]):hover {
   background: var(--hover);
   color: var(--ink);
 }
-.app-sidebar button:focus-visible {
+.app-sidebar :is(button, a):focus-visible {
   outline: 2px solid var(--focus-color);
   outline-offset: 2px;
 }

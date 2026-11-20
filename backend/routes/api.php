@@ -65,6 +65,7 @@ use App\Http\Middleware\JournalAuthenticatedTiming;
 use App\Http\Middleware\JournalAuthenticationStartTiming;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\RequireCompanyRole;
+use App\Http\Middleware\RequirePayrollSchema;
 use App\Http\Middleware\RequireMonthlyAccountingConfirmation;
 use App\Http\Controllers\Api\V1\Accounting\MonthlyAccountingWorkController;
 use App\Http\Controllers\Api\V1\Accounting\DaotReportController;
@@ -196,7 +197,10 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/{format}', [DaotReportController::class, 'csv'])->whereIn('format', ['resumen', 'detalle']);
             });
 
-            Route::prefix('payroll')->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+            Route::prefix('payroll')->middleware([
+                RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT',
+                RequirePayrollSchema::class,
+            ])
                 ->controller(\App\Http\Controllers\Api\V1\Payroll\PayrollController::class)->group(function (): void {
                     Route::put('/workers/{worker}', 'worker')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
                     Route::post('/workers/{worker}/vacations', 'vacation')->where('worker', '[A-Z][A-Z0-9-]{0,19}');

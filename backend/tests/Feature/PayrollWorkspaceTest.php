@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 
 beforeEach(function (): void {
@@ -81,4 +82,12 @@ it('freezes monthly payroll, balances its draft and exports PLAME and AFPnet', f
         ->where('user_id', $this->user->id)->update(['role' => 'AUDITOR']));
     $this->getJson($period)->assertForbidden();
     $this->get($period.'/exports/afp')->assertForbidden();
+});
+
+it('returns a migration message when the payroll table is missing', function (): void {
+    Schema::partialMock()->shouldReceive('hasTable')->with('company_payroll_revisions')->once()->andReturnFalse();
+
+    $this->getJson('/api/v1/payroll/periods/2026-07')
+        ->assertServiceUnavailable()
+        ->assertJsonPath('message', 'Planillas no está disponible. Aplique la migración de planillas y vuelva a intentar.');
 });

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { payrollRoutes, resolvePayrollModule } from '../src/shared/layout/navigation.types.ts';
 
 const read = (relative) => readFileSync(new URL(relative, import.meta.url), 'utf8');
 const app = read('../src/App.vue');
@@ -148,4 +149,14 @@ test('el modal PCGE presenta etiquetas contables claras y ayuda contextual sin a
   assert.match(form, /requires_cost_center: form\.requires_cost_center/);
   assert.match(form, /financial_statement_rubric: form\.financial_statement_rubric/);
   assert.doesNotMatch(form, /selectedCostCenterCode: selectedCostCenterCode\.value/);
+});
+
+test('resuelve cada ruta de planillas y mantiene el enlace anterior a trabajadores', () => {
+  assert.equal(resolvePayrollModule('#gestion-de-planillas'), 'payroll-workers');
+  assert.equal(resolvePayrollModule('#diario'), undefined);
+  assert.equal(Object.keys(payrollRoutes).length, 5);
+  assert.equal(new Set(Object.values(payrollRoutes).map(({ hash }) => hash)).size, 5);
+  for (const [module, { hash }] of Object.entries(payrollRoutes)) {
+    assert.equal(resolvePayrollModule(hash), module);
+  }
 });

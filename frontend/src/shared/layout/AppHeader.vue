@@ -15,6 +15,7 @@ import UiSelect from '@/shared/ui/UiSelect.vue';
 import type { UiSelectOption } from '@/shared/ui/types';
 import type { CompanyId } from '@/modules/accounting/types/accountingAccount.types';
 import type { UserCompany } from '@/shared/auth/useAuthSession';
+import { isPayrollModule, payrollRoutes } from './navigation.types';
 import type { ActiveCompanyInfo, NavigationModule } from './navigation.types';
 
 interface AuthenticatedUser {
@@ -125,8 +126,8 @@ const activeCompanyIdString = computed<string>({
                 ? 'Préstamos recibidos'
               : currentModule === 'fixed-assets'
                 ? 'Activos fijos'
-              : currentModule === 'payroll'
-                ? 'Gestión de planillas'
+              : isPayrollModule(currentModule)
+                ? payrollRoutes[currentModule].label
               : currentModule === 'external-tax-reports'
                 ? 'DAOT y PDB Exportadores'
               : currentModule === 'monthly-work'

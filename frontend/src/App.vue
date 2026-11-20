@@ -23,6 +23,7 @@ import UiViewLoadError from './shared/ui/UiViewLoadError.vue';
 import LoginView from './shared/auth/LoginView.vue';
 import AppSidebar from './shared/layout/AppSidebar.vue';
 import AppHeader from './shared/layout/AppHeader.vue';
+import { isPayrollModule, payrollRoutes, resolvePayrollModule } from './shared/layout/navigation.types';
 import type { ActiveCompanyInfo, NavigationModule } from './shared/layout/navigation.types';
 import { asCompanyId, type CompanyId } from './modules/accounting/types/accountingAccount.types';
 import { useAuthSession } from './shared/auth/useAuthSession';
@@ -297,6 +298,8 @@ function refreshHeaderDate(): void {
 function resolveModuleFromHash(): NavigationModule {
   if (typeof window === 'undefined') return 'journal';
   const hash = window.location.hash.toLowerCase();
+  const payroll = resolvePayrollModule(hash);
+  if (payroll) return payroll;
   if (hash.includes('catalogos-see')) return 'see-references';
   if (hash.includes('catalogos-sunat')) return 'sunat-references';
   if (hash.includes('registro-compras')) return 'purchases';
@@ -308,7 +311,6 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('flujo-efectivo') || hash.includes('cash-flow')) return 'cash-flow';
   if (hash.includes('prestamos')) return 'loans';
   if (hash.includes('activos-fijos')) return 'fixed-assets';
-  if (hash.includes('gestion-de-planillas')) return 'payroll';
   if (hash.includes('daot-pdb')) return 'external-tax-reports';
   if (hash.includes('agenda-contable')) return 'monthly-work';
   if (hash.includes('vencimientos-sunat')) return 'sunat-calendar';
@@ -346,7 +348,9 @@ function openTaxJournal(draft: TaxJournalDraft) {
 function handleNavigate(mod: NavigationModule): void {
   if (isSwitchingCompany.value) return;
   currentModule.value = mod;
-  if (mod === 'journal') {
+  if (isPayrollModule(mod)) {
+    window.location.hash = payrollRoutes[mod].hash;
+  } else if (mod === 'journal') {
     window.location.hash = '#diario';
   } else if (mod === 'purchases') {
     window.location.hash = '#registro-compras';
@@ -364,8 +368,6 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#prestamos';
   } else if (mod === 'fixed-assets') {
     window.location.hash = '#activos-fijos';
-  } else if (mod === 'payroll') {
-    window.location.hash = '#gestion-de-planillas';
   } else if (mod === 'external-tax-reports') {
     window.location.hash = '#daot-pdb';
   } else if (mod === 'monthly-work') {
@@ -509,6 +511,7 @@ watch(
       :can-manage-payroll="canDeactivateEntities"
       :is-switching-company="isSwitchingCompany"
       @navigate="handleNavigate"
+      @expand="isSidebarCollapsed = false"
       @switch-company="handleSwitchCompany"
       @close-mobile="isMobileDrawerOpen = false"
       @toggle-dark="isDarkMode = !isDarkMode"
@@ -603,12 +606,13 @@ watch(
           :get-access-token="() => accessToken"
           :can-edit="canManageEntities"
         />
-        <template v-else-if="currentModule === 'payroll'">
+        <template v-else-if="isPayrollModule(currentModule)">
           <PayrollWorkspaceView v-if="canDeactivateEntities"
             :key="`payroll-${activeCompanyId}`"
             :active-company-id="activeCompanyId"
             :get-access-token="() => accessToken"
             :ruc="activeCompany.taxId"
+            :section="currentModule"
             @journal="openTaxJournal"
           />
           <p v-else role="alert" class="rounded-lg border border-line bg-surf p-4">Gestión de planillas requiere permisos de administrador o contador jefe.</p>
