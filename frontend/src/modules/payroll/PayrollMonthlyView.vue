@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { Calculator, ChevronDown, Download, FileCheck, Settings2, UsersRound } from 'lucide-vue-next';
+import { computed, nextTick, ref } from 'vue';
+import { Calculator, ChevronDown, Download, FileCheck, Settings2, UsersRound, Printer } from 'lucide-vue-next';
 import { formatExactLocalAmount } from '@/modules/accounting/utils/formatExactLocalAmount';
+import { buildPayrollReportHtml, buildPayslipHtml, payslipMissing, printPayrollDocument, type PayrollPrintEmployer } from './payrollPrint';
 import PayrollWorkerInputs from './PayrollWorkerInputs.vue';
 import type { PayrollInputDraft, PayrollRow, PayrollWorkspace } from './payroll.types';
 
-const props = defineProps<{ workspace: PayrollWorkspace; busy: boolean; month: string }>();
+const props = defineProps<{ workspace: PayrollWorkspace; busy: boolean; month: string; employer: PayrollPrintEmployer }>();
 const emit = defineEmits<{
   calculate: [];
   approve: [];
@@ -61,6 +62,9 @@ const indicators = [
 ] as const;
 
 const openParameters = ref(false);
+const report = ref<'payroll' | PayrollRow>();
+const reportHeading = ref<HTMLElement>();
+const printBlocked = ref(false);
 const selected = ref<string>();
 const canCalculate = computed(() => roster.value.length > 0 && !approved.value);
 
@@ -104,8 +108,33 @@ function detail(row: PayrollRow) {
   ];
 }
 
+const reportHtml = computed(() => {
+  if (!monthly.value || !report.value) return '';
+  const employer = monthly.value.data.employer ?? props.employer;
+  if (report.value === 'payroll') {
+    return buildPayrollReportHtml(employer, props.month, monthly.value.data, needsRecalculation.value);
+  }
+  const row = rowsByWorker.value.get(report.value.worker.code);
+  return row ? buildPayslipHtml(employer, props.month, monthly.value.data, row, needsRecalculation.value) : '';
+});
+const incompletePayslips = computed(() => monthly.value
+  ? rows.value.filter(row => payslipMissing(row, monthly.value!.data)).length : 0);
+
+async function showReport(target: 'payroll' | PayrollRow) {
+  report.value = target;
+  printBlocked.value = false;
+  await nextTick();
+  reportHeading.value?.focus();
+}
+
 function calculate() {
-  if (canCalculate.value) emit('calculate');
+  if (!canCalculate.value || props.busy) return;
+  if (minimum.value || props.workspace.parameters?.minimum) {
+    openParameters.value = false;
+    emit('calculate');
+  } else {
+    openParameters.value = true;
+  }
 }
 </script>
 
@@ -126,10 +155,13 @@ function calculate() {
           </button>
           <button v-if="monthly && !approved && !needsRecalculation" type="button" class="ui-btn ui-btn-sm ui-btn-primary"
             :disabled="busy" @click="emit('approve')"><FileCheck class="size-4" aria-hidden="true" /> Aprobar planilla</button>
-          <button v-else-if="canCalculate" type="button" class="ui-btn ui-btn-sm ui-btn-primary"
-            :disabled="busy || openParameters" @click="openParameters = true">
+          <button v-if="canCalculate" type="button" class="ui-btn ui-btn-sm"
+            :class="monthly && !needsRecalculation ? 'ui-btn-secondary' : 'ui-btn-primary'"
+            :disabled="busy" @click="calculate">
             <Calculator class="size-4" aria-hidden="true" /> {{ monthly ? 'Recalcular planilla' : 'Calcular planilla' }}
           </button>
+          <button v-if="monthly" type="button" class="ui-btn ui-btn-sm ui-btn-secondary"
+            :disabled="busy" @click="showReport('payroll')">Ver planilla</button>
           <template v-if="approved">
             <button v-if="monthly?.data.journal" type="button" class="ui-btn ui-btn-sm ui-btn-primary" @click="emit('journal')">Preparar asiento</button>
             <button v-if="jornadaAvailable" type="button" class="ui-btn ui-btn-sm ui-btn-secondary" :disabled="busy" @click="emit('download', 'jor')">
@@ -159,16 +191,34 @@ function calculate() {
       <h2 class="text-sm font-semibold">Parámetros del cálculo</h2>
       <div class="grid gap-3 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)]">
         <label class="ui-label">Base mínima EsSalud (S/)<input v-model.trim="minimum" class="w-full" inputmode="decimal" :readonly="!!workspace.parameters?.minimum" pattern="[0-9]{1,9}(\.[0-9]{1,2})?" required></label>
-        <label class="ui-label">Sustento del devengue y de la base mínima<input v-model.trim="source" class="w-full" maxlength="500" required></label>
+        <label class="ui-label">Referencia adicional (opcional)<input v-model.trim="source" class="w-full" maxlength="500"></label>
       </div>
       <button type="submit" class="ui-btn ui-btn-sm ui-btn-primary" :disabled="busy || !canCalculate">
         {{ monthly ? 'Recalcular planilla' : 'Calcular planilla' }}
       </button>
     </form>
 
-    <p v-if="!approved" class="text-sm text-muted">
-      Los trabajadores sin datos de planilla se calculan con su sueldo y los días del vínculo. Puedes registrar novedades o importar un cierre de asistencia por trabajador.
+    <p v-if="!approved && !monthly && roster.length" class="text-sm text-muted">
+      Calcula con el sueldo y los días del vínculo. Registra novedades solo si necesitas ajustar el periodo.
     </p>
+    <p v-if="monthly && !approved && incompletePayslips" class="text-sm text-muted">
+      {{ incompletePayslips }} {{ incompletePayslips === 1 ? 'boleta tiene' : 'boletas tienen' }} datos pendientes.
+      Revisa cada boleta y completa los datos de la ficha o la jornada antes de aprobar.
+    </p>
+    <section v-if="reportHtml" class="space-y-3 rounded-lg border border-line bg-surf p-3" aria-label="Vista previa del documento">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 ref="reportHeading" tabindex="-1" class="font-semibold">{{ report === 'payroll' ? 'Planilla de remuneraciones' : 'Boleta de pago' }}</h2>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" @click="printBlocked = !printPayrollDocument(reportHtml)">
+            <Printer class="size-4" aria-hidden="true" /> Imprimir / guardar PDF
+          </button>
+          <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" @click="report = undefined">Cerrar vista previa</button>
+        </div>
+      </div>
+      <p v-if="printBlocked" role="alert" class="text-sm text-neg">Permite las ventanas emergentes para abrir la impresión.</p>
+      <iframe sandbox="" :srcdoc="reportHtml" title="Documento de remuneraciones"
+        class="h-[40rem] w-full rounded-lg border border-line bg-white"></iframe>
+    </section>
     <p v-if="monthly && !jornadaAvailable" class="rounded-lg border border-line bg-soft px-4 py-3 text-sm">
       {{ approved ? 'El archivo Jornada PLAME requiere jornada confirmada para todos los trabajadores.'
         : 'Si necesitas exportar Jornada PLAME, confirma la jornada de todos los trabajadores antes de aprobar.' }}
@@ -226,7 +276,9 @@ function calculate() {
                   <span v-else class="block font-semibold">{{ worker.given_names }} {{ worker.surname }} {{ worker.second_surname }}</span>
                   <span class="block text-xs text-muted">{{ worker.code }} · {{ worker.pension }}</span>
                   <button v-if="!approved" type="button" class="mt-1 text-xs font-medium text-brand underline"
-                    @click="editing = editing === worker.code ? '' : worker.code">{{ input ? 'Editar datos de planilla' : 'Registrar datos de planilla' }}</button>
+                    @click="editing = editing === worker.code ? '' : worker.code">{{ input ? 'Editar novedades' : 'Registrar novedades' }}</button>
+                  <button v-if="row" type="button" class="ml-2 mt-1 text-xs font-medium text-brand underline"
+                    @click="showReport(row)">Ver boleta</button>
                 </th>
                 <td class="hidden text-right tabular-nums md:table-cell">{{ (row ? row.attendance : input)?.paid_days ?? '—' }}</td>
                 <td class="hidden whitespace-nowrap text-right tabular-nums lg:table-cell">{{ money(row?.amounts.gross) }}</td>

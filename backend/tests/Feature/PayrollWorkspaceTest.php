@@ -285,3 +285,54 @@ it('imports only the closed work inputs and keeps the copy independent of subseq
     $this->postJson($period.'/approval', ['expected_revision' => 1])->assertOk();
     $this->get($period.'/exports/jor')->assertOk();
 });
+
+it('reconciles the three-worker October payroll and retains its approved payslip inputs', function (): void {
+    $path = '/api/v1/payroll';
+    $period = $path.'/periods/2026-10';
+    $workers = [
+        ['01', '01234560', '1500.00', false, 'PR', '3.02', '1329.45', '2022-08-01'],
+        ['02', '01234561', '2500.00', true, 'IN', '5.28', '2324.76', '2023-04-01'],
+        ['03', '01234562', '1500.00', true, 'PR', '3.27', '1438.46', '2025-07-01'],
+    ];
+    foreach ($workers as [$code, $dni, $salary, $family, $afp, $insurance, , $hired]) {
+        $worker = [
+            'expected_revision' => 0, 'dni' => $dni, 'surname' => 'Ejemplo', 'given_names' => 'Trabajador '.$code,
+            'position' => 'Puesto de prueba', 'effective_month' => '2026-10', 'hired_on' => $hired,
+            'salary' => $salary, 'daily_hours' => 8, 'pension' => 'AFP', 'afp' => $afp, 'cuspp' => '0000DEMO00'.$code,
+            'family_allowance' => $family, 'afp_commission' => 'BALANCE',
+            'vacation_granted' => 0, 'reference' => 'Caso anonimizado',
+            'payslip_profile' => ['sex' => 'M', 'birth_date' => '1990-01-01', 'address' => 'Domicilio de prueba', 'nationality' => 'Peruana'],
+        ];
+        $this->putJson($path.'/workers/'.$code, $worker)->assertOk();
+        $this->putJson($period.'/inputs/'.$code, [
+            'expected_revision' => 0, 'input_source' => 'manual', 'jornada_confirmed' => true, 'worked_days' => 26,
+            'paid_days' => 30, 'vacation_paid_days' => 0, 'ordinary_minutes' => 12480, 'overtime_25' => 0, 'overtime_35' => 0,
+            'taxable_extra' => '0', 'nontaxable_extra' => '0', 'income_tax' => '0', 'other_deductions' => '0',
+            'employer_insurance' => $insurance,
+            'afp_rates' => ['insurance' => '1.37', 'commission' => '0', 'insurance_ceiling' => '12732.70', 'source' => 'Caso de prueba'],
+        ])->assertOk();
+    }
+
+    $draft = $this->putJson($period.'/calculation', ['input_mode' => 'independent', 'expected_revision' => 0])->assertOk()
+        ->assertJsonPath('data.data.totals.gross', '5746.00')
+        ->assertJsonPath('data.data.totals.basic', '5500.00')
+        ->assertJsonPath('data.data.totals.family_allowance', '246.00')
+        ->assertJsonPath('data.data.totals.afp_insurance', '78.73')
+        ->assertJsonPath('data.data.totals.pension', '653.33')
+        ->assertJsonPath('data.data.totals.net', '5092.67')
+        ->assertJsonPath('data.data.totals.essalud', '517.14')
+        ->assertJsonPath('data.data.totals.employer_insurance', '11.57')
+        ->assertJsonPath('data.data.totals.employer_cost', '6274.71')
+        ->assertJsonPath('data.data.health_minimum', '1230.00');
+    foreach ($workers as $index => $worker) {
+        $draft->assertJsonPath("data.data.rows.$index.amounts.net", $worker[6]);
+    }
+    $approved = $this->postJson($period.'/approval', ['expected_revision' => 1])->assertOk()
+        ->assertJsonPath('data.data.approved', true)
+        ->assertJsonPath('data.data.rows.0.worker.payslip_profile.nationality', 'Peruana')
+        ->assertJsonPath('data.data.rows.0.attendance.worked_days', 26)
+        ->assertJsonPath('data.data.employer.ruc', $this->company->tax_id);
+    $this->get($period.'/exports/jor')->assertOk();
+    $this->get($period.'/exports/afp')->assertOk();
+    expect($approved->json('data.data.journal.lines'))->not->toBeEmpty();
+});

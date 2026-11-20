@@ -13,7 +13,7 @@ import { formatAccountingDate, peruAccountingDate } from '@/modules/accounting/u
 import { formatExactLocalAmount } from '@/modules/accounting/utils/formatExactLocalAmount';
 import type { PayrollInputDraft, WorkInput, Benefit, PayrollParameterEntry, PayrollParameterRevision, PayrollWorkspace, Revision, Worker } from './payroll.types';
 
-const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => string | null; ruc: string; section: PayrollModule }>();
+const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => string | null; ruc: string; companyName: string; companyAddress?: string; section: PayrollModule }>();
 const emit = defineEmits<{ journal: [draft: TaxJournalDraft]; navigate: [module: PayrollModule] }>();
 const api = new AccountingApiClient('', { getActiveCompanyId: () => props.activeCompanyId, getAccessToken: props.getAccessToken });
 const today = peruAccountingDate();
@@ -100,10 +100,10 @@ function selectMonth(value: string) {
 }
 
 function editWorker(entry?: Revision<Worker>) {
-  worker.value = entry ? { ...entry.data, expected_revision: entry.revision } : {
+  worker.value = entry ? { ...entry.data, payslip_profile: { ...entry.data.payslip_profile }, expected_revision: entry.revision } : {
     code: '', dni: '', surname: '', second_surname: null, given_names: '', position: '',
     effective_month: month.value, hired_on: '', ended_on: null, salary: '', daily_hours: 8,
-    pension: 'ONP', afp: null, cuspp: null, family_allowance: false, night_shift: false, vacation_granted: 0, reference: '', expected_revision: 0,
+    payslip_profile: {}, pension: 'ONP', afp: null, cuspp: null, family_allowance: false, night_shift: false, vacation_granted: 0, reference: '', expected_revision: 0,
   };
 }
 
@@ -190,7 +190,7 @@ function savePayrollInput(payload: PayrollInputDraft) {
   void run(async () => {
     await api.payrollRequest(`periods/${month.value}/inputs/${code}`, 'PUT', input);
     await reload();
-    message.value = 'Datos de planilla guardados.';
+    message.value = 'Novedades guardadas. Puedes calcular la planilla.';
   });
 }
 
@@ -211,7 +211,9 @@ async function saveParameter(entry: PayrollParameterEntry, expected_revision: nu
 function calculate() {
   void run(async () => {
     await api.payrollRequest(`periods/${month.value}/calculation`, 'PUT', {
-      expected_revision: monthly.value?.revision ?? 0, health_minimum: minimum.value, source: source.value,
+      expected_revision: monthly.value?.revision ?? 0,
+      ...(minimum.value ? { health_minimum: minimum.value } : {}),
+      ...(source.value ? { source: source.value } : {}),
       input_mode: 'independent',
     });
     await reload();
@@ -341,6 +343,20 @@ void run(reload);
           </template>
           <label class="ui-label sm:col-span-2">Sustento de la ficha<input v-model.trim="worker.reference" class="w-full" required maxlength="500"></label>
         </fieldset>
+        <details v-if="worker.payslip_profile" class="rounded-lg border border-line p-3">
+          <summary class="cursor-pointer text-sm font-semibold">Datos de la boleta de pago</summary>
+          <fieldset :disabled="busy" class="mt-3 grid gap-2 sm:grid-cols-2">
+            <div>
+              <label for="worker-payslip-sex" class="ui-label">Sexo</label>
+              <UiSelect id="worker-payslip-sex" :model-value="worker.payslip_profile.sex ?? ''"
+                :options="[{ value: 'F', label: 'Femenino' }, { value: 'M', label: 'Masculino' }] as const"
+                @update:model-value="worker.payslip_profile.sex = $event || null" />
+            </div>
+            <label class="ui-label">Fecha de nacimiento<input v-model="worker.payslip_profile.birth_date" class="w-full" type="date"></label>
+            <label class="ui-label">Nacionalidad<input v-model.trim="worker.payslip_profile.nationality" class="w-full" maxlength="80"></label>
+            <label class="ui-label">Domicilio<input v-model.trim="worker.payslip_profile.address" class="w-full" maxlength="250"></label>
+          </fieldset>
+        </details>
         <button class="ui-btn ui-btn-primary" :disabled="busy" type="submit">Guardar ficha</button>
         <button class="ui-btn ui-btn-ghost" type="button" @click="worker = undefined">Cancelar</button>
       </form>
@@ -406,6 +422,7 @@ void run(reload);
       @journal="monthly?.data.journal && emit('journal', monthly.data.journal)"
       @workers="emit('navigate', 'payroll-workers')"
       :month="month"
+      :employer="{ name: companyName, ruc, address: companyAddress }"
       @save-input="savePayrollInput"
     />
 

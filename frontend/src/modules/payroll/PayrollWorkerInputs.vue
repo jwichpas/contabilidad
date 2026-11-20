@@ -47,7 +47,7 @@ const balance = props.worker.afp_commission === 'BALANCE';
 const form = ref<PayrollInput>({
   worker: props.worker.code, paid_days: paidDays, vacation_paid_days: 0, ordinary_minutes: 0, overtime_25: 0, overtime_35: 0,
   taxable_extra: legacy?.taxable_extra ?? '0', nontaxable_extra: legacy?.nontaxable_extra ?? '0', income_tax: legacy?.income_tax ?? '0',
-  other_deductions: legacy?.other_deductions ?? '0', reference: '', input_source: 'manual', jornada_confirmed: false,
+  other_deductions: legacy?.other_deductions ?? '0', worked_days: null, employer_insurance: null, reference: '', input_source: 'manual', jornada_confirmed: false,
   ...saved,
   provisions: provisions ? { ...provisions } : null,
   afp_rates: props.worker.pension === 'AFP' && !props.catalogAfp
@@ -75,6 +75,7 @@ function toggleProvisions() {
 
 function submit() {
   const data = { ...form.value };
+  for (const [key] of extraFields) data[key] ||= '0';
   if (data.afp_rates && !data.afp_rates.insurance && !data.afp_rates.source && !data.afp_rates.insurance_ceiling) data.afp_rates = null;
   emit('save', { ...data, expected_revision: props.saved?.revision ?? 0, import_attendance: importRequested.value });
 }
@@ -83,27 +84,49 @@ function submit() {
 <template>
   <form class="space-y-4 rounded-lg border border-line bg-surf p-4" @submit.prevent="submit">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <div><h2 class="font-semibold">Datos de planilla · {{ worker.given_names }} {{ worker.surname }}</h2>
+      <div><h2 class="font-semibold">Novedades · {{ worker.given_names }} {{ worker.surname }}</h2>
         <p class="text-sm text-muted">{{ form.input_source === 'attendance' ? (importRequested ? 'Se copiará el cierre vigente al guardar.' : 'Usa la jornada importada previamente.') : 'Ingreso directo en Planilla mensual.' }}</p>
       </div>
       <button v-if="canImport" type="button" class="ui-btn ui-btn-secondary ui-btn-sm" :disabled="busy" @click="importAttendance">Importar cierre de asistencia</button>
     </div>
-    <fieldset :disabled="busy" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <label v-for="[key,label,max] in workFields" :key="key" class="ui-label">{{ label }}
-        <input v-model.number="form[key]" type="number" min="0" :max="max"
+    <fieldset :disabled="busy" class="grid gap-3 sm:grid-cols-3">
+      <label class="ui-label">Días equivalentes remunerados
+        <input v-model.number="form.paid_days" class="w-full" type="number" min="0" max="30"
           :readonly="form.input_source === 'attendance'" required>
       </label>
-      <div v-if="form.input_source === 'attendance'" class="flex items-end">
-        <button type="button" class="ui-btn ui-btn-sm ui-btn-secondary" @click="form.input_source = 'manual'">Editar jornada manualmente</button>
-      </div>
-      <label v-else class="flex items-center gap-2 text-sm">
-        <input v-model="form.jornada_confirmed" type="checkbox"> Jornada confirmada para exportación PLAME
-      </label>
-      <label v-for="[key,label] in extraFields" :key="key" class="ui-label">{{ label }}
-        <input v-model.trim="form[key]" inputmode="decimal" required>
-      </label>
-      <label class="ui-label">Referencia (opcional)<input v-model.trim="form.reference" maxlength="500"></label>
+      <label class="ui-label">Otros descuentos<input v-model.trim="form.other_deductions" class="w-full" inputmode="decimal"></label>
+      <label class="ui-label">Referencia (opcional)<input v-model.trim="form.reference" class="w-full" maxlength="500"></label>
     </fieldset>
+    <details class="rounded-md border border-line p-3">
+      <summary class="cursor-pointer text-sm font-semibold">Jornada, vacaciones y PLAME</summary>
+      <fieldset :disabled="busy" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <label class="ui-label">Días efectivamente trabajados
+          <input v-model.number="form.worked_days" type="number" min="0" max="31" class="w-full">
+        </label>
+        <label v-for="[key,label,max] in workFields.slice(1)" :key="key" class="ui-label">{{ label }}
+          <input v-model.number="form[key]" type="number" min="0" :max="max" class="w-full"
+            :readonly="form.input_source === 'attendance'" required>
+        </label>
+        <div v-if="form.input_source === 'attendance'" class="flex items-end">
+          <button type="button" class="ui-btn ui-btn-sm ui-btn-secondary" @click="form.input_source = 'manual'">Editar jornada manualmente</button>
+        </div>
+        <label v-else class="flex items-center gap-2 text-sm">
+          <input v-model="form.jornada_confirmed" type="checkbox"> Jornada confirmada
+        </label>
+      </fieldset>
+    </details>
+    <details class="rounded-md border border-line p-3">
+      <summary class="cursor-pointer text-sm font-semibold">Ingresos adicionales, quinta y aportes</summary>
+      <fieldset :disabled="busy" class="mt-3 grid gap-3 sm:grid-cols-2">
+        <label v-for="[key,label] in extraFields.slice(0, 3)" :key="key" class="ui-label">{{ label }}
+          <input v-model.trim="form[key]" inputmode="decimal" class="w-full">
+        </label>
+        <label class="ui-label">Póliza de seguro del empleador (S/)
+          <input v-model.trim="form.employer_insurance" inputmode="decimal" class="w-full">
+        </label>
+      </fieldset>
+      <p class="mt-2 text-xs text-muted">La póliza se incluye en el costo de planilla. Su registro contable se realiza por separado.</p>
+    </details>
     <fieldset v-if="form.afp_rates" :disabled="busy" class="grid gap-3 rounded-md border border-line p-3 sm:grid-cols-2">
       <legend class="px-1 text-sm font-semibold">Tasas AFP del devengue</legend>
       <label v-for="[key,label] in afpFields" :key="key" class="ui-label">{{ label }}
@@ -111,8 +134,9 @@ function submit() {
           :inputmode="key === 'source' ? 'text' : 'decimal'">
       </label>
     </fieldset>
-    <fieldset :disabled="busy" class="space-y-2 rounded-md border border-line p-3">
-      <legend class="px-1 text-sm font-semibold">Provisiones del mes</legend>
+    <details class="rounded-md border border-line p-3" :open="!!form.provisions">
+      <summary class="cursor-pointer text-sm font-semibold">Provisiones del mes</summary>
+      <fieldset :disabled="busy" class="mt-3 space-y-2">
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" :checked="!!form.provisions" @change="toggleProvisions"> Estimar provisiones</label>
       <div v-if="form.provisions" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <label v-for="[key,label] in provisionFields" :key="key" class="ui-label">{{ label }}
@@ -127,9 +151,10 @@ function submit() {
         <label class="flex items-center gap-2 text-sm"><input v-model="form.provisions.gratification_month" type="checkbox"> Mes completo computable para gratificación</label>
         <label class="ui-label">Sustento de bases y días<input v-model.trim="form.provisions.reference" maxlength="500" required></label>
       </div>
-    </fieldset>
+      </fieldset>
+    </details>
     <div class="flex gap-2">
-      <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm" :disabled="busy">Guardar datos de planilla</button>
+      <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm" :disabled="busy">Guardar novedades</button>
       <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" :disabled="busy" @click="emit('close')">Cerrar</button>
     </div>
   </form>

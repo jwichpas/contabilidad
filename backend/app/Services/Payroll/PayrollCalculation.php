@@ -62,12 +62,14 @@ final class PayrollCalculation
         $healthBasis = bccomp($gross, '0', 2) === 0 ? '0' : (bccomp($gross, $healthMinimum, 2) < 0 ? $healthMinimum : $gross);
         $essalud = $this->percent($healthBasis, PayrollParameters::ESSALUD);
 
+        $insuranceCost = $attendance['employer_insurance'] ?? '0.00';
         $provisions = isset($attendance['provisions']) ? $this->provisions($attendance['provisions']) : [];
 
         return ['basic' => $basic, 'overtime' => $overtime, 'pensionable' => $gross, 'gross' => $earnings,
             'pension' => $pension, 'vacation_pay' => $vacationPay, 'regular_expense' => bcsub($earnings, $vacationPay, 2), 'essalud' => $essalud, 'income_tax' => $attendance['income_tax'],
             'other_deductions' => $attendance['other_deductions'], 'net' => $net,
-            'employer_cost' => bcadd($earnings, $essalud, 2)] + ($family !== '0.00' ? ['family_allowance' => $family] : []) + $pensionParts + $provisions;
+            'employer_cost' => bcadd(bcadd($earnings, $essalud, 2), $insuranceCost, 2)]
+            + (isset($attendance['employer_insurance']) ? ['employer_insurance' => bcadd($insuranceCost, '0', 2)] : []) + ($family !== '0.00' ? ['family_allowance' => $family] : []) + $pensionParts + $provisions;
     }
 
     public function benefit(string $kind, array $input): array

@@ -612,6 +612,8 @@ watch(
             :active-company-id="activeCompanyId"
             :get-access-token="() => accessToken"
             :ruc="activeCompany.taxId"
+            :company-name="activeCompany.businessName"
+            :company-address="activeCompany.legalAddress"
             :section="currentModule"
             @navigate="handleNavigate"
             @journal="openTaxJournal"

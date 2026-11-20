@@ -116,6 +116,11 @@ final readonly class PayrollController
             'daily_hours' => ['required', 'integer', 'between:4,8'],
             'pension' => ['required', 'in:ONP,AFP'],
             'afp' => ['nullable', 'required_if:pension,AFP', 'in:HA,IN,PR,RI'],
+            'payslip_profile' => ['nullable', 'array:sex,birth_date,address,nationality'],
+            'payslip_profile.sex' => ['nullable', 'in:F,M'],
+            'payslip_profile.birth_date' => ['nullable', 'date_format:Y-m-d', 'before:today'],
+            'payslip_profile.address' => ['nullable', 'string', 'max:250'],
+            'payslip_profile.nationality' => ['nullable', 'string', 'max:80'],
             'family_allowance' => ['sometimes', 'boolean'],
             'night_shift' => ['sometimes', 'boolean'],
             'afp_commission' => ['nullable', 'in:FLOW,BALANCE', 'exclude_unless:pension,AFP'],
@@ -135,7 +140,7 @@ final readonly class PayrollController
                 'dni', 'Ya existe un trabajador con ese DNI.');
             $this->check($input['vacation_granted'] < $this->vacationDays($worker), 'vacation_granted',
                 'Los días reconocidos no pueden quedar por debajo de los descansos registrados.');
-            $previous = array_intersect_key($current ?? [], array_flip(['family_allowance', 'night_shift', 'afp_commission']));
+            $previous = array_intersect_key($current ?? [], array_flip(['family_allowance', 'night_shift', 'afp_commission', 'payslip_profile']));
             if ($input['pension'] !== 'AFP') {
                 unset($previous['afp_commission']);
             }
@@ -199,6 +204,8 @@ final readonly class PayrollController
             'input_source' => ['required', 'in:manual,attendance'],
             'jornada_confirmed' => ['required', 'boolean'],
             'import_attendance' => ['sometimes', 'boolean'],
+            'worked_days' => ['nullable', 'integer', 'between:0,31'],
+            'employer_insurance' => ['nullable', ...array_slice(self::MONEY, 1)],
         ] + $this->workInputRules() + $this->payrollInputRules(true));
         return $this->write($request, 'payroll_input', "$month-$worker", $data, function (array $input) use ($month, $worker): array {
             abort_if(($this->ledger->latest('payroll', $month)['data']['approved'] ?? false), 409, 'La planilla del periodo está aprobada.');
@@ -297,19 +304,27 @@ final readonly class PayrollController
     {
         $data = $request->validate([
             'expected_revision' => self::REVISION,
-            'health_minimum' => [...self::MONEY, 'numeric', 'gt:0'],
+            'health_minimum' => ['nullable', ...array_slice(self::MONEY, 1), 'numeric', 'gt:0'],
             'input_mode' => ['sometimes', 'in:independent'],
-            'source' => ['required', 'string', 'max:500'],
+            'source' => ['nullable', 'string', 'max:500'],
         ]);
         return $this->write($request, 'payroll', $month, $data, function (array $input) use ($month): array {
             abort_if(($this->ledger->latest('payroll', $month)['data']['approved'] ?? false), 409, 'La planilla ya está aprobada.');
             $parameters = $this->parameters->forMonth($month);
+            $input['health_minimum'] ??= $parameters['minimum']['amount'] ?? null;
+            $this->check($input['health_minimum'] === null, 'health_minimum', 'Registra la base mínima de EsSalud del periodo en Parámetros.');
+            $input['source'] ??= $parameters['minimum']['rule'] ?? 'Base registrada en Planilla mensual';
             if ($parameters['minimum']) {
                 $this->check(bccomp($input['health_minimum'], $parameters['minimum']['amount'], 2) !== 0,
                     'health_minimum', 'Use la RMV publicada para la base mínima de EsSalud del periodo.');
             }
+            $input['payslip_snapshot'] = true;
+            $employer = DB::table('companies')->where('id', $this->ledger->company())
+                ->first(['business_name', 'tax_id', 'legal_address']);
+
             return $this->snapshot($month, $input, $parameters, true)
-                + ['approved' => false, 'parameters' => $parameters, 'uses_parameter_catalog' => true];
+                + ['approved' => false, 'parameters' => $parameters, 'uses_parameter_catalog' => true,
+                    'employer' => ['name' => $employer->business_name, 'ruc' => $employer->tax_id, 'address' => $employer->legal_address]];
         });
     }
 
@@ -328,7 +343,7 @@ final readonly class PayrollController
                 abort_if(bccomp($draft['health_minimum'], $minimum['amount'], 2) !== 0, 409,
                     'La base mínima del borrador difiere de la RMV del periodo. Recalcule la planilla.');
             }
-            $current = $this->snapshot($month, array_intersect_key($draft, array_flip(['health_minimum', 'source', 'input_mode'])),
+            $current = $this->snapshot($month, array_intersect_key($draft, array_flip(['health_minimum', 'source', 'input_mode', 'payslip_snapshot'])),
                 $parameters, $draft['uses_parameter_catalog'] ?? false);
             abort_if($current['rows'] != $draft['rows'], 409, 'Cambió un trabajador o sus datos de planilla. Vuelva a calcular el periodo.');
             return array_replace($draft, ['approved' => true]);
@@ -425,8 +440,22 @@ final readonly class PayrollController
         $independent = ($input['input_mode'] ?? null) === 'independent';
         $records = $this->ledger->records($independent ? 'payroll_input' : 'attendance', $month.'-');
         $versions = $independent ? [] : $this->dayVersions($this->ledger->records('day', $month.'-'));
+        $payslip = $input['payslip_snapshot'] ?? false;
+        [$first, $last] = $this->bounds($month);
+        $vacations = [];
+        if ($payslip) {
+            foreach ($this->ledger->records('vacation') as $entry) {
+                $days = $entry['data'];
+                if ($days['from'] <= $last && $days['to'] >= $first) {
+                    $vacations[$days['worker']][] = ['from' => $days['from'], 'to' => $days['to']];
+                }
+            }
+        }
         $rows = [];
         $totals = array_fill_keys(['gross','regular_expense','vacation_pay','net','pension','essalud','income_tax','other_deductions','employer_cost','onp','afp'], '0.00');
+        if ($payslip) {
+            $totals += array_fill_keys(['basic', 'family_allowance', 'afp_contribution', 'afp_insurance', 'afp_commission'], '0.00');
+        }
         foreach ($eligible as $person) {
             $worker = $person['data'];
             $code = $worker['code'];
@@ -463,7 +492,11 @@ final readonly class PayrollController
             $amounts = $this->calculation->worker($worker, $attendanceInput, $input['health_minimum'], $parameters);
             $rows[] = ['worker' => $worker, 'worker_revision' => $person['revision'], 'attendance_revision' => $independent ? null : $record['revision'],
                 'attendance' => $attendanceInput, 'amounts' => $amounts]
-                + ($independent ? ['input_revision' => $record['revision'] ?? 0] : []);
+                + ($independent ? ['input_revision' => $record['revision'] ?? 0] : [])
+                + ($payslip ? ['vacation_periods' => $vacations[$code] ?? []] : []);
+            if (isset($amounts['employer_insurance'])) {
+                $totals['employer_insurance'] ??= '0.00';
+            }
             if (isset($amounts['provision_total'])) {
                 $totals['provision_total'] ??= '0.00';
             }
