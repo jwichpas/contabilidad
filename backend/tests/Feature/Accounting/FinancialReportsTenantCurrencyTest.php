@@ -59,6 +59,7 @@ it('reports an empty company in its configured USD functional currency, not assu
         ->assertJsonPath('data.analytic_routing_status', 'NOT_CONFIGURED')
         ->assertJsonCount(0, 'data.accounts')
         ->assertJsonCount(0, 'data.rubrics')
+        ->assertJsonStructure(['data' => ['esf_catalog']])
         ->assertJsonCount(0, 'data.unmapped_account_ids');
 });
 

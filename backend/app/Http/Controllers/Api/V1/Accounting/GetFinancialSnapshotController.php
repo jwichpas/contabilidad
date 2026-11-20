@@ -76,6 +76,10 @@ final readonly class GetFinancialSnapshotController
                 str_starts_with((string) $row->code, '9'),
                 str_starts_with((string) $row->code, '79'),
                 $row->account_type === 'MEMORANDUM' => 'excluded',
+                // PCGE 88 (impuesto a las ganancias) es gasto del periodo.
+                // El maestro historico marca todo el elemento 8 como EQUITY:
+                // no trasladar 881 al patrimonio ni inflar el resultado neto.
+                str_starts_with((string) $row->code, '88') => 'result',
                 $row->account_type === 'ASSET' => 'assets',
                 $row->account_type === 'LIABILITY' => 'liabilities',
                 $row->account_type === 'EQUITY' => 'equity',
@@ -131,8 +135,19 @@ final readonly class GetFinancialSnapshotController
 
         $rubricDefinitions = DB::table('financial_statement_rubrics')
             ->where('is_active', true)
-            ->get(['code', 'name', 'group_name', 'presentation_order'])
+            ->get(['code', 'name', 'group_name', 'presentation_order', 'statement_type'])
             ->keyBy('code');
+        // Only standard ESF reference rows; the amounts remain tenant-scoped,
+        // sourced exclusively from posted journal lines. This supplies the
+        // headings with blank lines shown in a formal balance sheet.
+        $esfCatalog = $rubricDefinitions->filter(
+            static fn ($rubric): bool => (string) $rubric->statement_type === 'ESF'
+        )->sortBy('presentation_order')->values()->map(static fn ($rubric): array => [
+            'code' => (string) $rubric->code,
+            'name' => (string) $rubric->name,
+            'group_name' => (string) $rubric->group_name,
+            'presentation_order' => (int) $rubric->presentation_order,
+        ])->all();
         $rubricTotals = [];
         $unmappedAccountIds = [];
         foreach ($accounts as $account) {
@@ -140,7 +155,10 @@ final readonly class GetFinancialSnapshotController
                 continue;
             }
 
-            $rubricCode = $account['rubric'];
+            // El impuesto a las ganancias corriente/diferido tiene un rubro
+            // oficial propio aunque el PCGE_2019 ya inicializado no lo mapee.
+            $rubricCode = str_starts_with($account['code'], '88')
+                ? 'ER_IMPUESTO_RENTA' : $account['rubric'];
             $definition = $rubricDefinitions->get($rubricCode);
             if ($rubricCode === 'NONE' || $definition === null) {
                 $unmappedAccountIds[] = $account['id'];
@@ -188,6 +206,7 @@ final readonly class GetFinancialSnapshotController
             'currency' => $currency,
             'accounts' => $accounts,
             'rubrics' => $rubrics,
+            'esf_catalog' => $esfCatalog,
             'unmapped_account_ids' => $unmappedAccountIds,
             'analytic_routing_status' => $analyticRoutingStatus,
             'totals' => array_merge($totals, [

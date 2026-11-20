@@ -165,6 +165,7 @@ const activeCompany = computed<ActiveCompanyInfo>(() => {
       id: found.id,
       taxId: found.tax_id,
       businessName: found.business_name,
+      legalAddress: found.legal_address,
       fiscalRegime: found.fiscal_regime ?? 'Régimen General · PRICO',
     };
   }
@@ -243,6 +244,7 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('centros-costo') || hash.includes('cost-centers')) return 'cost-centers';
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
+  if (hash.includes('flujo-efectivo') || hash.includes('cash-flow')) return 'cash-flow';
   if (hash.includes('estados-financieros') || hash.includes('financial-statements')) return 'financial-statements';
   if (hash.includes('historial-fiscal') || hash.includes('fiscal-history')) return 'fiscal-history';
   if (hash.includes('anexos') || hash.includes('terceros') || hash.includes('entities')) return 'entities';
@@ -284,6 +286,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#periodos';
   } else if (mod === 'financial-statements') {
     window.location.hash = '#estados-financieros';
+  } else if (mod === 'cash-flow') {
+    window.location.hash = '#flujo-efectivo';
   } else if (mod === 'exchange-rates') {
     window.location.hash = '#tipo-cambio';
   } else if (mod === 'fiscal-history') {
@@ -486,10 +490,16 @@ watch(
           :can-manage-periods="canManagePeriods"
         />
         <FinancialStatementsView
-          v-else-if="currentModule === 'financial-statements'"
+          v-else-if="currentModule === 'financial-statements' || currentModule === 'cash-flow'"
           :key="`financial-${activeCompanyId}`"
           :active-company-id="activeCompanyId"
+          :company-name="activeCompany.businessName"
+          :company-tax-id="activeCompany.taxId"
+          :company-address="activeCompany.legalAddress ?? ''"
+          :can-configure-cash-flow="canDeactivateEntities"
+          :initial-report="currentModule === 'cash-flow' ? 'cash-flow' : 'snapshot'"
           :get-access-token="() => accessToken"
+          @select-report="handleNavigate($event === 'cash-flow' ? 'cash-flow' : 'financial-statements')"
         />
         <ExchangeRatesView
           v-else-if="currentModule === 'exchange-rates'"

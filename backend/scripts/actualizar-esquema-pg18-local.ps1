@@ -21,6 +21,7 @@ $volume='contabilidad-pg18-local-data'
 $privateConfig=Join-Path $backend '.env.pg18.local'
 $previousEnvironment=@{}
 $success=$false
+$referenceLedger='2026_10_21_040000_create_reference_data_versions'
 $baseline=@(
     '0001_01_00_000000_setup_extensions_and_app_backend_role'
     '0001_01_01_000000_create_companies_table'
@@ -88,14 +89,40 @@ function ReadMigrationNames {
 function CheckMigrationInventory {
     $applied=@(ReadMigrationNames)
     $missingBase=@($baseline | Where-Object { $_ -notin $applied })
-    $unexpected=@($applied | Where-Object { $_ -notin $baseline -and $_ -notin $updates })
+    # The F2 catalog installer legitimately installs a portable immutable
+    # reference-data ledger between baseline 25 and subsequent upgrades.
+    $unexpected=@($applied | Where-Object { $_ -notin $baseline -and $_ -notin $updates -and $_ -ne $referenceLedger })
     $done=@($updates | Where-Object { $_ -in $applied })
     $pending=@($updates | Where-Object { $_ -notin $applied })
+    $ledgerPresent=($referenceLedger -in $applied)
+    Write-Host ('[INVENTARIO] Migraciones registradas='+$applied.Count+' | base='+(25-$missingBase.Count)+'/25 | adicionales='+$done.Count+'/3 | ledger F2='+[int]$ledgerPresent+'/1')
+    foreach($migration in $missingBase){Write-Host ('[FALTA BASE] '+$migration)}
+    foreach($migration in $unexpected){Write-Host ('[NO RECONOCIDA] '+$migration)}
     if($missingBase.Count -gt 0 -or $unexpected.Count -gt 0) {
-        throw 'El historial no coincide con las migraciones revisadas; no modificar automaticamente.'
+        throw 'Inventario diferente del revisado; detener hasta identificar cada migracion mostrada.'
+    }
+    if($applied.Count -ne (25+$done.Count+[int]$ledgerPresent)) {
+        throw 'Cantidad de migraciones distinta del inventario revisado.'
+    }
+    if($ledgerPresent) {
+        if((SqlLocal "SELECT CASE WHEN to_regclass('public.reference_data_versions') IS NULL THEN 0 ELSE 1 END") -ne '1') {
+            throw 'Registro de migración F2 sin tabla de versiones.'
+        }
+        $ledger=SqlLocal @'
+SELECT
+ (SELECT count(*) FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='reference_data_versions'
+   AND column_name IN ('dataset_key','manifest_sha256','source_sha256',
+     'expected_counts','verified_counts','content_sha256','installed_at')),
+ (SELECT count(*) FROM pg_catalog.pg_class
+   WHERE oid='public.reference_data_versions'::regclass AND relkind='r'),
+ has_table_privilege('app_backend','public.reference_data_versions','SELECT')
+'@
+        if($ledger -ne '7|1|f'){throw 'Estructura o permisos del ledger F2 no reconocidos.'}
+        Write-Host '[PASS] Ledger F2 con columnas y permisos originales.'
     }
     Write-Host ('[ESTADO] Base inicial 25/25 | adicionales '+$done.Count+'/'+$updates.Count+' | pendientes '+$pending.Count)
-    return @{applied=$applied;done=$done;pending=$pending}
+    return @{applied=$applied;done=$done;pending=$pending;ledgerPresent=$ledgerPresent}
 }
 function ReadPrivateConfig {
     if(-not (Test-Path -LiteralPath $privateConfig)){throw 'Falta backend/.env.pg18.local; no continuar.'}
@@ -132,8 +159,9 @@ function SetProcessEnv([hashtable]$values) {
     }
 }
 function CheckUpdated([hashtable]$inventory) {
-    if($inventory.applied.Count -ne 28 -or $inventory.pending.Count -ne 0) {
-        throw 'Aun no estan las 28 migraciones de la etapa contable.'
+    $expected=28+[int]$inventory.ledgerPresent
+    if($inventory.applied.Count -ne $expected -or $inventory.pending.Count -ne 0) {
+        throw 'No están completas las migraciones de la etapa contable y ledger F2.'
     }
     $tables=SqlLocal @'
 SELECT
@@ -158,7 +186,7 @@ WHERE n.nspname='public'
     if($rlsNew -ne '5') {
         throw 'Las cinco tablas nuevas no tienen todas FORCE RLS.'
     }
-    Write-Host '[PASS] 28 migraciones, tablas contables y FORCE RLS en Docker.'
+    Write-Host ('[PASS] '+$expected+' migraciones, tablas contables y FORCE RLS en Docker.')
 }
 function BackupLocal {
     $backupRoot=Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Contabilidad\Backups'

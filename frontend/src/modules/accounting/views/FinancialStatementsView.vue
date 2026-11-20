@@ -1,18 +1,37 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef } from 'vue';
-import { FileBarChart2, RefreshCw } from 'lucide-vue-next';
+import { computed, ref, shallowRef, watch } from 'vue';
+import { FileBarChart2, Printer, RefreshCw } from 'lucide-vue-next';
 import { AccountingApiClient } from '../api/httpClient';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import type { CompanyId } from '../types/accountingAccount.types';
 import type { FinancialSnapshot, FinancialSnapshotAccount, GeneralLedgerPage } from '../types/financialSnapshot.types';
 import CashFlowStatementView from './CashFlowStatementView.vue';
+import FinancialPositionSheet from './FinancialPositionSheet.vue';
+import ComprehensiveIncomeSheet from './ComprehensiveIncomeSheet.vue';
+import FinancialContinuationView from './FinancialContinuationView.vue';
+import NiifNotesView from './NiifNotesView.vue';
+import FinancialLayoutSettingsPanel from './FinancialLayoutSettingsPanel.vue';
+import type { FinancialReportLayoutSettings } from '../types/financialLayout.types';
+import { openComprehensiveIncomePrintDialog } from '../utils/printComprehensiveIncome';
+import { openFinancialPositionPrintDialog } from '../utils/printFinancialPosition';
+import { openFinancialReportPrintDialog } from '../utils/printFinancialReport';
 
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly getAccessToken: () => string | null;
+  readonly companyName: string;
+  readonly companyTaxId: string;
+  readonly companyAddress: string;
+  readonly canConfigureCashFlow: boolean;
+  readonly initialReport: 'snapshot' | 'cash-flow';
 }>();
-
-const activeReport = shallowRef<'snapshot' | 'cash-flow'>('snapshot');
+const emit = defineEmits<{ 'select-report': [tab: 'snapshot' | 'cash-flow'] }>();
+const activeReport = shallowRef<'snapshot' | 'income' | 'cash-flow' | 'trial' | 'equity' | 'notes'>(props.initialReport);
+watch(() => props.initialReport, (tab) => { activeReport.value = tab; });
+function selectReport(tab: 'snapshot' | 'income' | 'cash-flow' | 'trial' | 'equity' | 'notes'): void {
+  activeReport.value = tab;
+  if (tab === 'snapshot' || tab === 'cash-flow') emit('select-report',tab);
+}
 
 const client = computed(() => new AccountingApiClient('', {
   getAccessToken: props.getAccessToken,
@@ -23,6 +42,18 @@ const asOf = ref(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart
 const snapshot = shallowRef<FinancialSnapshot | null>(null);
 const loading = shallowRef(false);
 const error = shallowRef<string | null>(null);
+const printNotice = shallowRef<string | null>(null);
+const layoutWarning = shallowRef<string | null>(null);
+const esfLayout = shallowRef<FinancialReportLayoutSettings | null>(null);
+const eriLayout = shallowRef<FinancialReportLayoutSettings | null>(null);
+const esfRevision = shallowRef(0);
+const eriRevision = shallowRef(0);
+const showLayoutEditor = shallowRef(false);
+function saveLayoutLocally(settings: FinancialReportLayoutSettings, revision: number): void {
+  if (activeReport.value === 'snapshot') {esfLayout.value = settings; esfRevision.value = revision;}
+  if (activeReport.value === 'income') {eriLayout.value = settings; eriRevision.value = revision;}
+  layoutWarning.value = null;
+}
 const showTrialBalance = shallowRef(false);
 const selectedAccount = shallowRef<FinancialSnapshotAccount | null>(null);
 const ledger = shallowRef<GeneralLedgerPage | null>(null);
@@ -65,9 +96,26 @@ async function load(): Promise<void> {
   loading.value = true;
   error.value = null;
   snapshot.value = null;
+  esfLayout.value = null; eriLayout.value = null;
+  esfRevision.value = 0; eriRevision.value = 0;
+  layoutWarning.value = null;
   try {
-    const response = await client.value.fetchFinancialSnapshot(asOf.value);
-    if (version === requestVersion && companyId === props.activeCompanyId) snapshot.value = response;
+    const [balance, esf, eri] = await Promise.allSettled([
+      client.value.fetchFinancialSnapshot(asOf.value),
+      client.value.fetchFinancialReportLayout('ESF'),
+      client.value.fetchFinancialReportLayout('ERI'),
+    ]);
+    if (balance.status === 'rejected') throw balance.reason;
+    if (version === requestVersion && companyId === props.activeCompanyId) {
+      snapshot.value = balance.value;
+      esfLayout.value = esf.status === 'fulfilled' ? esf.value.data.settings : null;
+      eriLayout.value = eri.status === 'fulfilled' ? eri.value.data.settings : null;
+      esfRevision.value = esf.status === 'fulfilled' ? esf.value.data.revision : 0;
+      eriRevision.value = eri.status === 'fulfilled' ? eri.value.data.revision : 0;
+      if (esf.status !== 'fulfilled' || eri.status !== 'fulfilled') {
+        layoutWarning.value = 'No fue posible consultar alguna estructura personalizada. Se está mostrando el formato estándar.';
+      }
+    }
   } catch (cause) {
     if (version === requestVersion) error.value = cause instanceof Error ? cause.message : 'No se pudieron consultar los saldos.';
   } finally {
@@ -100,6 +148,12 @@ function openLedger(account: FinancialSnapshotAccount): void {
   void loadLedger(1);
 }
 
+function openLedgerById(id: number): void {
+  const account = snapshot.value?.accounts.find(row => row.id === id);
+  if (!account) return;
+  selectReport('snapshot');
+  openLedger(account);
+}
 function closeLedger(): void {
   ledgerVersion++;
   selectedAccount.value = null;
@@ -111,23 +165,115 @@ function accountLabel(account: FinancialSnapshotAccount): string {
   return `${account.code} · ${account.name}`;
 }
 
-onMounted(() => { void load(); });
+function printIncome(): void {
+  const data = snapshot.value;
+  if (!data || loading.value || selectedAccount.value) return;
+  const ok = openComprehensiveIncomePrintDialog({
+    snapshot: data,
+    companyName: props.companyName,
+    companyTaxId: props.companyTaxId,
+    companyAddress: props.companyAddress,
+    layout: eriLayout.value,
+    layoutRevision: eriRevision.value,
+  });
+  printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes.';
+}
+
+function printEsf(): void {
+  const data = snapshot.value;
+  if (!data || loading.value || selectedAccount.value) return;
+  const ok = openFinancialPositionPrintDialog({
+    snapshot: data,
+    companyName: props.companyName,
+    companyTaxId: props.companyTaxId,
+    companyAddress: props.companyAddress,
+    layout: esfLayout.value,
+    layoutRevision: esfRevision.value,
+  });
+  printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes.';
+}
+
+function printSnapshot(): void {
+  const data = snapshot.value;
+  if (!data || loading.value || selectedAccount.value) return;
+  const amount = (value: string): string => formatExactLocalAmount(value, data.currency);
+  const totals = data.totals;
+  // El backend conserva cifras decimales exactas y agrupa 88 en este rubro.
+  const taxExpense = data.rubrics.find((rubric) => rubric.code === 'ER_IMPUESTO_RENTA')
+    ?.period_amount_local ?? '0.0000';
+  const warnings = [
+    'Estado preliminar sin comparativos, cierre anual ni notas completas NIIF.',
+    'El estado de resultados es una vista por naturaleza del Libro Diario, no un juego integral de cuatro estados financieros.',
+    ...(data.unmapped_account_ids.length
+      ? [`Hay ${data.unmapped_account_ids.length} cuentas sin rubro financiero configurado.`] : []),
+    ...(data.analytic_routing_status !== 'ACTIVE'
+      ? ['La distribución analítica 94/95 no está activa en esta empresa.'] : []),
+    ...(totals.difference !== '0.0000' || totals.trial_difference !== '0.0000'
+      ? ['Existen diferencias de conciliación: revisar antes de cualquier uso externo.'] : []),
+  ];
+  const ok = openFinancialReportPrintDialog({
+    title: 'Situación financiera y resultados · Preliminar',
+    company: props.companyName,
+    period: `Al ${data.as_of} · Resultados desde ${data.income_statement.from}`,
+    currency: data.currency,
+    sections: [
+      { heading: 'Estado de situación financiera', rows: [
+        { label: 'Total activo', value: amount(totals.assets) },
+        { label: 'Total pasivo', value: amount(totals.liabilities) },
+        { label: 'Patrimonio sin resultado del periodo', value: amount(totals.equity) },
+        { label: 'Resultado del periodo sin cerrar', value: amount(totals.result) },
+        { label: 'Diferencia de presentación', value: amount(totals.difference) },
+      ] },
+      { heading: 'Estado de resultados por naturaleza', rows: [
+        { label: 'Ingresos', value: amount(data.income_statement.revenue) },
+        { label: 'Gastos y costos (incluye impuesto a las ganancias)', value: amount(data.income_statement.expenses) },
+        { label: 'Impuesto a las ganancias incluido en gastos (grupo 88)', value: amount(taxExpense) },
+        { label: 'Resultado neto del periodo', value: amount(data.income_statement.net) },
+      ] },
+      { heading: 'Detalle contable por rubros', rows: data.rubrics
+        .filter((rubric) => ['assets','liabilities','equity','result'].includes(rubric.section))
+        .map((rubric) => ({ label: rubric.name, value: amount(rubric.amount_local) })) },
+      { heading: 'Balance de comprobación', rows: [
+        { label: 'Movimientos en el Debe', value: amount(totals.debit_local) },
+        { label: 'Movimientos en el Haber', value: amount(totals.credit_local) },
+        { label: 'Diferencia de movimientos', value: amount(totals.trial_difference) },
+      ] },
+    ],
+    notices: warnings,
+  });
+  printNotice.value = ok ? null : 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes para este sitio.';
+}
+
+watch(() => props.activeCompanyId, () => {
+  showLayoutEditor.value = false;
+  void load();
+}, {immediate:true});
 </script>
 
 <template>
   <div>
     <nav aria-label="Seleccionar estado financiero" class="mb-5 flex flex-wrap gap-2 border-b border-border pb-3">
-      <button type="button" :aria-pressed="activeReport === 'snapshot'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'snapshot' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="activeReport = 'snapshot'">Situación financiera y resultados</button>
-      <button type="button" :aria-pressed="activeReport === 'cash-flow'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'cash-flow' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="activeReport = 'cash-flow'">Flujo de efectivo</button>
+      <button type="button" :aria-pressed="activeReport === 'snapshot'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'snapshot' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('snapshot')">Situación financiera y resultados</button>
+      <button type="button" :aria-pressed="activeReport === 'income'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'income' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('income')">Estado de Resultados Integrales</button>
+      <button type="button" :aria-pressed="activeReport === 'equity'" class="rounded-lg px-3 py-2 text-sm font-medium"
+        :class="activeReport === 'equity' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        @click="selectReport('equity')">Cambios en el Patrimonio</button>
+      <button type="button" :aria-pressed="activeReport === 'trial'" class="rounded-lg px-3 py-2 text-sm font-medium"
+        :class="activeReport === 'trial' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        @click="selectReport('trial')">Balance de comprobación</button>
+      <button type="button" :aria-pressed="activeReport === 'notes'" class="rounded-lg px-3 py-2 text-sm font-medium"
+        :class="activeReport === 'notes' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'"
+        @click="selectReport('notes')">Notas NIIF</button>
+      <button type="button" :aria-pressed="activeReport === 'cash-flow'" class="rounded-lg px-3 py-2 text-sm font-medium" :class="activeReport === 'cash-flow' ? 'bg-soft text-brand' : 'text-muted hover:bg-soft'" @click="selectReport('cash-flow')">Flujo de efectivo</button>
     </nav>
-    <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :get-access-token="getAccessToken" />
-  <div v-show="activeReport === 'snapshot'" class="space-y-5">
+    <CashFlowStatementView v-if="activeReport === 'cash-flow'" :active-company-id="activeCompanyId" :company-name="companyName" :company-tax-id="companyTaxId" :can-configure-cash-flow="canConfigureCashFlow" :get-access-token="getAccessToken" />
+  <div v-show="activeReport === 'snapshot' || activeReport === 'income'" class="space-y-5">
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
       <div class="flex items-start gap-3">
         <div class="rounded-xl bg-brand/10 p-3 text-brand"><FileBarChart2 class="h-5 w-5" /></div>
         <div>
-          <h1 class="text-xl font-semibold text-foreground">Estado de situación financiera preliminar</h1>
-          <p class="mt-1 max-w-3xl text-sm text-muted">Saldos de los asientos contabilizados de esta empresa hasta la fecha elegida. Cifras en moneda funcional de la empresa con cuatro decimales.</p>
+          <h1 class="text-xl font-semibold text-foreground">{{ activeReport === 'income' ? 'Estado de Resultados Integrales preliminar' : 'Estado de situación financiera preliminar' }}</h1>
+          <p class="mt-1 max-w-3xl text-sm text-muted">Saldos reales de los asientos de la empresa hasta la fecha elegida; importes exactos a cuatro decimales y presentación formal a dos.</p>
         </div>
       </div>
       <form class="flex flex-wrap items-end gap-2" @submit.prevent="load">
@@ -138,9 +284,47 @@ onMounted(() => { void load(); });
         <button type="submit" :disabled="loading" class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" /> Consultar
         </button>
+        <button v-if="activeReport === 'snapshot'" type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
+          class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
+          title="Estado de Situación Financiera formal en A4 horizontal"
+          @click="printEsf">
+          <Printer class="h-4 w-4" /> PDF ESF formal
+        </button>
+        <button v-if="activeReport === 'snapshot'" type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
+          class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
+          title="Resumen técnico de situación y resultados"
+          @click="printSnapshot">
+          <Printer class="h-4 w-4" /> PDF resumen y resultados
+        </button>
+        <button v-if="activeReport === 'income'" type="button" :disabled="loading || !snapshot || Boolean(selectedAccount)"
+          class="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40"
+          title="Imprimir el Estado de Resultados Integrales preliminar en A4"
+          @click="printIncome">
+          <Printer class="h-4 w-4" /> PDF Resultados Integrales
+        </button>
       </form>
     </header>
 
+    <div v-if="canConfigureCashFlow && (activeReport === 'snapshot' || activeReport === 'income')" class="flex justify-end">
+      <button type="button" @click="showLayoutEditor = !showLayoutEditor"
+        :aria-expanded="showLayoutEditor"
+        class="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-brand">
+        {{ showLayoutEditor ? 'Cerrar personalización' : 'Personalizar estructura de esta empresa' }}
+      </button>
+    </div>
+    <FinancialLayoutSettingsPanel
+      v-if="showLayoutEditor && canConfigureCashFlow && (activeReport === 'snapshot' || activeReport === 'income')"
+      :statement="activeReport === 'snapshot' ? 'ESF' : 'ERI'"
+      :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
+      :can-edit="canConfigureCashFlow" @saved="saveLayoutLocally" />
+    <p v-if="activeReport === 'snapshot' && esfLayout" class="text-xs text-muted">
+      Estructura de ESF: revisión {{ esfRevision }} · Empresa activa
+    </p>
+    <p v-if="activeReport === 'income' && eriLayout" class="text-xs text-muted">
+      Estructura de ERI: revisión {{ eriRevision }} · Empresa activa
+    </p>
+    <p v-if="layoutWarning" role="status" class="rounded-lg border border-border p-3 text-xs text-muted">{{ layoutWarning }}</p>
+    <p v-if="printNotice" role="alert" class="mb-3 text-sm text-danger">{{ printNotice }}</p>
     <div v-if="loading" role="status" class="space-y-3" aria-label="Calculando estado financiero">
       <div class="ui-skeleton h-20 rounded-xl" /><div class="ui-skeleton h-40 rounded-xl" /><div class="ui-skeleton h-40 rounded-xl" />
     </div>
@@ -169,7 +353,12 @@ onMounted(() => { void load(); });
           </template>
         </div>
       </section>
-      <template v-else>
+      <ComprehensiveIncomeSheet v-if="activeReport === 'income' && !selectedAccount"
+        :layout="eriLayout" :snapshot="snapshot" :company-name="companyName"
+        :company-tax-id="companyTaxId" :company-address="companyAddress"
+        @open-ledger="openLedger"
+      />
+      <template v-if="activeReport === 'snapshot' && !selectedAccount">
       <p class="rounded-lg border border-border bg-soft p-3 text-sm text-muted">
         Vista preliminar. El resultado incluye ingresos, gastos y costos acumulados aún sin asiento de cierre.
         Los ajustes y las notas de presentación siguen pendientes de conciliación.
@@ -189,7 +378,19 @@ onMounted(() => { void load(); });
         No hay partidas contabilizadas hasta {{ snapshot.as_of }} en esta empresa.
       </div>
       <template v-else>
-        <div class="grid gap-4 lg:grid-cols-2">
+        <FinancialPositionSheet
+          :layout="esfLayout"
+          :snapshot="snapshot"
+          :company-name="companyName"
+          :company-tax-id="companyTaxId"
+          :company-address="companyAddress"
+          @open-ledger="openLedger"
+        />
+        <details class="rounded-xl border border-border bg-surface p-4">
+          <summary class="cursor-pointer text-sm font-semibold text-brand">
+            Ver desglose contable adicional por cuentas y Libro Mayor
+          </summary>
+          <div class="mt-4 grid gap-4 lg:grid-cols-2">
           <section v-for="section in grouped" :key="section.key" class="min-w-0 rounded-xl border border-border bg-surface p-4">
             <h2 class="text-base font-semibold text-foreground">{{ section.label }}</h2>
             <div v-if="section.rubrics.length" class="mt-3 divide-y divide-border">
@@ -215,7 +416,8 @@ onMounted(() => { void load(); });
             <p v-else class="mt-3 text-sm text-muted">Sin movimientos.</p>
             <div class="mt-3 flex justify-between gap-2 border-t border-border pt-3 font-semibold"><span>Total</span><span class="font-mono tabular-nums">{{ money(section.total) }}</span></div>
           </section>
-        </div>
+          </div>
+        </details>
         <div class="rounded-xl border border-border bg-soft p-4 text-sm">
           <div class="flex flex-wrap justify-between gap-2"><span>Activo</span><strong class="font-mono tabular-nums">{{ money(snapshot.totals.assets) }}</strong></div>
           <div class="mt-2 flex flex-wrap justify-between gap-2"><span>Pasivo + patrimonio + resultado</span><strong class="font-mono tabular-nums">{{ money(snapshot.totals.liabilities_equity_result) }}</strong></div>
@@ -293,6 +495,15 @@ onMounted(() => { void load(); });
       </template>
     </template>
   </div>
+  <FinancialContinuationView v-if="activeReport === 'trial' || activeReport === 'equity'"
+    :kind="activeReport" :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
+    :company-name="companyName" :company-tax-id="companyTaxId" :as-of="asOf"
+    :can-edit="canConfigureCashFlow"
+    @ledger="openLedgerById"/>
+  <NiifNotesView v-if="activeReport === 'notes'"
+    :active-company-id="activeCompanyId" :get-access-token="getAccessToken"
+    :company-name="companyName" :company-tax-id="companyTaxId" :as-of="asOf"
+    :snapshot="snapshot?.as_of === asOf ? snapshot : null" :can-edit="canConfigureCashFlow"/>
   </div>
 </template>
 

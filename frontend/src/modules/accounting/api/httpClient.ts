@@ -33,7 +33,9 @@ import { buildDocumentJournalEntityQuery } from './documentJournalEntityQuery';
 import type { DocumentJournalModule, DocumentJournalSettings, UpdateDocumentJournalSettings, DocumentJournalInput, DocumentJournalRecord, DocumentJournalPage, DocumentJournalEntityPage, TaxRegisterPage, TaxRegisterSummary } from '../types/documentJournal.types';
 import type { FiscalPeriodAction, FiscalPeriodSummary, FiscalPeriodTransitionResult } from '../types/fiscalPeriod.types';
 import type { FinancialSnapshot, GeneralLedgerPage } from '../types/financialSnapshot.types';
-import type { CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
+import type { TrialBalanceReport, EquityChangesReport, IndirectCashFlowReport, NiifNotesResponse } from '../types/financialContinuation.types';
+import type { FinancialReportCode, FinancialReportLayoutResponse, FinancialReportLayoutSettings } from '../types/financialLayout.types';
+import type { AnnualCashFlowReport, CashFlowPresentationResponse, CashFlowPresentationSettings, CashFlowPresentationRevision, CashFlowQuery, CashFlowReport } from '../types/cashFlow.types';
 import type {
   CompanyOnboardingResult, PcgeTemplateSummary, CreateCompanyOnboardingPayload,
   SunatContributorType, SunatCiiuClass, SunatTaxCode,
@@ -564,10 +566,97 @@ export class AccountingApiClient {
     return result.data;
   }
 
+  public async fetchTrialBalance(from: string, to: string): Promise<TrialBalanceReport> {
+    const query = new URLSearchParams({from,to});
+    const response = await this.request<{data:TrialBalanceReport}>(
+      `/api/v1/accounting/reports/trial-balance?${query}`, {method:'GET'}, true,
+    );
+    return response.data;
+  }
+
+  public async fetchEquityChanges(asOf: string): Promise<EquityChangesReport> {
+    const response = await this.request<{data:EquityChangesReport}>(
+      `/api/v1/accounting/reports/equity-changes?as_of=${encodeURIComponent(asOf)}`,
+      {method:'GET'}, true,
+    );
+    return response.data;
+  }
+
+  public async fetchIndirectCashFlow(from: string, to: string): Promise<IndirectCashFlowReport> {
+    const query = new URLSearchParams({from,to});
+    const response = await this.request<{data:IndirectCashFlowReport}>(
+      `/api/v1/accounting/reports/cash-flow/indirect?${query}`, {method:'GET'}, true,
+    );
+    return response.data;
+  }
+
+  public async fetchNiifNotes(year: number): Promise<NiifNotesResponse> {
+    const response = await this.request<{data:NiifNotesResponse}>(
+      `/api/v1/company/niif-notes?year=${year}`, {method:'GET'}, true,
+    );
+    return response.data;
+  }
+
+  public async saveNiifNote(year: number, code: string, narrative: string, expectedRevision: number): Promise<{
+    note_code:string;year:number;revision:number;narrative:string;status:'DRAFT';
+  }> {
+    const response = await this.request<{data:{
+      note_code:string;year:number;revision:number;narrative:string;status:'DRAFT';
+    }}>(`/api/v1/company/niif-notes/${encodeURIComponent(code)}`, {
+      method:'PUT',
+      body:JSON.stringify({year,narrative,expected_revision:expectedRevision}),
+    }, true);
+    return response.data;
+  }
+
   public async fetchGeneralLedger(accountId: number, from: string, to: string, page: number): Promise<GeneralLedgerPage> {
     const query = new URLSearchParams({ account_id: String(accountId), from, to, page: String(page) });
     const result = await this.request<{ data: GeneralLedgerPage }>(
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
+  public async fetchFinancialReportLayout(statement: FinancialReportCode): Promise<FinancialReportLayoutResponse> {
+    return this.request<FinancialReportLayoutResponse>(
+      `/api/v1/company/financial-layout/${encodeURIComponent(statement)}`,
+      { method: 'GET' }, true,
+    );
+  }
+
+  public async saveFinancialReportLayout(
+    statement: FinancialReportCode, settings: FinancialReportLayoutSettings, expectedRevision: number,
+  ): Promise<FinancialReportLayoutResponse['data']> {
+    const response = await this.request<{data: FinancialReportLayoutResponse['data']}>(
+      `/api/v1/company/financial-layout/${encodeURIComponent(statement)}`,
+      { method: 'PUT', body: JSON.stringify({settings, expected_revision: expectedRevision}) }, true,
+    );
+    return response.data;
+  }
+
+  public async fetchCashFlowPresentation(): Promise<CashFlowPresentationResponse> {
+    return this.request<CashFlowPresentationResponse>(
+      '/api/v1/company/cash-flow-presentation', { method: 'GET' }, true,
+    );
+  }
+
+  public async saveCashFlowPresentation(
+    settings: CashFlowPresentationSettings, expectedRevision: number,
+  ): Promise<CashFlowPresentationRevision> {
+    const response = await this.request<{ data: CashFlowPresentationRevision }>(
+      '/api/v1/company/cash-flow-presentation', {
+        method: 'PUT',
+        body: JSON.stringify({ settings, expected_revision: expectedRevision }),
+      }, true,
+    );
+    return response.data;
+  }
+
+  public async fetchAnnualCashFlowReport(year: number, throughMonth = 12): Promise<AnnualCashFlowReport> {
+    const params = new URLSearchParams({ year: String(year), through_month: String(throughMonth) });
+    const result = await this.request<{ data: AnnualCashFlowReport }>(
+      `/api/v1/accounting/reports/cash-flow/annual?${params}`,
+      { method: 'GET' }, true,
     );
     return result.data;
   }

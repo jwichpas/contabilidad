@@ -17,7 +17,7 @@ final class CashFlowCalculator
      * @param list<int> $fxAccountIds Configured gain/loss accounts of this company.
      * @return array<string, mixed>
      */
-    public function calculate(iterable $rows, string $from, string $to, array $fxAccountIds = [], string $section = 'ALL', ?int $areaId = null, int $page = 1): array
+    public function calculate(iterable $rows, string $from, string $to, array $fxAccountIds = [], string $section = 'ALL', ?int $areaId = null, int $page = 1, bool $includeMonthly = false, array $presentationSettings = []): array
     {
         $totals = array_fill_keys([
             'opening_book_local', 'opening_entries_local', 'opening_local', 'closing_local',
@@ -32,13 +32,33 @@ final class CashFlowCalculator
         $detailCount = 0;
         $entry = [];
         $previousId = null;
+        $conceptResolver = $includeMonthly ? new CashFlowConceptResolver() : null;
+        $areaPresentationRules = $presentationSettings['area_rules'] ?? [];
+        $accountPresentationRules = $presentationSettings['account_rules'] ?? [];
+        // Annual matrix is derived from the SAME SQL cursor and classifier as the
+        // ordinary report: never make 12 independent history queries or infer
+        // categories from descriptions or opposite-side accounts.
+        $monthly = [];
+        if ($includeMonthly) {
+            foreach (range(1, 12) as $month) {
+                $monthly[$month] = [
+                    'month' => $month, 'cash_delta_local' => '0.0000',
+                    'operating_local' => '0.0000', 'investing_local' => '0.0000',
+                    'financing_local' => '0.0000', 'exchange_effect_local' => '0.0000',
+                    'other_adjustments_local' => '0.0000', 'unclassified_local' => '0.0000',
+                    'opening_entries_local' => '0.0000', 'groups' => [],
+                    'unclassified_count' => 0, 'other_adjustments_count' => 0,
+                ];
+            }
+        }
 
-        $consume = function (array $lines) use ($from, $to, $fxAccountIds, $section, $areaId, $page, &$totals, &$counts, &$groups, &$accounts, &$unconfigured, &$details, &$detailCount): void {
+        $consume = function (array $lines) use ($from, $to, $fxAccountIds, $section, $areaId, $page, &$totals, &$counts, &$groups, &$accounts, &$unconfigured, &$details, &$detailCount, &$monthly, $includeMonthly, $conceptResolver, $areaPresentationRules, $accountPresentationRules): void {
             if ($lines === []) {
                 return;
             }
             $head = $lines[0];
             $date = (string) $head->entry_date;
+            $month = (int) substr($date, 5, 2);
             if ($date > $to) {
                 return;
             }
@@ -55,6 +75,9 @@ final class CashFlowCalculator
                     $unconfigured[(int) $line->account_id] = ['id' => (int) $line->account_id, 'code' => $line->account_code, 'name' => $line->account_name];
                 }
                 if ($isCash) {
+                    if ($includeMonthly && $date >= $from && isset($monthly[$month])) {
+                        $monthly[$month]['cash_delta_local'] = bcadd($monthly[$month]['cash_delta_local'], $amount, 4);
+                    }
                     $cash[] = $line;
                     $cashNet = bcadd($cashNet, $amount, 4);
                     $hasDebit = $hasDebit || bccomp($amount, '0', 4) > 0;
@@ -98,6 +121,9 @@ final class CashFlowCalculator
                 if ($effectiveType === 'OPENING' && $date === $from) {
                     $kind = 'OPENING';
                     $totals['opening_entries_local'] = bcadd($totals['opening_entries_local'], $amount, 4);
+                    if ($includeMonthly) {
+                        $monthly[$month]['opening_entries_local'] = bcadd($monthly[$month]['opening_entries_local'], $amount, 4);
+                    }
                     $id = (int) $line->account_id;
                     $accounts[$id]['opening_local'] = bcadd($accounts[$id]['opening_local'], $amount, 4);
                 } elseif (in_array($effectiveType, ['OPENING', 'CLOSING'], true)) {
@@ -132,6 +158,13 @@ final class CashFlowCalculator
                 };
                 if ($totalKey !== null) {
                     $totals[$totalKey] = bcadd($totals[$totalKey], $amount, 4);
+                    if ($includeMonthly) {
+                        $monthly[$month][$totalKey] = bcadd($monthly[$month][$totalKey], $amount, 4);
+                    }
+                }
+                if ($includeMonthly) {
+                    if ($kind === 'UNCLASSIFIED') $monthly[$month]['unclassified_count']++;
+                    if ($kind === 'OTHER_ADJUSTMENT') $monthly[$month]['other_adjustments_count']++;
                 }
                 if (in_array($kind, ['OPERATING', 'INVESTING', 'FINANCING'], true)) {
                     $key = $kind.'|'.$line->area_id;
@@ -146,6 +179,57 @@ final class CashFlowCalculator
                     $groups[$key][$side] = bcadd($groups[$key][$side], $sideAmount, 4);
                     $groups[$key]['net_local'] = bcadd($groups[$key]['net_local'], $amount, 4);
                     $groups[$key]['count']++;
+                    if ($includeMonthly) {
+                        // The *economic activity* always comes from the cash-side
+                        // area; only the presentation concept is inferred from
+                        // unequivocal counterparty accounting codes.
+                        $explicitAreaCode = preg_match('/^(?:F318-)?[0-9]{4}$/i', (string) $line->area_code) === 1;
+                        $conceptCode = null;
+                        $conceptSource = null;
+                        if (! $explicitAreaCode) {
+                            foreach ($areaPresentationRules as $rule) {
+                                if ($rule['area_code'] === (string) $line->area_code
+                                    && $rule['section'] === $kind
+                                    && $rule['direction'] === ($side === 'inflow_local' ? 'INFLOW' : 'OUTFLOW')) {
+                                    $conceptCode = $rule['target_code'];
+                                    $conceptSource = 'COMPANY_AREA';
+                                    break;
+                                }
+                            }
+                            if ($conceptCode === null) {
+                                $conceptCode = $conceptResolver->resolve(
+                                    $cash, $noncash, $kind, $amount, $isReversal, $accountPresentationRules
+                                );
+                                $conceptSource = $conceptCode === null ? null : 'COUNTERPART';
+                                if ($conceptCode !== null && count($noncash) === 1) {
+                                    foreach ($accountPresentationRules as $rule) {
+                                        if ($rule['account_code'] === (string) $noncash[0]->account_code
+                                            && $rule['target_code'] === $conceptCode
+                                            && $rule['section'] === $kind
+                                            && $rule['direction'] === ($side === 'inflow_local' ? 'INFLOW' : 'OUTFLOW')) {
+                                            $conceptSource = 'COMPANY_ACCOUNT';
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Different meanings can share OPE-IN/OUT. They must
+                        // remain separate to avoid mixing client collections,
+                        // supplier payments and unidentified cash flows.
+                        $monthlyKey = $key.'|'.($conceptCode ?? 'NO_DETAIL');
+                        $monthly[$month]['groups'][$monthlyKey] ??= [
+                            'section' => $kind, 'area_id' => (int) $line->area_id,
+                            'code' => $line->area_code, 'name' => $line->area_name,
+                            'concept_code' => $conceptCode,
+                            'concept_source' => $conceptSource,
+                            'inflow_local' => '0.0000', 'outflow_local' => '0.0000',
+                            'net_local' => '0.0000', 'count' => 0,
+                        ];
+                        $monthly[$month]['groups'][$monthlyKey][$side] = bcadd($monthly[$month]['groups'][$monthlyKey][$side], $sideAmount, 4);
+                        $monthly[$month]['groups'][$monthlyKey]['net_local'] = bcadd($monthly[$month]['groups'][$monthlyKey]['net_local'], $amount, 4);
+                        $monthly[$month]['groups'][$monthlyKey]['count']++;
+                    }
                 }
                 if (($section === 'ALL' || $section === $kind) && ($areaId === null || (int) $line->area_id === $areaId)) {
                     $detailCount++;
@@ -183,9 +267,32 @@ final class CashFlowCalculator
         $classificationComplete = $counts['UNCLASSIFIED'] === 0 && $counts['OTHER_ADJUSTMENT'] === 0 && $unconfigured === [];
         $groups = array_values($groups);
         usort($groups, static fn (array $a, array $b): int => strcmp($a['section'].'|'.$a['code'], $b['section'].'|'.$b['code']));
+        if ($includeMonthly) {
+            $rolling = $totals['opening_local'];
+            foreach ($monthly as &$m) {
+                $m['opening_local'] = $rolling;
+                // Annual January opening entry is included in the starting cash.
+                $movement = bcsub($m['cash_delta_local'], $m['opening_entries_local'], 4);
+                $rolling = bcadd($rolling, $movement, 4);
+                $m['closing_local'] = $rolling;
+                $m['net_flow_local'] = bcadd(bcadd($m['operating_local'], $m['investing_local'], 4), $m['financing_local'], 4);
+                $m['expected_closing_local'] = bcadd(
+                    bcadd(bcadd($m['opening_local'], $m['net_flow_local'], 4), $m['exchange_effect_local'], 4),
+                    $m['other_adjustments_local'], 4
+                );
+                $m['difference_local'] = bcsub($m['closing_local'], $m['expected_closing_local'], 4);
+                $m['groups'] = array_values($m['groups']);
+                usort($m['groups'], static fn (array $a, array $b): int => strcmp($a['section'].'|'.$a['code'], $b['section'].'|'.$b['code']));
+                $m['is_reconciled'] = $m['unclassified_count'] === 0
+                    && $m['other_adjustments_count'] === 0
+                    && bccomp($m['difference_local'], '0', 4) === 0;
+            }
+            unset($m);
+        }
         return [
             'from' => $from, 'to' => $to, 'method' => 'DIRECT', 'is_preliminary' => true,
             'totals' => $totals, 'counts' => $counts, 'groups' => $groups,
+            ...($includeMonthly ? ['monthly' => array_values($monthly)] : []),
             'cash_accounts' => array_values($accounts), 'unconfigured_accounts' => array_values($unconfigured),
             'classification_complete' => $classificationComplete,
             'is_reconciled' => $classificationComplete && bccomp($totals['difference_local'], '0', 4) === 0,

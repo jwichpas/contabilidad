@@ -26,7 +26,16 @@ export interface FinancialSnapshotRubric {
   readonly account_ids: readonly number[];
 }
 
+export interface FinancialSnapshotEsfCatalogLine {
+  readonly code: string;
+  readonly name: string;
+  readonly group_name: string;
+  readonly presentation_order: number;
+}
+
 export interface FinancialSnapshot {
+  /** Rubros estándar ESF, incluso aquellos sin movimientos en el período. */
+  readonly esf_catalog?: readonly FinancialSnapshotEsfCatalogLine[];
   readonly as_of: string;
   readonly currency: string; // ISO 4217: moneda funcional de la empresa
   readonly is_preliminary: boolean;

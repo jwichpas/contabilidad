@@ -1,0 +1,432 @@
+{
+  "scenario": "COMERCIO_PEN_2026_01_NIIF_PLENAS_NO_IFRS18_ANTICIPADA",
+  "description": "Caso sintetico para validar asientos y conciliacion EEFF; no son transacciones reales ni prueba del backend.",
+  "period": {
+    "from": "2026-01-01",
+    "to": "2026-01-31",
+    "currency": "PEN",
+    "framework": "NIIF completas (sin adopcion anticipada NIIF 18)",
+    "chart": "PCGE 2019, codigos de clase/referencia; asignar subcuentas operativas reales por empresa"
+  },
+  "assumptions": {
+    "inventory": "Promedio ponderado: inicial 100u x S/100, compra 100u x S/120, venta 80u; costo unitario S/110",
+    "igv": "Tasa hipotetica 18% y credito fiscal totalmente aplicable, conciliacion dentro de la misma cuenta IGV",
+    "loan": "Principal S/24000, sin comisiones ni costos de transaccion; interes S/240 devengado y pagado como dato ilustrativo, sin derivar TIE",
+    "income_tax": "29.5% como supuesto para el ejemplo sobre utilidad antes de impuesto 5460, sin diferencias temporarias ni permanentes",
+    "cashflow": "Intereses pagados clasificados en operacion para el caso 2026, politica consistente sujeta a marco/vigencia"
+  },
+  "accounts": {
+    "10_EFECTIVO": {
+      "kind": "asset",
+      "label": "Efectivo en banco"
+    },
+    "12_CXC": {
+      "kind": "asset",
+      "label": "Cuentas por cobrar comerciales"
+    },
+    "20_MERCADERIAS": {
+      "kind": "asset",
+      "label": "Mercaderias"
+    },
+    "33_PPE": {
+      "kind": "asset",
+      "label": "Equipo y mobiliario al costo"
+    },
+    "39_DEP_ACUM": {
+      "kind": "asset",
+      "label": "Depreciacion acumulada (cuenta correctora)"
+    },
+    "40_IGV": {
+      "kind": "liability",
+      "label": "IGV por pagar neto (credito fiscal aplicado)"
+    },
+    "40_RENTA": {
+      "kind": "liability",
+      "label": "Impuesto a la renta por pagar"
+    },
+    "42_CXP": {
+      "kind": "liability",
+      "label": "Cuentas por pagar comerciales"
+    },
+    "45_PRESTAMO": {
+      "kind": "liability",
+      "label": "Prestamo bancario principal"
+    },
+    "45_INTERES": {
+      "kind": "liability",
+      "label": "Intereses por pagar"
+    },
+    "50_CAPITAL": {
+      "kind": "equity",
+      "label": "Capital social"
+    },
+    "60_COMPRAS": {
+      "kind": "expense",
+      "label": "Compras de mercaderias"
+    },
+    "61_VARIACION": {
+      "kind": "expense",
+      "label": "Variacion de inventarios (contrapartida)"
+    },
+    "63_ALQUILER": {
+      "kind": "expense",
+      "label": "Gasto de alquiler"
+    },
+    "67_INTERESES": {
+      "kind": "expense",
+      "label": "Gasto financiero"
+    },
+    "68_DEPRECIACION": {
+      "kind": "expense",
+      "label": "Gasto de depreciacion"
+    },
+    "69_COSTO_VENTAS": {
+      "kind": "expense",
+      "label": "Costo de ventas"
+    },
+    "70_VENTAS": {
+      "kind": "revenue",
+      "label": "Ventas netas"
+    },
+    "88_IMP_RENTA": {
+      "kind": "expense",
+      "label": "Gasto impuesto a la renta"
+    }
+  },
+  "entries": [
+    {
+      "id": "J01",
+      "date": "2026-01-01",
+      "type": "OPENING",
+      "subdiary": "APERTURA_CIERRE",
+      "description": "Apertura con efectivo, inventario inicial 100 uds x 100, equipo y capital",
+      "lines": [
+        {
+          "account": "10_EFECTIVO",
+          "debit": "40000.0000",
+          "credit": "0.0000",
+          "cash_flow": "OPENING"
+        },
+        {
+          "account": "20_MERCADERIAS",
+          "debit": "10000.0000",
+          "credit": "0.0000",
+          "qty_units": 100
+        },
+        {
+          "account": "33_PPE",
+          "debit": "10000.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "50_CAPITAL",
+          "debit": "0.0000",
+          "credit": "60000.0000"
+        }
+      ]
+    },
+    {
+      "id": "J02",
+      "date": "2026-01-05",
+      "type": "STANDARD",
+      "subdiary": "BANCOS",
+      "description": "Desembolso bancario de 24000 sin comisiones, ejemplo simplificado",
+      "lines": [
+        {
+          "account": "10_EFECTIVO",
+          "debit": "24000.0000",
+          "credit": "0.0000",
+          "cash_flow": "FINANCING"
+        },
+        {
+          "account": "45_PRESTAMO",
+          "debit": "0.0000",
+          "credit": "24000.0000"
+        }
+      ]
+    },
+    {
+      "id": "J03",
+      "date": "2026-01-08",
+      "type": "STANDARD",
+      "subdiary": "COMPRAS",
+      "description": "Compra a credito de 100 uds x 120 mas IGV 18%",
+      "lines": [
+        {
+          "account": "60_COMPRAS",
+          "debit": "12000.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "40_IGV",
+          "debit": "2160.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "42_CXP",
+          "debit": "0.0000",
+          "credit": "14160.0000"
+        }
+      ]
+    },
+    {
+      "id": "J04",
+      "date": "2026-01-08",
+      "type": "STANDARD",
+      "subdiary": "COMPRAS",
+      "description": "Destino de compra a existencias - no gasto duplicado",
+      "lines": [
+        {
+          "account": "20_MERCADERIAS",
+          "debit": "12000.0000",
+          "credit": "0.0000",
+          "qty_units": 100
+        },
+        {
+          "account": "61_VARIACION",
+          "debit": "0.0000",
+          "credit": "12000.0000"
+        }
+      ]
+    },
+    {
+      "id": "J05",
+      "date": "2026-01-15",
+      "type": "STANDARD",
+      "subdiary": "VENTAS",
+      "description": "Venta a credito de 80 uds x 200 mas IGV 18%",
+      "lines": [
+        {
+          "account": "12_CXC",
+          "debit": "18880.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "70_VENTAS",
+          "debit": "0.0000",
+          "credit": "16000.0000"
+        },
+        {
+          "account": "40_IGV",
+          "debit": "0.0000",
+          "credit": "2880.0000"
+        }
+      ]
+    },
+    {
+      "id": "J06",
+      "date": "2026-01-15",
+      "type": "STANDARD",
+      "subdiary": "VENTAS",
+      "description": "Costo de ventas 80 uds x costo promedio ponderado 110",
+      "lines": [
+        {
+          "account": "69_COSTO_VENTAS",
+          "debit": "8800.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "20_MERCADERIAS",
+          "debit": "0.0000",
+          "credit": "8800.0000",
+          "qty_units": -80
+        }
+      ]
+    },
+    {
+      "id": "J07",
+      "date": "2026-01-20",
+      "type": "STANDARD",
+      "subdiary": "BANCOS",
+      "description": "Cobranza a clientes",
+      "lines": [
+        {
+          "account": "10_EFECTIVO",
+          "debit": "10000.0000",
+          "credit": "0.0000",
+          "cash_flow": "OPERATING"
+        },
+        {
+          "account": "12_CXC",
+          "debit": "0.0000",
+          "credit": "10000.0000"
+        }
+      ]
+    },
+    {
+      "id": "J08",
+      "date": "2026-01-22",
+      "type": "STANDARD",
+      "subdiary": "BANCOS",
+      "description": "Pago parcial a proveedores",
+      "lines": [
+        {
+          "account": "42_CXP",
+          "debit": "6000.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "10_EFECTIVO",
+          "debit": "0.0000",
+          "credit": "6000.0000",
+          "cash_flow": "OPERATING"
+        }
+      ]
+    },
+    {
+      "id": "J09",
+      "date": "2026-01-25",
+      "type": "STANDARD",
+      "subdiary": "BANCOS",
+      "description": "Amortizacion de capital del prestamo",
+      "lines": [
+        {
+          "account": "45_PRESTAMO",
+          "debit": "4000.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "10_EFECTIVO",
+          "debit": "0.0000",
+          "credit": "4000.0000",
+          "cash_flow": "FINANCING"
+        }
+      ]
+    },
+    {
+      "id": "J10",
+      "date": "2026-01-25",
+      "type": "STANDARD",
+      "subdiary": "GENERAL",
+      "description": "Devengo de intereses segun supuesto contractual de demostracion",
+      "lines": [
+        {
+          "account": "67_INTERESES",
+          "debit": "240.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "45_INTERES",
+          "debit": "0.0000",
+          "credit": "240.0000"
+        }
+      ]
+    },
+    {
+      "id": "J11",
+      "date": "2026-01-25",
+      "type": "STANDARD",
+      "subdiary": "BANCOS",
+      "description": "Pago de intereses devengados; clasificados como operacion en el ejemplo 2026",
+      "lines": [
+        {
+          "account": "45_INTERES",
+          "debit": "240.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "10_EFECTIVO",
+          "debit": "0.0000",
+          "credit": "240.0000",
+          "cash_flow": "OPERATING"
+        }
+      ]
+    },
+    {
+      "id": "J12",
+      "date": "2026-01-27",
+      "type": "STANDARD",
+      "subdiary": "CAJA",
+      "description": "Pago de alquiler del local",
+      "lines": [
+        {
+          "account": "63_ALQUILER",
+          "debit": "1200.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "10_EFECTIVO",
+          "debit": "0.0000",
+          "credit": "1200.0000",
+          "cash_flow": "OPERATING"
+        }
+      ]
+    },
+    {
+      "id": "J13",
+      "date": "2026-01-31",
+      "type": "ADJUSTMENT",
+      "subdiary": "AJUSTES",
+      "description": "Depreciacion del mes",
+      "lines": [
+        {
+          "account": "68_DEPRECIACION",
+          "debit": "300.0000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "39_DEP_ACUM",
+          "debit": "0.0000",
+          "credit": "300.0000"
+        }
+      ]
+    },
+    {
+      "id": "J14",
+      "date": "2026-01-31",
+      "type": "ADJUSTMENT",
+      "subdiary": "AJUSTES",
+      "description": "Impuesto a la renta 29.5% del resultado contable antes de impuesto solo como supuesto",
+      "lines": [
+        {
+          "account": "88_IMP_RENTA",
+          "debit": "1610.7000",
+          "credit": "0.0000"
+        },
+        {
+          "account": "40_RENTA",
+          "debit": "0.0000",
+          "credit": "1610.7000"
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "trial_debit": "161430.7000",
+    "trial_credit": "161430.7000",
+    "cash_opening": "40000.0000",
+    "cash_operating": "2560.0000",
+    "cash_investing": "0.0000",
+    "cash_financing": "20000.0000",
+    "cash_closing": "62560.0000",
+    "receivables": "8880.0000",
+    "inventory": "13200.0000",
+    "gross_ppe": "10000.0000",
+    "accumulated_depreciation": "300.0000",
+    "net_ppe": "9700.0000",
+    "assets": "94340.0000",
+    "bank_debt": "20000.0000",
+    "suppliers": "8160.0000",
+    "vat_payable": "720.0000",
+    "income_tax_payable": "1610.7000",
+    "liabilities": "30490.7000",
+    "capital": "60000.0000",
+    "revenue": "16000.0000",
+    "cost_of_sales": "8800.0000",
+    "gross_profit": "7200.0000",
+    "operating_expenses": "1500.0000",
+    "operating_profit": "5700.0000",
+    "finance_cost": "240.0000",
+    "pretax_profit": "5460.0000",
+    "income_tax_expense": "1610.7000",
+    "net_profit": "3849.3000",
+    "other_comprehensive_income": "0.0000",
+    "equity_closing": "63849.3000",
+    "equity_movement": "3849.3000",
+    "statement_difference": "0.0000",
+    "inventory_units_end": 120,
+    "journal_count": 14,
+    "line_count": 32,
+    "inventory_unit_cost": "110.0000"
+  }
+}
