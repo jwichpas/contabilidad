@@ -197,22 +197,23 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/{format}', [DaotReportController::class, 'csv'])->whereIn('format', ['resumen', 'detalle']);
             });
 
-            Route::prefix('payroll')->middleware([
-                RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT',
-                RequirePayrollSchema::class,
-            ])
-                ->controller(\App\Http\Controllers\Api\V1\Payroll\PayrollController::class)->group(function (): void {
-                    Route::put('/workers/{worker}', 'worker')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
-                    Route::post('/workers/{worker}/vacations', 'vacation')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
+            Route::prefix('payroll')
+                ->where(['worker' => '[A-Z0-9][A-Z0-9-]{0,19}'])
+                ->middleware([
+                    RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT',
+                    RequirePayrollSchema::class,
+                ])
+                ->controller(\App\Http\Controllers\Api\V1\Payroll\PayrollController::class)
+                ->group(function (): void {
+                    Route::put('/workers/{worker}', 'worker');
+                    Route::post('/workers/{worker}/vacations', 'vacation');
                     Route::prefix('periods/{month}')->where(['month' => '20[0-9]{2}-(0[1-9]|1[0-2])'])->group(function (): void {
                         Route::get('/', 'show');
-                        Route::put('/attendance/{worker}', 'attendance')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
-                        Route::put('/attendance/{worker}/days/{date}', 'day')
-                            ->where('worker', '[A-Z][A-Z0-9-]{0,19}')->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
+                        Route::put('/attendance/{worker}', 'attendance');
+                        Route::put('/attendance/{worker}/days/{date}', 'day')->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
                         Route::put('/calculation', 'run');
                         Route::post('/approval', 'approve');
-                        Route::put('/benefits/{worker}/{benefit}', 'benefit')
-                            ->where('worker', '[A-Z][A-Z0-9-]{0,19}')->whereIn('benefit', ['CTS', 'GRATIFICATION']);
+                        Route::put('/benefits/{worker}/{benefit}', 'benefit')->whereIn('benefit', ['CTS', 'GRATIFICATION']);
                         Route::get('/exports/{format}', 'download')->whereIn('format', ['jor', 'afp']);
                     });
                 });

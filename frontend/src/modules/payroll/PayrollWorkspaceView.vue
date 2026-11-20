@@ -33,6 +33,7 @@ const afpOptions = [{ value: 'HA', label: 'Hábitat' }, { value: 'IN', label: 'I
 const kindOptions = [{ value: 'CTS', label: 'CTS' }, { value: 'GRATIFICATION', label: 'Gratificación' }] as const;
 
 const worker = ref<(Worker & { expected_revision: number })>();
+const workerCodePattern = String.raw`[A-Z0-9][A-Z0-9\-]{0,19}`;
 const workerText = [['code','Código interno'], ['dni','DNI'], ['given_names','Nombres'], ['surname','Apellido paterno'],
   ['second_surname','Apellido materno'], ['position','Cargo']] as const;
 const attendance = ref<Attendance & { expected_revision: number }>();
@@ -272,7 +273,9 @@ void run(reload);
         <fieldset class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" :disabled="busy">
           <label v-for="[key, label] in workerText" :key="key" class="ui-label">{{ label }}
             <input v-model.trim="worker[key]" class="w-full" :required="key !== 'second_surname'"
-              :readonly="worker.expected_revision > 0 && (key === 'code' || key === 'dni')" :pattern="key === 'code' ? '[A-Z][A-Z0-9-]{0,19}' : key === 'dni' ? '[0-9]{8}' : undefined">
+              :readonly="worker.expected_revision > 0 && (key === 'code' || key === 'dni')" :pattern="key === 'code' ? workerCodePattern : key === 'dni' ? '[0-9]{8}' : undefined"
+              :maxlength="key === 'code' ? 20 : key === 'dni' ? 8 : undefined"
+              :title="key === 'code' ? 'Usa hasta 20 caracteres: letras mayúsculas, números y guiones. Empieza con una letra o un número.' : undefined">
           </label>
           <label class="ui-label">Fecha de ingreso<input v-model="worker.hired_on" type="date" class="w-full" required></label>
           <label class="ui-label">Fecha de cese<input v-model="worker.ended_on" type="date" class="w-full"></label>
@@ -283,7 +286,11 @@ void run(reload);
           <div><label for="payroll-pension" class="ui-label">Pensión</label><UiSelect id="payroll-pension" v-model="worker.pension" :options="pensionOptions" /></div>
           <template v-if="worker.pension === 'AFP'">
             <div><label for="payroll-afp" class="ui-label">AFP</label><UiSelect id="payroll-afp" :model-value="worker.afp ?? ''" :options="afpOptions" @update:model-value="worker.afp = $event" /></div>
-            <label class="ui-label">CUSPP<input v-model.trim="worker.cuspp" maxlength="12" class="w-full" required></label>
+            <label class="ui-label">CUSPP
+              <input v-model.trim="worker.cuspp" minlength="12" maxlength="12" pattern="[A-Z0-9]{12}"
+                class="w-full" aria-describedby="payroll-cuspp-hint" required>
+              <span id="payroll-cuspp-hint" class="text-xs text-muted">12 caracteres alfanuméricos en mayúsculas.</span>
+            </label>
           </template>
           <label class="ui-label sm:col-span-2">Sustento de la ficha<input v-model.trim="worker.reference" class="w-full" required maxlength="500"></label>
         </fieldset>

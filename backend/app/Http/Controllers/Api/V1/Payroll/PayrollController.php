@@ -29,7 +29,8 @@ final readonly class PayrollController
         $attendance = $this->ledger->records('attendance', $month.'-');
         $versions = $this->dayVersions($daily);
         $pending = [];
-        foreach ($eligible as $code => $person) {
+        foreach ($eligible as $person) {
+            $code = $person['data']['code'];
             $issue = $this->attendanceIssue($person, $attendance["$month-$code"] ?? null, $versions[$code] ?? []);
             if ($issue !== null) {
                 $pending[] = ['worker' => $code, 'message' => $issue];
@@ -67,6 +68,8 @@ final readonly class PayrollController
             'cuspp' => ['nullable', 'required_if:pension,AFP', 'regex:/^[A-Z0-9]{12}$/D'],
             'vacation_granted' => ['required', 'integer', 'between:0,1000'],
             'reference' => ['required', 'string', 'max:500'],
+        ], [
+            'cuspp.regex' => 'El CUSPP debe tener 12 caracteres alfanuméricos en mayúsculas.',
         ]);
         return $this->write($request, 'worker', $worker, $data, function (array $input) use ($worker): array {
             $current = $this->ledger->latest('worker', $worker)['data'] ?? null;
@@ -261,7 +264,8 @@ final readonly class PayrollController
         $versions = $this->dayVersions($this->ledger->records('day', $month.'-'));
         $rows = [];
         $totals = array_fill_keys(['gross','regular_expense','vacation_pay','net','pension','essalud','income_tax','other_deductions','employer_cost','onp','afp'], '0.00');
-        foreach ($eligible as $code => $person) {
+        foreach ($eligible as $person) {
+            $code = $person['data']['code'];
             $daily = $attendance["$month-$code"] ?? null;
             $issue = $this->attendanceIssue($person, $daily, $versions[$code] ?? []);
             if ($issue !== null) {

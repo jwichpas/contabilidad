@@ -31,16 +31,21 @@ it('freezes monthly payroll, balances its draft and exports PLAME and AFPnet', f
         'salary' => '3000', 'daily_hours' => 8, 'pension' => 'ONP', 'vacation_granted' => 30,
         'reference' => 'Contrato de prueba',
     ];
-    $this->putJson($path.'/workers/TR-001', $worker)->assertOk()->assertJsonPath('data.revision', 1);
+    $this->putJson($path.'/workers/70000001', $worker)->assertOk()->assertJsonPath('data.revision', 1)
+        ->assertJsonPath('data.data.code', '70000001');
+    $this->putJson($path.'/workers/-70000001', $worker)->assertNotFound();
+    $this->putJson($path.'/workers/00000002', array_replace($worker, [
+        'dni' => '01234569', 'pension' => 'AFP', 'afp' => 'IN', 'cuspp' => '123456',
+    ]))->assertUnprocessable()->assertJsonValidationErrors('cuspp');
     $this->putJson($path.'/workers/TR-002', array_replace($worker, ['dni' => '01234568', 'salary' => '2000',
         'given_names' => 'Pedro', 'pension' => 'AFP', 'afp' => 'IN', 'cuspp' => '123456ABCD12']))->assertOk();
-    $this->postJson($path.'/workers/TR-001/vacations', ['from' => '2026-07-06', 'to' => '2026-07-07',
+    $this->postJson($path.'/workers/70000001/vacations', ['from' => '2026-07-06', 'to' => '2026-07-07',
         'reference' => 'Acuerdo de vacaciones'])->assertOk()->assertJsonPath('data.data.days', 2);
-    $this->postJson($path.'/workers/TR-001/vacations', ['from' => '2026-07-07', 'to' => '2026-07-09',
+    $this->postJson($path.'/workers/70000001/vacations', ['from' => '2026-07-07', 'to' => '2026-07-09',
         'reference' => 'Traslape'])->assertUnprocessable();
 
     $this->getJson($period)->assertOk()->assertJsonCount(2, 'data.attendance_pending')
-        ->assertJsonPath('data.attendance_pending.0.worker', 'TR-001')
+        ->assertJsonPath('data.attendance_pending.0.worker', '70000001')
         ->assertJsonPath('data.attendance_pending.0.message', 'Falta confirmar la asistencia.');
 
     $calculation = ['expected_revision' => 0, 'health_minimum' => '1130', 'source' => 'Cierre de prueba'];
@@ -48,15 +53,15 @@ it('freezes monthly payroll, balances its draft and exports PLAME and AFPnet', f
     $attendance = ['expected_revision' => 0, 'paid_days' => 30, 'vacation_paid_days' => 2, 'ordinary_minutes' => 9600,
         'overtime_25' => 0, 'overtime_35' => 0, 'taxable_extra' => '0', 'nontaxable_extra' => '0',
         'income_tax' => '0', 'other_deductions' => '0', 'reference' => 'Asistencia de julio'];
-    $dayPath = $period.'/attendance/TR-001/days/2026-07-01';
+    $dayPath = $period.'/attendance/70000001/days/2026-07-01';
     $day = ['expected_revision' => 0, 'date' => '2026-07-01', 'status' => 'WORKED', 'ordinary' => 480, 'extra' => 30,
         'reference' => 'Parte diario'];
     $this->putJson($dayPath, $day)->assertOk();
-    $this->putJson($period.'/attendance/TR-001', $attendance)->assertOk();
+    $this->putJson($period.'/attendance/70000001', $attendance)->assertOk();
     $this->putJson($dayPath, array_replace($day, ['expected_revision' => 1, 'extra' => 0]))->assertOk();
     $this->getJson($period)->assertJsonPath('data.attendance_pending.0.message', 'Cambió la asistencia diaria. Actualice el cierre de asistencia.');
     $this->putJson($period.'/calculation', $calculation)->assertUnprocessable()->assertJsonValidationErrors('attendance');
-    $this->putJson($period.'/attendance/TR-001', array_replace($attendance, ['expected_revision' => 1]))->assertOk();
+    $this->putJson($period.'/attendance/70000001', array_replace($attendance, ['expected_revision' => 1]))->assertOk();
     $this->putJson($period.'/attendance/TR-002', array_replace($attendance, ['vacation_paid_days' => 0,
         'afp_rates' => ['insurance' => '1.37', 'commission' => '1.50', 'insurance_ceiling' => '12000', 'source' => 'SBS de prueba']]))->assertOk();
 
@@ -68,7 +73,7 @@ it('freezes monthly payroll, balances its draft and exports PLAME and AFPnet', f
     expect($lines->sum('debit'))->toBe($lines->sum('credit'));
     $this->get($period.'/exports/jor')->assertStatus(409);
     $this->postJson($period.'/approval', ['expected_revision' => 1])->assertOk()->assertJsonPath('data.data.approved', true);
-    $this->putJson($period.'/attendance/TR-001', $attendance)->assertStatus(409);
+    $this->putJson($period.'/attendance/70000001', $attendance)->assertStatus(409);
 
     $plame = $this->get($period.'/exports/jor')->assertOk()->getContent();
     expect($plame)->toContain("01|01234567|160|0|0|0|\r\n");
@@ -76,10 +81,10 @@ it('freezes monthly payroll, balances its draft and exports PLAME and AFPnet', f
     expect(strlen($afp))->toBe(141)->and(substr($afp, 102, 9))->toBe('000200000')->and(substr($afp, 139))->toBe('IN');
     $benefit = ['expected_revision' => 0, 'base' => '3000', 'months' => 6, 'days' => 0, 'health' => 'ESSALUD',
         'posting_date' => '2026-07-15', 'withholding' => '0', 'reference' => 'Semestre validado'];
-    $this->putJson($period.'/benefits/TR-001/GRATIFICATION', $benefit)->assertOk()
+    $this->putJson($period.'/benefits/70000001/GRATIFICATION', $benefit)->assertOk()
         ->assertJsonPath('data.data.result.amount', '3000.00')->assertJsonPath('data.data.result.bonus', '270.00');
 
-    $this->putJson($path.'/periods/2026-11/benefits/TR-001/CTS', array_replace($benefit, [
+    $this->putJson($path.'/periods/2026-11/benefits/70000001/CTS', array_replace($benefit, [
         'months' => 3, 'days' => 15, 'previous_gratification' => '3000', 'posting_date' => '2026-11-15',
     ]))->assertOk()->assertJsonPath('data.data.result.basis', '3500.00')
         ->assertJsonPath('data.data.result.amount', '1020.83');
