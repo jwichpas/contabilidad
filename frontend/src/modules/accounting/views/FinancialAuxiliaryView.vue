@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Calculator } from 'lucide-vue-next';
+import { Calculator, FolderOpen, Save } from 'lucide-vue-next';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import type { CompanyId } from '../types/accountingAccount.types';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
@@ -10,6 +10,7 @@ const props = defineProps<{
   mode: 'loan' | 'asset';
   activeCompanyId: CompanyId;
   getAccessToken: () => string | null;
+  canEdit: boolean;
 }>();
 
 const client = new AccountingApiClient('', {
@@ -44,6 +45,84 @@ const response = ref<{ input: string; data: Calculation }>();
 const result = computed(() => response.value?.input === JSON.stringify(form.value) ? response.value.data : null);
 const error = ref('');
 const loading = ref(false);
+const identity = ref({ reference: '', label: '', source_reference: '', expected_revision: 0 });
+const loadedReference = ref('');
+const revisionToOpen = ref<number>();
+const records = ref<{ reference: string; label: string; revision: number }[]>([]);
+const recordPage = ref(1);
+const hasLaterPage = ref(false);
+
+async function listRecords(page = 1) {
+  if (loading.value) return;
+  loading.value = true;
+  error.value = '';
+  try {
+    const batch = await client.listFinancialAuxiliaries(props.mode, page);
+    recordPage.value = page;
+    hasLaterPage.value = !!batch.next_page_url;
+    records.value = batch.data;
+  } catch (reason) {
+    showError(reason);
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function openRecord(reference: string, revision?: number) {
+  if (loading.value) return;
+  loading.value = true;
+  error.value = '';
+  try {
+    const record = await client.fetchFinancialAuxiliary<Calculation>(props.mode, reference, revision);
+    const { payments: items, ...values } = record.inputs;
+    if (props.mode === 'loan') {
+      Object.assign(loan.value, values);
+      payments.value = (items as string[]).join('\n');
+    } else {
+      Object.assign(asset.value, values, { stop_on: values.stop_on ?? '', tax_use_from: values.tax_use_from ?? '' });
+    }
+    identity.value = { reference, label: record.label, source_reference: record.source_reference, expected_revision: record.revision };
+    loadedReference.value = reference;
+    revisionToOpen.value = record.revision;
+    response.value = { input: JSON.stringify(form.value), data: record.result };
+  } catch (reason) {
+    showError(reason);
+  } finally {
+    loading.value = false;
+  }
+}
+
+function showError(reason: unknown) {
+  error.value = reason instanceof ApiHttpError
+    ? Object.values(reason.validationErrors).flat()[0] ?? reason.message
+    : 'No se pudo completar la operación. Revise la conexión.';
+}
+
+async function saveRecord() {
+  if (loading.value || !props.canEdit) return;
+  const input = JSON.stringify(form.value);
+  loading.value = true;
+  error.value = '';
+  try {
+    const reference = identity.value.reference.trim().toUpperCase();
+    const saved = await client.saveFinancialAuxiliary<Calculation>(props.mode, JSON.stringify({
+      ...form.value,
+      ...identity.value,
+      reference,
+      expected_revision: reference === loadedReference.value ? identity.value.expected_revision : 0,
+    }));
+    response.value = { input, data: saved.data };
+    loadedReference.value = reference;
+    identity.value.reference = reference;
+    identity.value.expected_revision = saved.revision;
+    revisionToOpen.value = saved.revision;
+  } catch (reason) {
+    showError(reason);
+  } finally {
+    loading.value = false;
+  }
+}
+
 
 const loanFields = [
   ['principal', 'Principal contractual'], ['transaction_costs', 'Costos de transacción atribuibles'],
@@ -93,9 +172,7 @@ async function calculate() {
     const data = await client.calculateFinancialAuxiliary<Calculation>(props.mode, input);
     response.value = { input, data };
   } catch (reason) {
-    error.value = reason instanceof ApiHttpError
-      ? Object.values(reason.validationErrors).flat()[0] ?? reason.message
-      : 'No se pudo calcular. Revise la conexión.';
+    showError(reason);
   } finally {
     loading.value = false;
   }
@@ -108,6 +185,27 @@ async function calculate() {
       <h1 class="text-xl font-bold">{{ isLoan ? 'Préstamos recibidos' : 'Activos fijos' }}</h1>
       <p class="mt-1 text-sm text-muted">{{ isLoan ? 'Costo amortizado NIIF 9 y límite tributario' : 'Depreciación contable NIC 16 y fiscal' }} · Simulación en PEN · 2025</p>
     </header>
+
+    <details class="rounded-lg border border-border bg-surface p-4" @toggle="($event.target as HTMLDetailsElement).open && listRecords()">
+      <summary class="cursor-pointer font-semibold">Fichas guardadas</summary>
+      <ul class="mt-2 divide-y divide-border">
+        <li v-for="record in records" :key="record.reference" class="flex items-center justify-between gap-2 py-2 text-sm">
+          <span>{{ record.reference }} · {{ record.label }} · Revisión {{ record.revision }}</span>
+          <button class="ui-btn ui-btn-secondary" type="button" :disabled="loading" @click="openRecord(record.reference)"><FolderOpen /> Abrir</button>
+        </li>
+      </ul>
+      <p v-if="!records.length && !loading" class="mt-2 text-sm text-muted">No hay fichas en esta página.</p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <button v-if="recordPage > 1" type="button" class="ui-btn ui-btn-secondary" :disabled="loading" @click="listRecords(recordPage - 1)">Anterior</button>
+        <button v-if="hasLaterPage" type="button" class="ui-btn ui-btn-secondary" :disabled="loading" @click="listRecords(recordPage + 1)">Siguiente</button>
+      </div>
+      <div v-if="loadedReference" class="mt-2 flex flex-wrap items-end gap-2">
+        <label class="ui-label">Revisión de {{ loadedReference }}
+          <input v-model.number="revisionToOpen" type="number" min="1" class="block">
+        </label>
+        <button type="button" class="ui-btn ui-btn-secondary" :disabled="loading || !revisionToOpen" @click="openRecord(loadedReference, revisionToOpen)">Abrir revisión</button>
+      </div>
+    </details>
 
     <form class="space-y-4 rounded-lg border border-border bg-surface p-4" @submit.prevent="calculate">
       <div v-if="isLoan" class="grid gap-4 sm:grid-cols-2">
@@ -156,6 +254,15 @@ async function calculate() {
       <button class="ui-btn ui-btn-primary" type="submit" :disabled="loading">
         <Calculator /> {{ loading ? 'Calculando…' : 'Calcular' }}
       </button>
+      <div v-if="canEdit" class="grid gap-3 border-t border-border pt-3 sm:grid-cols-3">
+        <label class="ui-label">Código de la ficha <input v-model.trim="identity.reference" maxlength="40" class="w-full"></label>
+        <label class="ui-label">Nombre <input v-model.trim="identity.label" maxlength="160" class="w-full"></label>
+        <label class="ui-label">Referencia de contrato o documento <input v-model.trim="identity.source_reference" maxlength="255" class="w-full"></label>
+        <button type="button" class="ui-btn ui-btn-secondary justify-self-start" :disabled="loading || !identity.reference || !identity.label || !identity.source_reference" @click="saveRecord">
+          <Save /> Guardar ficha y cálculo
+        </button>
+        <p v-if="loadedReference" role="status" class="text-sm text-muted sm:col-span-2">Ficha {{ loadedReference }} · Revisión {{ identity.expected_revision }}</p>
+      </div>
       <p v-if="error" role="alert" class="text-sm text-danger">{{ error }}</p>
     </form>
 

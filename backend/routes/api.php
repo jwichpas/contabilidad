@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\CompanyCashFlowPresentationController;
 use App\Http\Controllers\Api\V1\Company\CompanyFinancialReportLayoutController;
 use App\Http\Controllers\Api\V1\Company\CompanyNiifNotesController;
+use App\Http\Controllers\Api\V1\Company\CompanySunatCalendarController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\CostCenterMasterController;
@@ -170,6 +171,15 @@ Route::prefix('v1')->group(function (): void {
                 ->name('api.v1.accounting.financial-auxiliaries.loan');
             Route::post('/accounting/financial-auxiliaries/asset', [CalculateFinancialAuxiliariesController::class, 'asset'])
                 ->name('api.v1.accounting.financial-auxiliaries.asset');
+
+            Route::get('/accounting/financial-auxiliaries/{kind}/records', [CalculateFinancialAuxiliariesController::class, 'records'])
+                ->whereIn('kind', ['loan', 'asset'])->name('api.v1.accounting.financial-auxiliaries.records');
+            Route::post('/accounting/financial-auxiliaries/loan/records', [CalculateFinancialAuxiliariesController::class, 'loan'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                ->name('api.v1.accounting.financial-auxiliaries.loan.save');
+            Route::post('/accounting/financial-auxiliaries/asset/records', [CalculateFinancialAuxiliariesController::class, 'asset'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                ->name('api.v1.accounting.financial-auxiliaries.asset.save');
 
             Route::get('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'show'])
                 ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.show');
@@ -322,6 +332,11 @@ Route::prefix('v1')->group(function (): void {
                     ->name('api.v1.company.niif-notes.save');
 
                 // Historial tributario por ejercicio: sólo revisiones inmutables.
+                Route::get('/sunat-calendar/{year}', [CompanySunatCalendarController::class, 'show'])
+                    ->whereNumber('year')->name('api.v1.company.sunat-calendar.show');
+                Route::put('/sunat-calendar/{year}', [CompanySunatCalendarController::class, 'save'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->whereNumber('year')->name('api.v1.company.sunat-calendar.save');
                 Route::get('/fiscal-profiles', [CompanyFiscalProfileController::class, 'index'])
                     ->name('api.v1.company.fiscal-profiles.index');
 

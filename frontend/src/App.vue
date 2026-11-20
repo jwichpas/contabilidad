@@ -94,6 +94,13 @@ const FinancialAuxiliaryView = defineAsyncComponent({
   delay: 120,
 });
 
+const SunatCalendarView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/SunatCalendarView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
 const AnnualTaxCloseView = defineAsyncComponent({
   loader: () => import('./modules/accounting/views/AnnualTaxCloseView.vue'),
   loadingComponent: UiViewLoading,
@@ -262,6 +269,7 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('flujo-efectivo') || hash.includes('cash-flow')) return 'cash-flow';
   if (hash.includes('prestamos')) return 'loans';
   if (hash.includes('activos-fijos')) return 'fixed-assets';
+  if (hash.includes('vencimientos-sunat')) return 'sunat-calendar';
   if (hash.includes('cierre-tributario')) return 'annual-tax-close';
   if (hash.includes('estados-financieros') || hash.includes('financial-statements')) return 'financial-statements';
   if (hash.includes('historial-fiscal') || hash.includes('fiscal-history')) return 'fiscal-history';
@@ -314,6 +322,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#prestamos';
   } else if (mod === 'fixed-assets') {
     window.location.hash = '#activos-fijos';
+  } else if (mod === 'sunat-calendar') {
+    window.location.hash = '#vencimientos-sunat';
   } else if (mod === 'annual-tax-close') {
     window.location.hash = '#cierre-tributario';
   } else if (mod === 'financial-statements') {
@@ -535,6 +545,14 @@ watch(
           :mode="currentModule === 'loans' ? 'loan' : 'asset'"
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
+          :can-edit="canManageEntities"
+        />
+        <SunatCalendarView
+          v-else-if="currentModule === 'sunat-calendar'"
+          :key="`sunat-calendar-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-edit="canDeactivateEntities"
         />
         <AnnualTaxCloseView
           v-else-if="currentModule === 'annual-tax-close'"

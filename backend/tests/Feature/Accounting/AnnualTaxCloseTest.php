@@ -278,3 +278,99 @@ it('separates useful life and availability for use from the fiscal months and re
     $input['residual'] = '12000.01';
     $this->postJson($url, $input)->assertUnprocessable()->assertJsonValidationErrors('book_cost');
 });
+
+it('uses independent SUNAT dates for each RUC group including digit zero', function (): void {
+    $base = '/api/v1/catalogs/tax-calendar-deadlines/2026';
+    $this->getJson($base.'?month=10&last_digit_ruc=0')->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.electronic_books_deadline', '2026-11-13')
+        ->assertJsonPath('data.0.tax_returns_deadline', '2026-11-16');
+    foreach ([4, 5] as $digit) {
+        $this->getJson($base.'?month=10&last_digit_ruc='.$digit)->assertOk()
+            ->assertJsonPath('data.0.electronic_books_deadline', '2026-11-18')
+            ->assertJsonPath('data.0.tax_returns_deadline', '2026-11-19');
+    }
+    $this->getJson($base.'?month=12&last_digit_ruc=BC')->assertOk()
+        ->assertJsonPath('data.0.electronic_books_deadline', '2027-01-25')
+        ->assertJsonPath('data.0.tax_returns_deadline', '2027-01-26');
+    $this->getJson($base.'?month=13')->assertUnprocessable();
+});
+
+it('combines the active company RUC, book obligations, and a supported individual extension', function (): void {
+    $this->company->update(['tax_id' => substr($this->company->tax_id, 0, -1).'4']);
+    $this->tenant->run((int) $this->company->id, function (): void {
+        DB::table('company_settings')->insert([
+            'company_id' => $this->company->id,
+            'base_currency_id' => DB::table('currencies')->where('code', 'PEN')->value('id'),
+            'tax_regime' => 'GENERAL', 'default_vat_rate' => '18.00',
+        ]);
+        $revision = [
+            'company_id' => $this->company->id, 'fiscal_year' => 2026,
+            'default_vat_rate' => '18.00', 'change_reason' => 'Cambio de régimen de prueba',
+            'created_by' => $this->user->id,
+        ];
+        DB::table('company_fiscal_profiles')->insert([
+            $revision + ['revision' => 1, 'effective_date' => '2026-01-01', 'tax_regime' => 'RER'],
+            $revision + ['revision' => 2, 'effective_date' => '2026-07-01', 'tax_regime' => 'GENERAL'],
+        ]);
+    });
+    $url = '/api/v1/company/sunat-calendar/2026';
+    $original = $this->getJson($url)->assertOk()->assertJsonCount(26, 'data.books')
+        ->assertJsonPath('data.revision', 0)
+        ->assertJsonPath('data.regimes.6', 'RER')->assertJsonPath('data.regimes.7', 'GENERAL');
+    $events = collect($original->json('data.events'))->where('period', '2026-10')->keyBy('code');
+    expect($events['8']['date'])->toBe('2026-11-18');
+    expect($events['14']['date'])->toBe('2026-11-18');
+    expect($events['MONTHLY']['date'])->toBe('2026-11-19');
+    expect($events->has('5'))->toBeFalse();
+
+    $profile = $original->json('data.profile');
+    $profile['income_band'] = 'OVER_1700';
+    $profile['extra_books'] = ['7','13'];
+    $profile['inventory_electronic'] = true;
+    $profile['plame'] = true;
+    $profile['itan'] = 'INSTALLMENTS';
+    $profile['overrides'] = [[
+        'code' => 'MONTHLY', 'label' => 'FV 621', 'type' => 'tax', 'period' => '2026-10',
+        'date' => '2026-11-30', 'reference' => 'Constancia de prórroga de prueba',
+    ]];
+    $response = $this->putJson($url, ['profile' => $profile, 'expected_revision' => 0])
+        ->assertOk()->assertJsonPath('data.revision', 1);
+    $events = collect($response->json('data.events'))->keyBy(fn ($row) => $row['code'].':'.$row['period']);
+    expect($events['MONTHLY:2026-10']['date'])->toBe('2026-11-30');
+    expect($events['8:2026-10']['date'])->toBe('2026-11-18');
+    expect($events['5:2026-10']['date'])->toBe('2027-02-02');
+    expect($events->has('5:2026-06'))->toBeFalse();
+    expect($events->has('5:2026-07'))->toBeTrue();
+    expect($events['ITAN:2026-10']['date'])->toBe('2026-11-19');
+    expect($events->has('7:2026'))->toBeTrue();
+    expect($events->has('13:2026-06'))->toBeTrue();
+    expect($events->has('13:2026-10'))->toBeFalse();
+
+    $this->putJson($url, ['profile' => $profile, 'expected_revision' => 0])->assertConflict();
+    $other = Company::query()->create([
+        'tax_id' => '20'.random_int(100000000, 999999999),
+        'business_name' => 'Otra empresa', 'legal_address' => 'DEV', 'is_active' => true,
+    ]);
+    $this->getJson($url, ['X-Company-Id' => (string) $other->id])->assertForbidden();
+});
+
+it('stores auxiliary revisions with supporting references and preserves the original calculation', function (): void {
+    $url = '/api/v1/accounting/financial-auxiliaries/loan/records';
+    $input = [
+        'principal' => '1100', 'transaction_costs' => '100', 'payments' => ['550', '605'],
+        'apply_ebitda_limit' => false, 'previous_tax_ebitda' => '0',
+        'tax_interest_expense' => '0', 'tax_interest_income' => '0',
+        'reference' => 'PRESTAMO-01', 'label' => 'Préstamo banco de prueba',
+        'source_reference' => 'Contrato de prueba', 'expected_revision' => 0,
+    ];
+    $this->postJson($url, $input)->assertCreated()->assertJsonPath('revision', 1);
+    $this->postJson($url, $input)->assertConflict();
+    $input['expected_revision'] = 1;
+    $input['payments'] = ['560', '610'];
+    $this->postJson($url, $input)->assertCreated()->assertJsonPath('revision', 2);
+    $this->getJson($url)->assertOk()->assertJsonCount(1, 'data.data')->assertJsonPath('data.data.0.revision', 2);
+    $this->getJson($url.'?reference=PRESTAMO-01&revision=1')->assertOk()
+        ->assertJsonPath('data.inputs.payments.0', '550')
+        ->assertJsonPath('data.result.initial_carrying_amount', '1000.00');
+    $this->getJson($url.'?reference=PRESTAMO-01')->assertOk()->assertJsonPath('data.inputs.payments.0', '560');
+});

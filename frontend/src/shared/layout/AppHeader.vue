@@ -122,6 +122,8 @@ const activeCompanyIdString = computed<string>({
                 ? 'Préstamos recibidos'
               : currentModule === 'fixed-assets'
                 ? 'Activos fijos'
+              : currentModule === 'sunat-calendar'
+                ? 'Vencimientos SUNAT'
               : currentModule === 'annual-tax-close'
                 ? 'Cierre tributario anual'
               : currentModule === 'financial-statements'

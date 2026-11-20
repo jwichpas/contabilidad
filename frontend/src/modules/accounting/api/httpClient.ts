@@ -1,3 +1,4 @@
+import type { SunatCalendarProfile, SunatCalendarReport } from '../types/sunatCalendar.types';
 import type { TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseRevision, TaxCloseTrialBalance, TaxOpeningSource } from '../types/annualTaxClose.types';
 import { reportUnauthorizedBearer } from '@/shared/auth/sessionInvalidation';
 import {
@@ -616,6 +617,38 @@ export class AccountingApiClient {
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
     );
     return result.data;
+  }
+
+  public async fetchSunatCalendar(year: string): Promise<SunatCalendarReport> {
+    return (await this.request<{ data: SunatCalendarReport }>(
+      `/api/v1/company/sunat-calendar/${year}`, { method: 'GET' },
+    )).data;
+  }
+
+  public async saveSunatCalendar(year: string, profile: SunatCalendarProfile, expectedRevision: number): Promise<SunatCalendarReport> {
+    return (await this.request<{ data: SunatCalendarReport }>(
+      `/api/v1/company/sunat-calendar/${year}`, { method: 'PUT', body: JSON.stringify({ profile, expected_revision: expectedRevision }) },
+    )).data;
+  }
+
+  public async listFinancialAuxiliaries(kind: 'loan' | 'asset', page: number) {
+    return (await this.request<{ data: {
+      data: { reference: string; label: string; revision: number }[]; next_page_url: string | null;
+    } }>(`/api/v1/accounting/financial-auxiliaries/${kind}/records?page=${page}`, { method: 'GET' })).data;
+  }
+
+  public async fetchFinancialAuxiliary<T>(kind: 'loan' | 'asset', reference: string, revision?: number) {
+    const query = new URLSearchParams({ reference });
+    if (revision !== undefined) query.set('revision', String(revision));
+    return (await this.request<{ data: {
+      reference: string; label: string; source_reference: string; revision: number; inputs: Record<string, unknown>; result: T;
+    } }>(`/api/v1/accounting/financial-auxiliaries/${kind}/records?${query}`, { method: 'GET' })).data;
+  }
+
+  public async saveFinancialAuxiliary<T>(kind: 'loan' | 'asset', body: string) {
+    return this.request<{ data: T; revision: number }>(
+      `/api/v1/accounting/financial-auxiliaries/${kind}/records`, { method: 'POST', body },
+    );
   }
 
   public async calculateFinancialAuxiliary<T>(kind: 'loan' | 'asset', body: string): Promise<T> {
