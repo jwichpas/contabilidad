@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { formatExactLocalAmount } from '@/modules/accounting/utils/formatExactLocalAmount';
-import type { PayrollParameters } from './payroll.types';
+import PayrollParameterHistory from './PayrollParameterHistory.vue';
+import type { PayrollParameterEntry, PayrollParameterRevision, PayrollParameters } from './payroll.types';
 
-const props = defineProps<{ parameters?: PayrollParameters }>();
+const props = defineProps<{
+  parameters?: PayrollParameters;
+  month: string;
+  loadHistory: () => Promise<PayrollParameterRevision[]>;
+  saveParameter: (entry: PayrollParameterEntry, revision: number) => Promise<void>;
+}>();
 const sbs = 'https://www.sbs.gob.pe/app/spp/empleadores/comisiones_spp/Paginas/comision_prima.aspx';
 const mtpe = 'https://cdn.www.gob.pe/uploads/document/file/5859785/5193674-13-mdpf-actualizado-2023-2-firmado-1-f-oom-ogpp-dpflcnl-y-dgppflit.pdf';
 const administratorNames = { HA: 'Hábitat', IN: 'Integra', PR: 'Profuturo', RI: 'Prima' } as const;
@@ -44,6 +50,8 @@ const pensionRows = computed(() => Object.entries(props.parameters?.afp?.adminis
         <li><strong>Asignación familiar.</strong> Activa el derecho acreditado en la ficha del trabajador. <a :href="mtpe" target="_blank" rel="noopener noreferrer" class="text-brand underline">Guía MTPE</a></li>
       </ul>
     </section>
+
+    <PayrollParameterHistory :month="month" :load-history="loadHistory" :save-parameter="saveParameter" />
 
     <section aria-labelledby="payroll-legal-deductions" class="space-y-3 rounded-lg border border-line bg-surf p-4">
       <h2 id="payroll-legal-deductions" class="font-semibold">Descuentos del trabajador</h2>

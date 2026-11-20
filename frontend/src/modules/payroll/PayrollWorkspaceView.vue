@@ -10,7 +10,7 @@ import type { CompanyId } from '@/modules/accounting/types/accountingAccount.typ
 import type { TaxJournalDraft } from '@/modules/accounting/types/annualTaxClose.types';
 import { formatAccountingDate, peruAccountingDate } from '@/modules/accounting/utils/journalPresentation';
 import { formatExactLocalAmount } from '@/modules/accounting/utils/formatExactLocalAmount';
-import type { Attendance, AttendanceDay, Benefit, PayrollWorkspace, Revision, Worker } from './payroll.types';
+import type { Attendance, AttendanceDay, Benefit, PayrollParameterEntry, PayrollParameterRevision, PayrollWorkspace, Revision, Worker } from './payroll.types';
 
 const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => string | null; ruc: string; section: PayrollModule }>();
 const emit = defineEmits<{ journal: [draft: TaxJournalDraft]; navigate: [module: PayrollModule] }>();
@@ -88,7 +88,10 @@ async function run(action: () => Promise<void>) {
 }
 
 async function reload() {
-  workspace.value = await api.payrollRequest<PayrollWorkspace>(`periods/${month.value}`);
+  const period = month.value;
+  const data = await api.payrollRequest<PayrollWorkspace>(`periods/${period}`);
+  if (period !== month.value) return;
+  workspace.value = data;
   minimum.value = (workspace.value.payroll?.data.approved ? workspace.value.payroll.data.health_minimum : workspace.value.parameters?.minimum?.amount)
     ?? workspace.value.payroll?.data.health_minimum ?? '';
   source.value = workspace.value.payroll?.data.source ?? '';
@@ -141,7 +144,7 @@ function selectAttendance(code: string) {
   const saved = workspace.value?.attendance.find((row) => row.data.worker === code);
   const person = workspace.value?.eligible.find((row) => row.reference === code)?.data;
   const data = saved?.data;
-  const afp = workspace.value?.parameters?.afp;
+  const afp = monthly.value?.data.approved ? monthly.value.data.parameters?.afp : workspace.value?.parameters?.afp;
   const rates = person?.afp ? afp?.administrators[person.afp] : undefined;
   const balance = person?.afp_commission === 'BALANCE';
   attendance.value = {
@@ -149,10 +152,11 @@ function selectAttendance(code: string) {
     nontaxable_extra: '0', income_tax: '0', other_deductions: '0', reference: '', ...data,
     expected_revision: saved?.revision ?? 0,
     provisions: data?.provisions ? { ...data.provisions } : null,
-    afp_rates: person?.pension === 'AFP' ? (data?.afp_rates
-      ? { ...data.afp_rates, commission: balance ? '0' : data.afp_rates.commission }
-      : { insurance: afp?.insurance ?? '', commission: balance ? '0' : rates?.flow ?? '',
-        insurance_ceiling: afp?.insurance_ceiling ?? '', source: afp?.source ?? '' }) : null,
+    afp_rates: person?.pension === 'AFP' ? (afp && rates
+      ? { insurance: afp.insurance, commission: balance ? '0' : rates.flow,
+        insurance_ceiling: afp.insurance_ceiling, source: afp.source }
+      : { insurance: data?.afp_rates?.insurance ?? '', commission: balance ? '0' : data?.afp_rates?.commission ?? '',
+        insurance_ceiling: data?.afp_rates?.insurance_ceiling ?? '', source: data?.afp_rates?.source ?? '' }) : null,
   };
 }
 
@@ -207,6 +211,20 @@ function saveAttendance() {
     selectAttendance(code);
     message.value = 'Asistencia guardada.';
   });
+}
+
+function loadParameterHistory() {
+  return api.payrollRequest<PayrollParameterRevision[]>('parameters');
+}
+
+async function saveParameter(entry: PayrollParameterEntry, expected_revision: number) {
+  const { kind, period, ...values } = entry;
+  await api.payrollRequest(`parameters/${kind}/${period}`, 'PUT', { ...values, expected_revision });
+  try {
+    await reload();
+  } catch {
+    error.value = 'Se registró la versión. Recarga la página para actualizar los parámetros del periodo.';
+  }
 }
 
 function calculate() {
@@ -379,7 +397,7 @@ void run(reload);
           <label v-for="[key,label] in extraFields" :key="key" class="ui-label">{{ label }}<input v-model.trim="attendance[key]" class="w-full" inputmode="decimal" required></label>
           <template v-if="attendance.afp_rates">
             <label v-for="[key,label] in afpFields" :key="key" class="ui-label">{{ label }}<input v-model.trim="attendance.afp_rates[key]" class="w-full"
-              :readonly="key === 'commission' && attendanceCommissionOnBalance" :required="attendance.paid_days > 0"></label>
+              :readonly="!!workspace.parameters?.afp || (key === 'commission' && attendanceCommissionOnBalance)" :required="attendance.paid_days > 0"></label>
           </template>
           <label class="ui-label sm:col-span-2">Referencia de asistencia y conceptos validados<input v-model.trim="attendance.reference" class="w-full" required maxlength="500"></label>
         </fieldset>
@@ -415,7 +433,9 @@ void run(reload);
       </form>
     </section>
 
-    <PayrollParametersView v-if="workspace && section === 'payroll-parameters'" :parameters="workspace.parameters" />
+    <PayrollParametersView v-if="workspace && section === 'payroll-parameters'"
+      :parameters="workspace.parameters" :month="month"
+      :load-history="loadParameterHistory" :save-parameter="saveParameter" />
 
     <PayrollMonthlyView
       v-if="workspace && section === 'payroll-monthly'"

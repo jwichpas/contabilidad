@@ -28,7 +28,8 @@ const pending = computed(() => new Map(
     .map(({ worker, message }) => [worker, message]),
 ));
 const needsRecalculation = computed(() => !!monthly.value && !approved.value && (
-  (props.workspace.parameters?.minimum && Number(monthly.value.data.health_minimum) !== Number(props.workspace.parameters.minimum.amount))
+  props.workspace.parameters_changed
+  || (props.workspace.parameters?.minimum && Number(monthly.value.data.health_minimum) !== Number(props.workspace.parameters.minimum.amount))
   || pending.value.size > 0
   || rows.value.length !== props.workspace.eligible.length
   || props.workspace.eligible.some(({ reference, revision }) => {
@@ -170,8 +171,18 @@ function calculate() {
       Revisa los pendientes en la nómina antes de calcular.
     </p>
     <p v-if="needsRecalculation" role="status" class="rounded-lg border border-line bg-soft px-4 py-3 text-sm">
+      <template v-if="workspace.parameters_changed">Cambió un parámetro del periodo. </template>
       Los importes corresponden a la revisión {{ monthly?.revision }}. Vuelve a calcular antes de aprobar.
     </p>
+
+    <details v-if="approved && monthly?.data.parameters" class="rounded-lg border border-line bg-surf px-4 py-3 text-sm">
+      <summary class="cursor-pointer font-semibold">Parámetros de la planilla aprobada</summary>
+      <dl class="mt-2 grid gap-2 text-muted sm:grid-cols-3">
+        <div><dt>RMV aplicada</dt><dd>{{ money(monthly.data.parameters.minimum?.amount) }} · {{ monthly.data.parameters.minimum?.rule ?? 'Sin fuente registrada' }}</dd></div>
+        <div><dt>UIT del ejercicio</dt><dd>{{ money(monthly.data.parameters.uit ?? undefined) }}</dd></div>
+        <div><dt>Tasas AFP</dt><dd>{{ monthly.data.parameters.afp?.source ?? 'Tasas registradas en Asistencia' }}</dd></div>
+      </dl>
+    </details>
 
     <section aria-labelledby="payroll-roster-title" class="min-w-0 overflow-hidden rounded-lg border border-line bg-surf">
       <h2 id="payroll-roster-title" class="px-4 py-3 text-sm font-semibold">Nómina del periodo</h2>

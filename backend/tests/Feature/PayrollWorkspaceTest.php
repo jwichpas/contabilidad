@@ -156,5 +156,70 @@ it('uses the October 2026 increase and itemizes the family allowance and AFP bal
         ->assertJsonPath('data.data.rows.0.amounts.provision_vacation', '141.67')
         ->assertJsonPath('data.data.totals.provision_total', '602.46')
         ->assertJsonPath('data.data.rows.0.amounts.employer_cost', '1987.07');
-    $this->postJson($period.'/approval', ['expected_revision' => 1])->assertOk()->assertJsonPath('data.data.approved', true);
+    $ratePath = '/api/v1/payroll/parameters/afp/2026-11';
+    $decree = ['source' => 'Publicación SBS de prueba', 'url' => 'https://www.sbs.gob.pe'];
+    $rates = $decree + [
+        'expected_revision' => 0, 'contribution' => '11.00', 'insurance' => '1.47', 'insurance_ceiling' => '12000.00',
+        'administrators' => [
+            'HA' => ['flow' => '1.47', 'balance' => '1.25'], 'IN' => ['flow' => '1.55', 'balance' => '0.78'],
+            'PR' => ['flow' => '1.69', 'balance' => '0.68'], 'RI' => ['flow' => '1.60', 'balance' => '1.25'],
+        ],
+    ];
+    $this->putJson($ratePath, $rates)->assertOk()->assertJsonPath('data.revision', 1);
+    $this->putJson($ratePath, $rates)->assertConflict();
+    $this->getJson($period)->assertJsonPath('data.parameters_changed', true)
+        ->assertJsonPath('data.parameters.afp_contribution', '11.00');
+    $this->postJson($period.'/approval', ['expected_revision' => 1])->assertConflict();
+    $this->putJson($period.'/calculation', array_replace($calculation, ['expected_revision' => 1]))->assertOk()
+        ->assertJsonPath('data.data.parameters.revisions.afp', 'afp:2026-11#1')
+        ->assertJsonPath('data.data.rows.0.amounts.afp_contribution', '200.53')
+        ->assertJsonPath('data.data.rows.0.attendance.afp_rates.insurance', '1.47')
+        ->assertJsonPath('data.data.rows.0.amounts.afp_commission', '0.00');
+    $this->postJson($period.'/approval', ['expected_revision' => 2])->assertOk()->assertJsonPath('data.data.approved', true);
+    $this->putJson($ratePath, array_replace($rates, ['expected_revision' => 1, 'contribution' => '12.00']))
+        ->assertOk()->assertJsonPath('data.revision', 2);
+    $this->getJson($period)->assertJsonPath('data.parameters.afp_contribution', '12.00')
+        ->assertJsonPath('data.parameters_changed', false)
+        ->assertJsonPath('data.payroll.data.parameters.afp_contribution', '11.00');
+    $this->getJson('/api/v1/payroll/parameters')->assertOk()
+        ->assertJsonPath('data.0.revision', 2)
+        ->assertJsonPath('data.0.created_by', $this->user->id)
+        ->assertJsonStructure(['data' => [['created_at']]])
+        ->assertJsonPath('data.1.revision', 1);
+});
+
+
+
+it('resolves minimum wages by effective month and tax units by year inside each company', function (): void {
+    $path = '/api/v1/payroll';
+    $data = ['expected_revision' => 0, 'source' => 'Norma de prueba', 'url' => 'https://www.gob.pe'];
+    $this->putJson($path.'/parameters/rmv/2027', $data + ['amount' => '1300.00'])
+        ->assertUnprocessable()->assertJsonValidationErrors('period');
+    $this->putJson($path.'/parameters/uit/2027-01', $data + ['amount' => '5600.00'])
+        ->assertUnprocessable()->assertJsonValidationErrors('period');
+    $this->putJson($path.'/parameters/rmv/2027-03', $data + ['amount' => '1300.00'])->assertOk();
+    $this->putJson($path.'/parameters/uit/2027', $data + ['amount' => '5600.00'])->assertOk();
+    $this->getJson($path.'/periods/2027-02')->assertJsonPath('data.parameters.minimum', null)
+        ->assertJsonPath('data.parameters.uit', '5600.00');
+    $this->getJson($path.'/periods/2027-12')->assertJsonPath('data.parameters.minimum.amount', '1300.00')
+        ->assertJsonPath('data.parameters.family_allowance', '130.00')
+        ->assertJsonPath('data.parameters.tax_deduction', '39200.00')
+        ->assertJsonPath('data.parameters.afp', null);
+    $this->getJson($path.'/periods/2028-01')->assertJsonPath('data.parameters.minimum.amount', '1300.00')
+        ->assertJsonPath('data.parameters.uit', null);
+
+    $other = Company::query()->create(['tax_id' => '20'.random_int(100000000, 999999999),
+        'business_name' => 'Empresa de prueba sin parámetros', 'legal_address' => 'Prueba', 'is_active' => true]);
+    app(TenantContext::class)->run($other->id, fn () => DB::table('company_user')->insert([
+        'company_id' => $other->id, 'user_id' => $this->user->id, 'role' => 'AUDITOR',
+        'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
+    ]));
+    $this->withHeader('X-Company-Id', (string) $other->id);
+    $this->getJson($path.'/parameters')->assertForbidden();
+    $this->putJson($path.'/parameters/uit/2027', $data + ['amount' => '5800.00'])->assertForbidden();
+    app(TenantContext::class)->run($other->id, fn () => DB::table('company_user')
+        ->where('user_id', $this->user->id)->update(['role' => 'CHIEF_ACCOUNTANT']));
+    $this->getJson($path.'/parameters')->assertJsonCount(5, 'data');
+    $this->getJson($path.'/periods/2027-12')->assertJsonPath('data.parameters.minimum', null)
+        ->assertJsonPath('data.parameters.uit', null);
 });

@@ -32,9 +32,27 @@ export type PayrollRow = {
   amounts: Record<string, string>;
 };
 export type Payroll = {
-  approved: boolean; health_minimum: string; source: string;
+  approved: boolean; health_minimum: string; source: string; parameters?: PayrollParameters;
   rows: PayrollRow[];
   totals: Record<string, string>; journal: TaxJournalDraft | null;
+};
+export type PayrollParameterKind = 'rmv' | 'uit' | 'afp';
+export type PayrollAfpCode = 'HA' | 'IN' | 'PR' | 'RI';
+export type PayrollAfpRates = {
+  contribution: string;
+  insurance: string;
+  insurance_ceiling: string;
+  administrators: Record<PayrollAfpCode, { flow: string; balance: string }>;
+};
+export type PayrollParameterEntry = {
+  kind: PayrollParameterKind;
+  period: string;
+  source: string;
+  url: string;
+} & ({ kind: 'rmv' | 'uit'; amount: string } | ({ kind: 'afp' } & PayrollAfpRates));
+export type PayrollParameterRevision = Revision<PayrollParameterEntry> & {
+  created_at: string | null;
+  created_by: number | null;
 };
 export type PayrollParameters = {
   minimum: { amount: string; from: string; rule: string; url: string } | null;
@@ -48,7 +66,7 @@ export type PayrollParameters = {
   essalud: string;
   gratification_bonus: { essalud: string; eps: string };
   afp: {
-    source: string; insurance: string; insurance_ceiling: string;
+    source: string; url?: string; insurance: string; insurance_ceiling: string;
     administrators: Record<string, { flow: string; balance: string }>;
   } | null;
 };
@@ -56,6 +74,7 @@ export type PayrollParameters = {
 export type PayrollWorkspace = {
   workers: Revision<Worker>[]; eligible: Revision<Worker>[]; attendance: Revision<Attendance>[];
   parameters?: PayrollParameters;
+  parameters_changed?: boolean;
   attendance_pending?: { worker: string; message: string }[];
   daily: Revision<AttendanceDay>[]; vacations: Revision<Vacation>[]; benefits: Revision<Benefit>[]; payroll: Revision<Payroll> | null;
 };

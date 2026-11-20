@@ -44,7 +44,7 @@ final class PayrollCalculation
                 throw ValidationException::withMessages(['afp_rates' => 'Registre la prima, comisión y tope SBS del mes para '.$worker['code'].'.']);
             }
             $insured = bccomp($gross, $rates['insurance_ceiling'], 2) > 0 ? $rates['insurance_ceiling'] : $gross;
-            $contribution = $this->percent($gross, PayrollParameters::AFP);
+            $contribution = $this->percent($gross, $parameters['afp_contribution'] ?? PayrollParameters::AFP);
             $insurance = $this->percent($insured, $rates['insurance']);
             $commission = $this->percent($gross, ($worker['afp_commission'] ?? null) === 'BALANCE' ? '0' : $rates['commission']);
             $pension = bcadd(bcadd($contribution, $insurance, 2), $commission, 2);

@@ -42,17 +42,61 @@ final readonly class PayrollController
             }
         }
 
+        $payroll = $this->ledger->latest('payroll', $month);
+        $parameters = $this->parameters->forMonth($month);
+
         return $this->json([
             'workers' => array_values($this->ledger->records('worker')),
             'eligible' => array_values($eligible),
             'daily' => array_values($daily),
             'attendance' => array_values($attendance),
             'attendance_pending' => $pending,
-            'parameters' => $this->parameters->forMonth($month),
+            'parameters' => $parameters,
+            'parameters_changed' => $payroll !== null && ! $payroll['data']['approved']
+                && ($payroll['data']['parameters']['revisions'] ?? []) != $parameters['revisions'],
             'vacations' => array_values($this->ledger->records('vacation')),
             'benefits' => array_values($this->ledger->records('benefit', $month.'-')),
-            'payroll' => $this->ledger->latest('payroll', $month),
+            'payroll' => $payroll,
         ]);
+    }
+
+    public function parameterHistory(): JsonResponse
+    {
+        return $this->json($this->parameters->history());
+    }
+
+    public function parameter(Request $request, string $kind, string $period): JsonResponse
+    {
+        $request->merge(['period' => $period]);
+        $monthly = 'regex:/^20[0-9]{2}-(0[1-9]|1[0-2])$/D';
+        $annual = 'regex:/^20[0-9]{2}$/D';
+        $rates = ['required', 'string', 'regex:/^\d{1,2}(\.\d{1,4})?$/D', 'numeric', 'between:0,30'];
+        $rules = $kind === 'afp' ? [
+            'contribution' => [...$rates, 'gt:0'],
+            'insurance' => $rates,
+            'insurance_ceiling' => [...self::MONEY, 'numeric', 'gt:0'],
+            'administrators' => ['required', 'array:HA,IN,PR,RI'],
+        ] : [
+            'amount' => [...self::MONEY, 'numeric', 'gt:0'],
+        ];
+        if ($kind === 'afp') {
+            foreach (['HA', 'IN', 'PR', 'RI'] as $administrator) {
+                $rules["administrators.$administrator"] = ['required', 'array:flow,balance'];
+                $rules["administrators.$administrator.flow"] = $rates;
+                $rules["administrators.$administrator.balance"] = $rates;
+            }
+        }
+        $data = $request->validate($rules + [
+            'expected_revision' => self::REVISION,
+            'period' => ['required', 'string', $kind === 'uit' ? $annual : $monthly],
+            'source' => ['required', 'string', 'max:250'],
+            'url' => ['required', 'url:https', 'max:500'],
+        ]);
+        unset($data['period']);
+
+        return $this->write($request, 'parameter', "$kind:$period", $data, fn (array $input) =>
+            ['kind' => $kind, 'period' => $period] + $input
+        );
     }
 
     public function worker(Request $request, string $worker): JsonResponse
@@ -196,7 +240,8 @@ final readonly class PayrollController
                 $this->check(bccomp($input['health_minimum'], $parameters['minimum']['amount'], 2) !== 0,
                     'health_minimum', 'Use la RMV publicada para la base mínima de EsSalud del periodo.');
             }
-            return $this->snapshot($month, $input, $parameters) + ['approved' => false, 'parameters' => $parameters];
+            return $this->snapshot($month, $input, $parameters, true)
+                + ['approved' => false, 'parameters' => $parameters, 'uses_parameter_catalog' => true];
         });
     }
 
@@ -207,12 +252,16 @@ final readonly class PayrollController
             $draft = $this->ledger->latest('payroll', $month)['data'] ?? null;
             abort_if(!$draft || $draft['approved'], 409, 'Genere un cálculo pendiente antes de aprobarlo.');
             $parameters = $draft['parameters'] ?? [];
-            $minimum = ($draft['parameters'] ?? $this->parameters->forMonth($month))['minimum'];
+            $effective = $this->parameters->forMonth($month);
+            abort_if(($parameters['revisions'] ?? []) != $effective['revisions'], 409,
+                'Cambió la versión de un parámetro del periodo. Recalcule la planilla antes de aprobar.');
+            $minimum = $effective['minimum'];
             if ($minimum) {
                 abort_if(bccomp($draft['health_minimum'], $minimum['amount'], 2) !== 0, 409,
                     'La base mínima del borrador difiere de la RMV del periodo. Recalcule la planilla.');
             }
-            $current = $this->snapshot($month, ['health_minimum' => $draft['health_minimum'], 'source' => $draft['source']], $parameters);
+            $current = $this->snapshot($month, ['health_minimum' => $draft['health_minimum'], 'source' => $draft['source']],
+                $parameters, $draft['uses_parameter_catalog'] ?? false);
             abort_if($current['rows'] != $draft['rows'], 409, 'Cambió un trabajador o su asistencia. Vuelva a calcular el periodo.');
             return array_replace($draft, ['approved' => true]);
         });
@@ -297,7 +346,7 @@ final readonly class PayrollController
             'Content-Disposition' => 'attachment; filename="'.$name.'"']);
     }
 
-    private function snapshot(string $month, array $input, array $parameters): array
+    private function snapshot(string $month, array $input, array $parameters, bool $useCatalog): array
     {
         $eligible = $this->eligible($month);
         $this->check($eligible === [], 'workers', 'Registre trabajadores vigentes para el periodo.');
@@ -312,9 +361,20 @@ final readonly class PayrollController
             if ($issue !== null) {
                 throw ValidationException::withMessages(['attendance' => $code.' · '.$issue]);
             }
-            $amounts = $this->calculation->worker($person['data'], $daily['data'], $input['health_minimum'], $parameters);
-            $rows[] = ['worker' => $person['data'], 'worker_revision' => $person['revision'], 'attendance_revision' => $daily['revision'],
-                'attendance' => $daily['data'], 'amounts' => $amounts];
+            $worker = $person['data'];
+            $attendanceInput = $daily['data'];
+            $afp = $parameters['afp'] ?? null;
+            if ($useCatalog && $afp && $worker['pension'] === 'AFP') {
+                $attendanceInput['afp_rates'] = [
+                    'insurance' => $afp['insurance'],
+                    'commission' => ($worker['afp_commission'] ?? null) === 'BALANCE' ? '0' : $afp['administrators'][$worker['afp']]['flow'],
+                    'insurance_ceiling' => $afp['insurance_ceiling'],
+                    'source' => $afp['source'],
+                ];
+            }
+            $amounts = $this->calculation->worker($worker, $attendanceInput, $input['health_minimum'], $parameters);
+            $rows[] = ['worker' => $worker, 'worker_revision' => $person['revision'], 'attendance_revision' => $daily['revision'],
+                'attendance' => $attendanceInput, 'amounts' => $amounts];
             if (isset($amounts['provision_total'])) {
                 $totals['provision_total'] ??= '0.00';
             }

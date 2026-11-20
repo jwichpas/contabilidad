@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Payroll;
 
 use App\Support\Tenant\TenantContext;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +34,16 @@ final readonly class PayrollLedger
         return $this->query($kind)->when($prefix !== '', fn (Builder $query) => $query->where('reference', 'like', $prefix.'%'))
             ->selectRaw('DISTINCT ON (reference) *')->orderBy('reference')->orderByDesc('revision')
             ->get()->mapWithKeys(fn (object $row) => [$row->reference => $this->record($row)])->all();
+    }
+
+    public function parameterHistory(): array
+    {
+        return $this->query('parameter')->orderByDesc('id')->get()->map(fn (object $row) =>
+            $this->record($row) + [
+                'created_by' => (int) $row->created_by,
+                'created_at' => CarbonImmutable::parse($row->created_at)->toIso8601String(),
+            ]
+        )->all();
     }
 
     public function workforce(string $month): array

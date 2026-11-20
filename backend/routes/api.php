@@ -205,6 +205,8 @@ Route::prefix('v1')->group(function (): void {
                 ])
                 ->controller(\App\Http\Controllers\Api\V1\Payroll\PayrollController::class)
                 ->group(function (): void {
+                    Route::get('/parameters', 'parameterHistory');
+                    Route::put('/parameters/{kind}/{period}', 'parameter')->whereIn('kind', ['rmv', 'uit', 'afp']);
                     Route::put('/workers/{worker}', 'worker');
                     Route::post('/workers/{worker}/vacations', 'vacation');
                     Route::prefix('periods/{month}')->where(['month' => '20[0-9]{2}-(0[1-9]|1[0-2])'])->group(function (): void {
