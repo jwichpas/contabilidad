@@ -39,6 +39,10 @@ it('freezes monthly payroll, balances its draft and exports PLAME and AFPnet', f
     $this->postJson($path.'/workers/TR-001/vacations', ['from' => '2026-07-07', 'to' => '2026-07-09',
         'reference' => 'Traslape'])->assertUnprocessable();
 
+    $this->getJson($period)->assertOk()->assertJsonCount(2, 'data.attendance_pending')
+        ->assertJsonPath('data.attendance_pending.0.worker', 'TR-001')
+        ->assertJsonPath('data.attendance_pending.0.message', 'Falta confirmar la asistencia.');
+
     $calculation = ['expected_revision' => 0, 'health_minimum' => '1130', 'source' => 'Cierre de prueba'];
     $this->putJson($period.'/calculation', $calculation)->assertUnprocessable()->assertJsonValidationErrors('attendance');
     $attendance = ['expected_revision' => 0, 'paid_days' => 30, 'vacation_paid_days' => 2, 'ordinary_minutes' => 9600,
@@ -50,11 +54,13 @@ it('freezes monthly payroll, balances its draft and exports PLAME and AFPnet', f
     $this->putJson($dayPath, $day)->assertOk();
     $this->putJson($period.'/attendance/TR-001', $attendance)->assertOk();
     $this->putJson($dayPath, array_replace($day, ['expected_revision' => 1, 'extra' => 0]))->assertOk();
+    $this->getJson($period)->assertJsonPath('data.attendance_pending.0.message', 'Cambió la asistencia diaria. Actualice el cierre de asistencia.');
     $this->putJson($period.'/calculation', $calculation)->assertUnprocessable()->assertJsonValidationErrors('attendance');
     $this->putJson($period.'/attendance/TR-001', array_replace($attendance, ['expected_revision' => 1]))->assertOk();
     $this->putJson($period.'/attendance/TR-002', array_replace($attendance, ['vacation_paid_days' => 0,
         'afp_rates' => ['insurance' => '1.37', 'commission' => '1.50', 'insurance_ceiling' => '12000', 'source' => 'SBS de prueba']]))->assertOk();
 
+    $this->getJson($period)->assertJsonCount(0, 'data.attendance_pending');
     $payroll = $this->putJson($period.'/calculation', $calculation)->assertOk()
         ->assertJsonPath('data.data.totals.gross', '5000.00')->assertJsonPath('data.data.totals.net', '4352.60')
         ->assertJsonPath('data.data.totals.vacation_pay', '200.00')->json('data.data');

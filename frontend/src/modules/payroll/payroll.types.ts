@@ -18,12 +18,20 @@ export type Benefit = {
   previous_gratification: string | null; health: 'ESSALUD' | 'EPS'; posting_date: string; withholding: string; reference: string;
   result: { basis: string; amount: string; bonus: string; net: string }; journal: TaxJournalDraft | null;
 };
+export type PayrollRow = {
+  worker: Worker;
+  worker_revision: number;
+  attendance_revision: number;
+  attendance: Attendance;
+  amounts: Record<string, string>;
+};
 export type Payroll = {
   approved: boolean; health_minimum: string; source: string;
-  rows: { worker: Worker; amounts: Record<string, string> }[];
+  rows: PayrollRow[];
   totals: Record<string, string>; journal: TaxJournalDraft | null;
 };
 export type PayrollWorkspace = {
   workers: Revision<Worker>[]; eligible: Revision<Worker>[]; attendance: Revision<Attendance>[];
+  attendance_pending?: { worker: string; message: string }[];
   daily: Revision<AttendanceDay>[]; vacations: Revision<Vacation>[]; benefits: Revision<Benefit>[]; payroll: Revision<Payroll> | null;
 };

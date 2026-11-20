@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { Download, FileCheck, Plus } from 'lucide-vue-next';
+import { Plus } from 'lucide-vue-next';
+import PayrollMonthlyView from './PayrollMonthlyView.vue';
 import { payrollRoutes, type PayrollModule } from '@/shared/layout/navigation.types';
 import UiSelect from '@/shared/ui/UiSelect.vue';
 import { AccountingApiClient, ApiHttpError } from '@/modules/accounting/api/httpClient';
@@ -11,7 +12,7 @@ import { formatExactLocalAmount } from '@/modules/accounting/utils/formatExactLo
 import type { Attendance, AttendanceDay, Benefit, PayrollWorkspace, Revision, Worker } from './payroll.types';
 
 const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => string | null; ruc: string; section: PayrollModule }>();
-const emit = defineEmits<{ (e: 'journal', draft: TaxJournalDraft): void }>();
+const emit = defineEmits<{ journal: [draft: TaxJournalDraft]; navigate: [module: PayrollModule] }>();
 const api = new AccountingApiClient('', { getActiveCompanyId: () => props.activeCompanyId, getAccessToken: props.getAccessToken });
 const today = peruAccountingDate();
 const month = ref(today.slice(0, 7));
@@ -30,7 +31,6 @@ const pensionOptions = [{ value: 'ONP', label: 'ONP' }, { value: 'AFP', label: '
 const afpOptions = [{ value: 'HA', label: 'Hábitat' }, { value: 'IN', label: 'Integra' },
   { value: 'PR', label: 'Profuturo' }, { value: 'RI', label: 'Prima' }];
 const kindOptions = [{ value: 'CTS', label: 'CTS' }, { value: 'GRATIFICATION', label: 'Gratificación' }] as const;
-const indicatorFields = [['gross', 'Bruto'], ['net', 'Neto'], ['pension', 'Pensión'], ['employer_cost', 'Costo empleador']] as const;
 
 const worker = ref<(Worker & { expected_revision: number })>();
 const workerText = [['code','Código interno'], ['dni','DNI'], ['given_names','Nombres'], ['surname','Apellido paterno'],
@@ -130,6 +130,11 @@ function selectAttendance(code: string) {
     afp_rates: person?.pension === 'AFP' ? (data?.afp_rates ? { ...data.afp_rates } :
       { insurance: '', commission: '', insurance_ceiling: '', source: '' }) : null,
   };
+}
+
+function openAttendance(code: string) {
+  selectAttendance(code);
+  emit('navigate', 'payroll-attendance');
 }
 
 function editDay(entry?: Revision<AttendanceDay>) {
@@ -333,33 +338,19 @@ void run(reload);
       </form>
     </section>
 
-    <section v-if="workspace && section === 'payroll-monthly'" class="space-y-4 rounded-lg border border-line bg-surf p-4">
-      <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="font-semibold">Planilla del periodo</h2>
-        <span v-if="monthly" class="text-sm text-muted">Revisión {{ monthly.revision }} · {{ monthly.data.approved ? 'Aprobada' : 'Borrador' }}</span></div>
-      <form v-if="!monthly?.data.approved" class="flex flex-wrap items-end gap-3" @submit.prevent="calculate">
-        <label class="ui-label">Base mínima EsSalud vigente<input v-model.trim="minimum" class="w-full" inputmode="decimal" required></label>
-        <label class="ui-label">Sustento del devengue y base mínima<input v-model.trim="source" class="w-full" maxlength="500" required></label>
-        <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy">Calcular planilla</button>
-      </form>
-      <template v-if="monthly">
-        <dl class="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <div v-for="[key,label] in indicatorFields" :key="key" class="rounded-md border border-line p-3">
-            <dt class="text-sm text-muted">{{ label }}</dt><dd class="font-semibold tabular-nums">{{ money(monthly.data.totals[key]) }}</dd>
-          </div>
-        </dl>
-        <ul class="divide-y divide-line">
-          <li v-for="row in monthly.data.rows" :key="row.worker.code" class="flex flex-wrap justify-between gap-2 py-2 text-sm">
-            <span>{{ row.worker.given_names }} {{ row.worker.surname }}</span><span class="tabular-nums">Neto {{ money(row.amounts.net) }}</span>
-          </li>
-        </ul>
-        <button v-if="!monthly.data.approved" type="button" class="ui-btn ui-btn-primary" :disabled="busy" @click="approve"><FileCheck class="size-4" /> Aprobar planilla</button>
-        <div v-else class="flex flex-wrap gap-2">
-          <button v-if="monthly.data.journal" type="button" class="ui-btn ui-btn-primary" @click="emit('journal', monthly.data.journal)">Preparar asiento</button>
-          <button type="button" class="ui-btn ui-btn-secondary" :disabled="busy" @click="download('jor')"><Download class="size-4" /> Jornada PLAME</button>
-          <button v-if="monthly.data.rows.some(row => row.worker.pension === 'AFP')" type="button" class="ui-btn ui-btn-secondary" :disabled="busy" @click="download('afp')"><Download class="size-4" /> AFPnet TXT</button>
-        </div>
-      </template>
-    </section>
+    <PayrollMonthlyView
+      v-if="workspace && section === 'payroll-monthly'"
+      v-model:minimum="minimum"
+      v-model:source="source"
+      :workspace="workspace"
+      :busy="busy"
+      @calculate="calculate"
+      @approve="approve"
+      @download="download"
+      @journal="monthly?.data.journal && emit('journal', monthly.data.journal)"
+      @workers="emit('navigate', 'payroll-workers')"
+      @attendance="openAttendance"
+    />
 
     <section v-if="workspace && section === 'payroll-benefits'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
       <form class="space-y-3" @submit.prevent="saveBenefit">

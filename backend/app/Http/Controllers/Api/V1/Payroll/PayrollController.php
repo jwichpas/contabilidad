@@ -24,11 +24,24 @@ final readonly class PayrollController
 
     public function show(string $month): JsonResponse
     {
+        $eligible = $this->eligible($month);
+        $daily = $this->ledger->records('day', $month.'-');
+        $attendance = $this->ledger->records('attendance', $month.'-');
+        $versions = $this->dayVersions($daily);
+        $pending = [];
+        foreach ($eligible as $code => $person) {
+            $issue = $this->attendanceIssue($person, $attendance["$month-$code"] ?? null, $versions[$code] ?? []);
+            if ($issue !== null) {
+                $pending[] = ['worker' => $code, 'message' => $issue];
+            }
+        }
+
         return $this->json([
             'workers' => array_values($this->ledger->records('worker')),
-            'eligible' => array_values($this->eligible($month)),
-            'daily' => array_values($this->ledger->records('day', $month.'-')),
-            'attendance' => array_values($this->ledger->records('attendance', $month.'-')),
+            'eligible' => array_values($eligible),
+            'daily' => array_values($daily),
+            'attendance' => array_values($attendance),
+            'attendance_pending' => $pending,
             'vacations' => array_values($this->ledger->records('vacation')),
             'benefits' => array_values($this->ledger->records('benefit', $month.'-')),
             'payroll' => $this->ledger->latest('payroll', $month),
@@ -132,7 +145,7 @@ final readonly class PayrollController
             $this->check($input['vacation_paid_days'] > $input['paid_days'], 'vacation_paid_days',
                 'Los días de vacaciones deben estar incluidos en los días remunerados.');
             $this->check($input['overtime_25'] + $input['overtime_35'] > 21659, 'overtime_35', 'El sobretiempo excede el máximo de la jornada PLAME.');
-            return ['worker' => $worker, 'worker_revision' => $workerRecord['revision'], 'daily_versions' => $this->dayVersions($month)[$worker] ?? []] + $input;
+            return ['worker' => $worker, 'worker_revision' => $workerRecord['revision'], 'daily_versions' => $this->dayVersions($this->ledger->records('day', $month.'-'))[$worker] ?? []] + $input;
         });
     }
 
@@ -245,16 +258,15 @@ final readonly class PayrollController
         $eligible = $this->eligible($month);
         $this->check($eligible === [], 'workers', 'Registre trabajadores vigentes para el periodo.');
         $attendance = $this->ledger->records('attendance', $month.'-');
-        $versions = $this->dayVersions($month);
+        $versions = $this->dayVersions($this->ledger->records('day', $month.'-'));
         $rows = [];
         $totals = array_fill_keys(['gross','regular_expense','vacation_pay','net','pension','essalud','income_tax','other_deductions','employer_cost','onp','afp'], '0.00');
         foreach ($eligible as $code => $person) {
             $daily = $attendance["$month-$code"] ?? null;
-            $this->check(!$daily, 'attendance', 'Falta confirmar la asistencia de '.$code.'.');
-            $this->check(($daily['data']['worker_revision'] ?? null) !== $person['revision'],
-                'attendance', 'Cambió la ficha de '.$code.'. Vuelva a confirmar su asistencia.');
-            $this->check(($daily['data']['daily_versions'] ?? []) !== ($versions[$code] ?? []),
-                'attendance', 'Cambió la asistencia diaria de '.$code.'. Actualice el cierre de asistencia.');
+            $issue = $this->attendanceIssue($person, $daily, $versions[$code] ?? []);
+            if ($issue !== null) {
+                throw ValidationException::withMessages(['attendance' => $code.' · '.$issue]);
+            }
             $amounts = $this->calculation->worker($person['data'], $daily['data'], $input['health_minimum']);
             $rows[] = ['worker' => $person['data'], 'worker_revision' => $person['revision'], 'attendance_revision' => $daily['revision'],
                 'attendance' => $daily['data'], 'amounts' => $amounts];
@@ -292,10 +304,22 @@ final readonly class PayrollController
             && ($record['data']['ended_on'] ?? '9999-12-31') >= $first);
     }
 
-    private function dayVersions(string $month): array
+    private function attendanceIssue(array $person, ?array $attendance, array $dayVersions): ?string
+    {
+        return match (true) {
+            $attendance === null => 'Falta confirmar la asistencia.',
+            ($attendance['data']['worker_revision'] ?? null) !== $person['revision'] =>
+                'Cambió la ficha del trabajador. Vuelva a confirmar su asistencia.',
+            ($attendance['data']['daily_versions'] ?? []) !== $dayVersions =>
+                'Cambió la asistencia diaria. Actualice el cierre de asistencia.',
+            default => null,
+        };
+    }
+
+    private function dayVersions(array $daily): array
     {
         $versions = [];
-        foreach ($this->ledger->records('day', $month.'-') as $record) {
+        foreach ($daily as $record) {
             $versions[$record['data']['worker']][] = $record['reference'].':'.$record['revision'];
         }
 

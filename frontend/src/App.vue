@@ -613,6 +613,7 @@ watch(
             :get-access-token="() => accessToken"
             :ruc="activeCompany.taxId"
             :section="currentModule"
+            @navigate="handleNavigate"
             @journal="openTaxJournal"
           />
           <p v-else role="alert" class="rounded-lg border border-line bg-surf p-4">Gestión de planillas requiere permisos de administrador o contador jefe.</p>
