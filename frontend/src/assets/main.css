@@ -1291,6 +1291,9 @@
 }
 .app-header { background: var(--surf); border-color: var(--line); }
 @media (max-width: 1023px) {
+  body:has(#workspace-sidebar[aria-modal="true"]) { overflow: hidden; }
+  .app-sidebar-header { padding-top: calc(0.75rem + env(safe-area-inset-top)); }
+  .app-sidebar-footer { padding-bottom: calc(0.625rem + env(safe-area-inset-bottom)); }
   .app-panel { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
 }
 @media (prefers-reduced-motion: reduce) {

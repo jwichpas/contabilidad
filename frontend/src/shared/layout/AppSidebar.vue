@@ -14,6 +14,7 @@ import {
   FileBarChart2,
   FolderTree,
   Users,
+  LockKeyhole,
   FileClock,
   Globe2,
   LogOut,
@@ -81,6 +82,7 @@ const groups = [
     { module: 'journal', label: 'Libro Diario', icon: BookOpen },
     { module: 'purchases', label: 'Registro de compras', icon: ShoppingCart },
     { module: 'sales', label: 'Registro de ventas', icon: Receipt },
+    { module: 'payroll', label: 'Gestión de planillas', icon: Users },
     { module: 'exchange-rates', label: 'Tipo de cambio', icon: ArrowLeftRight },
   ] },
   { label: 'Cierre y reportes', items: [
@@ -93,7 +95,6 @@ const groups = [
     { module: 'fiscal-periods', label: 'Periodos contables', icon: CalendarRange },
   ] },
   { label: 'Auxiliares', items: [
-    { module: 'payroll', label: 'Gestión de planillas', icon: Users },
     { module: 'loans', label: 'Préstamos recibidos', icon: Landmark },
     { module: 'fixed-assets', label: 'Activos fijos', icon: Package },
   ] },
@@ -117,7 +118,7 @@ const visibleGroups = computed(() => {
   const term = expanded.value ? normalize(query.value.trim()) : '';
   return groups.map((group) => ({
     ...group,
-    items: group.items.filter((item) => item.module !== 'payroll' || props.canManagePayroll).filter((item) => normalize(group.label + ' ' + item.label).includes(term)),
+    items: group.items.filter((item) => normalize(group.label + ' ' + item.label).includes(term)),
   })).filter((group) => group.items.length);
 });
 
@@ -142,7 +143,7 @@ function navigate(module: NavigationModule) {
 </script>
 
 <template>
-  <div>
+  <div class="lg:sticky lg:top-0 lg:h-dvh lg:shrink-0 lg:self-start lg:z-50">
     <!-- Backdrop para Drawer Móvil (< lg) -->
     <div
       v-if="isOpenMobile"
@@ -156,17 +157,17 @@ function navigate(module: NavigationModule) {
       :role="isOpenMobile ? 'dialog' : undefined"
       :aria-modal="isOpenMobile ? true : undefined"
       :class="[
-        'app-sidebar flex flex-col overflow-hidden border-r border-line transition-[width] duration-200 z-50 shrink-0 font-sans',
+        'app-sidebar grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-r border-line transition-[width] duration-200 z-50 shrink-0 font-sans',
         isOpenMobile
           ? 'fixed inset-y-0 left-0 w-[min(19rem,90vw)] shadow-2xl'
-          : 'hidden lg:flex lg:sticky lg:top-0 lg:h-dvh',
+          : 'hidden lg:grid lg:h-full',
         !isOpenMobile && (isCollapsed ? 'lg:w-16' : 'lg:w-[17.5rem]'),
       ]"
       aria-label="Menú principal del ERP Contable"
       @keydown.esc="isOpenMobile && emit('close-mobile')"
     >
       <!-- Cabecera de Marca + Selector Multi-Tenant -->
-      <div class="shrink-0 space-y-3 border-b border-line p-3">
+      <header class="app-sidebar-header space-y-3 border-b border-line p-3">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
             <div
@@ -229,9 +230,9 @@ function navigate(module: NavigationModule) {
           <span class="sr-only">Buscar módulo</span>
           <input v-model="query" type="search" class="min-h-9 w-full pl-9 text-sm" placeholder="Buscar módulo">
         </label>
-      </div>
+      </header>
 
-      <nav class="app-sidebar-nav min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-2 py-3"
+      <nav class="app-sidebar-nav min-h-0 space-y-4 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 py-3"
         aria-label="Módulos contables">
         <p v-if="!visibleGroups.length" role="status" class="p-2 text-muted">Sin módulos que coincidan.</p>
         <section v-for="group in visibleGroups" :key="group.label" class="space-y-0.5">
@@ -239,16 +240,19 @@ function navigate(module: NavigationModule) {
           <button v-for="item in group.items" :key="item.module" type="button"
             class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left"
             :class="expanded ? 'justify-start' : 'justify-center'"
-            :aria-label="item.label" :title="item.label"
+            :aria-label="item.label"
+            :title="item.module === 'payroll' && !canManagePayroll ? 'Gestión de planillas · Acceso restringido' : item.label"
             :aria-current="currentModule === item.module ? 'page' : undefined"
             @click="navigate(item.module)">
             <component :is="item.icon" class="size-4 shrink-0" aria-hidden="true" />
             <span v-if="expanded" class="truncate">{{ item.label }}</span>
+            <LockKeyhole v-if="expanded && item.module === 'payroll' && !canManagePayroll"
+              class="ml-auto size-3.5 shrink-0 text-muted" aria-label="Acceso restringido" />
           </button>
         </section>
       </nav>
 
-      <div class="shrink-0 space-y-1 border-t border-line p-2.5">
+      <footer class="app-sidebar-footer space-y-1 border-t border-line p-2.5">
         <button
           type="button"
           class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-line bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-hover transition-colors cursor-pointer"
@@ -275,7 +279,7 @@ function navigate(module: NavigationModule) {
             Cerrar Sesión
           </span>
         </button>
-      </div>
+      </footer>
     </aside>
   </div>
 </template>
