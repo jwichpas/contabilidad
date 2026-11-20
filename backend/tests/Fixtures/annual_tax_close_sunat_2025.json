@@ -1,0 +1,502 @@
+{
+  "book_profit": "15262078",
+  "book_reference": "SUNAT 2025, anexo 2",
+  "prior_losses_used": "0",
+  "participation_rate": "8",
+  "participation_deductible": "1267900",
+  "participation_admin": "633319",
+  "participation_sales": "634581",
+  "participation_reference": "SUNAT 2025, pp. 2 y 14",
+  "adjustments": [
+    {
+      "label": "Intereses no deducibles",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "86960",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A01"
+    },
+    {
+      "label": "Donación de alimentos",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "23250",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A02"
+    },
+    {
+      "label": "Combustibles sin placa",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "39160",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A03"
+    },
+    {
+      "label": "Cobranza dudosa",
+      "direction": "ADDITION",
+      "kind": "TEMPORARY",
+      "book_base": "51560",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A04"
+    },
+    {
+      "label": "Cobranza dudosa afianzada",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "73950",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A05"
+    },
+    {
+      "label": "Seguros anticipados",
+      "direction": "ADDITION",
+      "kind": "TEMPORARY",
+      "book_base": "23333",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A06"
+    },
+    {
+      "label": "Depreciación de automóvil vendido",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "6667",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A07"
+    },
+    {
+      "label": "Movilidad de trabajadores",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "249",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A08"
+    },
+    {
+      "label": "Gastos ajenos al giro y tasa adicional",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "26164",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A09"
+    },
+    {
+      "label": "Comprobantes con datos incompletos",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "25990",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A10"
+    },
+    {
+      "label": "Pérdida por robo",
+      "direction": "ADDITION",
+      "kind": "TEMPORARY",
+      "book_base": "92860",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A11"
+    },
+    {
+      "label": "Seguro de socios y tasa adicional",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "8075",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A12"
+    },
+    {
+      "label": "Exceso de gastos recreativos",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "4550",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A13"
+    },
+    {
+      "label": "Retención de tercero asumida",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "13680",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A14"
+    },
+    {
+      "label": "Provisión de cobranza dudosa",
+      "direction": "ADDITION",
+      "kind": "TEMPORARY",
+      "book_base": "55930",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A15"
+    },
+    {
+      "label": "Exceso de remuneración de directorio",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "7261",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A16"
+    },
+    {
+      "label": "Sorteo sin requisitos",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "45840",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A17"
+    },
+    {
+      "label": "Asesoría en jurisdicción de baja o nula imposición",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "45000",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A18"
+    },
+    {
+      "label": "Multas e intereses moratorios",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "20360",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A19"
+    },
+    {
+      "label": "Pérdida por forward",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "1800",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A20"
+    },
+    {
+      "label": "Provisión para litigios",
+      "direction": "ADDITION",
+      "kind": "TEMPORARY",
+      "book_base": "41000",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A21"
+    },
+    {
+      "label": "Viáticos nacionales",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "15040",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A22"
+    },
+    {
+      "label": "Viáticos internacionales",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "9771",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A23"
+    },
+    {
+      "label": "Pago sin medio bancarizado",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "19500",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A24"
+    },
+    {
+      "label": "Desvalorización de existencias",
+      "direction": "ADDITION",
+      "kind": "TEMPORARY",
+      "book_base": "35000",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A25"
+    },
+    {
+      "label": "Defensa legal de gerente",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "36800",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A26"
+    },
+    {
+      "label": "Honorarios pagados en el siguiente ejercicio",
+      "direction": "ADDITION",
+      "kind": "TEMPORARY",
+      "book_base": "8000",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A27"
+    },
+    {
+      "label": "Gastos con proformas y notas",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "7760",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A28"
+    },
+    {
+      "label": "Retención por servicio en Colombia",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "3848",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A29"
+    },
+    {
+      "label": "Gastos de vehículos",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "67766",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A30"
+    },
+    {
+      "label": "Boletas/tickets NRUS y otros",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "24270",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A31"
+    },
+    {
+      "label": "Canastas a independientes y tasa adicional",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "5880",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A32"
+    },
+    {
+      "label": "Gastos personales de accionistas",
+      "direction": "ADDITION",
+      "kind": "PERMANENT",
+      "book_base": "7810",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A33"
+    },
+    {
+      "label": "Vacaciones devengadas",
+      "direction": "ADDITION",
+      "kind": "TEMPORARY",
+      "book_base": "46000",
+      "tax_base": "0",
+      "reference": "Caso práctico SUNAT 2025, A34"
+    },
+    {
+      "label": "Deducción adicional por personal con discapacidad",
+      "direction": "DEDUCTION",
+      "kind": "PERMANENT",
+      "book_base": "0",
+      "tax_base": "131165",
+      "reference": "Caso práctico SUNAT 2025, D01"
+    },
+    {
+      "label": "Dividendos percibidos",
+      "direction": "DEDUCTION",
+      "kind": "PERMANENT",
+      "book_base": "0",
+      "tax_base": "120440",
+      "reference": "Caso práctico SUNAT 2025, D02"
+    },
+    {
+      "label": "Depreciación acelerada por leasing",
+      "direction": "DEDUCTION",
+      "kind": "TEMPORARY",
+      "book_base": "0",
+      "tax_base": "12331",
+      "reference": "Caso práctico SUNAT 2025, D03"
+    },
+    {
+      "label": "Ingreso por servicio en Colombia",
+      "direction": "DEDUCTION",
+      "kind": "PERMANENT",
+      "book_base": "0",
+      "tax_base": "38475",
+      "reference": "Caso práctico SUNAT 2025, D04"
+    },
+    {
+      "label": "Intereses inafectos",
+      "direction": "DEDUCTION",
+      "kind": "PERMANENT",
+      "book_base": "0",
+      "tax_base": "92000",
+      "reference": "Caso práctico SUNAT 2025, D05"
+    }
+  ],
+  "itan_assets": "52814990",
+  "itan_additions": "0",
+  "itan_deductions": "8963446",
+  "itan_paid": "171406",
+  "itan_at_close": "0",
+  "itan_reference": "SUNAT 2025, anexo 3",
+  "advances": [
+    {
+      "month": 1,
+      "assessed": "91052",
+      "cash_paid": "91052",
+      "itan_used": "0",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 2,
+      "assessed": "97082",
+      "cash_paid": "97082",
+      "itan_used": "0",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 3,
+      "assessed": "101420",
+      "cash_paid": "82375",
+      "itan_used": "19045",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 4,
+      "assessed": "110420",
+      "cash_paid": "91375",
+      "itan_used": "19045",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 5,
+      "assessed": "91856",
+      "cash_paid": "72811",
+      "itan_used": "19045",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 6,
+      "assessed": "108948",
+      "cash_paid": "89903",
+      "itan_used": "19045",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 7,
+      "assessed": "98566",
+      "cash_paid": "79521",
+      "itan_used": "19045",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 8,
+      "assessed": "88842",
+      "cash_paid": "69797",
+      "itan_used": "19045",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 9,
+      "assessed": "100114",
+      "cash_paid": "81069",
+      "itan_used": "19045",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 10,
+      "assessed": "95008",
+      "cash_paid": "75963",
+      "itan_used": "19045",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 11,
+      "assessed": "108477",
+      "cash_paid": "89431",
+      "itan_used": "19046",
+      "reference": "SUNAT 2025, anexo 6"
+    },
+    {
+      "month": 12,
+      "assessed": "104788",
+      "cash_paid": "104788",
+      "itan_used": "0",
+      "reference": "SUNAT 2025, anexo 6"
+    }
+  ],
+  "ciprl_available": "330000",
+  "ciprl_applied": "0",
+  "ciprl_reference": "SUNAT 2025, p. 14 (certificado disponible)",
+  "deferred": [
+    {
+      "label": "Cobranza dudosa",
+      "kind": "ASSET",
+      "opening_tax": "0",
+      "closing_difference": "51560",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    },
+    {
+      "label": "Seguros anticipados",
+      "kind": "ASSET",
+      "opening_tax": "0",
+      "closing_difference": "23333",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    },
+    {
+      "label": "Pérdida por robo",
+      "kind": "ASSET",
+      "opening_tax": "0",
+      "closing_difference": "92860",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    },
+    {
+      "label": "Provisión de cobranza dudosa",
+      "kind": "ASSET",
+      "opening_tax": "0",
+      "closing_difference": "55930",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    },
+    {
+      "label": "Provisión para litigios",
+      "kind": "ASSET",
+      "opening_tax": "0",
+      "closing_difference": "41000",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    },
+    {
+      "label": "Desvalorización de existencias",
+      "kind": "ASSET",
+      "opening_tax": "0",
+      "closing_difference": "35000",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    },
+    {
+      "label": "Honorarios pagados en el siguiente ejercicio",
+      "kind": "ASSET",
+      "opening_tax": "0",
+      "closing_difference": "8000",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    },
+    {
+      "label": "Vacaciones devengadas",
+      "kind": "ASSET",
+      "opening_tax": "0",
+      "closing_difference": "46000",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    },
+    {
+      "label": "Depreciación acelerada por leasing",
+      "kind": "LIABILITY",
+      "opening_tax": "0",
+      "closing_difference": "12331",
+      "rate": "29.5",
+      "recognize_closing": true,
+      "reference": "SUNAT 2025, anexos 4 y 4.1"
+    }
+  ]
+}

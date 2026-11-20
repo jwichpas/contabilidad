@@ -357,6 +357,23 @@ const activeCompanyIdString = computed<string>({
                 </span>
               </span>
             </button>
+
+            <button
+              type="button"
+              :class="['flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs transition-colors',
+                currentModule === 'annual-tax-close' ? 'bg-brand/10 font-semibold text-foreground shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
+              title="Cierre tributario anual"
+              aria-label="Cierre tributario anual"
+              :aria-current="currentModule === 'annual-tax-close' ? 'page' : undefined"
+              @click="emit('navigate', 'annual-tax-close')"
+            >
+              <span class="flex items-center gap-2.5 truncate">
+                <Receipt class="w-4 h-4 shrink-0 text-muted" />
+                <span v-if="!isCollapsed || isOpenMobile" class="truncate">
+                  Cierre tributario anual
+                </span>
+              </span>
+            </button>
           </div>
 
           <!-- Referencias normativas globales, sin edición por empresa -->

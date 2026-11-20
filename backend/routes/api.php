@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Accounting\CreateAccountingAccountController;
+use App\Http\Controllers\Api\V1\Accounting\AnnualTaxCloseController;
 use App\Http\Controllers\Api\V1\Accounting\ChangeFiscalPeriodStatusController;
 use App\Http\Controllers\Api\V1\Accounting\ListFiscalPeriodsController;
 use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
@@ -163,6 +164,19 @@ Route::prefix('v1')->group(function (): void {
                 ->whereNumber('periodId')
                 ->whereIn('action',['close','lock','reopen'])
                 ->name('api.v1.accounting.fiscal-periods.transition');
+
+            Route::get('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'show'])
+                ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.show');
+            Route::put('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'save'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.save');
+            Route::post('/accounting/annual-tax-close/{year}/submit', [AnnualTaxCloseController::class, 'transition'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                ->defaults('action', 'submit')->whereNumber('year')->name('api.v1.accounting.annual-tax-close.submit');
+            Route::post('/accounting/annual-tax-close/{year}/{action}', [AnnualTaxCloseController::class, 'transition'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                ->whereNumber('year')->whereIn('action', ['approve', 'return', 'rectify'])
+                ->name('api.v1.accounting.annual-tax-close.transition');
 
             Route::get('/accounting/reports/financial-snapshot', GetFinancialSnapshotController::class)
                 ->name('api.v1.accounting.reports.financial-snapshot');

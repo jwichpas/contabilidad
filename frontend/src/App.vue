@@ -86,6 +86,13 @@ const FiscalPeriodsView = defineAsyncComponent({
   delay: 120,
 });
 
+const AnnualTaxCloseView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/AnnualTaxCloseView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 150,
+});
+
 const FinancialStatementsView = defineAsyncComponent({
   loader: () => import('./modules/accounting/views/FinancialStatementsView.vue'),
   loadingComponent: UiViewLoading,
@@ -245,6 +252,7 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
   if (hash.includes('flujo-efectivo') || hash.includes('cash-flow')) return 'cash-flow';
+  if (hash.includes('cierre-tributario')) return 'annual-tax-close';
   if (hash.includes('estados-financieros') || hash.includes('financial-statements')) return 'financial-statements';
   if (hash.includes('historial-fiscal') || hash.includes('fiscal-history')) return 'fiscal-history';
   if (hash.includes('anexos') || hash.includes('terceros') || hash.includes('entities')) return 'entities';
@@ -284,6 +292,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#catalogos-sunat';
   } else if (mod === 'fiscal-periods') {
     window.location.hash = '#periodos';
+  } else if (mod === 'annual-tax-close') {
+    window.location.hash = '#cierre-tributario';
   } else if (mod === 'financial-statements') {
     window.location.hash = '#estados-financieros';
   } else if (mod === 'cash-flow') {
@@ -488,6 +498,16 @@ watch(
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
           :can-manage-periods="canManagePeriods"
+        />
+        <AnnualTaxCloseView
+          v-else-if="currentModule === 'annual-tax-close'"
+          :key="`annual-tax-close-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :company-name="activeCompany.businessName"
+          :company-tax-id="activeCompany.taxId"
+          :get-access-token="() => accessToken"
+          :can-edit="canManageEntities"
+          :can-review="canDeactivateEntities"
         />
         <FinancialStatementsView
           v-else-if="currentModule === 'financial-statements' || currentModule === 'cash-flow'"

@@ -14,7 +14,7 @@ const costCenterEditor = read('../src/modules/company/components/CostCenterEdito
 test('pantallas de compras y ventas mantienen la carga diferida del resto del sistema', () => {
   const views = [
     'AccountingCatalogView', 'SeeReferencesView', 'SunatReferencesView', 'JournalEntryView',
-    'DocumentJournalView', 'CompanySubdiariesView', 'ExchangeRatesView', 'FiscalPeriodsView', 'FinancialStatementsView',
+    'DocumentJournalView', 'CompanySubdiariesView', 'ExchangeRatesView', 'FiscalPeriodsView', 'FinancialStatementsView', 'AnnualTaxCloseView',
     'CompanySettingsView', 'EntityMasterView', 'CompanyFiscalHistoryView',
     'CostCenterMasterView', 'CompanyOnboardingWizard',
   ];

@@ -1,3 +1,4 @@
+import type { TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseRevision } from '../types/annualTaxClose.types';
 import { reportUnauthorizedBearer } from '@/shared/auth/sessionInvalidation';
 import {
   accountingAccountTreeApiResponseSchema,
@@ -613,6 +614,32 @@ export class AccountingApiClient {
     const query = new URLSearchParams({ account_id: String(accountId), from, to, page: String(page) });
     const result = await this.request<{ data: GeneralLedgerPage }>(
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
+  public async fetchAnnualTaxClose(year: number, revision?: number): Promise<TaxClose> {
+    const query = revision === undefined ? '' : `?revision=${revision}`;
+    const result = await this.request<{ data: TaxClose }>(
+      `/api/v1/accounting/annual-tax-close/${year}${query}`, { method: 'GET' },
+    );
+    return result.data;
+  }
+
+  public async saveAnnualTaxClose(year: number, inputs: TaxCloseInputs, expectedRevision: number): Promise<TaxCloseRevision> {
+    const result = await this.request<{ data: TaxCloseRevision }>(
+      `/api/v1/accounting/annual-tax-close/${year}`,
+      { method: 'PUT', body: JSON.stringify({ inputs, expected_revision: expectedRevision }) },
+    );
+    return result.data;
+  }
+
+  public async transitionAnnualTaxClose(
+    year: number, action: TaxCloseAction, expectedRevision: number, reason?: string,
+  ): Promise<TaxCloseRevision> {
+    const result = await this.request<{ data: TaxCloseRevision }>(
+      `/api/v1/accounting/annual-tax-close/${year}/${action}`,
+      { method: 'POST', body: JSON.stringify({ expected_revision: expectedRevision, reason }) },
     );
     return result.data;
   }

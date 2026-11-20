@@ -41,12 +41,14 @@ beforeEach(function (): void {
 });
 
 it('returns an exact empty USD statement without creating periods or journal entries', function (): void {
-    $this->getJson('/api/v1/accounting/reports/cash-flow?from=2026-01-01&to=2026-02-28')
-        ->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+    $response = $this->getJson('/api/v1/accounting/reports/cash-flow?from=2026-01-01&to=2026-02-28')
+        ->assertOk()
         ->assertJsonPath('data.currency', 'USD')->assertJsonPath('data.method', 'DIRECT')
         ->assertJsonPath('data.totals.opening_local', '0.0000')
         ->assertJsonPath('data.totals.difference_local', '0.0000')
         ->assertJsonCount(0, 'data.details.rows');
+    expect($response->headers->hasCacheControlDirective('no-store'))->toBeTrue();
+    expect($response->headers->hasCacheControlDirective('private'))->toBeTrue();
     $this->tenant->run($this->company->id, function (): void {
         expect(DB::table('journal_entries')->where('company_id', $this->company->id)->count())->toBe(0);
         expect(DB::table('fiscal_periods')->where('company_id', $this->company->id)->count())->toBe(0);
