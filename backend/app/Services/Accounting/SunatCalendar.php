@@ -125,6 +125,11 @@ final class SunatCalendar
                 $data['annual']['source'] ?? 'https://renta.sunat.gob.pe/empresas',
                 $variant === 'UNCONFIRMED' ? 'Confirme qué cronograma anual aplica' : 'Cronograma anual '.($variant === 'EXTENDED' ? 'ampliado' : 'general'));
         }
+        if (($profile['daot_status'] ?? null) === 'REQUIRED') {
+            $daotGroup = $this->group($profile['daot_good'] ? 'BC' : $digit);
+            $add('DAOT', 'DAOT · FV 3500 o constancia', 'tax', (string) $year, DaotReport::due($year, $daotGroup),
+                DaotReport::SOURCE, 'Cronograma ordinario de marzo por RUC o buenos contribuyentes');
+        }
         foreach ($profile['overrides'] as $override) {
             $id = $override['code'].':'.$override['period'];
             if (isset($events[$id])) {

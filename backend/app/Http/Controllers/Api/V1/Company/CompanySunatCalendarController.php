@@ -20,6 +20,7 @@ final readonly class CompanySunatCalendarController
     private const TABLE = 'company_sunat_calendar_profiles';
     private const DEFAULTS = [
         'income_band' => 'UNCONFIRMED', 'monthly_group' => 'RUC', 'annual_schedule' => 'UNCONFIRMED',
+        'daot_status' => 'UNCONFIRMED', 'daot_good' => false, 'daot_reference' => null,
         'annual_good' => false, 'plame' => false, 'itan' => 'NONE',
         'sales_electronic' => true, 'inventory_electronic' => false, 'extra_books' => [], 'excluded_books' => [], 'overrides' => [],
     ];
@@ -69,10 +70,13 @@ final readonly class CompanySunatCalendarController
         $bookCodes = array_map('strval', array_keys(SunatCalendar::CATALOG));
         $input = $request->validate([
             'expected_revision' => ['required', 'integer', 'min:0'],
-            'profile' => ['required', 'array:income_band,monthly_group,annual_schedule,annual_good,plame,itan,sales_electronic,inventory_electronic,extra_books,excluded_books,overrides'],
+            'profile' => ['required', 'array:income_band,monthly_group,annual_schedule,annual_good,daot_status,daot_good,daot_reference,plame,itan,sales_electronic,inventory_electronic,extra_books,excluded_books,overrides'],
             'profile.income_band' => ['required', 'in:UNCONFIRMED,UP_TO_300,UP_TO_500,UP_TO_1700,OVER_1700'],
             'profile.monthly_group' => ['required', 'in:RUC,BC'],
             'profile.annual_schedule' => ['required', 'in:UNCONFIRMED,GENERAL,EXTENDED'],
+            'profile.daot_status' => ['sometimes', 'in:UNCONFIRMED,REQUIRED,NOT_REQUIRED'],
+            'profile.daot_good' => ['sometimes', 'boolean'],
+            'profile.daot_reference' => ['nullable', 'required_if:profile.daot_status,REQUIRED,NOT_REQUIRED', 'string', 'max:500'],
             'profile.annual_good' => ['required', 'boolean'],
             'profile.plame' => ['required', 'boolean'],
             'profile.itan' => ['required', 'in:NONE,FULL,INSTALLMENTS'],

@@ -170,6 +170,18 @@ void run(() => client.fetchSunatCalendar(year.value));
             <label><input v-model="profile.sales_electronic" type="checkbox"> Compras y ventas electrónicas</label>
             <label><input v-model="profile.inventory_electronic" type="checkbox"> Inventario valorizado electrónico semestral</label>
           </div>
+          <details class="space-y-2">
+            <summary class="cursor-pointer font-semibold">DAOT del ejercicio</summary>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <div><label class="ui-label" for="sunat-daot">Obligación DAOT</label><UiSelect id="sunat-daot" v-model="profile.daot_status"
+                :options="[{value:'UNCONFIRMED',label:'Por confirmar'}, {value:'REQUIRED',label:'Obligada'}, {value:'NOT_REQUIRED',label:'No obligada'}]" :disabled="busy" /></div>
+              <label class="ui-label">Sustento de la condición
+                <input v-model.trim="profile.daot_reference" class="w-full" maxlength="500" :required="profile.daot_status !== 'UNCONFIRMED'">
+              </label>
+              <label class="text-sm"><input v-model="profile.daot_good" type="checkbox"> Buen contribuyente para el DAOT</label>
+            </div>
+            <p class="text-xs text-muted">Revise si aplica por PRICO al 31/12, obligación mensual de IGV y más de 75 UIT, u otros supuestos del artículo 3.</p>
+          </details>
           <details>
             <summary class="cursor-pointer font-semibold">Libros y registros adicionales o exceptuados</summary>
             <div class="mt-3 grid gap-3 md:grid-cols-2">

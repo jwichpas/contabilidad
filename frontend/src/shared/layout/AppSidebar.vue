@@ -84,6 +84,7 @@ const groups = [
   ] },
   { label: 'Cierre y reportes', items: [
     { module: 'monthly-work', label: 'Agenda contable mensual', icon: CalendarRange },
+    { module: 'external-tax-reports', label: 'DAOT y PDB Exportadores', icon: CalendarRange },
     { module: 'sunat-calendar', label: 'Vencimientos SUNAT', icon: CalendarRange },
     { module: 'annual-tax-close', label: 'Cierre tributario anual', icon: Receipt },
     { module: 'financial-statements', label: 'Estados financieros', icon: FileBarChart2 },

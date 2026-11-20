@@ -94,6 +94,11 @@ const FinancialAuxiliaryView = defineAsyncComponent({
   delay: 120,
 });
 
+const ExternalTaxReportsView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/ExternalTaxReportsView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+});
 const MonthlyWorkView = defineAsyncComponent({
   loader: () => import('./modules/accounting/views/MonthlyWorkView.vue'),
   loadingComponent: UiViewLoading,
@@ -298,6 +303,7 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('flujo-efectivo') || hash.includes('cash-flow')) return 'cash-flow';
   if (hash.includes('prestamos')) return 'loans';
   if (hash.includes('activos-fijos')) return 'fixed-assets';
+  if (hash.includes('daot-pdb')) return 'external-tax-reports';
   if (hash.includes('agenda-contable')) return 'monthly-work';
   if (hash.includes('vencimientos-sunat')) return 'sunat-calendar';
   if (hash.includes('cierre-tributario')) return 'annual-tax-close';
@@ -352,6 +358,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#prestamos';
   } else if (mod === 'fixed-assets') {
     window.location.hash = '#activos-fijos';
+  } else if (mod === 'external-tax-reports') {
+    window.location.hash = '#daot-pdb';
   } else if (mod === 'monthly-work') {
     window.location.hash = '#agenda-contable';
   } else if (mod === 'sunat-calendar') {
@@ -585,6 +593,14 @@ watch(
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
           :can-edit="canManageEntities"
+        />
+        <ExternalTaxReportsView
+          v-else-if="currentModule === 'external-tax-reports'"
+          :key="`external-tax-reports-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-edit="canManageEntities"
+          @calendar="handleNavigate('sunat-calendar')"
         />
         <MonthlyWorkView
           v-else-if="currentModule === 'monthly-work'"

@@ -11,6 +11,9 @@ export interface SunatCalendarProfile {
   income_band: string;
   monthly_group: string;
   annual_schedule: string;
+  daot_status: 'UNCONFIRMED' | 'REQUIRED' | 'NOT_REQUIRED';
+  daot_good: boolean;
+  daot_reference: string | null;
   annual_good: boolean;
   plame: boolean;
   itan: string;

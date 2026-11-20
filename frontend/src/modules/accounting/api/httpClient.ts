@@ -1,3 +1,4 @@
+import type { DaotReport, PdbInput, PdbReport } from '../types/externalTaxReports.types';
 import type { MonthlyPaper, MonthlyProfile, MonthlyWork, PayrollRow } from '../types/monthlyWork.types';
 import type { SunatCalendarProfile, SunatCalendarReport } from '../types/sunatCalendar.types';
 import type { TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseRevision, TaxCloseTrialBalance, TaxOpeningSource } from '../types/annualTaxClose.types';
@@ -618,6 +619,28 @@ export class AccountingApiClient {
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
     );
     return result.data;
+  }
+
+  public async fetchDaot(year: string, page: number, scope: string): Promise<DaotReport> {
+    return (await this.request<{ data: DaotReport }>(`/api/v1/accounting/daot/${year}?page=${page}&scope=${scope}`, { method: 'GET' })).data;
+  }
+
+  public reviewDaot(year: string, id: number, review: { included: boolean; reference: string; base_pen: string | null; expected_revision: number }) {
+    return this.request<{ revision: number }>(`/api/v1/accounting/daot/${year}/documents/${id}`, { method: 'PUT', body: JSON.stringify(review) });
+  }
+
+  public async downloadDaot(year: string, report: 'resumen' | 'detalle'): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/api/v1/accounting/daot/${year}/${report}`, {
+      headers: this.buildHeaders(true, this.authContext.getAccessToken()),
+    });
+    if (!response.ok) throw new ApiHttpError(response.status, 'No se pudo descargar el reporte del DAOT.');
+    return response.blob();
+  }
+
+  public async buildPdb(month: string, documents: PdbInput[], includeFiles: boolean): Promise<PdbReport> {
+    return (await this.request<{ data: PdbReport }>(`/api/v1/accounting/pdb-exportadores/${month}`, {
+      method: 'POST', body: JSON.stringify({ include_files: includeFiles, documents }),
+    })).data;
   }
 
   public async fetchMonthlyAlerts() {

@@ -67,6 +67,8 @@ use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\RequireCompanyRole;
 use App\Http\Middleware\RequireMonthlyAccountingConfirmation;
 use App\Http\Controllers\Api\V1\Accounting\MonthlyAccountingWorkController;
+use App\Http\Controllers\Api\V1\Accounting\DaotReportController;
+use App\Http\Controllers\Api\V1\Accounting\PdbExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -182,6 +184,17 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/accounting/financial-auxiliaries/asset/records', [CalculateFinancialAuxiliariesController::class, 'asset'])
                 ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
                 ->name('api.v1.accounting.financial-auxiliaries.asset.save');
+
+            Route::post('/accounting/pdb-exportadores/{month}', PdbExportController::class)
+                ->where('month', '20[0-9]{2}-(0[1-9]|1[0-2])')
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT,AUDITOR');
+
+            Route::prefix('/accounting/daot/{year}')->where(['year' => '[0-9]{4}'])->group(function (): void {
+                Route::get('/', [DaotReportController::class, 'show']);
+                Route::put('/documents/{document}', [DaotReportController::class, 'review'])->whereNumber('document')
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
+                Route::get('/{format}', [DaotReportController::class, 'csv'])->whereIn('format', ['resumen', 'detalle']);
+            });
 
             Route::get('/accounting/monthly-work/alerts', [MonthlyAccountingWorkController::class, 'alerts']);
             Route::prefix('/accounting/monthly-work/{month}')->where(['month' => '20[0-9]{2}-[0-9]{2}'])->group(function (): void {
