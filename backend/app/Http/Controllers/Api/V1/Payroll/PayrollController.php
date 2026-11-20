@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Payroll;
 
+use App\Services\Payroll\PayrollBenefitBatch;
 use App\Services\Payroll\PayrollCalculation;
 use App\Services\Payroll\PayrollExports;
 use App\Services\Payroll\PayrollLedger;
@@ -25,6 +26,7 @@ final readonly class PayrollController
         private PayrollLedger $ledger,
         private PayrollCalculation $calculation,
         private PayrollParameters $parameters,
+        private PayrollBenefitBatch $benefitBatch,
     ) {}
 
     public function show(string $month): JsonResponse
@@ -116,6 +118,7 @@ final readonly class PayrollController
             'daily_hours' => ['required', 'integer', 'between:4,8'],
             'pension' => ['required', 'in:ONP,AFP'],
             'afp' => ['nullable', 'required_if:pension,AFP', 'in:HA,IN,PR,RI'],
+            'health_coverage' => ['nullable', 'in:ESSALUD,EPS'],
             'payslip_profile' => ['nullable', 'array:sex,birth_date,address,nationality'],
             'payslip_profile.sex' => ['nullable', 'in:F,M'],
             'payslip_profile.birth_date' => ['nullable', 'date_format:Y-m-d', 'before:today'],
@@ -140,7 +143,7 @@ final readonly class PayrollController
                 'dni', 'Ya existe un trabajador con ese DNI.');
             $this->check($input['vacation_granted'] < $this->vacationDays($worker), 'vacation_granted',
                 'Los días reconocidos no pueden quedar por debajo de los descansos registrados.');
-            $previous = array_intersect_key($current ?? [], array_flip(['family_allowance', 'night_shift', 'afp_commission', 'payslip_profile']));
+            $previous = array_intersect_key($current ?? [], array_flip(['family_allowance', 'night_shift', 'afp_commission', 'payslip_profile', 'health_coverage']));
             if ($input['pension'] !== 'AFP') {
                 unset($previous['afp_commission']);
             }
@@ -374,6 +377,59 @@ final readonly class PayrollController
             });
     }
 
+    public function benefitBatchPreview(Request $request, string $month, string $benefit): JsonResponse
+    {
+        $data = $request->validate(['posting_date' => ['nullable', 'date_format:Y-m-d']]);
+        $date = $data['posting_date'] ?? $month.'-01';
+        $this->validateBenefitPeriod($month, $benefit, $date);
+
+        return $this->json($this->benefitBatch->preview($month, $benefit, $date));
+    }
+
+    public function saveBenefitBatch(Request $request, string $month, string $benefit): JsonResponse
+    {
+        $data = $request->validate([
+            'posting_date' => ['required', 'date_format:Y-m-d'],
+            'token' => ['required', 'regex:/^[a-f0-9]{64}$/D'],
+            'confirmed' => ['accepted', 'required'],
+            'withholdings' => ['sometimes', 'array'],
+            'withholdings.*' => self::MONEY,
+        ]);
+        $this->validateBenefitPeriod($month, $benefit, $data['posting_date']);
+
+        return $this->json(DB::transaction(function () use ($request, $month, $benefit, $data): array {
+            $this->ledger->lock();
+            $preview = $this->benefitBatch->preview($month, $benefit, $data['posting_date']);
+            abort_unless(hash_equals($preview['token'], $data['token']), 409, 'Cambiaron los datos del semestre. Actualiza la vista previa.');
+
+            $count = 0;
+            foreach ($preview['rows'] as $row) {
+                if ($row['status'] !== 'ready') {
+                    continue;
+                }
+                $code = $row['worker']['code'];
+                $input = $row['input'];
+                if ($benefit === 'GRATIFICATION') {
+                    $tax = $data['withholdings'][$code] ?? null;
+                    $this->check($tax === null, 'withholdings', 'Registra la retención validada de '.$code.'.');
+                    $input['withholding'] = $tax;
+                }
+                $this->ledger->save('benefit', "$month-$code-$benefit", 0, $request->user()->id,
+                    $this->benefitPayload($month, $code, $benefit, $input));
+                $count++;
+            }
+
+            return ['saved' => $count];
+        }));
+    }
+
+    private function validateBenefitPeriod(string $month, string $benefit, string $date): void
+    {
+        $this->check(! str_starts_with($date, $month.'-'), 'posting_date', 'La fecha contable debe estar en el periodo del beneficio.');
+        $this->check(! in_array(substr($month, -2), $benefit === 'CTS' ? ['05', '11'] : ['07', '12'], true),
+            'period', 'Seleccione el mes ordinario de pago del beneficio.');
+    }
+
     public function benefit(Request $request, string $month, string $worker, string $benefit): JsonResponse
     {
         $data = $request->validate([
@@ -386,34 +442,37 @@ final readonly class PayrollController
             'withholding' => self::MONEY,
             'reference' => ['required', 'string', 'max:500'],
         ]);
-        $this->check(!str_starts_with($data['posting_date'], $month.'-'), 'posting_date', 'La fecha contable debe estar en el periodo del beneficio.');
-        $this->check(!in_array(substr($month, -2), $benefit === 'CTS' ? ['05', '11'] : ['07', '12'], true),
-            'period', 'Seleccione el mes ordinario de pago del beneficio.');
+        $this->validateBenefitPeriod($month, $benefit, $data['posting_date']);
         $this->check(($benefit === 'CTS' && ($data['days'] > 29 || ((int) $data['months'] === 6 && $data['days'] > 0)))
             || ($benefit === 'GRATIFICATION' && $data['days'] > $data['months'] * 30), 'days', 'Revise el tiempo computable del semestre.');
         return $this->write($request, 'benefit', "$month-$worker-$benefit", $data, function (array $input) use ($month, $worker, $benefit): array {
             abort_unless(isset($this->eligible($month)[$worker]), 404, 'Trabajador sin vigencia para el periodo solicitado.');
-            $result = $this->calculation->benefit($benefit, $input);
-            $total = bcadd($result['amount'], $result['bonus'], 2);
-            $tax = bcadd($input['withholding'], '0', 2);
-            $this->check(($benefit === 'CTS' && $tax !== '0.00') || bccomp($tax, $total, 2) > 0,
-                'withholding', 'Revise la retención del beneficio.');
-            $net = bcsub($total, $tax, 2);
-            $lines = [];
-            foreach ([
-                [$benefit === 'CTS' ? '6291' : '6214', $result['amount'], true],
-                ['622', $result['bonus'], true], ['40173', $tax, false],
-                [$benefit === 'CTS' ? '4151' : '4114', $net, false],
-            ] as [$account, $amount, $debit]) {
-                if ($amount !== '0.00') {
-                    $lines[] = ['account' => $account, 'debit' => $debit ? $amount : '0.00', 'credit' => $debit ? '0.00' : $amount];
-                }
-            }
-            $label = $benefit === 'CTS' ? 'CTS' : 'Gratificación';
-            return ['worker' => $worker, 'kind' => $benefit, 'result' => $result + ['net' => $net],
-                'journal' => $lines === [] ? null : ['date' => $input['posting_date'], 'type' => 'ADJUSTMENT',
-                    'description' => "$label $month · $worker", 'lines' => $lines]] + $input;
+            return $this->benefitPayload($month, $worker, $benefit, $input);
         });
+    }
+
+    private function benefitPayload(string $month, string $worker, string $benefit, array $input): array
+    {
+        $result = $this->calculation->benefit($benefit, $input);
+        $total = bcadd($result['amount'], $result['bonus'], 2);
+        $tax = bcadd($input['withholding'], '0', 2);
+        $this->check(($benefit === 'CTS' && $tax !== '0.00') || bccomp($tax, $total, 2) > 0,
+            'withholding', 'Revise la retención del beneficio.');
+        $net = bcsub($total, $tax, 2);
+        $lines = [];
+        foreach ([
+            [$benefit === 'CTS' ? '6291' : '6214', $result['amount'], true],
+            ['622', $result['bonus'], true], ['40173', $tax, false],
+            [$benefit === 'CTS' ? '4151' : '4114', $net, false],
+        ] as [$account, $amount, $debit]) {
+            if ($amount !== '0.00') {
+                $lines[] = ['account' => $account, 'debit' => $debit ? $amount : '0.00', 'credit' => $debit ? '0.00' : $amount];
+            }
+        }
+        $label = $benefit === 'CTS' ? 'CTS' : 'Gratificación';
+        return ['worker' => $worker, 'kind' => $benefit, 'result' => $result + ['net' => $net],
+            'journal' => $lines === [] ? null : ['date' => $input['posting_date'], 'type' => 'ADJUSTMENT',
+                'description' => "$label $month · $worker", 'lines' => $lines]] + $input;
     }
 
     public function download(string $month, string $format, PayrollExports $export): Response

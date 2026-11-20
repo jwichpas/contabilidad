@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { Plus } from 'lucide-vue-next';
+import PayrollBenefitBatchView from './PayrollBenefitBatchView.vue';
 import PayrollAttendanceCalendar from './PayrollAttendanceCalendar.vue';
 import PayrollMonthlyView from './PayrollMonthlyView.vue';
 import PayrollParametersView from './PayrollParametersView.vue';
@@ -11,7 +12,7 @@ import type { CompanyId } from '@/modules/accounting/types/accountingAccount.typ
 import type { TaxJournalDraft } from '@/modules/accounting/types/annualTaxClose.types';
 import { formatAccountingDate, peruAccountingDate } from '@/modules/accounting/utils/journalPresentation';
 import { formatExactLocalAmount } from '@/modules/accounting/utils/formatExactLocalAmount';
-import type { PayrollInputDraft, WorkInput, Benefit, PayrollParameterEntry, PayrollParameterRevision, PayrollWorkspace, Revision, Worker } from './payroll.types';
+import type { PayrollInputDraft, WorkInput, Benefit, BenefitBatch, BenefitBatchRow, BenefitBatchSubmission, PayrollParameterEntry, PayrollParameterRevision, PayrollWorkspace, Revision, Worker } from './payroll.types';
 
 const props = defineProps<{ activeCompanyId: CompanyId; getAccessToken: () => string | null; ruc: string; companyName: string; companyAddress?: string; section: PayrollModule }>();
 const emit = defineEmits<{ journal: [draft: TaxJournalDraft]; navigate: [module: PayrollModule] }>();
@@ -53,6 +54,7 @@ const minutesFields = [
 const minimum = ref('');
 const source = ref('');
 const vacation = ref({ worker: '', from: '', to: '', reference: '' });
+const manualBenefitOpen = ref(false);
 const benefit = ref({ worker: '', kind: 'CTS' as Benefit['kind'], base: '', months: 6, days: 0,
   previous_gratification: '0', health: 'ESSALUD', posting_date: today, withholding: '0', reference: '', expected_revision: 0 });
 
@@ -88,6 +90,7 @@ function selectMonth(value: string) {
   if (!value || value === month.value) return;
   void run(async () => {
     month.value = value;
+    manualBenefitOpen.value = false;
     workspace.value = undefined;
     attendance.value = undefined;
     worker.value = undefined;
@@ -255,6 +258,32 @@ function saveVacation() {
   });
 }
 
+function previewBenefits(kind: Benefit['kind'], date: string) {
+  return api.payrollRequest<BenefitBatch>(`periods/${month.value}/benefits/${kind}/batch?posting_date=${encodeURIComponent(date)}`);
+}
+
+async function saveBenefitBatch(kind: Benefit['kind'], input: BenefitBatchSubmission) {
+  const result = await api.payrollRequest<{ saved: number }>(`periods/${month.value}/benefits/${kind}/batch`, 'POST', input);
+  try {
+    await reload();
+  } catch {
+    error.value = 'Se guardó el lote. Recarga la página para actualizar la lista de asientos.';
+  }
+  return result;
+}
+
+function reviewBenefit(row: BenefitBatchRow, kind: Benefit['kind']) {
+  selectBenefit(row.worker.code, kind);
+  if (row.status !== 'saved') {
+    const input = row.input;
+    benefit.value = {
+      ...benefit.value, ...input, base: input.base ?? '', previous_gratification: input.previous_gratification ?? '',
+      health: (kind === 'GRATIFICATION' && !row.worker.health_coverage) ? '' : input.health,
+    };
+  }
+  manualBenefitOpen.value = true;
+}
+
 function selectBenefit(code: string, kind: Benefit['kind']) {
   const existing = workspace.value?.benefits.find((entry) => entry.data.worker === code && entry.data.kind === kind);
   benefit.value = {
@@ -341,6 +370,12 @@ void run(reload);
               <span id="payroll-cuspp-hint" class="text-xs text-muted">12 caracteres alfanuméricos en mayúsculas.</span>
             </label>
           </template>
+          <div>
+            <label for="worker-benefit-coverage" class="ui-label">Cobertura de salud</label>
+            <UiSelect id="worker-benefit-coverage" :model-value="worker.health_coverage ?? ''"
+              :options="[{ value: 'ESSALUD', label: 'EsSalud' }, { value: 'EPS', label: 'EPS' }] as const"
+              @update:model-value="worker.health_coverage = $event || null" />
+          </div>
           <label class="ui-label sm:col-span-2">Sustento de la ficha<input v-model.trim="worker.reference" class="w-full" required maxlength="500"></label>
         </fieldset>
         <details v-if="worker.payslip_profile" class="rounded-lg border border-line p-3">
@@ -427,6 +462,11 @@ void run(reload);
     />
 
     <section v-if="workspace && section === 'payroll-benefits'" class="space-y-3 rounded-lg border border-line bg-surf p-4">
+      <PayrollBenefitBatchView :month="month" :refresh-key="workspace.benefits.reduce((sum, entry) => sum + entry.revision, 0)"
+        :preview="previewBenefits" :save="saveBenefitBatch" @review="reviewBenefit" />
+      <details class="space-y-3 rounded-lg border border-line p-3"
+        :open="manualBenefitOpen" @toggle="manualBenefitOpen = ($event.target as HTMLDetailsElement).open">
+        <summary class="cursor-pointer text-sm font-semibold">Ajuste individual</summary>
       <form class="space-y-3" @submit.prevent="saveBenefit">
         <fieldset :disabled="busy" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <div><label class="ui-label" for="benefit-worker">Trabajador</label><UiSelect id="benefit-worker" :model-value="benefit.worker" :options="currentWorkers" @update:model-value="selectBenefit($event, benefit.kind)" /></div>
@@ -442,8 +482,9 @@ void run(reload);
           <label class="ui-label">Fecha contable<input v-model="benefit.posting_date" class="w-full" type="date" required></label>
           <label class="ui-label">Sustento del cálculo<input v-model.trim="benefit.reference" class="w-full" required maxlength="500"></label>
         </fieldset>
-        <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy || !benefit.worker">Calcular y guardar beneficio</button>
+        <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy || !benefit.worker || (benefit.kind === 'GRATIFICATION' && !benefit.health)">Guardar cálculo individual</button>
       </form>
+      </details>
       <ul class="divide-y divide-line">
         <li v-for="{ reference, data } in workspace.benefits" :key="reference" class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
           <span>{{ data.worker }} · {{ data.kind === 'CTS' ? 'CTS' : 'Gratificación' }} · Neto {{ money(data.result.net) }}</span>

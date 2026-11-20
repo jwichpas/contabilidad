@@ -5,6 +5,7 @@ export type Worker = {
   code: string; dni: string; surname: string; second_surname: string | null; given_names: string; position: string;
   effective_month: string; hired_on: string; ended_on: string | null; salary: string; daily_hours: number;
   payslip_profile?: { sex?: 'F' | 'M' | null; birth_date?: string | null; address?: string | null; nationality?: string | null } | null;
+  health_coverage?: 'ESSALUD' | 'EPS' | null;
   family_allowance?: boolean; night_shift?: boolean; afp_commission?: 'FLOW' | 'BALANCE' | null;
   pension: 'ONP' | 'AFP'; afp: string | null; cuspp: string | null; vacation_granted: number; reference: string;
 };
@@ -90,3 +91,14 @@ export type PayrollWorkspace = {
   attendance_pending?: { worker: string; message: string }[];
   daily: Revision<AttendanceDay>[]; vacations: Revision<Vacation>[]; benefits: Revision<Benefit>[]; payroll: Revision<Payroll> | null;
 };
+
+export type BenefitBatchInput = Pick<Benefit, 'months' | 'days' | 'health' | 'posting_date' | 'withholding' | 'reference'> & {
+  base: string | null; previous_gratification: string | null;
+};
+export type BenefitBatchRow = { worker: Pick<Worker, 'code' | 'given_names' | 'surname' | 'health_coverage'> } & (
+  { status: 'saved'; record: Revision<Benefit> }
+  | { status: 'ready' | 'review'; issues: string[]; missing_history: string[]; input: BenefitBatchInput;
+    result: Omit<Benefit['result'], 'net'> | null }
+);
+export type BenefitBatch = { kind: Benefit['kind']; base_month: string; start: string; end: string; rows: BenefitBatchRow[]; token: string };
+export type BenefitBatchSubmission = { posting_date: string; token: string; confirmed: boolean; withholdings: Record<string, string> };

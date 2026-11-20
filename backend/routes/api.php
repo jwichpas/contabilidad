@@ -216,6 +216,8 @@ Route::prefix('v1')->group(function (): void {
                         Route::put('/inputs/{worker}', 'payrollInput');
                         Route::put('/calculation', 'run');
                         Route::post('/approval', 'approve');
+                        Route::get('/benefits/{benefit}/batch', 'benefitBatchPreview')->whereIn('benefit', ['CTS', 'GRATIFICATION']);
+                        Route::post('/benefits/{benefit}/batch', 'saveBenefitBatch')->whereIn('benefit', ['CTS', 'GRATIFICATION']);
                         Route::put('/benefits/{worker}/{benefit}', 'benefit')->whereIn('benefit', ['CTS', 'GRATIFICATION']);
                         Route::get('/exports/{format}', 'download')->whereIn('format', ['jor', 'afp']);
                     });

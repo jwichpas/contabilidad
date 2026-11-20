@@ -336,3 +336,65 @@ it('reconciles the three-worker October payroll and retains its approved payslip
     $this->get($period.'/exports/afp')->assertOk();
     expect($approved->json('data.data.journal.lines'))->not->toBeEmpty();
 });
+
+it('saves the November CTS batch from historical pay, prior gratification and recorded absences', function (): void {
+    $prefix = '/api/v1/payroll';
+    $person = ['expected_revision' => 0, 'dni' => '01234560', 'surname' => 'Ruiz', 'given_names' => 'Elena',
+        'position' => 'Control', 'effective_month' => '2026-05', 'hired_on' => '2026-05-01',
+        'salary' => '2000', 'daily_hours' => 8, 'pension' => 'ONP', 'vacation_granted' => 0,
+        'family_allowance' => true, 'reference' => 'Contrato'];
+    $this->putJson($prefix.'/workers/TR-001', $person)->assertOk();
+    $this->putJson($prefix.'/workers/TR-001', array_replace($person, [
+        'expected_revision' => 1, 'effective_month' => '2026-11', 'salary' => '2700',
+    ]))->assertOk();
+    $this->putJson($prefix.'/workers/TR-002', array_replace($person, [
+        'dni' => '01234561', 'effective_month' => '2026-08', 'hired_on' => '2026-08-01',
+        'salary' => '1500', 'family_allowance' => false,
+    ]))->assertOk();
+    $this->putJson($prefix.'/workers/TR-003', array_replace($person, ['dni' => '01234562']))->assertOk();
+    $this->putJson($prefix.'/periods/2026-07/benefits/TR-001/GRATIFICATION', [
+        'expected_revision' => 0, 'base' => '1800', 'months' => 2, 'days' => 0, 'withholding' => '0',
+        'health' => 'ESSALUD', 'posting_date' => '2026-07-15', 'reference' => 'Registro previo',
+    ])->assertOk();
+    $this->putJson($prefix.'/periods/2026-08/attendance/TR-001/days/2026-08-03', [
+        'expected_revision' => 0, 'date' => '2026-08-03', 'ordinary' => 0, 'extra' => 0, 'status' => 'ABSENT',
+    ])->assertOk();
+
+    $endpoint = $prefix.'/periods/2026-11/benefits/CTS/batch';
+    $preview = $this->getJson($endpoint)->assertOk()->assertJsonPath('data.base_month', '2026-10')
+        ->assertJsonPath('data.rows.0.status', 'ready')->assertJsonPath('data.rows.0.input.base', '2123.00')
+        ->assertJsonPath('data.rows.0.input.previous_gratification', '600.00')
+        ->assertJsonPath('data.rows.0.input.months', 5)->assertJsonPath('data.rows.0.input.days', 29)
+        ->assertJsonPath('data.rows.0.result.amount', '1105.33')
+        ->assertJsonPath('data.rows.1.result.amount', '375.00')
+        ->assertJsonPath('data.rows.2.status', 'review')->json('data');
+    $payload = ['token' => $preview['token'], 'posting_date' => '2026-11-01', 'confirmed' => true];
+    $this->postJson($endpoint, $payload)->assertOk()->assertJsonPath('data.saved', 2);
+    $this->postJson($endpoint, $payload)->assertConflict();
+    $this->getJson($endpoint)->assertJsonPath('data.rows.0.status', 'saved')
+        ->assertJsonPath('data.rows.0.record.data.result.net', '1105.33')
+        ->assertJsonPath('data.rows.2.status', 'review');
+});
+
+it('requires validated withholdings and rolls back a gratification batch with an invalid row', function (): void {
+    $prefix = '/api/v1/payroll';
+    $period = '/periods/2026-07';
+    $person = ['expected_revision' => 0, 'dni' => '01234560', 'surname' => 'Ruiz', 'given_names' => 'Elena',
+        'position' => 'Control', 'effective_month' => '2026-01', 'hired_on' => '2026-01-01',
+        'salary' => '1800', 'daily_hours' => 8, 'pension' => 'ONP', 'vacation_granted' => 0,
+        'health_coverage' => 'EPS', 'reference' => 'Contrato'];
+    $this->putJson($prefix.'/workers/TR-001', $person)->assertOk();
+    $this->putJson($prefix.'/workers/TR-002', array_replace($person, ['dni' => '01234561', 'health_coverage' => 'ESSALUD']))->assertOk();
+    $endpoint = $prefix.$period.'/benefits/GRATIFICATION/batch';
+    $preview = $this->getJson($endpoint)->assertOk()->assertJsonPath('data.rows.0.result.bonus', '121.50')
+        ->assertJsonPath('data.rows.1.result.bonus', '162.00')->json('data');
+    $submission = ['token' => $preview['token'], 'confirmed' => true, 'posting_date' => '2026-07-01'];
+    $this->postJson($endpoint, $submission + ['withholdings' => ['TR-001' => '0']])
+        ->assertUnprocessable()->assertJsonValidationErrors('withholdings');
+    $this->postJson($endpoint, $submission + ['withholdings' => ['TR-001' => '0', 'TR-002' => '2000']])
+        ->assertUnprocessable()->assertJsonValidationErrors('withholding');
+    $this->getJson($endpoint)->assertJsonPath('data.rows.0.status', 'ready');
+    $this->postJson($endpoint, $submission + ['withholdings' => ['TR-001' => '0', 'TR-002' => '12']])
+        ->assertOk()->assertJsonPath('data.saved', 2);
+    $this->getJson($endpoint)->assertJsonPath('data.rows.1.record.data.result.net', '1950.00');
+});
