@@ -119,3 +119,10 @@ export interface TaxCloseTrialBalance {
   mapped_totals: TaxBalanceAmounts;
   balanced: boolean;
 }
+
+export interface TaxJournalDraft {
+  date: string;
+  type: 'ADJUSTMENT' | 'CLOSING';
+  description: string;
+  lines: TaxCloseResult['journal_proposals'][number]['lines'];
+}

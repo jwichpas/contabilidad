@@ -14,7 +14,7 @@ test('fiscal history is routed under global company selection, without a local c
   assert.match(app, /currentModule === 'fiscal-history'/);
   assert.match(app, /:can-write="canDeactivateEntities"/);
   assert.match(app, /window.location.hash = '#historial-fiscal'/);
-  assert.match(sidebar, /emit\('navigate', 'fiscal-history'\)/);
+  assert.match(sidebar, /module: 'fiscal-history'/);
   assert.doesNotMatch(view, /tenant-selector/);
 });
 test('client uses existing authenticated tenant-scoped transport and immutable DTO', () => {

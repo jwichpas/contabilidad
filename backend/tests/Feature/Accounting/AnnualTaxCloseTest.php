@@ -230,3 +230,51 @@ it('prepares the FV 710 working balance from the ledger with separate opening an
         ->assertJsonPath('data.income_statement.net', '200.0000')
         ->assertJsonPath('data.totals.result', '200.0000');
 });
+
+it('calculates effective interest and keeps the company tax limit independent of the loan schedule', function (): void {
+    $url = '/api/v1/accounting/financial-auxiliaries/loan';
+    $input = [
+        'principal' => '1100', 'transaction_costs' => '100', 'payments' => ['550', '605'],
+        'apply_ebitda_limit' => true, 'previous_tax_ebitda' => '800',
+        'tax_interest_expense' => '370', 'tax_interest_income' => '70',
+    ];
+    $this->postJson($url, $input)->assertOk()
+        ->assertJsonPath('data.initial_carrying_amount', '1000.00')
+        ->assertJsonPath('data.effective_monthly_percent', '10.00000000')
+        ->assertJsonPath('data.effective_annual_percent', '213.84283767')
+        ->assertJsonPath('data.rows.0.effective_interest', '100.00')
+        ->assertJsonPath('data.rows.1.effective_interest', '55.00')
+        ->assertJsonPath('data.rows.1.closing', '0.00')
+        ->assertJsonPath('data.ebitda_limit', '240.00')
+        ->assertJsonPath('data.tax_excess', '60.00');
+    $input['apply_ebitda_limit'] = false;
+    $this->postJson($url, $input)->assertOk()->assertJsonPath('data.ebitda_limit', null);
+    $input['transaction_costs'] = '1100';
+    $this->postJson($url, $input)->assertUnprocessable()->assertJsonValidationErrors('payments');
+});
+
+it('separates useful life and availability for use from the fiscal months and recorded cap', function (): void {
+    $url = '/api/v1/accounting/financial-auxiliaries/asset';
+    $input = [
+        'book_cost' => '12000', 'residual' => '2000', 'useful_months' => 12, 'available_from' => '2025-01-01',
+        'tax_cost' => '12000', 'tax_category' => 'DATA_EQUIPMENT', 'tax_use_from' => '2025-07-20',
+        'last_eligible_month' => 12, 'prior_tax_depreciation' => '0', 'recorded_depreciation' => '1300',
+    ];
+    $this->postJson($url, $input)->assertOk()->assertJsonCount(12, 'data.rows')
+        ->assertJsonPath('data.book_depreciation', '10000.00')
+        ->assertJsonPath('data.book_carrying_amount', '2000.00')
+        ->assertJsonPath('data.tax_rate', '25')
+        ->assertJsonPath('data.tax_months', 6)
+        ->assertJsonPath('data.tax_depreciation_limit', '1500.00')
+        ->assertJsonPath('data.tax_depreciation', '1300.00')
+        ->assertJsonPath('data.tax_base_closing', '10700.00')
+        ->assertJsonPath('data.period_adjustment', '8700.00')
+        ->assertJsonPath('data.carrying_vs_tax_base', '-8700.00');
+    $input['stop_on'] = '2025-07-01';
+    $input['last_eligible_month'] = 6;
+    $this->postJson($url, $input)->assertOk()
+        ->assertJsonPath('data.rows.7.book_depreciation', '0.00')
+        ->assertJsonPath('data.tax_depreciation', '0.00');
+    $input['residual'] = '12000.01';
+    $this->postJson($url, $input)->assertUnprocessable()->assertJsonValidationErrors('book_cost');
+});

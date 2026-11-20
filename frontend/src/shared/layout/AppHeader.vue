@@ -79,6 +79,7 @@ const activeCompanyIdString = computed<string>({
         type="button"
         class="lg:hidden inline-flex items-center justify-center w-8 h-8 rounded-md border border-line bg-surf text-foreground hover:bg-soft cursor-pointer"
         aria-label="Abrir navegación"
+        aria-controls="workspace-sidebar"
         @click="emit('open-mobile')"
       >
         <Menu class="w-4 h-4" />
@@ -117,6 +118,10 @@ const activeCompanyIdString = computed<string>({
               ? 'Libro Diario Bimoneda (Vouchers Contables)'
               : currentModule === 'fiscal-periods'
                 ? 'Períodos contables · Cierre y auditoría'
+              : currentModule === 'loans'
+                ? 'Préstamos recibidos'
+              : currentModule === 'fixed-assets'
+                ? 'Activos fijos'
               : currentModule === 'annual-tax-close'
                 ? 'Cierre tributario anual'
               : currentModule === 'financial-statements'

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Accounting\CreateAccountingAccountController;
 use App\Http\Controllers\Api\V1\Accounting\AnnualTaxCloseController;
+use App\Http\Controllers\Api\V1\Accounting\CalculateFinancialAuxiliariesController;
 use App\Http\Controllers\Api\V1\Accounting\ChangeFiscalPeriodStatusController;
 use App\Http\Controllers\Api\V1\Accounting\ListFiscalPeriodsController;
 use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
@@ -164,6 +165,11 @@ Route::prefix('v1')->group(function (): void {
                 ->whereNumber('periodId')
                 ->whereIn('action',['close','lock','reopen'])
                 ->name('api.v1.accounting.fiscal-periods.transition');
+
+            Route::post('/accounting/financial-auxiliaries/loan', [CalculateFinancialAuxiliariesController::class, 'loan'])
+                ->name('api.v1.accounting.financial-auxiliaries.loan');
+            Route::post('/accounting/financial-auxiliaries/asset', [CalculateFinancialAuxiliariesController::class, 'asset'])
+                ->name('api.v1.accounting.financial-auxiliaries.asset');
 
             Route::get('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'show'])
                 ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.show');

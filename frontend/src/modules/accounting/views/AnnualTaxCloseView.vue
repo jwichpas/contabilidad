@@ -3,7 +3,7 @@ import { computed, onScopeDispose, ref } from 'vue';
 import { Download, Plus, Printer, RefreshCw, Save, Trash2 } from 'lucide-vue-next';
 import { AccountingApiClient, ApiHttpError } from '../api/httpClient';
 import type { CompanyId } from '../types/accountingAccount.types';
-import type { DeferredTaxLine, TaxAdjustment, TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseResult } from '../types/annualTaxClose.types';
+import type { DeferredTaxLine, TaxAdjustment, TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseResult, TaxJournalDraft } from '../types/annualTaxClose.types';
 import { formatExactLocalAmount } from '../utils/formatExactLocalAmount';
 import { openStatementTablePrint } from '../utils/printStatementTable';
 import AnnualTaxTrialBalancePanel from './AnnualTaxTrialBalancePanel.vue';
@@ -17,6 +17,18 @@ const props = defineProps<{
   canEdit: boolean;
   canReview: boolean;
 }>();
+
+const emit = defineEmits<{ 'prepare-journal': [draft: TaxJournalDraft] }>();
+
+function prepareJournal(journal: TaxCloseResult['journal_proposals'][number]) {
+  if (!current.value || dirty.value || data.value?.status !== 'APPROVED' || !props.canReview) return;
+  emit('prepare-journal', {
+    date: `${year}-12-31`,
+    type: journal.code.endsWith('_TRANSFER') ? 'CLOSING' : 'ADJUSTMENT',
+    description: `${journal.title} · Cierre tributario ${year}, revisión ${data.value.revision}`,
+    lines: journal.lines,
+  });
+}
 
 const year = 2025;
 const client = new AccountingApiClient('', {
@@ -327,6 +339,8 @@ void run(load);
         <summary class="cursor-pointer font-semibold">Propuestas de asientos</summary>
         <p class="mt-2 text-sm text-muted">Revise saldos, subcuentas y dimensiones antes de contabilizar desde el Diario.</p>
         <div v-for="journal in result.journal_proposals" :key="journal.code" class="mt-3 overflow-x-auto rounded-md border border-border p-3">
+          <button v-if="canReview && current && data.status === 'APPROVED'" type="button"
+            class="ui-btn ui-btn-secondary mb-2" @click="prepareJournal(journal)">Preparar en el Diario</button>
           <table class="w-full min-w-64 text-sm">
             <caption class="pb-2 text-left font-semibold">{{ journal.title }}</caption>
             <thead><tr class="text-muted"><th scope="col" class="text-left">Cuenta</th><th scope="col" class="text-right">Debe</th><th scope="col" class="text-right">Haber</th></tr></thead>

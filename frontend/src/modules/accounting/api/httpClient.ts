@@ -618,6 +618,13 @@ export class AccountingApiClient {
     return result.data;
   }
 
+  public async calculateFinancialAuxiliary<T>(kind: 'loan' | 'asset', body: string): Promise<T> {
+    const result = await this.request<{ data: T }>(
+      `/api/v1/accounting/financial-auxiliaries/${kind}`, { method: 'POST', body },
+    );
+    return result.data;
+  }
+
   public async fetchAnnualTaxClose(year: number, revision?: number): Promise<TaxClose> {
     const query = revision === undefined ? '' : `?revision=${revision}`;
     const result = await this.request<{ data: TaxClose }>(

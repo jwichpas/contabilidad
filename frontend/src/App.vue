@@ -16,6 +16,7 @@ import { Toaster } from 'vue-sonner';
 
 
 
+import type { TaxJournalDraft } from './modules/accounting/types/annualTaxClose.types';
 import type { CompanyOnboardingResult } from './modules/company/types/companyOnboarding.types';
 import UiViewLoading from './shared/ui/UiViewLoading.vue';
 import UiViewLoadError from './shared/ui/UiViewLoadError.vue';
@@ -81,6 +82,13 @@ const ExchangeRatesView = defineAsyncComponent({
 
 const FiscalPeriodsView = defineAsyncComponent({
   loader: () => import('./modules/accounting/views/FiscalPeriodsView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const FinancialAuxiliaryView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/FinancialAuxiliaryView.vue'),
   loadingComponent: UiViewLoading,
   errorComponent: UiViewLoadError,
   delay: 120,
@@ -252,6 +260,8 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
   if (hash.includes('flujo-efectivo') || hash.includes('cash-flow')) return 'cash-flow';
+  if (hash.includes('prestamos')) return 'loans';
+  if (hash.includes('activos-fijos')) return 'fixed-assets';
   if (hash.includes('cierre-tributario')) return 'annual-tax-close';
   if (hash.includes('estados-financieros') || hash.includes('financial-statements')) return 'financial-statements';
   if (hash.includes('historial-fiscal') || hash.includes('fiscal-history')) return 'fiscal-history';
@@ -275,6 +285,14 @@ function syncHashWithModule(): void {
   currentModule.value = resolveModuleFromHash();
 }
 
+const taxJournalDraft = shallowRef<{ company: CompanyId; draft: TaxJournalDraft } | null>(null);
+watch([activeCompanyId, accessToken], () => { taxJournalDraft.value = null; });
+
+function openTaxJournal(draft: TaxJournalDraft) {
+  taxJournalDraft.value = { company: activeCompanyId.value, draft };
+  handleNavigate('journal');
+}
+
 function handleNavigate(mod: NavigationModule): void {
   if (isSwitchingCompany.value) return;
   currentModule.value = mod;
@@ -292,6 +310,10 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#catalogos-sunat';
   } else if (mod === 'fiscal-periods') {
     window.location.hash = '#periodos';
+  } else if (mod === 'loans') {
+    window.location.hash = '#prestamos';
+  } else if (mod === 'fixed-assets') {
+    window.location.hash = '#activos-fijos';
   } else if (mod === 'annual-tax-close') {
     window.location.hash = '#cierre-tributario';
   } else if (mod === 'financial-statements') {
@@ -337,9 +359,14 @@ async function handleCompanyCreated(result: CompanyOnboardingResult): Promise<vo
   if (switched) handleNavigate('company');
 }
 
+function closeMobileNavigationAtDesktop() {
+  if (window.matchMedia('(min-width: 1024px)').matches) isMobileDrawerOpen.value = false;
+}
+
 onMounted(async () => {
   syncHashWithModule();
   window.addEventListener('hashchange', syncHashWithModule);
+  window.addEventListener('resize', closeMobileNavigationAtDesktop);
   window.addEventListener('focus', refreshHeaderDate);
   document.addEventListener('visibilitychange', refreshHeaderDate);
   try {
@@ -351,6 +378,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('hashchange', syncHashWithModule);
+  window.removeEventListener('resize', closeMobileNavigationAtDesktop);
   window.removeEventListener('focus', refreshHeaderDate);
   document.removeEventListener('visibilitychange', refreshHeaderDate);
 });
@@ -429,7 +457,7 @@ watch(
     />
 
     <!-- Contenedor Principal (Header Superior + Área de Trabajo Modular) -->
-    <div class="app-panel flex-1 flex flex-col min-w-0">
+    <div class="app-panel flex-1 flex flex-col min-w-0" :inert="isMobileDrawerOpen">
       <!-- Componente Modular: Cabecera Superior (Header) -->
       <AppHeader
         :current-module="currentModule"
@@ -481,6 +509,8 @@ watch(
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
           @posting-change="isJournalSubmitting = $event"
+          :tax-draft="taxJournalDraft?.company === activeCompanyId ? taxJournalDraft.draft : undefined"
+          @tax-draft-consumed="taxJournalDraft = null"
         />
         <DocumentJournalView
           v-else-if="currentModule === 'purchases' || currentModule === 'sales'"
@@ -499,6 +529,13 @@ watch(
           :get-access-token="() => accessToken"
           :can-manage-periods="canManagePeriods"
         />
+        <FinancialAuxiliaryView
+          v-else-if="currentModule === 'loans' || currentModule === 'fixed-assets'"
+          :key="currentModule + '-' + activeCompanyId"
+          :mode="currentModule === 'loans' ? 'loan' : 'asset'"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+        />
         <AnnualTaxCloseView
           v-else-if="currentModule === 'annual-tax-close'"
           :key="`annual-tax-close-${activeCompanyId}`"
@@ -508,6 +545,7 @@ watch(
           :get-access-token="() => accessToken"
           :can-edit="canManageEntities"
           :can-review="canDeactivateEntities"
+          @prepare-journal="openTaxJournal"
         />
         <FinancialStatementsView
           v-else-if="currentModule === 'financial-statements' || currentModule === 'cash-flow'"
