@@ -14,7 +14,7 @@ const costCenterEditor = read('../src/modules/company/components/CostCenterEdito
 test('pantallas de compras y ventas mantienen la carga diferida del resto del sistema', () => {
   const views = [
     'AccountingCatalogView', 'SeeReferencesView', 'SunatReferencesView', 'JournalEntryView',
-    'DocumentJournalView', 'CompanySubdiariesView', 'ExchangeRatesView', 'FiscalPeriodsView', 'FinancialStatementsView',
+    'DocumentJournalView', 'CompanySubdiariesView', 'ExchangeRatesView', 'FiscalPeriodsView', 'FinancialStatementsView', 'AnnualTaxCloseView', 'FinancialAuxiliaryView', 'SunatCalendarView', 'MonthlyWorkView', 'ExternalTaxReportsView', 'PayrollWorkspaceView',
     'CompanySettingsView', 'EntityMasterView', 'CompanyFiscalHistoryView',
     'CostCenterMasterView', 'CompanyOnboardingWizard',
   ];
@@ -32,6 +32,7 @@ test('carga diferida conserva los límites por empresa, la sesión y las accione
   assert.match(app, /:key="`entities-\$\{activeCompanyId\}`"/);
   assert.match(app, /:key="'cost-centers-' \+ activeCompanyId"/);
   assert.match(app, /:can-write="canManageEntities"/);
+  assert.match(app, /:tax-draft="taxJournalDraft\?\.company === activeCompanyId/);
   assert.match(app, /@posting-change="isJournalSubmitting = \$event"/);
   assert.match(app, /import LoginView from/);
   assert.match(app, /import AppSidebar from/);

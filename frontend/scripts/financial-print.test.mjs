@@ -23,7 +23,7 @@ test('ambos accesos al flujo de efectivo comparten vista con enlaces accesibles'
   const app = read('../src/App.vue');
   const sidebar = read('../src/shared/layout/AppSidebar.vue');
   const report = read('../src/modules/accounting/views/FinancialStatementsView.vue');
-  assert.match(sidebar, /@click="emit\('navigate', 'cash-flow'\)"/);
+  assert.match(sidebar, /module: 'cash-flow'/);
   assert.match(app, /hash\.includes\('flujo-efectivo'\)/);
   assert.match(app, /currentModule === 'financial-statements' \|\| currentModule === 'cash-flow'/);
   assert.match(report, /selectReport\('cash-flow'\)/);

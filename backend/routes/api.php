@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Accounting\CreateAccountingAccountController;
+use App\Http\Controllers\Api\V1\Accounting\AnnualTaxCloseController;
+use App\Http\Controllers\Api\V1\Accounting\CalculateFinancialAuxiliariesController;
 use App\Http\Controllers\Api\V1\Accounting\ChangeFiscalPeriodStatusController;
 use App\Http\Controllers\Api\V1\Accounting\ListFiscalPeriodsController;
 use App\Http\Controllers\Api\V1\Accounting\OpenFiscalPeriodController;
@@ -45,6 +47,7 @@ use App\Http\Controllers\Api\V1\Company\ListCashFlowAreasController;
 use App\Http\Controllers\Api\V1\Company\CompanyCashFlowPresentationController;
 use App\Http\Controllers\Api\V1\Company\CompanyFinancialReportLayoutController;
 use App\Http\Controllers\Api\V1\Company\CompanyNiifNotesController;
+use App\Http\Controllers\Api\V1\Company\CompanySunatCalendarController;
 use App\Http\Controllers\Api\V1\Company\ListCompanyAreasController;
 use App\Http\Controllers\Api\V1\Company\ListCostCentersController;
 use App\Http\Controllers\Api\V1\Company\CostCenterMasterController;
@@ -62,6 +65,10 @@ use App\Http\Middleware\JournalAuthenticatedTiming;
 use App\Http\Middleware\JournalAuthenticationStartTiming;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\RequireCompanyRole;
+use App\Http\Middleware\RequireMonthlyAccountingConfirmation;
+use App\Http\Controllers\Api\V1\Accounting\MonthlyAccountingWorkController;
+use App\Http\Controllers\Api\V1\Accounting\DaotReportController;
+use App\Http\Controllers\Api\V1\Accounting\PdbExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -164,6 +171,79 @@ Route::prefix('v1')->group(function (): void {
                 ->whereIn('action',['close','lock','reopen'])
                 ->name('api.v1.accounting.fiscal-periods.transition');
 
+            Route::post('/accounting/financial-auxiliaries/loan', [CalculateFinancialAuxiliariesController::class, 'loan'])
+                ->name('api.v1.accounting.financial-auxiliaries.loan');
+            Route::post('/accounting/financial-auxiliaries/asset', [CalculateFinancialAuxiliariesController::class, 'asset'])
+                ->name('api.v1.accounting.financial-auxiliaries.asset');
+
+            Route::get('/accounting/financial-auxiliaries/{kind}/records', [CalculateFinancialAuxiliariesController::class, 'records'])
+                ->whereIn('kind', ['loan', 'asset'])->name('api.v1.accounting.financial-auxiliaries.records');
+            Route::post('/accounting/financial-auxiliaries/loan/records', [CalculateFinancialAuxiliariesController::class, 'loan'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                ->name('api.v1.accounting.financial-auxiliaries.loan.save');
+            Route::post('/accounting/financial-auxiliaries/asset/records', [CalculateFinancialAuxiliariesController::class, 'asset'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                ->name('api.v1.accounting.financial-auxiliaries.asset.save');
+
+            Route::post('/accounting/pdb-exportadores/{month}', PdbExportController::class)
+                ->where('month', '20[0-9]{2}-(0[1-9]|1[0-2])')
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT,AUDITOR');
+
+            Route::prefix('/accounting/daot/{year}')->where(['year' => '[0-9]{4}'])->group(function (): void {
+                Route::get('/', [DaotReportController::class, 'show']);
+                Route::put('/documents/{document}', [DaotReportController::class, 'review'])->whereNumber('document')
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
+                Route::get('/{format}', [DaotReportController::class, 'csv'])->whereIn('format', ['resumen', 'detalle']);
+            });
+
+            Route::prefix('payroll')->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                ->controller(\App\Http\Controllers\Api\V1\Payroll\PayrollController::class)->group(function (): void {
+                    Route::put('/workers/{worker}', 'worker')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
+                    Route::post('/workers/{worker}/vacations', 'vacation')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
+                    Route::prefix('periods/{month}')->where(['month' => '20[0-9]{2}-(0[1-9]|1[0-2])'])->group(function (): void {
+                        Route::get('/', 'show');
+                        Route::put('/attendance/{worker}', 'attendance')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
+                        Route::put('/attendance/{worker}/days/{date}', 'day')
+                            ->where('worker', '[A-Z][A-Z0-9-]{0,19}')->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
+                        Route::put('/calculation', 'run');
+                        Route::post('/approval', 'approve');
+                        Route::put('/benefits/{worker}/{benefit}', 'benefit')
+                            ->where('worker', '[A-Z][A-Z0-9-]{0,19}')->whereIn('benefit', ['CTS', 'GRATIFICATION']);
+                        Route::get('/exports/{format}', 'download')->whereIn('format', ['jor', 'afp']);
+                    });
+                });
+
+            Route::get('/accounting/monthly-work/alerts', [MonthlyAccountingWorkController::class, 'alerts']);
+            Route::prefix('/accounting/monthly-work/{month}')->where(['month' => '20[0-9]{2}-[0-9]{2}'])->group(function (): void {
+                Route::get('/', [MonthlyAccountingWorkController::class, 'show']);
+                Route::put('/confirmation', [MonthlyAccountingWorkController::class, 'confirm'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+                Route::put('/tasks/{code}', [MonthlyAccountingWorkController::class, 'task'])
+                    ->where('code', '[a-z0-9_-]+')->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
+                Route::get('/depreciation', [MonthlyAccountingWorkController::class, 'paper'])->defaults('code', 'depreciation');
+                Route::post('/depreciation', [MonthlyAccountingWorkController::class, 'depreciation'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
+                Route::get('/payroll', [MonthlyAccountingWorkController::class, 'paper'])->defaults('code', 'payroll')
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+                Route::put('/payroll', [MonthlyAccountingWorkController::class, 'payroll'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+            });
+
+            Route::get('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'show'])
+                ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.show');
+            Route::get('/accounting/annual-tax-close/{year}/trial-balance', [AnnualTaxCloseController::class, 'trialBalance'])
+                ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.trial-balance');
+            Route::put('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'save'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.save');
+            Route::post('/accounting/annual-tax-close/{year}/submit', [AnnualTaxCloseController::class, 'transition'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                ->defaults('action', 'submit')->whereNumber('year')->name('api.v1.accounting.annual-tax-close.submit');
+            Route::post('/accounting/annual-tax-close/{year}/{action}', [AnnualTaxCloseController::class, 'transition'])
+                ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                ->whereNumber('year')->whereIn('action', ['approve', 'return', 'rectify'])
+                ->name('api.v1.accounting.annual-tax-close.transition');
+
             Route::get('/accounting/reports/financial-snapshot', GetFinancialSnapshotController::class)
                 ->name('api.v1.accounting.reports.financial-snapshot');
             Route::get('/accounting/reports/cash-flow', GetCashFlowStatementController::class)
@@ -192,11 +272,13 @@ Route::prefix('v1')->group(function (): void {
 
                 Route::post('/', CreateJournalEntryController::class)
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                    ->middleware(RequireMonthlyAccountingConfirmation::class.':entry_date')
                     ->name('api.v1.accounting.journal-entries.store');
 
                 Route::post('/{entryId}/reverse', ReverseJournalEntryController::class)
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
                     ->whereNumber('entryId')
+                    ->middleware(RequireMonthlyAccountingConfirmation::class.':reversal_date')
                     ->name('api.v1.accounting.journal-entries.reverse');
             });
 
@@ -215,6 +297,7 @@ Route::prefix('v1')->group(function (): void {
                 ->whereIn('module', ['purchases', 'sales']);
             Route::post('/accounting/document-journals/{module}/documents', [DocumentJournalController::class, 'store'])
                 ->whereIn('module', ['purchases', 'sales'])
+                ->middleware(RequireMonthlyAccountingConfirmation::class.':entry_date')
                 ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
 
             Route::get('/company/subdiaries', [CompanySubdiaryMasterController::class, 'index'])
@@ -300,6 +383,11 @@ Route::prefix('v1')->group(function (): void {
                     ->name('api.v1.company.niif-notes.save');
 
                 // Historial tributario por ejercicio: sólo revisiones inmutables.
+                Route::get('/sunat-calendar/{year}', [CompanySunatCalendarController::class, 'show'])
+                    ->whereNumber('year')->name('api.v1.company.sunat-calendar.show');
+                Route::put('/sunat-calendar/{year}', [CompanySunatCalendarController::class, 'save'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                    ->whereNumber('year')->name('api.v1.company.sunat-calendar.save');
                 Route::get('/fiscal-profiles', [CompanyFiscalProfileController::class, 'index'])
                     ->name('api.v1.company.fiscal-profiles.index');
 

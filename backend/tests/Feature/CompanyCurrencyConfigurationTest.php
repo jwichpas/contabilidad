@@ -34,6 +34,7 @@ beforeEach(function (): void {
         ]
     );
 
+    $this->seedMonthlyConfirmation((int) $this->company->id, (int) $this->user->id, '2026-10');
     $this->tenantContext->run($this->company->id, function (): void {
         \App\Models\CompanySubdiary::query()->firstOrCreate(
             ['code' => 'GENERAL'], ['name' => 'Diario general']

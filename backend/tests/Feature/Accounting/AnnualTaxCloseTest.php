@@ -1,0 +1,377 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Models\AccountingAccount;
+use App\Models\Company;
+use App\Models\CompanySubdiary;
+use App\Models\FiscalPeriod;
+use App\Services\Accounting\PostJournalEntryService;
+use App\Models\User;
+use App\Support\Tenant\TenantContext;
+use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
+
+const TAX_CLOSE_PATH = '/api/v1/accounting/annual-tax-close/2025';
+
+beforeEach(function (): void {
+    $this->tenant = app(TenantContext::class);
+    $this->company = Company::query()->create([
+        'tax_id' => '20'.random_int(100000000, 999999999),
+        'business_name' => 'Laboratorio de cierre fiscal', 'legal_address' => 'DEV', 'is_active' => true,
+    ]);
+    $this->user = User::query()->create([
+        'name' => 'Contador fiscal', 'email' => 'fiscal_'.bin2hex(random_bytes(7)).'@example.test',
+        'password' => 'testing-only-2026!',
+    ]);
+    $this->tenant->run((int) $this->company->id, function (): void {
+        DB::table('company_user')->insert([
+            'company_id' => $this->company->id, 'user_id' => $this->user->id,
+            'role' => 'ADMIN', 'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    });
+    $this->user->update(['current_company_id' => $this->company->id]);
+    Sanctum::actingAs($this->user, ['*']);
+    $this->withHeader('X-Company-Id', (string) $this->company->id);
+    $this->inputs = json_decode(
+        file_get_contents(__DIR__.'/../../Fixtures/annual_tax_close_sunat_2025.json'),
+        true, 512, JSON_THROW_ON_ERROR
+    );
+});
+
+it('reproduces the 39 adjustments and freezes each approved revision', function (): void {
+    $this->getJson(TAX_CLOSE_PATH)->assertOk()->assertJsonPath('data.revision', 0);
+    $this->putJson(TAX_CLOSE_PATH, ['expected_revision' => 0, 'inputs' => $this->inputs])
+        ->assertOk()->assertJsonPath('data.revision', 1);
+    $snapshot = $this->getJson(TAX_CLOSE_PATH)->assertOk()
+        ->assertJsonCount(39, 'data.inputs.adjustments')
+        ->assertJsonPath('data.result.casilla_103', '981084.00')
+        ->assertJsonPath('data.result.casilla_105', '394411.00')
+        ->assertJsonPath('data.result.adjusted_income', '15848751.00')
+        ->assertJsonPath('data.result.participation', '1267900.00')
+        ->assertJsonPath('data.result.taxable_income', '14580851.00')
+        ->assertJsonPath('data.result.current_tax', '4301351.00')
+        ->assertJsonPath('data.result.itan_assessed', '171406.00')
+        ->assertJsonPath('data.result.advances_cash', '1025167.00')
+        ->assertJsonPath('data.result.advances_total', '1196573.00')
+        ->assertJsonPath('data.result.settlement_before_ciprl', '3104778.00')
+        ->assertJsonPath('data.result.asset_closing', '104336.00')
+        ->assertJsonPath('data.result.liability_closing', '3638.00')
+        ->assertJsonPath('data.result.tax_expense', '4200653.00')
+        ->assertJsonPath('data.result.net_profit', '9793525.00')
+        ->assertJsonCount(5, 'data.result.journal_proposals')
+        ->assertJsonPath('data.result.journal_proposals.1.lines.0.debit', '633319.00');
+    foreach ($snapshot->json('data.result.journal_proposals') as $journal) {
+        $debit = $credit = '0.00';
+        foreach ($journal['lines'] as $line) {
+            $debit = bcadd($debit, $line['debit'], 2);
+            $credit = bcadd($credit, $line['credit'], 2);
+        }
+        expect($debit)->toBe($credit);
+    }
+
+    $this->putJson(TAX_CLOSE_PATH, ['expected_revision' => 0, 'inputs' => $this->inputs])->assertConflict();
+    $this->postJson(TAX_CLOSE_PATH.'/submit', ['expected_revision' => 1])
+        ->assertOk()->assertJsonPath('data.status', 'IN_REVIEW');
+    $this->postJson(TAX_CLOSE_PATH.'/approve', ['expected_revision' => 2])
+        ->assertOk()->assertJsonPath('data.status', 'APPROVED');
+    $this->putJson(TAX_CLOSE_PATH, ['expected_revision' => 3, 'inputs' => $this->inputs])->assertConflict();
+    $this->postJson(TAX_CLOSE_PATH.'/rectify', ['expected_revision' => 3, 'reason' => 'Nuevo sustento'])
+        ->assertOk()->assertJsonPath('data.revision', 4);
+    $this->getJson(TAX_CLOSE_PATH.'?revision=3')->assertOk()->assertJsonPath('data.status', 'APPROVED')
+        ->assertJsonPath('data.latest_revision', 4);
+
+    $companyId = $this->company->id;
+    $this->tenant->run((int) $companyId, function () use ($companyId): void {
+        expect(DB::table('audit_logs')->where('company_id', $companyId)
+            ->where('event_type', 'ANNUAL_TAX_CLOSE_REVISION')->count())->toBe(4);
+    });
+});
+
+it('rejects a second application of ITAN, duplicate months and excess CIPRL', function (): void {
+    $payload = ['expected_revision' => 0, 'inputs' => $this->inputs];
+    $payload['inputs']['itan_at_close'] = '1';
+    $this->putJson(TAX_CLOSE_PATH, $payload)->assertUnprocessable()->assertJsonValidationErrors('inputs.itan_at_close');
+    $payload['inputs'] = $this->inputs;
+    $payload['inputs']['advances'][1]['month'] = 1;
+    $this->putJson(TAX_CLOSE_PATH, $payload)->assertUnprocessable()->assertJsonValidationErrors('inputs.advances.1.month');
+    $payload['inputs'] = $this->inputs;
+    $payload['inputs']['ciprl_applied'] = '330000.01';
+    $this->putJson(TAX_CLOSE_PATH, $payload)->assertUnprocessable()->assertJsonValidationErrors('inputs.ciprl_applied');
+    $payload['inputs']['ciprl_applied'] = '330000';
+    $this->putJson(TAX_CLOSE_PATH, $payload)->assertOk();
+    $this->getJson(TAX_CLOSE_PATH)->assertOk()->assertJsonPath('data.result.cash_to_pay', '2774778.00');
+});
+
+it('requires evidence for submission and keeps write permissions scoped to the company role', function (): void {
+    $other = Company::query()->create([
+        'tax_id' => '20'.random_int(100000000, 999999999),
+        'business_name' => 'Empresa ajena', 'legal_address' => 'DEV', 'is_active' => true,
+    ]);
+    $this->getJson(TAX_CLOSE_PATH, ['X-Company-Id' => (string) $other->id])->assertForbidden();
+
+    $this->tenant->run((int) $this->company->id, function (): void {
+        DB::table('company_user')->where('company_id', $this->company->id)
+            ->where('user_id', $this->user->id)->update(['role' => 'ACCOUNTANT']);
+    });
+    $payload = ['expected_revision' => 0, 'inputs' => $this->inputs];
+    $payload['inputs']['book_reference'] = null;
+    $this->putJson(TAX_CLOSE_PATH, $payload)->assertOk();
+    $this->postJson(TAX_CLOSE_PATH.'/submit', ['expected_revision' => 1])
+        ->assertUnprocessable()->assertJsonValidationErrors('inputs.book_reference');
+    $this->putJson(TAX_CLOSE_PATH, ['expected_revision' => 1, 'inputs' => $this->inputs])->assertOk();
+    $this->postJson(TAX_CLOSE_PATH.'/submit', ['expected_revision' => 2])->assertOk();
+    $this->postJson(TAX_CLOSE_PATH.'/approve', ['expected_revision' => 3])->assertForbidden();
+    $this->getJson(str_replace('2025', '2026', TAX_CLOSE_PATH))->assertNotFound();
+});
+
+it('preserves losses and separates a deferred-tax reversal from the current tax', function (): void {
+    $inputs = $this->inputs;
+    $inputs['book_profit'] = '-10000.50';
+    $inputs['adjustments'] = [];
+    $inputs['participation_deductible'] = '0';
+    $inputs['participation_admin'] = '0';
+    $inputs['participation_sales'] = '0';
+    $inputs['advances'] = [];
+    $inputs['deferred'] = [[
+        'label' => 'Reversión', 'kind' => 'ASSET', 'opening_tax' => '1200.00',
+        'closing_difference' => '0', 'rate' => '29.5', 'recognize_closing' => false,
+    ]];
+    $this->putJson(TAX_CLOSE_PATH, ['expected_revision' => 0, 'inputs' => $inputs])->assertOk();
+    $this->getJson(TAX_CLOSE_PATH)->assertOk()
+        ->assertJsonPath('data.result.adjusted_income', '-10001.00')
+        ->assertJsonPath('data.result.taxable_income', '0.00')
+        ->assertJsonPath('data.result.participation', '0.00')
+        ->assertJsonPath('data.result.current_tax', '0.00')
+        ->assertJsonPath('data.result.deferred_expense', '1200.00');
+});
+
+it('prepares the FV 710 working balance from the ledger with separate opening and closing movements', function (): void {
+    $closing = $this->tenant->run((int) $this->company->id, function () {
+        DB::table('company_settings')->insert([
+            'company_id' => $this->company->id,
+            'base_currency_id' => DB::table('currencies')->where('code', 'PEN')->value('id'),
+            'tax_regime' => 'GENERAL', 'default_vat_rate' => '18.00',
+        ]);
+        CompanySubdiary::query()->create(['code' => 'GENERAL', 'name' => 'General']);
+        $account = static function (array $codes, string $type = 'ASSET'): int {
+            $parent = null;
+            foreach ($codes as $i => $code) {
+                $parent = AccountingAccount::query()->firstOrCreate(['code' => $code], [
+                    'name' => 'Cuenta '.$code, 'parent_id' => $parent?->id, 'level' => $i + 1,
+                    'path' => $parent === null ? $code : $parent->path.'.'.$code,
+                    'account_type' => $type, 'balance_type' => $type === 'REVENUE' ? 'CREDIT' : 'DEBIT', 'currency_mode' => 'MULTI',
+                    'is_operational' => $i === 5, 'is_active' => true, 'requires_auxiliary' => false,
+                    'entity_requirement_type' => 'NONE', 'requires_cash_flow_area' => false,
+                    'cash_flow_category' => 'NONE', 'financial_statement_rubric' => 'ESF_ACT_CORR_CXC_COM',
+                ]);
+            }
+
+            return (int) $parent->id;
+        };
+        $debit = $account(['1', '10', '104', '1041', '10410', '104101']);
+        $credit = $account(['1', '12', '121', '1212', '12120', '121201']);
+        $revenue = $account(['7', '70', '701', '7011', '70110', '701101'], 'REVENUE');
+        $retained = $account(['5', '59', '591', '5911', '59110', '591101'], 'EQUITY');
+        $post = function (string $date, string $type, string $amount, ?int $dr = null, ?int $cr = null) use ($debit, $credit) {
+            $period = FiscalPeriod::query()->firstOrCreate([
+                'year' => (int) substr($date, 0, 4), 'month' => (int) substr($date, 5, 2),
+            ], [
+                'start_date' => date('Y-m-01', strtotime($date)), 'end_date' => date('Y-m-t', strtotime($date)),
+                'status' => 'OPEN',
+            ]);
+            return app(PostJournalEntryService::class)->post([
+                'fiscal_period_id' => $period->id, 'entry_date' => $date,
+                'entry_type' => $type, 'currency' => 'PEN', 'exchange_rate' => '1.000000',
+                'exchange_rate_type' => 'PARITY', 'description' => 'Movimiento para balance anual',
+                'created_by_user_id' => $this->user->id,
+                'lines' => [
+                    ['accounting_account_id' => $dr ?? $debit, 'debit_local' => $amount,
+                        'credit_local' => '0', 'debit_foreign' => $amount, 'credit_foreign' => '0'],
+                    ['accounting_account_id' => $cr ?? $credit, 'debit_local' => '0',
+                        'credit_local' => $amount, 'debit_foreign' => '0', 'credit_foreign' => $amount],
+                ],
+            ]);
+        };
+        $post('2024-12-31', 'STANDARD', '10.25');
+        $post('2025-01-01', 'OPENING', '10.25');
+        $post('2025-02-01', 'STANDARD', '20.55');
+        $post('2025-12-30', 'ADJUSTMENT', '5.10');
+
+        $post('2025-02-02', 'STANDARD', '200.00', $credit, $revenue);
+
+        return $post('2025-12-31', 'CLOSING', '200.00', $revenue, $retained);
+    });
+
+    $url = TAX_CLOSE_PATH.'/trial-balance';
+    $this->getJson($url)->assertOk()->assertJsonPath('data.opening_ambiguous', true)
+        ->assertJsonPath('data.balanced', false);
+    $this->getJson($url.'?opening=entry')->assertOk()->assertJsonPath('data.balanced', true)
+        ->assertJsonPath('data.rows.0.code', '1041')->assertJsonPath('data.rows.0.accounts.0', '104101')
+        ->assertJsonPath('data.rows.0.opening_debit', '10.2500')
+        ->assertJsonPath('data.rows.0.movement_debit', '25.6500')
+        ->assertJsonPath('data.rows.0.transfer_debit', '0.0000')
+        ->assertJsonPath('data.totals.transfer_debit', '200.0000');
+
+    $statements = '/api/v1/accounting/reports/financial-snapshot?as_of=2025-12-31';
+    $this->getJson($statements)->assertOk()
+        ->assertJsonPath('data.income_statement.net', '200.0000')
+        ->assertJsonPath('data.totals.result', '0.0000');
+    $this->seedMonthlyConfirmation((int) $this->company->id, (int) $this->user->id, '2025-12');
+    $this->postJson('/api/v1/accounting/journal-entries/'.$closing->id.'/reverse', [
+        'fiscal_period_id' => $closing->fiscal_period_id, 'reversal_date' => '2025-12-31',
+        'reason' => 'Extornar el cierre de prueba',
+    ])->assertCreated();
+    $this->getJson($url.'?opening=historical')->assertOk()
+        ->assertJsonPath('data.rows.0.opening_debit', '10.2500')
+        ->assertJsonPath('data.rows.0.movement_debit', '25.6500')
+        ->assertJsonPath('data.totals.transfer_debit', '400.0000')
+        ->assertJsonPath('data.totals.transfer_credit', '400.0000');
+    $this->getJson($statements)->assertOk()
+        ->assertJsonPath('data.income_statement.net', '200.0000')
+        ->assertJsonPath('data.totals.result', '200.0000');
+});
+
+it('calculates effective interest and keeps the company tax limit independent of the loan schedule', function (): void {
+    $url = '/api/v1/accounting/financial-auxiliaries/loan';
+    $input = [
+        'principal' => '1100', 'transaction_costs' => '100', 'payments' => ['550', '605'],
+        'apply_ebitda_limit' => true, 'previous_tax_ebitda' => '800',
+        'tax_interest_expense' => '370', 'tax_interest_income' => '70',
+    ];
+    $this->postJson($url, $input)->assertOk()
+        ->assertJsonPath('data.initial_carrying_amount', '1000.00')
+        ->assertJsonPath('data.effective_monthly_percent', '10.00000000')
+        ->assertJsonPath('data.effective_annual_percent', '213.84283767')
+        ->assertJsonPath('data.rows.0.effective_interest', '100.00')
+        ->assertJsonPath('data.rows.1.effective_interest', '55.00')
+        ->assertJsonPath('data.rows.1.closing', '0.00')
+        ->assertJsonPath('data.ebitda_limit', '240.00')
+        ->assertJsonPath('data.tax_excess', '60.00');
+    $input['apply_ebitda_limit'] = false;
+    $this->postJson($url, $input)->assertOk()->assertJsonPath('data.ebitda_limit', null);
+    $input['transaction_costs'] = '1100';
+    $this->postJson($url, $input)->assertUnprocessable()->assertJsonValidationErrors('payments');
+});
+
+it('separates useful life and availability for use from the fiscal months and recorded cap', function (): void {
+    $url = '/api/v1/accounting/financial-auxiliaries/asset';
+    $input = [
+        'book_cost' => '12000', 'residual' => '2000', 'useful_months' => 12, 'available_from' => '2025-01-01',
+        'tax_cost' => '12000', 'tax_category' => 'DATA_EQUIPMENT', 'tax_use_from' => '2025-07-20',
+        'last_eligible_month' => 12, 'prior_tax_depreciation' => '0', 'recorded_depreciation' => '1300',
+    ];
+    $this->postJson($url, $input)->assertOk()->assertJsonCount(12, 'data.rows')
+        ->assertJsonPath('data.book_depreciation', '10000.00')
+        ->assertJsonPath('data.book_carrying_amount', '2000.00')
+        ->assertJsonPath('data.tax_rate', '25')
+        ->assertJsonPath('data.tax_months', 6)
+        ->assertJsonPath('data.tax_depreciation_limit', '1500.00')
+        ->assertJsonPath('data.tax_depreciation', '1300.00')
+        ->assertJsonPath('data.tax_base_closing', '10700.00')
+        ->assertJsonPath('data.period_adjustment', '8700.00')
+        ->assertJsonPath('data.carrying_vs_tax_base', '-8700.00');
+    $input['stop_on'] = '2025-07-01';
+    $input['last_eligible_month'] = 6;
+    $this->postJson($url, $input)->assertOk()
+        ->assertJsonPath('data.rows.7.book_depreciation', '0.00')
+        ->assertJsonPath('data.tax_depreciation', '0.00');
+    $input['residual'] = '12000.01';
+    $this->postJson($url, $input)->assertUnprocessable()->assertJsonValidationErrors('book_cost');
+});
+
+it('uses independent SUNAT dates for each RUC group including digit zero', function (): void {
+    $base = '/api/v1/catalogs/tax-calendar-deadlines/2026';
+    $this->getJson($base.'?month=10&last_digit_ruc=0')->assertOk()->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.electronic_books_deadline', '2026-11-13')
+        ->assertJsonPath('data.0.tax_returns_deadline', '2026-11-16');
+    foreach ([4, 5] as $digit) {
+        $this->getJson($base.'?month=10&last_digit_ruc='.$digit)->assertOk()
+            ->assertJsonPath('data.0.electronic_books_deadline', '2026-11-18')
+            ->assertJsonPath('data.0.tax_returns_deadline', '2026-11-19');
+    }
+    $this->getJson($base.'?month=12&last_digit_ruc=BC')->assertOk()
+        ->assertJsonPath('data.0.electronic_books_deadline', '2027-01-25')
+        ->assertJsonPath('data.0.tax_returns_deadline', '2027-01-26');
+    $this->getJson($base.'?month=13')->assertUnprocessable();
+});
+
+it('combines the active company RUC, book obligations, and a supported individual extension', function (): void {
+    $this->company->update(['tax_id' => substr($this->company->tax_id, 0, -1).'4']);
+    $this->tenant->run((int) $this->company->id, function (): void {
+        DB::table('company_settings')->insert([
+            'company_id' => $this->company->id,
+            'base_currency_id' => DB::table('currencies')->where('code', 'PEN')->value('id'),
+            'tax_regime' => 'GENERAL', 'default_vat_rate' => '18.00',
+        ]);
+        $revision = [
+            'company_id' => $this->company->id, 'fiscal_year' => 2026,
+            'default_vat_rate' => '18.00', 'change_reason' => 'Cambio de régimen de prueba',
+            'created_by' => $this->user->id,
+        ];
+        DB::table('company_fiscal_profiles')->insert([
+            $revision + ['revision' => 1, 'effective_date' => '2026-01-01', 'tax_regime' => 'RER'],
+            $revision + ['revision' => 2, 'effective_date' => '2026-07-01', 'tax_regime' => 'GENERAL'],
+        ]);
+    });
+    $url = '/api/v1/company/sunat-calendar/2026';
+    $original = $this->getJson($url)->assertOk()->assertJsonCount(26, 'data.books')
+        ->assertJsonPath('data.revision', 0)
+        ->assertJsonPath('data.regimes.6', 'RER')->assertJsonPath('data.regimes.7', 'GENERAL');
+    $events = collect($original->json('data.events'))->where('period', '2026-10')->keyBy('code');
+    expect($events['8']['date'])->toBe('2026-11-18');
+    expect($events['14']['date'])->toBe('2026-11-18');
+    expect($events['MONTHLY']['date'])->toBe('2026-11-19');
+    expect($events->has('5'))->toBeFalse();
+
+    $profile = $original->json('data.profile');
+    $profile['income_band'] = 'OVER_1700';
+    $profile['extra_books'] = ['7','13'];
+    $profile['inventory_electronic'] = true;
+    $profile['plame'] = true;
+    $profile['itan'] = 'INSTALLMENTS';
+    $profile['overrides'] = [[
+        'code' => 'MONTHLY', 'label' => 'FV 621', 'type' => 'tax', 'period' => '2026-10',
+        'date' => '2026-11-30', 'reference' => 'Constancia de prórroga de prueba',
+    ]];
+    $response = $this->putJson($url, ['profile' => $profile, 'expected_revision' => 0])
+        ->assertOk()->assertJsonPath('data.revision', 1);
+    $events = collect($response->json('data.events'))->keyBy(fn ($row) => $row['code'].':'.$row['period']);
+    expect($events['MONTHLY:2026-10']['date'])->toBe('2026-11-30');
+    expect($events['8:2026-10']['date'])->toBe('2026-11-18');
+    expect($events['5:2026-10']['date'])->toBe('2027-02-02');
+    expect($events->has('5:2026-06'))->toBeFalse();
+    expect($events->has('5:2026-07'))->toBeTrue();
+    expect($events['ITAN:2026-10']['date'])->toBe('2026-11-19');
+    expect($events->has('7:2026'))->toBeTrue();
+    expect($events->has('13:2026-06'))->toBeTrue();
+    expect($events->has('13:2026-10'))->toBeFalse();
+
+    $this->putJson($url, ['profile' => $profile, 'expected_revision' => 0])->assertConflict();
+    $other = Company::query()->create([
+        'tax_id' => '20'.random_int(100000000, 999999999),
+        'business_name' => 'Otra empresa', 'legal_address' => 'DEV', 'is_active' => true,
+    ]);
+    $this->getJson($url, ['X-Company-Id' => (string) $other->id])->assertForbidden();
+});
+
+it('stores auxiliary revisions with supporting references and preserves the original calculation', function (): void {
+    $url = '/api/v1/accounting/financial-auxiliaries/loan/records';
+    $input = [
+        'principal' => '1100', 'transaction_costs' => '100', 'payments' => ['550', '605'],
+        'apply_ebitda_limit' => false, 'previous_tax_ebitda' => '0',
+        'tax_interest_expense' => '0', 'tax_interest_income' => '0',
+        'reference' => 'PRESTAMO-01', 'label' => 'Préstamo banco de prueba',
+        'source_reference' => 'Contrato de prueba', 'expected_revision' => 0,
+    ];
+    $this->postJson($url, $input)->assertCreated()->assertJsonPath('revision', 1);
+    $this->postJson($url, $input)->assertConflict();
+    $input['expected_revision'] = 1;
+    $input['payments'] = ['560', '610'];
+    $this->postJson($url, $input)->assertCreated()->assertJsonPath('revision', 2);
+    $this->getJson($url)->assertOk()->assertJsonCount(1, 'data.data')->assertJsonPath('data.data.0.revision', 2);
+    $this->getJson($url.'?reference=PRESTAMO-01&revision=1')->assertOk()
+        ->assertJsonPath('data.inputs.payments.0', '550')
+        ->assertJsonPath('data.result.initial_carrying_amount', '1000.00');
+    $this->getJson($url.'?reference=PRESTAMO-01')->assertOk()->assertJsonPath('data.inputs.payments.0', '560');
+});

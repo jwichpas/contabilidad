@@ -52,6 +52,7 @@ beforeEach(function (): void {
     });
 
     // El FK compuesto exige la membresía antes de establecer la empresa actual.
+    $this->seedMonthlyConfirmation((int) $this->company->id, (int) $this->user->id, '2026-10');
     $this->user->update(['current_company_id' => $this->company->id]);
 
     // Instalar el PCGE versionado por el mismo proceso de alta que usa la aplicación.

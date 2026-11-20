@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import {
   ArrowLeftRight,
+  Bell,
   ChevronRight,
   LogOut,
   Menu,
@@ -31,6 +32,7 @@ const props = defineProps<{
   readonly isLiveConnected: boolean;
   readonly isSwitchingCompany: boolean;
   readonly isSidebarCollapsed: boolean;
+  readonly monthlyAlertCount: number;
   readonly headerUsdRate: { readonly buy_rate: string; readonly sell_rate: string } | null;
   readonly headerRateDate: string;
   readonly headerRateStatus: 'loading' | 'unavailable' | 'unrecorded' | 'not-applicable' | 'recorded';
@@ -41,6 +43,7 @@ const emit = defineEmits<{
   (e: 'open-mobile'): void;
   (e: 'switch-company', companyId: CompanyId): void;
   (e: 'logout'): void;
+  (e: 'open-monthly'): void;
 }>();
 
 const companyOptions = computed<readonly UiSelectOption<string>[]>(() => {
@@ -79,6 +82,7 @@ const activeCompanyIdString = computed<string>({
         type="button"
         class="lg:hidden inline-flex items-center justify-center w-8 h-8 rounded-md border border-line bg-surf text-foreground hover:bg-soft cursor-pointer"
         aria-label="Abrir navegación"
+        aria-controls="workspace-sidebar"
         @click="emit('open-mobile')"
       >
         <Menu class="w-4 h-4" />
@@ -117,6 +121,20 @@ const activeCompanyIdString = computed<string>({
               ? 'Libro Diario Bimoneda (Vouchers Contables)'
               : currentModule === 'fiscal-periods'
                 ? 'Períodos contables · Cierre y auditoría'
+              : currentModule === 'loans'
+                ? 'Préstamos recibidos'
+              : currentModule === 'fixed-assets'
+                ? 'Activos fijos'
+              : currentModule === 'payroll'
+                ? 'Gestión de planillas'
+              : currentModule === 'external-tax-reports'
+                ? 'DAOT y PDB Exportadores'
+              : currentModule === 'monthly-work'
+                ? 'Agenda contable mensual'
+              : currentModule === 'sunat-calendar'
+                ? 'Vencimientos SUNAT'
+              : currentModule === 'annual-tax-close'
+                ? 'Cierre tributario anual'
               : currentModule === 'financial-statements'
                 ? 'Estado de situación financiera · Preliminar'
               : currentModule === 'cost-centers'
@@ -139,6 +157,11 @@ const activeCompanyIdString = computed<string>({
 
     <!-- Derecha: Indicadores Financieros Bimoneda (TC SUNAT), Periodo y Selector Móvil -->
     <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+      <button type="button" class="inline-flex min-h-8 items-center gap-1 rounded-md border border-line bg-surf px-2 text-xs"
+        :aria-label="`Agenda mensual, ${monthlyAlertCount} alertas`" title="Agenda y alertas de vencimiento" @click="emit('open-monthly')">
+        <Bell class="size-4" aria-hidden="true" />
+        <span v-if="monthlyAlertCount" class="font-semibold text-neg" aria-hidden="true">{{ monthlyAlertCount }}</span>
+      </button>
       <!-- Selector rápido de empresa en móvil/tablet -->
       <div class="hidden w-40 sm:block lg:hidden">
         <UiSelect

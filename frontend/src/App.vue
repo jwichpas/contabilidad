@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import { Loader2 } from 'lucide-vue-next';
 import { Toaster } from 'vue-sonner';
@@ -16,6 +16,7 @@ import { Toaster } from 'vue-sonner';
 
 
 
+import type { TaxJournalDraft } from './modules/accounting/types/annualTaxClose.types';
 import type { CompanyOnboardingResult } from './modules/company/types/companyOnboarding.types';
 import UiViewLoading from './shared/ui/UiViewLoading.vue';
 import UiViewLoadError from './shared/ui/UiViewLoadError.vue';
@@ -84,6 +85,42 @@ const FiscalPeriodsView = defineAsyncComponent({
   loadingComponent: UiViewLoading,
   errorComponent: UiViewLoadError,
   delay: 120,
+});
+
+const FinancialAuxiliaryView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/FinancialAuxiliaryView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const PayrollWorkspaceView = defineAsyncComponent({
+  loader: () => import('./modules/payroll/PayrollWorkspaceView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+});
+const ExternalTaxReportsView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/ExternalTaxReportsView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+});
+const MonthlyWorkView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/MonthlyWorkView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+});
+const SunatCalendarView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/SunatCalendarView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 120,
+});
+
+const AnnualTaxCloseView = defineAsyncComponent({
+  loader: () => import('./modules/accounting/views/AnnualTaxCloseView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+  delay: 150,
 });
 
 const FinancialStatementsView = defineAsyncComponent({
@@ -229,6 +266,30 @@ const headerRateStatus = computed<'loading' | 'unavailable' | 'unrecorded' | 'no
   return headerUsdRate.value ? 'recorded' : 'unrecorded';
 });
 
+const monthlyCurrent = computed(() => headerFxDate.value.slice(0, 7));
+const monthlyOpenPeriod = ref<string | null>(null);
+watch(activeCompanyId, () => { monthlyOpenPeriod.value = null; });
+const monthlyWorkKey = computed(() => ['monthly-work-alerts', activeCompanyId.value, monthlyCurrent.value]);
+const monthlyWorkAlerts = useQuery({
+  queryKey: monthlyWorkKey,
+  enabled: computed(() => isAuthenticated.value && !isSwitchingCompany.value && !!accessToken.value),
+  refetchInterval: 300_000,
+  queryFn: async () => {
+    const companyId = activeCompanyId.value;
+    const token = accessToken.value;
+    const { AccountingApiClient } = await import('./modules/accounting/api/httpClient');
+    const client = new AccountingApiClient('', {
+      getActiveCompanyId: () => companyId, getAccessToken: () => token,
+    });
+    return client.fetchMonthlyAlerts();
+  },
+});
+
+function openMonthlyWork(period = monthlyCurrent.value): void {
+  monthlyOpenPeriod.value = period;
+  handleNavigate('monthly-work');
+}
+
 function refreshHeaderDate(): void {
   headerFxDate.value = peruAccountingDate();
 }
@@ -245,6 +306,13 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('nueva-empresa') || hash.includes('company-create')) return 'company-create';
   if (hash.includes('periodos') || hash.includes('fiscal-periods')) return 'fiscal-periods';
   if (hash.includes('flujo-efectivo') || hash.includes('cash-flow')) return 'cash-flow';
+  if (hash.includes('prestamos')) return 'loans';
+  if (hash.includes('activos-fijos')) return 'fixed-assets';
+  if (hash.includes('gestion-de-planillas')) return 'payroll';
+  if (hash.includes('daot-pdb')) return 'external-tax-reports';
+  if (hash.includes('agenda-contable')) return 'monthly-work';
+  if (hash.includes('vencimientos-sunat')) return 'sunat-calendar';
+  if (hash.includes('cierre-tributario')) return 'annual-tax-close';
   if (hash.includes('estados-financieros') || hash.includes('financial-statements')) return 'financial-statements';
   if (hash.includes('historial-fiscal') || hash.includes('fiscal-history')) return 'fiscal-history';
   if (hash.includes('anexos') || hash.includes('terceros') || hash.includes('entities')) return 'entities';
@@ -267,6 +335,14 @@ function syncHashWithModule(): void {
   currentModule.value = resolveModuleFromHash();
 }
 
+const taxJournalDraft = shallowRef<{ company: CompanyId; draft: TaxJournalDraft } | null>(null);
+watch([activeCompanyId, accessToken], () => { taxJournalDraft.value = null; });
+
+function openTaxJournal(draft: TaxJournalDraft) {
+  taxJournalDraft.value = { company: activeCompanyId.value, draft };
+  handleNavigate('journal');
+}
+
 function handleNavigate(mod: NavigationModule): void {
   if (isSwitchingCompany.value) return;
   currentModule.value = mod;
@@ -284,6 +360,20 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#catalogos-sunat';
   } else if (mod === 'fiscal-periods') {
     window.location.hash = '#periodos';
+  } else if (mod === 'loans') {
+    window.location.hash = '#prestamos';
+  } else if (mod === 'fixed-assets') {
+    window.location.hash = '#activos-fijos';
+  } else if (mod === 'payroll') {
+    window.location.hash = '#gestion-de-planillas';
+  } else if (mod === 'external-tax-reports') {
+    window.location.hash = '#daot-pdb';
+  } else if (mod === 'monthly-work') {
+    window.location.hash = '#agenda-contable';
+  } else if (mod === 'sunat-calendar') {
+    window.location.hash = '#vencimientos-sunat';
+  } else if (mod === 'annual-tax-close') {
+    window.location.hash = '#cierre-tributario';
   } else if (mod === 'financial-statements') {
     window.location.hash = '#estados-financieros';
   } else if (mod === 'cash-flow') {
@@ -327,9 +417,14 @@ async function handleCompanyCreated(result: CompanyOnboardingResult): Promise<vo
   if (switched) handleNavigate('company');
 }
 
+function closeMobileNavigationAtDesktop() {
+  if (window.matchMedia('(min-width: 1024px)').matches) isMobileDrawerOpen.value = false;
+}
+
 onMounted(async () => {
   syncHashWithModule();
   window.addEventListener('hashchange', syncHashWithModule);
+  window.addEventListener('resize', closeMobileNavigationAtDesktop);
   window.addEventListener('focus', refreshHeaderDate);
   document.addEventListener('visibilitychange', refreshHeaderDate);
   try {
@@ -341,6 +436,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('hashchange', syncHashWithModule);
+  window.removeEventListener('resize', closeMobileNavigationAtDesktop);
   window.removeEventListener('focus', refreshHeaderDate);
   document.removeEventListener('visibilitychange', refreshHeaderDate);
 });
@@ -410,6 +506,7 @@ watch(
       :user-companies="userCompanies"
       :active-company="activeCompany"
       :is-dark-mode="isDarkMode"
+      :can-manage-payroll="canDeactivateEntities"
       :is-switching-company="isSwitchingCompany"
       @navigate="handleNavigate"
       @switch-company="handleSwitchCompany"
@@ -419,7 +516,7 @@ watch(
     />
 
     <!-- Contenedor Principal (Header Superior + Área de Trabajo Modular) -->
-    <div class="app-panel flex-1 flex flex-col min-w-0">
+    <div class="app-panel flex-1 flex flex-col min-w-0" :inert="isMobileDrawerOpen">
       <!-- Componente Modular: Cabecera Superior (Header) -->
       <AppHeader
         :current-module="currentModule"
@@ -433,6 +530,8 @@ watch(
         :header-usd-rate="headerUsdRate"
         :header-rate-date="formatAccountingDate(headerFxDate)"
         :header-rate-status="headerRateStatus"
+        :monthly-alert-count="monthlyWorkAlerts.data.value?.count ?? 0"
+        @open-monthly="openMonthlyWork(monthlyWorkAlerts.data.value?.target)"
         @toggle-collapse="isSidebarCollapsed = !isSidebarCollapsed"
         @open-mobile="isMobileDrawerOpen = true"
         @switch-company="handleSwitchCompany"
@@ -447,6 +546,11 @@ watch(
         </div>
         <div v-if="companySwitchError" role="alert" class="mb-4 rounded-lg border border-danger bg-surface p-3 text-sm text-danger">
           {{ companySwitchError }} Revise el editor antes de continuar; el intento de cambio pudo descartar el borrador.
+        </div>
+        <div v-if="monthlyWorkAlerts.data.value?.needsConfirmation && currentModule !== 'monthly-work'" role="status"
+          class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surf p-3 text-sm">
+          <span>Confirme las obligaciones y vencimientos de {{ monthlyCurrent }} para registrar operaciones del periodo.</span>
+          <button type="button" class="ui-btn ui-btn-secondary" @click="openMonthlyWork()">Abrir agenda mensual</button>
         </div>
         <AccountingCatalogView
           v-if="currentModule === 'catalog'"
@@ -471,6 +575,8 @@ watch(
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
           @posting-change="isJournalSubmitting = $event"
+          :tax-draft="taxJournalDraft?.company === activeCompanyId ? taxJournalDraft.draft : undefined"
+          @tax-draft-consumed="taxJournalDraft = null"
         />
         <DocumentJournalView
           v-else-if="currentModule === 'purchases' || currentModule === 'sales'"
@@ -488,6 +594,63 @@ watch(
           :active-company-id="activeCompanyId"
           :get-access-token="() => accessToken"
           :can-manage-periods="canManagePeriods"
+        />
+        <FinancialAuxiliaryView
+          v-else-if="currentModule === 'loans' || currentModule === 'fixed-assets'"
+          :key="currentModule + '-' + activeCompanyId"
+          :mode="currentModule === 'loans' ? 'loan' : 'asset'"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-edit="canManageEntities"
+        />
+        <template v-else-if="currentModule === 'payroll'">
+          <PayrollWorkspaceView v-if="canDeactivateEntities"
+            :key="`payroll-${activeCompanyId}`"
+            :active-company-id="activeCompanyId"
+            :get-access-token="() => accessToken"
+            :ruc="activeCompany.taxId"
+            @journal="openTaxJournal"
+          />
+          <p v-else role="alert" class="rounded-lg border border-line bg-surf p-4">Gestión de planillas requiere permisos de administrador o contador jefe.</p>
+        </template>
+        <ExternalTaxReportsView
+          v-else-if="currentModule === 'external-tax-reports'"
+          :key="`external-tax-reports-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-edit="canManageEntities"
+          @calendar="handleNavigate('sunat-calendar')"
+        />
+        <MonthlyWorkView
+          v-else-if="currentModule === 'monthly-work'"
+          :key="`monthly-${activeCompanyId}-${monthlyOpenPeriod ?? monthlyCurrent}`"
+          :initial-month="monthlyOpenPeriod ?? monthlyCurrent"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-edit="canManageEntities"
+          :can-confirm="canDeactivateEntities"
+          @calendar="handleNavigate('sunat-calendar')"
+          @assets="handleNavigate('fixed-assets')"
+          @prepare-journal="openTaxJournal"
+          @updated="queryClient.invalidateQueries({ queryKey: monthlyWorkKey })"
+        />
+        <SunatCalendarView
+          v-else-if="currentModule === 'sunat-calendar'"
+          :key="`sunat-calendar-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :get-access-token="() => accessToken"
+          :can-edit="canDeactivateEntities"
+        />
+        <AnnualTaxCloseView
+          v-else-if="currentModule === 'annual-tax-close'"
+          :key="`annual-tax-close-${activeCompanyId}`"
+          :active-company-id="activeCompanyId"
+          :company-name="activeCompany.businessName"
+          :company-tax-id="activeCompany.taxId"
+          :get-access-token="() => accessToken"
+          :can-edit="canManageEntities"
+          :can-review="canDeactivateEntities"
+          @prepare-journal="openTaxJournal"
         />
         <FinancialStatementsView
           v-else-if="currentModule === 'financial-statements' || currentModule === 'cash-flow'"

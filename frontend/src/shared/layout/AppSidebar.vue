@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import {
   ArrowLeftRight,
   BookOpen,
   ShoppingCart,
   Receipt,
+  Search,
+  Landmark,
+  Package,
   CalendarRange,
   Building2,
   CirclePlus,
   FileBarChart2,
   FolderTree,
   Users,
+  LockKeyhole,
   FileClock,
   Globe2,
   LogOut,
@@ -33,6 +37,7 @@ const props = defineProps<{
   readonly userCompanies: readonly UserCompany[];
   readonly activeCompany: ActiveCompanyInfo;
   readonly isDarkMode: boolean;
+  readonly canManagePayroll: boolean;
   readonly isSwitchingCompany: boolean;
 }>();
 
@@ -68,30 +73,101 @@ const activeCompanyIdString = computed<string>({
     emit('switch-company', Number(val) as CompanyId);
   },
 });
+const expanded = computed(() => !props.isCollapsed || props.isOpenMobile);
+const query = ref('');
+const closeButton = ref<HTMLButtonElement>();
+const normalize = (value: string) => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+const groups = [
+  { label: 'Operaciones', items: [
+    { module: 'journal', label: 'Libro Diario', icon: BookOpen },
+    { module: 'purchases', label: 'Registro de compras', icon: ShoppingCart },
+    { module: 'sales', label: 'Registro de ventas', icon: Receipt },
+    { module: 'payroll', label: 'Gestión de planillas', icon: Users },
+    { module: 'exchange-rates', label: 'Tipo de cambio', icon: ArrowLeftRight },
+  ] },
+  { label: 'Cierre y reportes', items: [
+    { module: 'monthly-work', label: 'Agenda contable mensual', icon: CalendarRange },
+    { module: 'external-tax-reports', label: 'DAOT y PDB Exportadores', icon: CalendarRange },
+    { module: 'sunat-calendar', label: 'Vencimientos SUNAT', icon: CalendarRange },
+    { module: 'annual-tax-close', label: 'Cierre tributario anual', icon: Receipt },
+    { module: 'financial-statements', label: 'Estados financieros', icon: FileBarChart2 },
+    { module: 'cash-flow', label: 'Flujo de efectivo', icon: Wallet },
+    { module: 'fiscal-periods', label: 'Periodos contables', icon: CalendarRange },
+  ] },
+  { label: 'Auxiliares', items: [
+    { module: 'loans', label: 'Préstamos recibidos', icon: Landmark },
+    { module: 'fixed-assets', label: 'Activos fijos', icon: Package },
+  ] },
+  { label: 'Maestros', items: [
+    { module: 'catalog', label: 'Plan contable', icon: FolderTree },
+    { module: 'entities', label: 'Terceros y anexos', icon: Users },
+    { module: 'subdiaries', label: 'Maestro de subdiarios', icon: BookOpen },
+    { module: 'cost-centers', label: 'Centros de costo', icon: FolderTree },
+  ] },
+  { label: 'Empresa', items: [
+    { module: 'company', label: 'Datos de empresa', icon: Building2 },
+    { module: 'fiscal-history', label: 'Historial fiscal', icon: FileClock },
+    { module: 'company-create', label: 'Nueva empresa', icon: CirclePlus },
+  ] },
+  { label: 'Referencias', items: [
+    { module: 'see-references', label: 'Catálogos SEE', icon: Globe2 },
+    { module: 'sunat-references', label: 'Catálogos SUNAT y PLE', icon: FolderTree },
+  ] },
+] as const;
+const visibleGroups = computed(() => {
+  const term = expanded.value ? normalize(query.value.trim()) : '';
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => normalize(group.label + ' ' + item.label).includes(term)),
+  })).filter((group) => group.items.length);
+});
+
+let previousFocus: HTMLElement | null = null;
+watch(() => props.isOpenMobile, async (open) => {
+  if (open) {
+    previousFocus = document.activeElement as HTMLElement | null;
+    await nextTick();
+    closeButton.value?.focus();
+  } else {
+    query.value = '';
+    await nextTick();
+    previousFocus?.focus();
+    previousFocus = null;
+  }
+});
+
+function navigate(module: NavigationModule) {
+  query.value = '';
+  emit('navigate', module);
+}
 </script>
 
 <template>
-  <div>
+  <div class="lg:sticky lg:top-0 lg:h-dvh lg:shrink-0 lg:self-start lg:z-50">
     <!-- Backdrop para Drawer Móvil (< lg) -->
     <div
       v-if="isOpenMobile"
-      class="fixed inset-0 z-40 bg-slate-950/65 backdrop-blur-xs lg:hidden"
+      class="fixed inset-0 z-40 bg-black/55 backdrop-blur-xs lg:hidden"
       @click="emit('close-mobile')"
     />
 
     <!-- Barra Lateral Corporativa (Fija en Desktop, Drawer en Móvil/Tablet) -->
     <aside
+      id="workspace-sidebar"
+      :role="isOpenMobile ? 'dialog' : undefined"
+      :aria-modal="isOpenMobile ? true : undefined"
       :class="[
-        'app-sidebar flex flex-col justify-between overflow-y-auto overscroll-contain border-r border-line transition-[width] duration-200 z-50 shrink-0 font-sans',
+        'app-sidebar grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-r border-line transition-[width] duration-200 z-50 shrink-0 font-sans',
         isOpenMobile
-          ? 'fixed inset-y-0 left-0 w-72 shadow-2xl'
-          : 'hidden lg:flex lg:sticky lg:top-0 lg:h-screen',
+          ? 'fixed inset-y-0 left-0 w-[min(19rem,90vw)] shadow-2xl'
+          : 'hidden lg:grid lg:h-full',
         !isOpenMobile && (isCollapsed ? 'lg:w-16' : 'lg:w-[17.5rem]'),
       ]"
       aria-label="Menú principal del ERP Contable"
+      @keydown.esc="isOpenMobile && emit('close-mobile')"
     >
       <!-- Cabecera de Marca + Selector Multi-Tenant -->
-      <div class="p-3.5 space-y-4">
+      <header class="app-sidebar-header space-y-3 border-b border-line p-3">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
             <div
@@ -113,6 +189,7 @@ const activeCompanyIdString = computed<string>({
 
           <button
             type="button"
+            ref="closeButton"
             class="lg:hidden rounded-md p-1.5 text-muted hover:bg-hover hover:text-foreground cursor-pointer"
             aria-label="Cerrar menú lateral"
             @click="emit('close-mobile')"
@@ -131,7 +208,6 @@ const activeCompanyIdString = computed<string>({
               <Building2 class="w-3.5 h-3.5" />
               Empresa activa
             </span>
-            <span class="text-[10px] font-medium text-pos">Seleccionada</span>
           </div>
 
           <UiSelect
@@ -149,306 +225,34 @@ const activeCompanyIdString = computed<string>({
           </div>
         </div>
 
-        <!-- Navegación Modular del ERP -->
-        <nav class="app-sidebar-nav space-y-4 pt-1" aria-label="Módulos contables">
-          <div class="space-y-1">
-            <p
-              v-if="!isCollapsed || isOpenMobile"
-              class="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
-            >
-              Contabilidad General
-            </p>
+        <label v-if="expanded" class="ui-input-group">
+          <Search class="size-4" aria-hidden="true" />
+          <span class="sr-only">Buscar módulo</span>
+          <input v-model="query" type="search" class="min-h-9 w-full pl-9 text-sm" placeholder="Buscar módulo">
+        </label>
+      </header>
 
-            <!-- Directorio multiempresa de terceros / anexos -->
-            <button
-              type="button"
-              :class="[
-                'w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
-                currentModule === 'entities'
-                  ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]'
-                  : 'text-muted hover:bg-hover hover:text-foreground',
-              ]"
-              title="Directorio de clientes, proveedores, trabajadores y otros anexos"
-              aria-label="Terceros y anexos"
-              :aria-current="currentModule === 'entities' ? 'page' : undefined"
-              @click="emit('navigate', 'entities')"
-            >
-              <Users class="h-4 w-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Terceros y Anexos</span>
-            </button>
+      <nav class="app-sidebar-nav min-h-0 space-y-4 overflow-x-hidden overflow-y-auto overscroll-y-contain px-2 py-3"
+        aria-label="Módulos contables">
+        <p v-if="!visibleGroups.length" role="status" class="p-2 text-muted">Sin módulos que coincidan.</p>
+        <section v-for="group in visibleGroups" :key="group.label" class="space-y-0.5">
+          <p v-if="expanded" class="px-2 pb-1 text-xs font-semibold text-muted">{{ group.label }}</p>
+          <button v-for="item in group.items" :key="item.module" type="button"
+            class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left"
+            :class="expanded ? 'justify-start' : 'justify-center'"
+            :aria-label="item.label"
+            :title="item.module === 'payroll' && !canManagePayroll ? 'Gestión de planillas · Acceso restringido' : item.label"
+            :aria-current="currentModule === item.module ? 'page' : undefined"
+            @click="navigate(item.module)">
+            <component :is="item.icon" class="size-4 shrink-0" aria-hidden="true" />
+            <span v-if="expanded" class="truncate">{{ item.label }}</span>
+            <LockKeyhole v-if="expanded && item.module === 'payroll' && !canManagePayroll"
+              class="ml-auto size-3.5 shrink-0 text-muted" aria-label="Acceso restringido" />
+          </button>
+        </section>
+      </nav>
 
-            <button type="button"
-              :class="[
-                'w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
-                currentModule === 'fiscal-history'
-                  ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]'
-                  : 'text-muted hover:bg-hover hover:text-foreground',
-              ]"
-              title="Historial de regímenes y parámetros fiscales por ejercicio"
-              aria-label="Historial fiscal"
-              :aria-current="currentModule === 'fiscal-history' ? 'page' : undefined"
-              @click="emit('navigate', 'fiscal-history')"
-            >
-              <FileClock class="h-4 w-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Historial fiscal</span>
-            </button>
-
-            <button type="button"
-              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
-                currentModule === 'subdiaries' ? 'bg-brand/10 text-foreground font-semibold' : 'text-muted hover:bg-hover hover:text-foreground']"
-              title="Crear, editar y desactivar los subdiarios de la empresa"
-              aria-label="Maestro de subdiarios"
-              :aria-current="currentModule === 'subdiaries' ? 'page' : undefined"
-              @click="emit('navigate', 'subdiaries')">
-              <BookOpen class="h-4 w-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Maestro de subdiarios</span>
-            </button>
-
-            <!-- Opción 1: Plan de Cuentas (PCGE) -->
-            <button type="button"
-              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all', currentModule === 'cost-centers' ? 'bg-brand/10 text-foreground font-semibold' : 'text-muted hover:bg-hover hover:text-foreground']"
-              title="Centros de costo y destinos contables"
-              aria-label="Centros de costo"
-              :aria-current="currentModule === 'cost-centers' ? 'page' : undefined"
-              @click="emit('navigate', 'cost-centers')"
-            >
-              <FolderTree class="h-4 w-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Centros de costo</span>
-            </button>
-
-            <button
-              type="button"
-              :class="[
-                'w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs transition-all cursor-pointer text-left',
-                currentModule === 'catalog'
-                  ? 'bg-brand/10 text-foreground opacity-100 shadow-[inset_3px_0_0_var(--brand)] font-semibold'
-                  : 'text-muted hover:bg-hover hover:text-foreground hover:opacity-100 font-medium',
-              ]"
-              title="Plan Contable General Empresarial (PCGE)"
-              aria-label="Plan de cuentas PCGE"
-              :aria-current="currentModule === 'catalog' ? 'page' : undefined"
-              @click="emit('navigate', 'catalog')"
-            >
-              <FolderTree class="w-4 h-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                Plan de Cuentas (PCGE)
-              </span>
-            </button>
-
-            <!-- Opción 2: Libro Diario Bimoneda (Ingreso de Asientos / Voucher) -->
-            <button
-              type="button"
-              :class="[
-                'w-full flex items-center justify-between px-3 py-2 rounded-md text-xs transition-all cursor-pointer text-left',
-                currentModule === 'journal'
-                  ? 'bg-brand/10 text-foreground opacity-100 shadow-[inset_3px_0_0_var(--brand)] font-semibold'
-                  : 'text-muted hover:bg-hover hover:text-foreground hover:opacity-100 font-medium',
-              ]"
-              title="Voucher Contable y Libro Diario Bimoneda (Ingreso de Asientos)"
-              aria-label="Libro diario bimoneda"
-              :aria-current="currentModule === 'journal' ? 'page' : undefined"
-              @click="emit('navigate', 'journal')"
-            >
-              <span class="flex items-center gap-2.5 truncate">
-                <BookOpen class="w-4 h-4 shrink-0" />
-                <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                  Libro Diario Bimoneda
-                </span>
-              </span>
-            </button>
-
-            <!-- Registro de comprobantes y sus asientos vinculados al libro diario -->
-            <button type="button"
-              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
-                currentModule === 'purchases' ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
-              :aria-current="currentModule === 'purchases' ? 'page' : undefined"
-              title="Comprobantes y asientos de compras" @click="emit('navigate', 'purchases')">
-              <ShoppingCart class="size-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Registro de Compras</span>
-            </button>
-            <button type="button"
-              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
-                currentModule === 'sales' ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
-              :aria-current="currentModule === 'sales' ? 'page' : undefined"
-              title="Comprobantes y asientos de ventas" @click="emit('navigate', 'sales')">
-              <Receipt class="size-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Registro de Ventas</span>
-            </button>
-
-            <!-- Gestión de períodos contables (F2.3) -->
-            <button
-              type="button"
-              :class="[
-                'w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs transition-all cursor-pointer text-left',
-                currentModule === 'fiscal-periods'
-                  ? 'bg-brand/10 text-foreground opacity-100 shadow-[inset_3px_0_0_var(--brand)] font-semibold'
-                  : 'text-muted hover:bg-hover hover:text-foreground font-medium',
-              ]"
-              title="Cierre, reapertura y bloqueo de períodos contables"
-              aria-label="Períodos contables"
-              :aria-current="currentModule === 'fiscal-periods' ? 'page' : undefined"
-              @click="emit('navigate', 'fiscal-periods')"
-            >
-              <CalendarRange class="w-4 h-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Períodos contables</span>
-            </button>
-
-            <!-- Opción: Tipos de Cambio Diarios SUNAT / SBS -->
-            <button
-              type="button"
-              :class="[
-                'w-full flex items-center justify-between px-3 py-2 rounded-md text-xs transition-all cursor-pointer text-left',
-                currentModule === 'exchange-rates'
-                  ? 'bg-brand/10 text-foreground opacity-100 shadow-[inset_3px_0_0_var(--brand)] font-semibold'
-                  : 'text-muted hover:bg-hover hover:text-foreground hover:opacity-100 font-medium',
-              ]"
-              title="Registro y Consulta de Tipos de Cambio Diarios Oficiales (SUNAT & SBS)"
-              aria-label="Tipos de cambio diarios"
-              :aria-current="currentModule === 'exchange-rates' ? 'page' : undefined"
-              @click="emit('navigate', 'exchange-rates')"
-            >
-              <span class="flex items-center gap-2.5 truncate">
-                <ArrowLeftRight class="w-4 h-4 shrink-0" />
-                <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                  Tipos de Cambio Diarios
-                </span>
-              </span>
-            </button>
-
-
-          </div>
-
-          <div class="space-y-1">
-            <p
-              v-if="!isCollapsed || isOpenMobile"
-              class="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
-            >
-              Tesorería y reportes
-            </p>
-
-            <button
-              type="button"
-              :class="['flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-colors',
-                currentModule === 'cash-flow' ? 'bg-brand/10 font-semibold text-foreground shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
-              title="Estado de flujos de efectivo: movimientos de efectivo y equivalentes (NIC 7)"
-              aria-label="Flujo de efectivo"
-              :aria-current="currentModule === 'cash-flow' ? 'page' : undefined"
-              @click="emit('navigate', 'cash-flow')"
-            >
-              <Wallet class="h-4 w-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                Flujo de Efectivo (Cta. 10)
-              </span>
-            </button>
-
-            <button
-              type="button"
-              :class="['flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-xs transition-colors',
-                currentModule === 'financial-statements' ? 'bg-brand/10 font-semibold text-foreground shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
-              title="Estado de situación financiera preliminar y balance de comprobación"
-              aria-label="Estados financieros"
-              :aria-current="currentModule === 'financial-statements' ? 'page' : undefined"
-              @click="emit('navigate', 'financial-statements')"
-            >
-              <span class="flex items-center gap-2.5 truncate">
-                <FileBarChart2 class="w-4 h-4 shrink-0 text-muted" />
-                <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                  Estados financieros
-                </span>
-              </span>
-            </button>
-          </div>
-
-          <!-- Referencias normativas globales, sin edición por empresa -->
-          <div class="space-y-1">
-            <p v-if="!isCollapsed || isOpenMobile" class="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted">Referencias globales</p>
-            <button type="button"
-              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
-                currentModule === 'see-references' ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
-              title="Catálogos SEE de facturación electrónica y ubigeo INEI, solo lectura"
-              aria-label="Catálogos SEE y Ubigeo"
-              :aria-current="currentModule === 'see-references' ? 'page' : undefined"
-              @click="emit('navigate', 'see-references')">
-              <Globe2 class="h-4 w-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Catálogos SEE y Ubigeo</span>
-            </button>
-            <button type="button"
-              :class="['w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
-                currentModule === 'sunat-references' ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]' : 'text-muted hover:bg-hover hover:text-foreground']"
-              title="Tablas SUNAT PLE/SIRE y anexos RUC, solo lectura"
-              aria-label="Tablas SUNAT PLE/SIRE y RUC"
-              :aria-current="currentModule === 'sunat-references' ? 'page' : undefined"
-              @click="emit('navigate', 'sunat-references')">
-              <BookOpen class="h-4 w-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Tablas SUNAT PLE/SIRE y RUC</span>
-            </button>
-          </div>
-
-          <!-- Módulo: Configuración & Régimen de Empresa -->
-          <div class="space-y-1">
-            <p
-              v-if="!isCollapsed || isOpenMobile"
-              class="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted"
-            >
-              Configuración
-            </p>
-
-            <button
-              type="button"
-              :class="[
-                'w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs transition-all',
-                currentModule === 'company-create'
-                  ? 'bg-brand/10 text-foreground font-semibold shadow-[inset_3px_0_0_var(--brand)]'
-                  : 'text-muted hover:bg-hover hover:text-foreground'
-              ]"
-              title="Asistente para crear una nueva empresa"
-              aria-label="Nueva empresa"
-              :aria-current="currentModule === 'company-create' ? 'page' : undefined"
-              @click="emit('navigate', 'company-create')"
-            >
-              <CirclePlus class="h-4 w-4 shrink-0" />
-              <span v-if="!isCollapsed || isOpenMobile" class="truncate">Nueva empresa</span>
-            </button>
-
-            <button
-              type="button"
-              :class="[
-                'w-full flex items-center justify-between px-3 py-2 rounded-md text-xs transition-all cursor-pointer text-left',
-                currentModule === 'company'
-                  ? 'bg-brand/10 text-foreground opacity-100 shadow-[inset_3px_0_0_var(--brand)] font-semibold'
-                  : 'text-muted hover:bg-hover hover:text-foreground hover:opacity-100 font-medium',
-              ]"
-              title="Configuración de la Empresa, Monedas de Trabajo y Tipos de Cambio"
-              aria-label="Datos de empresa"
-              :aria-current="currentModule === 'company' ? 'page' : undefined"
-              @click="emit('navigate', 'company')"
-            >
-              <span class="flex items-center gap-2.5 truncate">
-                <Building2 class="w-4 h-4 shrink-0" />
-                <span v-if="!isCollapsed || isOpenMobile" class="truncate">
-                  Datos de Empresa
-                </span>
-              </span>
-            </button>
-          </div>
-        </nav>
-      </div>
-
-      <!-- Pie de Barra Lateral: Motor Decimal C# + Modo Oscuro + Logout -->
-      <div class="p-3.5 border-t border-line space-y-2.5">
-        <div
-          v-if="!isCollapsed || isOpenMobile"
-          class="rounded-lg bg-surface border border-line p-2.5 text-[11px] space-y-1"
-        >
-          <div class="flex items-center justify-between text-muted">
-            <span>Cálculo contable</span>
-            <span class="font-mono text-pos font-semibold">Alta precisión</span>
-          </div>
-          <div class="font-mono text-[10px] text-muted">
-            Importes con precisión decimal
-          </div>
-        </div>
-
+      <footer class="app-sidebar-footer space-y-1 border-t border-line p-2.5">
         <button
           type="button"
           class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-line bg-surface px-3 py-2 text-xs font-medium text-foreground hover:bg-hover transition-colors cursor-pointer"
@@ -475,7 +279,7 @@ const activeCompanyIdString = computed<string>({
             Cerrar Sesión
           </span>
         </button>
-      </div>
+      </footer>
     </aside>
   </div>
 </template>

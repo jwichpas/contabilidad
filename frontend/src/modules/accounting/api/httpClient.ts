@@ -1,3 +1,7 @@
+import type { DaotReport, PdbInput, PdbReport } from '../types/externalTaxReports.types';
+import type { MonthlyPaper, MonthlyProfile, MonthlyWork, PayrollRow } from '../types/monthlyWork.types';
+import type { SunatCalendarProfile, SunatCalendarReport } from '../types/sunatCalendar.types';
+import type { TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseRevision, TaxCloseTrialBalance, TaxOpeningSource } from '../types/annualTaxClose.types';
 import { reportUnauthorizedBearer } from '@/shared/auth/sessionInvalidation';
 import {
   accountingAccountTreeApiResponseSchema,
@@ -613,6 +617,156 @@ export class AccountingApiClient {
     const query = new URLSearchParams({ account_id: String(accountId), from, to, page: String(page) });
     const result = await this.request<{ data: GeneralLedgerPage }>(
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
+    );
+    return result.data;
+  }
+
+  public async payrollRequest<T>(path: string, method = 'GET', body?: object): Promise<T> {
+    return (await this.request<{ data: T }>(`/api/v1/payroll/${path}`, {
+      method, body: body ? JSON.stringify(body) : undefined,
+    })).data;
+  }
+
+  public async downloadPayroll(month: string, format: 'jor' | 'afp') {
+    const response = await fetch(`${this.baseUrl}/api/v1/payroll/periods/${month}/exports/${format}`, {
+      headers: this.buildHeaders(true, this.authContext.getAccessToken()),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      throw new ApiHttpError(response.status, detail.message ?? 'No se pudo generar el archivo de planillas.', detail.errors);
+    }
+    return { blob: await response.blob(), filename: /filename="?([^";]+)"?/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] };
+  }
+
+  public async fetchDaot(year: string, page: number, scope: string): Promise<DaotReport> {
+    return (await this.request<{ data: DaotReport }>(`/api/v1/accounting/daot/${year}?page=${page}&scope=${scope}`, { method: 'GET' })).data;
+  }
+
+  public reviewDaot(year: string, id: number, review: { included: boolean; reference: string; base_pen: string | null; expected_revision: number }) {
+    return this.request<{ revision: number }>(`/api/v1/accounting/daot/${year}/documents/${id}`, { method: 'PUT', body: JSON.stringify(review) });
+  }
+
+  public async downloadDaot(year: string, report: 'resumen' | 'detalle'): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/api/v1/accounting/daot/${year}/${report}`, {
+      headers: this.buildHeaders(true, this.authContext.getAccessToken()),
+    });
+    if (!response.ok) throw new ApiHttpError(response.status, 'No se pudo descargar el reporte del DAOT.');
+    return response.blob();
+  }
+
+  public async buildPdb(month: string, documents: PdbInput[], includeFiles: boolean): Promise<PdbReport> {
+    return (await this.request<{ data: PdbReport }>(`/api/v1/accounting/pdb-exportadores/${month}`, {
+      method: 'POST', body: JSON.stringify({ include_files: includeFiles, documents }),
+    })).data;
+  }
+
+  public async fetchMonthlyAlerts() {
+    return (await this.request<{ data: { needsConfirmation: boolean; count: number; target: string } }>(
+      '/api/v1/accounting/monthly-work/alerts', { method: 'GET' },
+    )).data;
+  }
+
+  public async fetchMonthlyWork(month: string): Promise<MonthlyWork> {
+    return (await this.request<{ data: MonthlyWork }>(`/api/v1/accounting/monthly-work/${month}`, { method: 'GET' })).data;
+  }
+
+  public async confirmMonthlyWork(month: string, profile: MonthlyProfile, revision: number) {
+    return (await this.request<{ data: MonthlyWork }>(`/api/v1/accounting/monthly-work/${month}/confirmation`, {
+      method: 'PUT', body: JSON.stringify({ ...profile, expected_revision: revision }),
+    })).data;
+  }
+
+  public async saveMonthlyTask(month: string, code: string, done: boolean, evidence: string, revision: number) {
+    return (await this.request<{ data: MonthlyWork }>(`/api/v1/accounting/monthly-work/${month}/tasks/${code}`, {
+      method: 'PUT', body: JSON.stringify({ done, evidence, expected_revision: revision }),
+    })).data;
+  }
+
+  public fetchMonthlyPaper<T>(month: string, paper: 'depreciation' | 'payroll') {
+    return this.request<MonthlyPaper<T>>(`/api/v1/accounting/monthly-work/${month}/${paper}`, { method: 'GET' });
+  }
+
+  public generateMonthlyDepreciation<T>(month: string, revision: number) {
+    return this.request<MonthlyPaper<T>>(`/api/v1/accounting/monthly-work/${month}/depreciation`, {
+      method: 'POST', body: JSON.stringify({ expected_revision: revision }),
+    });
+  }
+
+  public saveMonthlyPayroll<T>(month: string, revision: number, rows: PayrollRow[], source: string) {
+    return this.request<MonthlyPaper<T>>(`/api/v1/accounting/monthly-work/${month}/payroll`, {
+      method: 'PUT', body: JSON.stringify({ expected_revision: revision, rows, source }),
+    });
+  }
+
+  public async fetchSunatCalendar(year: string): Promise<SunatCalendarReport> {
+    return (await this.request<{ data: SunatCalendarReport }>(
+      `/api/v1/company/sunat-calendar/${year}`, { method: 'GET' },
+    )).data;
+  }
+
+  public async saveSunatCalendar(year: string, profile: SunatCalendarProfile, expectedRevision: number): Promise<SunatCalendarReport> {
+    return (await this.request<{ data: SunatCalendarReport }>(
+      `/api/v1/company/sunat-calendar/${year}`, { method: 'PUT', body: JSON.stringify({ profile, expected_revision: expectedRevision }) },
+    )).data;
+  }
+
+  public async listFinancialAuxiliaries(kind: 'loan' | 'asset', page: number) {
+    return (await this.request<{ data: {
+      data: { reference: string; label: string; revision: number }[]; next_page_url: string | null;
+    } }>(`/api/v1/accounting/financial-auxiliaries/${kind}/records?page=${page}`, { method: 'GET' })).data;
+  }
+
+  public async fetchFinancialAuxiliary<T>(kind: 'loan' | 'asset', reference: string, revision?: number) {
+    const query = new URLSearchParams({ reference });
+    if (revision !== undefined) query.set('revision', String(revision));
+    return (await this.request<{ data: {
+      reference: string; label: string; source_reference: string; revision: number; inputs: Record<string, unknown>; result: T;
+    } }>(`/api/v1/accounting/financial-auxiliaries/${kind}/records?${query}`, { method: 'GET' })).data;
+  }
+
+  public async saveFinancialAuxiliary<T>(kind: 'loan' | 'asset', body: string) {
+    return this.request<{ data: T; revision: number }>(
+      `/api/v1/accounting/financial-auxiliaries/${kind}/records`, { method: 'POST', body },
+    );
+  }
+
+  public async calculateFinancialAuxiliary<T>(kind: 'loan' | 'asset', body: string): Promise<T> {
+    const result = await this.request<{ data: T }>(
+      `/api/v1/accounting/financial-auxiliaries/${kind}`, { method: 'POST', body },
+    );
+    return result.data;
+  }
+
+  public async fetchAnnualTaxClose(year: number, revision?: number): Promise<TaxClose> {
+    const query = revision === undefined ? '' : `?revision=${revision}`;
+    const result = await this.request<{ data: TaxClose }>(
+      `/api/v1/accounting/annual-tax-close/${year}${query}`, { method: 'GET' },
+    );
+    return result.data;
+  }
+
+  public async fetchAnnualTaxTrialBalance(year: number, opening?: TaxOpeningSource): Promise<TaxCloseTrialBalance> {
+    const query = opening === undefined ? '' : `?opening=${opening}`;
+    const result = await this.request<{ data: TaxCloseTrialBalance }>(
+      `/api/v1/accounting/annual-tax-close/${year}/trial-balance${query}`, { method: 'GET' },
+    );
+    return result.data;
+  }
+
+  public async saveAnnualTaxClose(year: number, inputs: TaxCloseInputs, expectedRevision: number): Promise<TaxCloseRevision> {
+    const result = await this.request<{ data: TaxCloseRevision }>(
+      `/api/v1/accounting/annual-tax-close/${year}`,
+      { method: 'PUT', body: JSON.stringify({ inputs, expected_revision: expectedRevision }) },
+    );
+    return result.data;
+  }
+
+  public async transitionAnnualTaxClose(
+    year: number, action: TaxCloseAction, expectedRevision: number, reason?: string,
+  ): Promise<TaxCloseRevision> {
+    const result = await this.request<{ data: TaxCloseRevision }>(
+      `/api/v1/accounting/annual-tax-close/${year}/${action}`,
+      { method: 'POST', body: JSON.stringify({ expected_revision: expectedRevision, reason }) },
     );
     return result.data;
   }

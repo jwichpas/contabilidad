@@ -16,7 +16,7 @@ test('entities module is mounted and scoped to global tenant selector', () => {
   assert.match(app, /:key="`entities-\$\{activeCompanyId\}`"/);
   assert.match(app, /:can-write="canManageEntities"/);
   assert.match(app, /:can-deactivate="canDeactivateEntities"/);
-  assert.match(sidebar, /emit\('navigate', 'entities'\)/);
+  assert.match(sidebar, /module: 'entities'/);
   assert.match(app, /window\.location\.hash = '#anexos'/);
 });
 

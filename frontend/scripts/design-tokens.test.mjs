@@ -124,9 +124,11 @@ describe('Design tokens OKLCH corporativos', () => {
       'company-create', 'company',
     ];
     for (const module of modules) {
-      assert.ok(sidebar.includes(`currentModule === '${module}' ? 'page' : undefined`), module);
+      assert.ok(sidebar.includes(`module: '${module}'`), module);
     }
     assert.match(sidebar, /app-sidebar-nav/);
+    assert.match(sidebar, /currentModule === item.module \? 'page' : undefined/);
+    assert.match(sidebar, /Buscar módulo/);
     assert.match(styles, /\.app-sidebar-nav button\[aria-current="page"\]/);
   });
 

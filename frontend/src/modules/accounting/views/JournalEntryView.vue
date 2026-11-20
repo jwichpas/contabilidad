@@ -37,11 +37,14 @@ import type {
   JournalEntryResponse,
 } from '../types/journalEntry.types';
 
+import type { TaxJournalDraft } from '../types/annualTaxClose.types';
+
 const props = defineProps<{
   readonly activeCompanyId: CompanyId;
   readonly getAccessToken: () => string | null;
+  readonly taxDraft?: TaxJournalDraft;
 }>();
-const emit = defineEmits<{ 'posting-change': [value: boolean] }>();
+const emit = defineEmits<{ 'posting-change': [value: boolean]; 'tax-draft-consumed': [] }>();
 
 const apiClient = computed(
   () =>
@@ -70,7 +73,7 @@ const cashFlowAreas = shallowRef<readonly CashFlowAreaItem[]>([]);
 
 // Campos de Cabecera del Voucher
 const todayStr = new Date().toISOString().slice(0, 10);
-const entryDate = ref(todayStr);
+const entryDate = ref(props.taxDraft?.date ?? todayStr);
 const entryNumber = ref('');
 const entryType = ref<EntryType>('STANDARD');
 const subdiaryCode = ref('');
@@ -854,8 +857,38 @@ watch(
   },
 );
 
-onMounted(() => {
-  void loadCatalogsAndHistory();
+onMounted(async () => {
+  const draft = props.taxDraft;
+  if (draft) emit('tax-draft-consumed');
+  const company = props.activeCompanyId;
+  const expectedLoad = loadSequence + 1;
+  await loadCatalogsAndHistory();
+  if (!draft || company !== props.activeCompanyId || expectedLoad !== loadSequence || errorMessage.value) return;
+  if (baseCurrencyInfo.value.code !== 'PEN') {
+    contextNotice.value = 'La propuesta está en PEN. Revise la moneda funcional antes de preparar el asiento.';
+    return;
+  }
+
+  resetDraft();
+  currency.value = 'PEN';
+  entryType.value = draft.type;
+  headerDescription.value = draft.description;
+  lines.value = draft.lines.map((line) => ({
+    id: nextLineKey++,
+    accountId: null,
+    costCenterId: null,
+    companyAreaId: null,
+    cashFlowAreaId: null,
+    entity: null,
+    description: `Cuenta de referencia ${line.account}`,
+    debitLocal: line.debit,
+    creditLocal: line.credit,
+    debitForeign: line.debit,
+    creditForeign: line.credit,
+  }));
+  selectedLineId.value = lines.value[0]!.id;
+  recalculateAmounts();
+  contextNotice.value = 'Propuesta contable cargada. Elija el subdiario, las subcuentas y sus dimensiones antes de registrar.';
 });
 onBeforeUnmount(() => {
   // La vista se reemplaza al cambiar tenant. El componente anterior conserva

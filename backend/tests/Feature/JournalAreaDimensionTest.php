@@ -42,6 +42,7 @@ beforeEach(function (): void {
             'activity_category' => 'OPERATING', 'flow_direction' => 'BOTH', 'is_active' => true]);
     });
     $this->user->update(['current_company_id' => $this->company->id]);
+    $this->seedMonthlyConfirmation((int) $this->company->id, (int) $this->user->id, '2026-10');
     $this->actingAs($this->user)->withHeader('X-Company-Id', (string) $this->company->id);
     $line = ['accounting_account_id' => $this->account->id, 'company_area_id' => $this->area->id, 'cash_flow_area_id' => $this->flow->id,
         'debit_local' => '40.0000', 'credit_local' => '0.0000',
