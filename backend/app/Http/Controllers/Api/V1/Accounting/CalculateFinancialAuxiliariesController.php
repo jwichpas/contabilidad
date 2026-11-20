@@ -36,6 +36,7 @@ final class CalculateFinancialAuxiliariesController
     public function asset(Request $request, AssetAndLoanCalculations $calculations): JsonResponse
     {
         $input = $request->validate([
+            'tax_year' => ['sometimes', 'integer', 'between:2025,2026'],
             'book_cost' => self::AMOUNT,
             'residual' => self::AMOUNT,
             'useful_months' => ['required', 'integer', 'between:1,1200'],

@@ -169,7 +169,7 @@ final class SunatCalendar
         return $this->workingDay($date->addMonthsNoOverflow($rule === 'month' ? 1 : 3))->toDateString();
     }
 
-    private function workingDay(CarbonImmutable $date): CarbonImmutable
+    public function workingDay(CarbonImmutable $date): CarbonImmutable
     {
         $fixed = ['01-01', '05-01', '06-07', '06-29', '07-23', '07-28', '07-29', '08-06',
             '08-30', '10-08', '11-01', '12-08', '12-09', '12-25'];

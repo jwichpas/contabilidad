@@ -55,6 +55,7 @@ beforeEach(function (): void {
             ->orderBy('code')->limit(4)->get()->all();
     });
     expect($this->accounts)->toHaveCount(4);
+    $this->seedMonthlyConfirmation((int) $this->company->id, (int) $this->user->id, '2026-11');
     $this->actingAs($this->user)->withHeader('X-Company-Id', (string) $this->company->id);
     $this->entityId = (int) $this->postJson('/api/v1/company/entities', [
         'identity_document_type_code' => '6',
@@ -251,8 +252,10 @@ it('distinguishes non-taxed purchases from mixed purchases and never infers pror
     $payload['tax_allocations'][0]['creditable_tax_amount'] = '10.0000';
     $response = $this->postJson('/api/v1/accounting/document-journals/purchases/documents', $payload)
         ->assertCreated()
-        ->assertJsonPath('data.total_amount', '158.0000')
-        ->assertJsonPath('data.tax_register.allocations.0.creditable_tax_amount', '10.0000');
+        ->assertJsonPath('data.total_amount', '158.0000');
+    $allocations = collect($response->json('data.tax_register.allocations'))->keyBy('category');
+    expect($allocations['P_TAXED_MIXED']['creditable_tax_amount'])->toBe('10.0000');
+    expect($allocations['P_NON_TAXED']['creditable_tax_amount'])->toBe('0.0000');
     $journalId = (int) $response->json('data.journal_entry_id');
     $this->tenant->run($this->company->id, function () use ($journalId): void {
         $lines = JournalEntry::query()->findOrFail($journalId)->lines;

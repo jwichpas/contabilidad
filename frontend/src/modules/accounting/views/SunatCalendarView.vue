@@ -14,7 +14,8 @@ const client = new AccountingApiClient('', {
 const today = peruAccountingDate();
 const previousMonth = new Date(today.slice(0, 7) + '-01T00:00:00Z');
 previousMonth.setUTCDate(0);
-const years = ['2026', '2025'].map((value) => ({ value, label: value }));
+const years = Array.from({ length: Math.max(3, Number(today.slice(0, 4)) - 2024) }, (_, index) => 2025 + index)
+  .reverse().map((value) => ({ value: String(value), label: String(value) }));
 const year = ref(years.some((option) => option.value === String(previousMonth.getUTCFullYear()))
   ? String(previousMonth.getUTCFullYear()) : '2026');
 const months = [

@@ -23,7 +23,7 @@ const loan = ref({
 });
 const payments = ref('');
 const asset = ref({
-  book_cost: '', residual: '0', useful_months: 60, available_from: '', stop_on: '',
+  tax_year: 2025, book_cost: '', residual: '0', useful_months: 60, available_from: '', stop_on: '',
   tax_cost: '', tax_category: 'OTHER', tax_use_from: '', last_eligible_month: 12,
   prior_tax_depreciation: '0', recorded_depreciation: '0',
 });
@@ -79,7 +79,7 @@ async function openRecord(reference: string, revision?: number) {
       Object.assign(loan.value, values);
       payments.value = (items as string[]).join('\n');
     } else {
-      Object.assign(asset.value, values, { stop_on: values.stop_on ?? '', tax_use_from: values.tax_use_from ?? '' });
+      Object.assign(asset.value, { tax_year: 2025 }, values, { stop_on: values.stop_on ?? '', tax_use_from: values.tax_use_from ?? '' });
     }
     identity.value = { reference, label: record.label, source_reference: record.source_reference, expected_revision: record.revision };
     loadedReference.value = reference;
@@ -132,7 +132,7 @@ const loanFields = [
 const assetFields = [
   ['book_cost', 'Costo contable'], ['residual', 'Valor residual'],
   ['tax_cost', 'Costo computable fiscal'], ['prior_tax_depreciation', 'Depreciación fiscal previa'],
-  ['recorded_depreciation', 'Depreciación contabilizada en 2025'],
+  ['recorded_depreciation', 'Depreciación contabilizada en el ejercicio'],
 ] as const;
 
 const totals = computed(() => isLoan.value ? [
@@ -183,7 +183,7 @@ async function calculate() {
   <div class="space-y-4">
     <header>
       <h1 class="text-xl font-bold">{{ isLoan ? 'Préstamos recibidos' : 'Activos fijos' }}</h1>
-      <p class="mt-1 text-sm text-muted">{{ isLoan ? 'Costo amortizado NIIF 9 y límite tributario' : 'Depreciación contable NIC 16 y fiscal' }} · Simulación en PEN · 2025</p>
+      <p class="mt-1 text-sm text-muted">{{ isLoan ? 'Costo amortizado NIIF 9 y límite tributario' : 'Depreciación contable NIC 16 y fiscal' }} · Simulación en PEN<span v-if="isLoan"> · 2025</span></p>
     </header>
 
     <details class="rounded-lg border border-border bg-surface p-4" @toggle="($event.target as HTMLDetailsElement).open && listRecords()">
@@ -240,7 +240,10 @@ async function calculate() {
         <label class="ui-label">Inicio de uso en renta gravada
           <input v-model="asset.tax_use_from" type="date" class="mt-1 w-full">
         </label>
-        <label class="ui-label">Último mes fiscal admitido en 2025
+        <label class="ui-label">Ejercicio de los datos fiscales
+          <input v-model.number="asset.tax_year" required type="number" min="2025" max="2026" class="mt-1 w-full">
+        </label>
+        <label class="ui-label">Último mes fiscal admitido
           <input v-model.number="asset.last_eligible_month" required type="number" min="0" max="12" class="mt-1 w-full">
         </label>
         <div>

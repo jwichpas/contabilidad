@@ -865,7 +865,7 @@ onMounted(async () => {
   await loadCatalogsAndHistory();
   if (!draft || company !== props.activeCompanyId || expectedLoad !== loadSequence || errorMessage.value) return;
   if (baseCurrencyInfo.value.code !== 'PEN') {
-    contextNotice.value = 'La propuesta tributaria está en PEN. Revise la moneda funcional antes de preparar el asiento.';
+    contextNotice.value = 'La propuesta está en PEN. Revise la moneda funcional antes de preparar el asiento.';
     return;
   }
 
@@ -888,7 +888,7 @@ onMounted(async () => {
   }));
   selectedLineId.value = lines.value[0]!.id;
   recalculateAmounts();
-  contextNotice.value = 'Propuesta del cierre cargada. Elija el subdiario, las subcuentas y sus dimensiones antes de registrar.';
+  contextNotice.value = 'Propuesta contable cargada. Elija el subdiario, las subcuentas y sus dimensiones antes de registrar.';
 });
 onBeforeUnmount(() => {
   // La vista se reemplaza al cambiar tenant. El componente anterior conserva

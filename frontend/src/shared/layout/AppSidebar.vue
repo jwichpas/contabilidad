@@ -83,6 +83,7 @@ const groups = [
     { module: 'exchange-rates', label: 'Tipo de cambio', icon: ArrowLeftRight },
   ] },
   { label: 'Cierre y reportes', items: [
+    { module: 'monthly-work', label: 'Agenda contable mensual', icon: CalendarRange },
     { module: 'sunat-calendar', label: 'Vencimientos SUNAT', icon: CalendarRange },
     { module: 'annual-tax-close', label: 'Cierre tributario anual', icon: Receipt },
     { module: 'financial-statements', label: 'Estados financieros', icon: FileBarChart2 },

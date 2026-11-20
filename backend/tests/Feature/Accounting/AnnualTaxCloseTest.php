@@ -217,6 +217,7 @@ it('prepares the FV 710 working balance from the ledger with separate opening an
     $this->getJson($statements)->assertOk()
         ->assertJsonPath('data.income_statement.net', '200.0000')
         ->assertJsonPath('data.totals.result', '0.0000');
+    $this->seedMonthlyConfirmation((int) $this->company->id, (int) $this->user->id, '2025-12');
     $this->postJson('/api/v1/accounting/journal-entries/'.$closing->id.'/reverse', [
         'fiscal_period_id' => $closing->fiscal_period_id, 'reversal_date' => '2025-12-31',
         'reason' => 'Extornar el cierre de prueba',

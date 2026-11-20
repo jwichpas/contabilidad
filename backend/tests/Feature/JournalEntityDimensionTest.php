@@ -37,6 +37,7 @@ beforeEach(function (): void {
             'bank_account_number' => 'PRIVATE-FIXTURE']);
     });
     $this->user->update(['current_company_id' => $this->company->id]);
+    $this->seedMonthlyConfirmation((int) $this->company->id, (int) $this->user->id, '2026-10');
     $this->actingAs($this->user)->withHeader('X-Company-Id', (string) $this->company->id);
     $line = ['accounting_account_id' => $this->account->id, 'entity_id' => $this->entity->id,
         'debit_local' => '40.0000', 'credit_local' => '0.0000',

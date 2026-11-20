@@ -71,14 +71,15 @@ final class AssetAndLoanCalculations
         ];
     }
 
-    public function asset(array $input): array
+    public function asset(array $input, ?int $year = null): array
     {
         if (bccomp($input['residual'], $input['book_cost'], 2) > 0
             || bccomp($input['prior_tax_depreciation'], $input['tax_cost'], 2) > 0) {
             throw ValidationException::withMessages(['book_cost' => 'Revise el valor residual y la depreciación fiscal acumulada frente a sus bases.']);
         }
 
-        $from = CarbonImmutable::create(self::TAX_YEAR, 1, 1, 0, 0, 0, 'UTC');
+        $year ??= (int) ($input['tax_year'] ?? self::TAX_YEAR);
+        $from = CarbonImmutable::create($year, 1, 1, 0, 0, 0, 'UTC');
         $until = $from->addYear();
         $available = CarbonImmutable::parse($input['available_from'], 'UTC');
         $lifeEnd = $available->addMonthsNoOverflow((int) $input['useful_months']);
@@ -118,12 +119,21 @@ final class AssetAndLoanCalculations
         if ($input['tax_category'] !== 'BUILDING') {
             $taxAllowance = $this->minimum($taxAllowance, $input['recorded_depreciation']);
         }
+        $taxAssigned = '0.00';
+        foreach ($rows as &$row) {
+            $eligibleMonths = min($months, max(0, $row['month'] - $firstEligible->month + 1));
+            $maximum = $this->round(bcdiv(bcmul($input['tax_cost'], bcmul($annualRate, (string) $eligibleMonths, 2), 4), '1200', 12));
+            $cumulative = $this->minimum($maximum, $taxAllowance);
+            $row['tax_depreciation'] = bcsub($cumulative, $taxAssigned, 2);
+            $taxAssigned = $cumulative;
+        }
+        unset($row);
         $yearlyBook = bcsub($previous, $openingBookDepreciation, 2);
         $bookClosing = bcsub($input['book_cost'], $previous, 2);
         $taxClosing = bcsub($taxOpening, $taxAllowance, 2);
 
         return [
-            'tax_year' => self::TAX_YEAR, 'tax_rate' => $annualRate, 'tax_months' => $months,
+            'tax_year' => $year, 'tax_rate' => $annualRate, 'tax_months' => $months,
             'book_depreciation' => $yearlyBook, 'book_carrying_amount' => $bookClosing,
             'tax_depreciation_limit' => $yearlyMaximum, 'tax_depreciation' => $taxAllowance,
             'tax_base_closing' => $taxClosing, 'period_adjustment' => bcsub($yearlyBook, $taxAllowance, 2),

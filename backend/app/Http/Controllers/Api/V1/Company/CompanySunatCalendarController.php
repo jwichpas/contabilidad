@@ -28,6 +28,11 @@ final readonly class CompanySunatCalendarController
 
     public function show(int $year): JsonResponse
     {
+        return response()->json(['data' => $this->report($year)]);
+    }
+
+    public function report(int $year): array
+    {
         $query = $this->profile($year);
         $company = $this->tenant->requireCompanyId(self::class);
         $ruc = (string) DB::table('companies')->where('id', $company)->value('tax_id');
@@ -48,14 +53,14 @@ final readonly class CompanySunatCalendarController
             $regimes[$month] = $revision->tax_regime ?? $settingsRegime;
         }
 
-        return response()->json(['data' => [
+        return [
             'year' => $year, 'ruc' => $ruc, 'regime' => $regimes[12], 'regimes' => $regimes, 'revision' => (int) ($latest->revision ?? 0),
             'profile' => $settings,
             'books' => collect(SunatCalendar::CATALOG)->map(
                 static fn (array $book, $code) => ['code' => (string) $code, 'label' => $book[0]]
             )->values(),
             'events' => $this->calendar->company($year, substr($ruc, -1), $regimes, $settings),
-        ]]);
+        ];
     }
 
     public function save(Request $request, int $year): JsonResponse
@@ -111,7 +116,7 @@ final readonly class CompanySunatCalendarController
 
     private function profile(int $year): Builder
     {
-        abort_if($this->calendar->edition($year) === null, 404, 'El ejercicio no tiene cronogramas oficiales cargados.');
+        abort_unless($year >= 2025 && $year <= 2099, 404, 'Ejercicio fuera de alcance.');
         abort_unless(Schema::hasTable(self::TABLE), 503, 'Aplique la migración de calendario SUNAT por empresa.');
 
         return DB::table(self::TABLE)->where('company_id', $this->tenant->requireCompanyId(self::class))->where('year', $year);

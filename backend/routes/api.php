@@ -65,6 +65,8 @@ use App\Http\Middleware\JournalAuthenticatedTiming;
 use App\Http\Middleware\JournalAuthenticationStartTiming;
 use App\Http\Middleware\SetTenantContext;
 use App\Http\Middleware\RequireCompanyRole;
+use App\Http\Middleware\RequireMonthlyAccountingConfirmation;
+use App\Http\Controllers\Api\V1\Accounting\MonthlyAccountingWorkController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -181,6 +183,22 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
                 ->name('api.v1.accounting.financial-auxiliaries.asset.save');
 
+            Route::get('/accounting/monthly-work/alerts', [MonthlyAccountingWorkController::class, 'alerts']);
+            Route::prefix('/accounting/monthly-work/{month}')->where(['month' => '20[0-9]{2}-[0-9]{2}'])->group(function (): void {
+                Route::get('/', [MonthlyAccountingWorkController::class, 'show']);
+                Route::put('/confirmation', [MonthlyAccountingWorkController::class, 'confirm'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+                Route::put('/tasks/{code}', [MonthlyAccountingWorkController::class, 'task'])
+                    ->where('code', '[a-z0-9_-]+')->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
+                Route::get('/depreciation', [MonthlyAccountingWorkController::class, 'paper'])->defaults('code', 'depreciation');
+                Route::post('/depreciation', [MonthlyAccountingWorkController::class, 'depreciation'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
+                Route::get('/payroll', [MonthlyAccountingWorkController::class, 'paper'])->defaults('code', 'payroll')
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+                Route::put('/payroll', [MonthlyAccountingWorkController::class, 'payroll'])
+                    ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT');
+            });
+
             Route::get('/accounting/annual-tax-close/{year}', [AnnualTaxCloseController::class, 'show'])
                 ->whereNumber('year')->name('api.v1.accounting.annual-tax-close.show');
             Route::get('/accounting/annual-tax-close/{year}/trial-balance', [AnnualTaxCloseController::class, 'trialBalance'])
@@ -224,11 +242,13 @@ Route::prefix('v1')->group(function (): void {
 
                 Route::post('/', CreateJournalEntryController::class)
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
+                    ->middleware(RequireMonthlyAccountingConfirmation::class.':entry_date')
                     ->name('api.v1.accounting.journal-entries.store');
 
                 Route::post('/{entryId}/reverse', ReverseJournalEntryController::class)
                     ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT')
                     ->whereNumber('entryId')
+                    ->middleware(RequireMonthlyAccountingConfirmation::class.':reversal_date')
                     ->name('api.v1.accounting.journal-entries.reverse');
             });
 
@@ -247,6 +267,7 @@ Route::prefix('v1')->group(function (): void {
                 ->whereIn('module', ['purchases', 'sales']);
             Route::post('/accounting/document-journals/{module}/documents', [DocumentJournalController::class, 'store'])
                 ->whereIn('module', ['purchases', 'sales'])
+                ->middleware(RequireMonthlyAccountingConfirmation::class.':entry_date')
                 ->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT,ACCOUNTANT');
 
             Route::get('/company/subdiaries', [CompanySubdiaryMasterController::class, 'index'])

@@ -1,3 +1,4 @@
+import type { MonthlyPaper, MonthlyProfile, MonthlyWork, PayrollRow } from '../types/monthlyWork.types';
 import type { SunatCalendarProfile, SunatCalendarReport } from '../types/sunatCalendar.types';
 import type { TaxClose, TaxCloseAction, TaxCloseInputs, TaxCloseRevision, TaxCloseTrialBalance, TaxOpeningSource } from '../types/annualTaxClose.types';
 import { reportUnauthorizedBearer } from '@/shared/auth/sessionInvalidation';
@@ -617,6 +618,44 @@ export class AccountingApiClient {
       `/api/v1/accounting/reports/general-ledger?${query}`, { method: 'GET' }, true,
     );
     return result.data;
+  }
+
+  public async fetchMonthlyAlerts() {
+    return (await this.request<{ data: { needsConfirmation: boolean; count: number; target: string } }>(
+      '/api/v1/accounting/monthly-work/alerts', { method: 'GET' },
+    )).data;
+  }
+
+  public async fetchMonthlyWork(month: string): Promise<MonthlyWork> {
+    return (await this.request<{ data: MonthlyWork }>(`/api/v1/accounting/monthly-work/${month}`, { method: 'GET' })).data;
+  }
+
+  public async confirmMonthlyWork(month: string, profile: MonthlyProfile, revision: number) {
+    return (await this.request<{ data: MonthlyWork }>(`/api/v1/accounting/monthly-work/${month}/confirmation`, {
+      method: 'PUT', body: JSON.stringify({ ...profile, expected_revision: revision }),
+    })).data;
+  }
+
+  public async saveMonthlyTask(month: string, code: string, done: boolean, evidence: string, revision: number) {
+    return (await this.request<{ data: MonthlyWork }>(`/api/v1/accounting/monthly-work/${month}/tasks/${code}`, {
+      method: 'PUT', body: JSON.stringify({ done, evidence, expected_revision: revision }),
+    })).data;
+  }
+
+  public fetchMonthlyPaper<T>(month: string, paper: 'depreciation' | 'payroll') {
+    return this.request<MonthlyPaper<T>>(`/api/v1/accounting/monthly-work/${month}/${paper}`, { method: 'GET' });
+  }
+
+  public generateMonthlyDepreciation<T>(month: string, revision: number) {
+    return this.request<MonthlyPaper<T>>(`/api/v1/accounting/monthly-work/${month}/depreciation`, {
+      method: 'POST', body: JSON.stringify({ expected_revision: revision }),
+    });
+  }
+
+  public saveMonthlyPayroll<T>(month: string, revision: number, rows: PayrollRow[], source: string) {
+    return this.request<MonthlyPaper<T>>(`/api/v1/accounting/monthly-work/${month}/payroll`, {
+      method: 'PUT', body: JSON.stringify({ expected_revision: revision, rows, source }),
+    });
   }
 
   public async fetchSunatCalendar(year: string): Promise<SunatCalendarReport> {

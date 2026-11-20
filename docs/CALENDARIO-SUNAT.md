@@ -26,4 +26,20 @@ En octubre de 2026, los RUC terminados en 4 o 5 tienen el 18 de noviembre para l
 
 ## Actualización y despliegue
 
-Las tablas base se versionan en `backend/database/reference_data/sunat_due_dates_*.json`. Compare cada ejercicio con las publicaciones oficiales y la fecha de diciembre del año siguiente. Los perfiles y excepciones quedan en revisiones separadas por empresa y ejercicio. La funcionalidad necesita las migraciones `2026_11_21_000000` y `2026_11_21_000001` con la conexión de migraciones del proyecto.
+Las tablas base se versionan en `backend/database/reference_data/sunat_due_dates_*.json`. Compare cada ejercicio con las publicaciones oficiales y la fecha de diciembre del año siguiente. Los perfiles y excepciones quedan en revisiones separadas por empresa y ejercicio. El calendario y los auxiliares requieren las migraciones `2026_11_21_000000` y `2026_11_21_000001` con la conexión de migraciones del proyecto.
+
+## Agenda contable mensual
+
+1. En **Vencimientos SUNAT**, guarde el perfil del ejercicio y las fechas particulares sustentadas. Las fechas oficiales de compras, ventas y tributos se cargan por periodo y RUC.
+2. En **Cierre y reportes → Agenda contable mensual**, un administrador o contador jefe confirma el periodo, la condición de PRICO, las designaciones de retención y percepción del IGV y las obligaciones laborales aplicables. La revisión guarda las fechas y el sustento. Si el calendario cambia, vuelva a confirmar ese periodo para aplicar las fechas corregidas a la agenda. Ante un ejercicio sin cronograma cargado, registre cada fecha necesaria con su fuente en el calendario.
+3. Desde enero de 2025, el Diario, sus extornos y los registros de compras y ventas requieren confirmar los vencimientos del mes de la **fecha contable de la operación**. Los reportes, la navegación y la configuración siguen disponibles. Despliegue primero la migración `2026_11_22_000000` y confirme los meses activos de cada empresa.
+4. Complete las tareas con sustento. La campana informa vencidas y próximas a siete días de los periodos confirmados de la empresa. La fecha interna se configura por cada cierre y se usa para conciliación bancaria, saldos de terceros, revisión de mayores, planilla y depreciación cuando corresponda. Las obligaciones legales siguen sus propias fechas.
+
+PRICO se registra con su sustento de designación y crea una revisión del directorio y de las notificaciones. La columna de buenos contribuyentes y UESP se configura en el calendario. La retención y percepción del IGV generan las tareas 626 y 633 cuando se confirma su aplicabilidad. Las prórrogas específicas de una obligación se registran con su propio código, como `626`, `633`, `PLAME`, `AFP`, `CTS` o `GRATIFICATION`. Los vencimientos ordinarios de AFPnet, CTS y gratificaciones se muestran según la obligación marcada para el personal.
+
+### Papeles de trabajo
+
+- **Depreciación.** Genera una revisión desde las fichas vigentes de activos, con importe contable, valor en libros y estimación tributaria ordinaria en PEN. La parte fiscal requiere datos del mismo ejercicio y, cuando corresponde, la depreciación contabilizada como límite. La tarea se completa después de revisar los datos fiscales. **Preparar asiento en el Diario** abre el borrador con las referencias 68 y 39 para que el contador asigne subcuentas, dimensiones y subdiario.
+- **Planilla.** Un administrador o contador jefe consolida por código de trabajador las remuneraciones y los importes validados de aportes, descuentos y retenciones. El cálculo suma ingresos, descuentos, neto y costo del empleador. La declaración PLAME se sigue como tarea separada y se presenta en su canal habilitado. Las revisiones conservan el papel de trabajo y el responsable.
+
+Fuentes laborales: [PLAME](https://orientacion.sunat.gob.pe/pdt-plame), [AFPnet](https://www.sbs.gob.pe/boletin/detalleboletin/idbulletin/73), [CTS](https://www.sbs.gob.pe/usuarios/aprende-con-la-sbs/cuenta-cts) y [gratificaciones](https://cdn.www.gob.pe/uploads/document/file/3321103/guia_gratificaciones.pdf).
