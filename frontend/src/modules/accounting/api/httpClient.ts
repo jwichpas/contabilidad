@@ -621,6 +621,23 @@ export class AccountingApiClient {
     return result.data;
   }
 
+  public async payrollRequest<T>(path: string, method = 'GET', body?: object): Promise<T> {
+    return (await this.request<{ data: T }>(`/api/v1/payroll/${path}`, {
+      method, body: body ? JSON.stringify(body) : undefined,
+    })).data;
+  }
+
+  public async downloadPayroll(month: string, format: 'jor' | 'afp') {
+    const response = await fetch(`${this.baseUrl}/api/v1/payroll/periods/${month}/exports/${format}`, {
+      headers: this.buildHeaders(true, this.authContext.getAccessToken()),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      throw new ApiHttpError(response.status, detail.message ?? 'No se pudo generar el archivo de planillas.', detail.errors);
+    }
+    return { blob: await response.blob(), filename: /filename="?([^";]+)"?/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] };
+  }
+
   public async fetchDaot(year: string, page: number, scope: string): Promise<DaotReport> {
     return (await this.request<{ data: DaotReport }>(`/api/v1/accounting/daot/${year}?page=${page}&scope=${scope}`, { method: 'GET' })).data;
   }

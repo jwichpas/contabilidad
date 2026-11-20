@@ -94,6 +94,11 @@ const FinancialAuxiliaryView = defineAsyncComponent({
   delay: 120,
 });
 
+const PayrollWorkspaceView = defineAsyncComponent({
+  loader: () => import('./modules/payroll/PayrollWorkspaceView.vue'),
+  loadingComponent: UiViewLoading,
+  errorComponent: UiViewLoadError,
+});
 const ExternalTaxReportsView = defineAsyncComponent({
   loader: () => import('./modules/accounting/views/ExternalTaxReportsView.vue'),
   loadingComponent: UiViewLoading,
@@ -303,6 +308,7 @@ function resolveModuleFromHash(): NavigationModule {
   if (hash.includes('flujo-efectivo') || hash.includes('cash-flow')) return 'cash-flow';
   if (hash.includes('prestamos')) return 'loans';
   if (hash.includes('activos-fijos')) return 'fixed-assets';
+  if (hash.includes('gestion-de-planillas')) return 'payroll';
   if (hash.includes('daot-pdb')) return 'external-tax-reports';
   if (hash.includes('agenda-contable')) return 'monthly-work';
   if (hash.includes('vencimientos-sunat')) return 'sunat-calendar';
@@ -358,6 +364,8 @@ function handleNavigate(mod: NavigationModule): void {
     window.location.hash = '#prestamos';
   } else if (mod === 'fixed-assets') {
     window.location.hash = '#activos-fijos';
+  } else if (mod === 'payroll') {
+    window.location.hash = '#gestion-de-planillas';
   } else if (mod === 'external-tax-reports') {
     window.location.hash = '#daot-pdb';
   } else if (mod === 'monthly-work') {
@@ -498,6 +506,7 @@ watch(
       :user-companies="userCompanies"
       :active-company="activeCompany"
       :is-dark-mode="isDarkMode"
+      :can-manage-payroll="canDeactivateEntities"
       :is-switching-company="isSwitchingCompany"
       @navigate="handleNavigate"
       @switch-company="handleSwitchCompany"
@@ -594,6 +603,16 @@ watch(
           :get-access-token="() => accessToken"
           :can-edit="canManageEntities"
         />
+        <template v-else-if="currentModule === 'payroll'">
+          <PayrollWorkspaceView v-if="canDeactivateEntities"
+            :key="`payroll-${activeCompanyId}`"
+            :active-company-id="activeCompanyId"
+            :get-access-token="() => accessToken"
+            :ruc="activeCompany.taxId"
+            @journal="openTaxJournal"
+          />
+          <p v-else role="alert" class="rounded-lg border border-line bg-surf p-4">Gestión de planillas requiere permisos de administrador o contador jefe.</p>
+        </template>
         <ExternalTaxReportsView
           v-else-if="currentModule === 'external-tax-reports'"
           :key="`external-tax-reports-${activeCompanyId}`"

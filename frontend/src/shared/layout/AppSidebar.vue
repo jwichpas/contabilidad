@@ -36,6 +36,7 @@ const props = defineProps<{
   readonly userCompanies: readonly UserCompany[];
   readonly activeCompany: ActiveCompanyInfo;
   readonly isDarkMode: boolean;
+  readonly canManagePayroll: boolean;
   readonly isSwitchingCompany: boolean;
 }>();
 
@@ -92,6 +93,7 @@ const groups = [
     { module: 'fiscal-periods', label: 'Periodos contables', icon: CalendarRange },
   ] },
   { label: 'Auxiliares', items: [
+    { module: 'payroll', label: 'Gestión de planillas', icon: Users },
     { module: 'loans', label: 'Préstamos recibidos', icon: Landmark },
     { module: 'fixed-assets', label: 'Activos fijos', icon: Package },
   ] },
@@ -115,7 +117,7 @@ const visibleGroups = computed(() => {
   const term = expanded.value ? normalize(query.value.trim()) : '';
   return groups.map((group) => ({
     ...group,
-    items: group.items.filter((item) => normalize(group.label + ' ' + item.label).includes(term)),
+    items: group.items.filter((item) => item.module !== 'payroll' || props.canManagePayroll).filter((item) => normalize(group.label + ' ' + item.label).includes(term)),
   })).filter((group) => group.items.length);
 });
 

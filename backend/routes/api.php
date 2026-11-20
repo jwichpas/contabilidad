@@ -196,6 +196,23 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/{format}', [DaotReportController::class, 'csv'])->whereIn('format', ['resumen', 'detalle']);
             });
 
+            Route::prefix('payroll')->middleware(RequireCompanyRole::class.':ADMIN,CHIEF_ACCOUNTANT')
+                ->controller(\App\Http\Controllers\Api\V1\Payroll\PayrollController::class)->group(function (): void {
+                    Route::put('/workers/{worker}', 'worker')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
+                    Route::post('/workers/{worker}/vacations', 'vacation')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
+                    Route::prefix('periods/{month}')->where(['month' => '20[0-9]{2}-(0[1-9]|1[0-2])'])->group(function (): void {
+                        Route::get('/', 'show');
+                        Route::put('/attendance/{worker}', 'attendance')->where('worker', '[A-Z][A-Z0-9-]{0,19}');
+                        Route::put('/attendance/{worker}/days/{date}', 'day')
+                            ->where('worker', '[A-Z][A-Z0-9-]{0,19}')->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}');
+                        Route::put('/calculation', 'run');
+                        Route::post('/approval', 'approve');
+                        Route::put('/benefits/{worker}/{benefit}', 'benefit')
+                            ->where('worker', '[A-Z][A-Z0-9-]{0,19}')->whereIn('benefit', ['CTS', 'GRATIFICATION']);
+                        Route::get('/exports/{format}', 'download')->whereIn('format', ['jor', 'afp']);
+                    });
+                });
+
             Route::get('/accounting/monthly-work/alerts', [MonthlyAccountingWorkController::class, 'alerts']);
             Route::prefix('/accounting/monthly-work/{month}')->where(['month' => '20[0-9]{2}-[0-9]{2}'])->group(function (): void {
                 Route::get('/', [MonthlyAccountingWorkController::class, 'show']);

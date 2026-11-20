@@ -125,6 +125,8 @@ const activeCompanyIdString = computed<string>({
                 ? 'Préstamos recibidos'
               : currentModule === 'fixed-assets'
                 ? 'Activos fijos'
+              : currentModule === 'payroll'
+                ? 'Gestión de planillas'
               : currentModule === 'external-tax-reports'
                 ? 'DAOT y PDB Exportadores'
               : currentModule === 'monthly-work'
