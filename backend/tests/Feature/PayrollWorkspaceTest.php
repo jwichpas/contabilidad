@@ -102,3 +102,59 @@ it('returns a migration message when the payroll table is missing', function ():
         ->assertServiceUnavailable()
         ->assertJsonPath('message', 'Planillas no está disponible. Aplique la migración de planillas y vuelva a intentar.');
 });
+
+it('uses the October 2026 increase and itemizes the family allowance and AFP balance deductions', function (): void {
+    $old = '/api/v1/payroll/periods/2026-09';
+    $period = '/api/v1/payroll/periods/2026-11';
+    $this->getJson($old)->assertOk()->assertJsonPath('data.parameters.minimum.amount', '1130.00')
+        ->assertJsonPath('data.parameters.family_allowance', '113.00')->assertJsonPath('data.parameters.afp', null);
+    $this->getJson($period)->assertOk()->assertJsonPath('data.parameters.minimum.amount', '1230.00')
+        ->assertJsonPath('data.parameters.family_allowance', '123.00')->assertJsonPath('data.parameters.night_minimum', '1660.50')
+        ->assertJsonPath('data.parameters.uit', '5500.00')->assertJsonPath('data.parameters.tax_deduction', '38500.00')
+        ->assertJsonPath('data.parameters.afp.administrators.IN.flow', '1.55');
+    $this->getJson('/api/v1/payroll/periods/2027-01')->assertOk()->assertJsonPath('data.parameters.minimum', null)
+        ->assertJsonPath('data.parameters.uit', null);
+
+    $worker = [
+        'expected_revision' => 0, 'dni' => '01234560', 'surname' => 'Ruiz', 'given_names' => 'Elena',
+        'position' => 'Control', 'effective_month' => '2026-11', 'hired_on' => '2026-11-01',
+        'salary' => '1640', 'daily_hours' => 8, 'pension' => 'AFP', 'afp' => 'IN', 'cuspp' => '123456ABCD12',
+        'family_allowance' => true, 'night_shift' => true, 'afp_commission' => 'BALANCE',
+        'vacation_granted' => 0, 'reference' => 'Contrato de prueba',
+    ];
+    $attendance = [
+        'expected_revision' => 0, 'paid_days' => 30, 'vacation_paid_days' => 0, 'ordinary_minutes' => 9600,
+        'overtime_25' => 0, 'overtime_35' => 0, 'taxable_extra' => '0', 'nontaxable_extra' => '0',
+        'income_tax' => '0', 'other_deductions' => '0', 'reference' => 'Cierre de asistencia',
+        'afp_rates' => ['insurance' => '1.37', 'commission' => '1.55', 'insurance_ceiling' => '12732.70', 'source' => 'SBS 2026-11'],
+        'provisions' => [
+            'gratification_base' => '1700', 'gratification_month' => true, 'cts_base' => '1700', 'prior_gratification' => '1200',
+            'cts_days' => 30, 'vacation_base' => '1700', 'vacation_days' => 30, 'coverage' => 'EPS', 'reference' => 'Bases de prueba',
+        ],
+    ];
+    $workerPath = '/api/v1/payroll/workers/TR-NOCHE';
+    $attendancePath = $period.'/attendance/TR-NOCHE';
+    $calculation = ['expected_revision' => 0, 'health_minimum' => '1230', 'source' => 'Cierre de prueba'];
+    $this->putJson($workerPath, $worker)->assertOk();
+    $this->putJson($attendancePath, $attendance)->assertOk();
+    $this->putJson($period.'/calculation', array_replace($calculation, ['health_minimum' => '1130']))
+        ->assertUnprocessable()->assertJsonValidationErrors('health_minimum');
+    $this->putJson($period.'/calculation', $calculation)->assertUnprocessable()->assertJsonValidationErrors('night_shift');
+
+    $this->putJson($workerPath, array_replace($worker, ['expected_revision' => 1, 'salary' => '1700']))->assertOk();
+    $this->putJson($attendancePath, array_replace($attendance, ['expected_revision' => 1]))->assertOk();
+    $this->putJson($period.'/calculation', $calculation)->assertOk()
+        ->assertJsonPath('data.data.parameters.minimum.amount', '1230.00')
+        ->assertJsonPath('data.data.rows.0.amounts.family_allowance', '123.00')
+        ->assertJsonPath('data.data.rows.0.amounts.gross', '1823.00')
+        ->assertJsonPath('data.data.rows.0.amounts.afp_contribution', '182.30')
+        ->assertJsonPath('data.data.rows.0.amounts.afp_insurance', '24.98')
+        ->assertJsonPath('data.data.rows.0.amounts.afp_commission', '0.00')
+        ->assertJsonPath('data.data.rows.0.amounts.provision_gratification', '283.33')
+        ->assertJsonPath('data.data.rows.0.amounts.provision_gratification_bonus', '19.13')
+        ->assertJsonPath('data.data.rows.0.amounts.provision_cts', '158.33')
+        ->assertJsonPath('data.data.rows.0.amounts.provision_vacation', '141.67')
+        ->assertJsonPath('data.data.totals.provision_total', '602.46')
+        ->assertJsonPath('data.data.rows.0.amounts.employer_cost', '1987.07');
+    $this->postJson($period.'/approval', ['expected_revision' => 1])->assertOk()->assertJsonPath('data.data.approved', true);
+});

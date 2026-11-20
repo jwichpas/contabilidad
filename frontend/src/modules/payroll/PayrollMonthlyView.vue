@@ -28,7 +28,8 @@ const pending = computed(() => new Map(
     .map(({ worker, message }) => [worker, message]),
 ));
 const needsRecalculation = computed(() => !!monthly.value && !approved.value && (
-  pending.value.size > 0
+  (props.workspace.parameters?.minimum && Number(monthly.value.data.health_minimum) !== Number(props.workspace.parameters.minimum.amount))
+  || pending.value.size > 0
   || rows.value.length !== props.workspace.eligible.length
   || props.workspace.eligible.some(({ reference, revision }) => {
     const row = rowsByWorker.value.get(reference);
@@ -70,14 +71,20 @@ function detail(row: PayrollRow) {
   return [
     { label: 'Ingresos', items: [
       ['Básico devengado', row.amounts.basic],
-      ['Vacaciones incluidas en el básico', row.amounts.vacation_pay],
+      ['Remuneración vacacional incluida', row.amounts.vacation_pay],
+      ...(row.amounts.family_allowance ? [['Asignación familiar', row.amounts.family_allowance]] : []),
       ['Horas extra', row.amounts.overtime],
       ['Otros ingresos afectos', row.attendance.taxable_extra],
       ['Otros ingresos inafectos', row.attendance.nontaxable_extra],
       ['Total ingresos', row.amounts.gross],
     ] },
     { label: 'Descuentos del trabajador', items: [
-      [row.worker.pension === 'AFP' ? 'AFP' : 'ONP', row.amounts.pension],
+      [row.worker.pension === 'AFP' ? 'AFP total' : 'ONP', row.amounts.pension],
+      ...(row.amounts.afp_contribution ? [
+        ['Aporte al fondo AFP', row.amounts.afp_contribution],
+        ['Prima AFP', row.amounts.afp_insurance],
+        ['Comisión AFP sobre remuneración', row.amounts.afp_commission],
+      ] : []),
       ['Retención de quinta categoría registrada', row.amounts.income_tax],
       ['Otros descuentos', row.amounts.other_deductions],
       ['Neto a pagar', row.amounts.net],
@@ -85,6 +92,13 @@ function detail(row: PayrollRow) {
     { label: 'Aportes y costo del empleador', items: [
       ['EsSalud', row.amounts.essalud],
       ['Costo del empleador', row.amounts.employer_cost],
+      ...(row.amounts.provision_total ? [
+        ['Provisión de gratificación', row.amounts.provision_gratification],
+        ['Provisión de bonificación extraordinaria', row.amounts.provision_gratification_bonus],
+        ['Provisión de CTS', row.amounts.provision_cts],
+        ['Provisión de vacaciones', row.amounts.provision_vacation],
+        ['Total estimado de provisiones', row.amounts.provision_total],
+      ] : []),
     ] },
   ];
 }
@@ -133,13 +147,17 @@ function calculate() {
           </dd>
         </div>
       </dl>
+      <p v-if="monthly?.data.totals.provision_total" class="border-t border-line px-4 py-2 text-sm">
+        Provisiones estimadas <strong class="tabular-nums">{{ money(monthly.data.totals.provision_total) }}</strong>
+        <span class="text-muted"> · {{ rows.filter(row => row.amounts.provision_total).length }} de {{ rows.length }} trabajadores</span>
+      </p>
     </section>
 
     <form v-if="openParameters && !approved" id="payroll-calculation-parameters" class="space-y-3 rounded-lg border border-line bg-surf p-4"
       @submit.prevent="calculate">
       <h2 class="text-sm font-semibold">Parámetros del cálculo</h2>
       <div class="grid gap-3 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)]">
-        <label class="ui-label">Base mínima EsSalud (S/)<input v-model.trim="minimum" class="w-full" inputmode="decimal" pattern="[0-9]{1,9}(\.[0-9]{1,2})?" required></label>
+        <label class="ui-label">Base mínima EsSalud (S/)<input v-model.trim="minimum" class="w-full" inputmode="decimal" :readonly="!!workspace.parameters?.minimum" pattern="[0-9]{1,9}(\.[0-9]{1,2})?" required></label>
         <label class="ui-label">Sustento del devengue y de la base mínima<input v-model.trim="source" class="w-full" maxlength="500" required></label>
       </div>
       <button type="submit" class="ui-btn ui-btn-sm ui-btn-primary" :disabled="busy || !canCalculate">

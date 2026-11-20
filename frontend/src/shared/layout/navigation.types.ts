@@ -4,6 +4,7 @@ export const payrollRoutes = {
   'payroll-monthly': { hash: '#gestion-de-planillas/planilla-mensual', label: 'Planilla mensual' },
   'payroll-benefits': { hash: '#gestion-de-planillas/beneficios', label: 'CTS y gratificaciones' },
   'payroll-vacations': { hash: '#gestion-de-planillas/vacaciones', label: 'Vacaciones' },
+  'payroll-parameters': { hash: '#gestion-de-planillas/parametros', label: 'Parámetros' },
 } as const;
 
 export type PayrollModule = keyof typeof payrollRoutes;

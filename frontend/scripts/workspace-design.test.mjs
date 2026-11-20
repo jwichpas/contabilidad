@@ -154,8 +154,8 @@ test('el modal PCGE presenta etiquetas contables claras y ayuda contextual sin a
 test('resuelve cada ruta de planillas y mantiene el enlace anterior a trabajadores', () => {
   assert.equal(resolvePayrollModule('#gestion-de-planillas'), 'payroll-workers');
   assert.equal(resolvePayrollModule('#diario'), undefined);
-  assert.equal(Object.keys(payrollRoutes).length, 5);
-  assert.equal(new Set(Object.values(payrollRoutes).map(({ hash }) => hash)).size, 5);
+  assert.equal(Object.keys(payrollRoutes).length, 6);
+  assert.equal(new Set(Object.values(payrollRoutes).map(({ hash }) => hash)).size, 6);
   for (const [module, { hash }] of Object.entries(payrollRoutes)) {
     assert.equal(resolvePayrollModule(hash), module);
   }

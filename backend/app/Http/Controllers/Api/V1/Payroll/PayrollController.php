@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Payroll;
 use App\Services\Payroll\PayrollCalculation;
 use App\Services\Payroll\PayrollExports;
 use App\Services\Payroll\PayrollLedger;
+use App\Services\Payroll\PayrollParameters;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,11 @@ final readonly class PayrollController
     private const RATE = ['required', 'string', 'regex:/^\d{1,2}(\.\d{1,4})?$/D', 'numeric', 'between:0,10'];
     private const REVISION = ['required', 'integer', 'min:0'];
 
-    public function __construct(private PayrollLedger $ledger, private PayrollCalculation $calculation) {}
+    public function __construct(
+        private PayrollLedger $ledger,
+        private PayrollCalculation $calculation,
+        private PayrollParameters $parameters,
+    ) {}
 
     public function show(string $month): JsonResponse
     {
@@ -43,6 +48,7 @@ final readonly class PayrollController
             'daily' => array_values($daily),
             'attendance' => array_values($attendance),
             'attendance_pending' => $pending,
+            'parameters' => $this->parameters->forMonth($month),
             'vacations' => array_values($this->ledger->records('vacation')),
             'benefits' => array_values($this->ledger->records('benefit', $month.'-')),
             'payroll' => $this->ledger->latest('payroll', $month),
@@ -65,6 +71,9 @@ final readonly class PayrollController
             'daily_hours' => ['required', 'integer', 'between:4,8'],
             'pension' => ['required', 'in:ONP,AFP'],
             'afp' => ['nullable', 'required_if:pension,AFP', 'in:HA,IN,PR,RI'],
+            'family_allowance' => ['sometimes', 'boolean'],
+            'night_shift' => ['sometimes', 'boolean'],
+            'afp_commission' => ['nullable', 'in:FLOW,BALANCE', 'exclude_unless:pension,AFP'],
             'cuspp' => ['nullable', 'required_if:pension,AFP', 'regex:/^[A-Z0-9]{12}$/D'],
             'vacation_granted' => ['required', 'integer', 'between:0,1000'],
             'reference' => ['required', 'string', 'max:500'],
@@ -81,7 +90,11 @@ final readonly class PayrollController
                 'dni', 'Ya existe un trabajador con ese DNI.');
             $this->check($input['vacation_granted'] < $this->vacationDays($worker), 'vacation_granted',
                 'Los días reconocidos no pueden quedar por debajo de los descansos registrados.');
-            return ['code' => $worker] + $input;
+            $previous = array_intersect_key($current ?? [], array_flip(['family_allowance', 'night_shift', 'afp_commission']));
+            if ($input['pension'] !== 'AFP') {
+                unset($previous['afp_commission']);
+            }
+            return ['code' => $worker] + $input + $previous;
         });
     }
 
@@ -125,6 +138,17 @@ final readonly class PayrollController
             'afp_rates.commission' => ['required_with:afp_rates', ...array_slice(self::RATE, 1)],
             'afp_rates.insurance_ceiling' => ['required_with:afp_rates', ...array_slice(self::MONEY, 1), 'numeric', 'gt:0'],
             'afp_rates.source' => ['required_with:afp_rates', 'string', 'max:250'],
+            'provisions' => ['nullable', 'array:gratification_base,gratification_month,cts_base,prior_gratification,cts_days,vacation_base,vacation_days,coverage,reference',
+                'required_array_keys:gratification_base,gratification_month,cts_base,prior_gratification,cts_days,vacation_base,vacation_days,coverage,reference'],
+            'provisions.gratification_base' => ['required_with:provisions', ...array_slice(self::MONEY, 1)],
+            'provisions.gratification_month' => ['required_with:provisions', 'boolean'],
+            'provisions.cts_base' => ['required_with:provisions', ...array_slice(self::MONEY, 1)],
+            'provisions.prior_gratification' => ['required_with:provisions', ...array_slice(self::MONEY, 1)],
+            'provisions.cts_days' => ['required_with:provisions', 'integer', 'between:0,30'],
+            'provisions.vacation_base' => ['required_with:provisions', ...array_slice(self::MONEY, 1)],
+            'provisions.vacation_days' => ['required_with:provisions', 'integer', 'between:0,30'],
+            'provisions.coverage' => ['required_with:provisions', 'in:ESSALUD,EPS'],
+            'provisions.reference' => ['required_with:provisions', 'string', 'max:500'],
         ]);
         return $this->write($request, 'attendance', "$month-$worker", $data, function (array $input) use ($month, $worker): array {
             $workerRecord = $this->eligible($month)[$worker] ?? null;
@@ -148,6 +172,12 @@ final readonly class PayrollController
             $this->check($input['vacation_paid_days'] > $input['paid_days'], 'vacation_paid_days',
                 'Los días de vacaciones deben estar incluidos en los días remunerados.');
             $this->check($input['overtime_25'] + $input['overtime_35'] > 21659, 'overtime_35', 'El sobretiempo excede el máximo de la jornada PLAME.');
+            if (! array_key_exists('provisions', $input)) {
+                $previous = $this->ledger->latest('attendance', "$month-$worker")['data']['provisions'] ?? null;
+                if ($previous !== null) {
+                    $input['provisions'] = $previous;
+                }
+            }
             return ['worker' => $worker, 'worker_revision' => $workerRecord['revision'], 'daily_versions' => $this->dayVersions($this->ledger->records('day', $month.'-'))[$worker] ?? []] + $input;
         });
     }
@@ -161,7 +191,12 @@ final readonly class PayrollController
         ]);
         return $this->write($request, 'payroll', $month, $data, function (array $input) use ($month): array {
             abort_if(($this->ledger->latest('payroll', $month)['data']['approved'] ?? false), 409, 'La planilla ya está aprobada.');
-            return $this->snapshot($month, $input) + ['approved' => false];
+            $parameters = $this->parameters->forMonth($month);
+            if ($parameters['minimum']) {
+                $this->check(bccomp($input['health_minimum'], $parameters['minimum']['amount'], 2) !== 0,
+                    'health_minimum', 'Use la RMV publicada para la base mínima de EsSalud del periodo.');
+            }
+            return $this->snapshot($month, $input, $parameters) + ['approved' => false, 'parameters' => $parameters];
         });
     }
 
@@ -171,7 +206,13 @@ final readonly class PayrollController
         return $this->write($request, 'payroll', $month, $data, function () use ($month): array {
             $draft = $this->ledger->latest('payroll', $month)['data'] ?? null;
             abort_if(!$draft || $draft['approved'], 409, 'Genere un cálculo pendiente antes de aprobarlo.');
-            $current = $this->snapshot($month, ['health_minimum' => $draft['health_minimum'], 'source' => $draft['source']]);
+            $parameters = $draft['parameters'] ?? [];
+            $minimum = ($draft['parameters'] ?? $this->parameters->forMonth($month))['minimum'];
+            if ($minimum) {
+                abort_if(bccomp($draft['health_minimum'], $minimum['amount'], 2) !== 0, 409,
+                    'La base mínima del borrador difiere de la RMV del periodo. Recalcule la planilla.');
+            }
+            $current = $this->snapshot($month, ['health_minimum' => $draft['health_minimum'], 'source' => $draft['source']], $parameters);
             abort_if($current['rows'] != $draft['rows'], 409, 'Cambió un trabajador o su asistencia. Vuelva a calcular el periodo.');
             return array_replace($draft, ['approved' => true]);
         });
@@ -256,7 +297,7 @@ final readonly class PayrollController
             'Content-Disposition' => 'attachment; filename="'.$name.'"']);
     }
 
-    private function snapshot(string $month, array $input): array
+    private function snapshot(string $month, array $input, array $parameters): array
     {
         $eligible = $this->eligible($month);
         $this->check($eligible === [], 'workers', 'Registre trabajadores vigentes para el periodo.');
@@ -271,9 +312,12 @@ final readonly class PayrollController
             if ($issue !== null) {
                 throw ValidationException::withMessages(['attendance' => $code.' · '.$issue]);
             }
-            $amounts = $this->calculation->worker($person['data'], $daily['data'], $input['health_minimum']);
+            $amounts = $this->calculation->worker($person['data'], $daily['data'], $input['health_minimum'], $parameters);
             $rows[] = ['worker' => $person['data'], 'worker_revision' => $person['revision'], 'attendance_revision' => $daily['revision'],
                 'attendance' => $daily['data'], 'amounts' => $amounts];
+            if (isset($amounts['provision_total'])) {
+                $totals['provision_total'] ??= '0.00';
+            }
             foreach ($totals as $key => $value) {
                 $totals[$key] = bcadd($value, $amounts[$key] ?? '0', 2);
             }

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { Plus } from 'lucide-vue-next';
 import PayrollMonthlyView from './PayrollMonthlyView.vue';
+import PayrollParametersView from './PayrollParametersView.vue';
 import { payrollRoutes, type PayrollModule } from '@/shared/layout/navigation.types';
 import UiSelect from '@/shared/ui/UiSelect.vue';
 import { AccountingApiClient, ApiHttpError } from '@/modules/accounting/api/httpClient';
@@ -30,6 +31,14 @@ const monthly = computed(() => workspace.value?.payroll);
 const pensionOptions = [{ value: 'ONP', label: 'ONP' }, { value: 'AFP', label: 'AFP' }];
 const afpOptions = [{ value: 'HA', label: 'Hábitat' }, { value: 'IN', label: 'Integra' },
   { value: 'PR', label: 'Profuturo' }, { value: 'RI', label: 'Prima' }];
+const afpCommissionOptions = [{ value: 'FLOW', label: 'Sobre flujo' }, { value: 'BALANCE', label: 'Sobre saldo' }] as const;
+const coverageOptions = [{ value: 'ESSALUD', label: 'EsSalud' }, { value: 'EPS', label: 'EPS' }] as const;
+const provisionFields = [
+  ['gratification_base', 'Base computable de la gratificación'],
+  ['cts_base', 'Base CTS antes de añadir la gratificación'],
+  ['prior_gratification', 'Gratificación previa computable'],
+  ['vacation_base', 'Base vacacional'],
+] as const;
 const kindOptions = [{ value: 'CTS', label: 'CTS' }, { value: 'GRATIFICATION', label: 'Gratificación' }] as const;
 
 const worker = ref<(Worker & { expected_revision: number })>();
@@ -38,6 +47,9 @@ const workerText = [['code','Código interno'], ['dni','DNI'], ['given_names','N
   ['second_surname','Apellido materno'], ['position','Cargo']] as const;
 const attendance = ref<Attendance & { expected_revision: number }>();
 const selectedAttendance = ref('');
+const attendanceCommissionOnBalance = computed(() =>
+  workspace.value?.eligible.find(({ reference }) => reference === selectedAttendance.value)?.data.afp_commission === 'BALANCE',
+);
 const day = ref({ date: '', ordinary: 0, extra: 0, status: 'WORKED', reference: '', expected_revision: 0 });
 const dayStatus = [{ value: 'WORKED', label: 'Laborado' }, { value: 'REST', label: 'Descanso' },
   { value: 'VACATION', label: 'Vacaciones' }, { value: 'PAID_LEAVE', label: 'Licencia con goce' }, { value: 'UNPAID', label: 'Sin goce' }];
@@ -77,7 +89,8 @@ async function run(action: () => Promise<void>) {
 
 async function reload() {
   workspace.value = await api.payrollRequest<PayrollWorkspace>(`periods/${month.value}`);
-  minimum.value = workspace.value.payroll?.data.health_minimum ?? '';
+  minimum.value = (workspace.value.payroll?.data.approved ? workspace.value.payroll.data.health_minimum : workspace.value.parameters?.minimum?.amount)
+    ?? workspace.value.payroll?.data.health_minimum ?? '';
   source.value = workspace.value.payroll?.data.source ?? '';
 }
 
@@ -100,13 +113,17 @@ function editWorker(entry?: Revision<Worker>) {
   worker.value = entry ? { ...entry.data, expected_revision: entry.revision } : {
     code: '', dni: '', surname: '', second_surname: null, given_names: '', position: '',
     effective_month: month.value, hired_on: '', ended_on: null, salary: '', daily_hours: 8,
-    pension: 'ONP', afp: null, cuspp: null, vacation_granted: 0, reference: '', expected_revision: 0,
+    pension: 'ONP', afp: null, cuspp: null, family_allowance: false, night_shift: false, vacation_granted: 0, reference: '', expected_revision: 0,
   };
 }
 
 function saveWorker() {
   const draft = worker.value;
   if (!draft) return;
+  if (draft.pension === 'AFP' && !draft.afp_commission) {
+    error.value = 'Selecciona el esquema de comisión AFP de la ficha.';
+    return;
+  }
   const { code, ...payload } = draft;
   void run(async () => {
     await api.payrollRequest(`workers/${encodeURIComponent(code)}`, 'PUT', {
@@ -124,12 +141,18 @@ function selectAttendance(code: string) {
   const saved = workspace.value?.attendance.find((row) => row.data.worker === code);
   const person = workspace.value?.eligible.find((row) => row.reference === code)?.data;
   const data = saved?.data;
+  const afp = workspace.value?.parameters?.afp;
+  const rates = person?.afp ? afp?.administrators[person.afp] : undefined;
+  const balance = person?.afp_commission === 'BALANCE';
   attendance.value = {
     worker: code, paid_days: 0, vacation_paid_days: 0, ordinary_minutes: 0, overtime_25: 0, overtime_35: 0, taxable_extra: '0',
     nontaxable_extra: '0', income_tax: '0', other_deductions: '0', reference: '', ...data,
     expected_revision: saved?.revision ?? 0,
-    afp_rates: person?.pension === 'AFP' ? (data?.afp_rates ? { ...data.afp_rates } :
-      { insurance: '', commission: '', insurance_ceiling: '', source: '' }) : null,
+    provisions: data?.provisions ? { ...data.provisions } : null,
+    afp_rates: person?.pension === 'AFP' ? (data?.afp_rates
+      ? { ...data.afp_rates, commission: balance ? '0' : data.afp_rates.commission }
+      : { insurance: afp?.insurance ?? '', commission: balance ? '0' : rates?.flow ?? '',
+        insurance_ceiling: afp?.insurance_ceiling ?? '', source: afp?.source ?? '' }) : null,
   };
 }
 
@@ -164,6 +187,14 @@ function bringMinutes() {
   attendance.value.ordinary_minutes = totals.ordinary;
   attendance.value.overtime_25 = totals.lower;
   attendance.value.overtime_35 = totals.higher;
+}
+
+function toggleProvisions() {
+  if (!attendance.value) return;
+  attendance.value.provisions = attendance.value.provisions ? null : {
+    gratification_base: '', gratification_month: false, cts_base: '', prior_gratification: '',
+    cts_days: 0, vacation_base: '', vacation_days: 0, coverage: 'ESSALUD', reference: '',
+  };
 }
 
 function saveAttendance() {
@@ -284,8 +315,18 @@ void run(reload);
           <label class="ui-label">Horas de jornada diaria<input v-model.number="worker.daily_hours" type="number" min="4" max="8" class="w-full" required></label>
           <label class="ui-label">Días vacacionales reconocidos acumulados<input v-model.number="worker.vacation_granted" type="number" min="0" max="1000" class="w-full" required></label>
           <div><label for="payroll-pension" class="ui-label">Pensión</label><UiSelect id="payroll-pension" v-model="worker.pension" :options="pensionOptions" /></div>
+          <label class="space-x-2 text-sm">
+            <input v-model="worker.family_allowance" type="checkbox"> Derecho a asignación familiar acreditado
+            <span class="block text-xs text-muted">La planilla agrega este concepto al sueldo de la ficha.</span>
+          </label>
+          <label class="flex items-center gap-2 text-sm"><input v-model="worker.night_shift" type="checkbox"> Jornada completa exclusivamente nocturna</label>
           <template v-if="worker.pension === 'AFP'">
             <div><label for="payroll-afp" class="ui-label">AFP</label><UiSelect id="payroll-afp" :model-value="worker.afp ?? ''" :options="afpOptions" @update:model-value="worker.afp = $event" /></div>
+            <div>
+              <label for="payroll-afp-commission" class="ui-label">Esquema de comisión AFP</label>
+              <UiSelect id="payroll-afp-commission" :model-value="worker.afp_commission ?? ''" placeholder="Seleccionar esquema" :options="afpCommissionOptions"
+                @update:model-value="worker.afp_commission = $event || null" />
+            </div>
             <label class="ui-label">CUSPP
               <input v-model.trim="worker.cuspp" minlength="12" maxlength="12" pattern="[A-Z0-9]{12}"
                 class="w-full" aria-describedby="payroll-cuspp-hint" required>
@@ -337,13 +378,44 @@ void run(reload);
           <label v-for="[key,label,max] in minutesFields" :key="key" class="ui-label">{{ label }}<input v-model.number="attendance[key]" class="w-full" type="number" min="0" :max="max" required></label>
           <label v-for="[key,label] in extraFields" :key="key" class="ui-label">{{ label }}<input v-model.trim="attendance[key]" class="w-full" inputmode="decimal" required></label>
           <template v-if="attendance.afp_rates">
-            <label v-for="[key,label] in afpFields" :key="key" class="ui-label">{{ label }}<input v-model.trim="attendance.afp_rates[key]" class="w-full" :required="attendance.paid_days > 0"></label>
+            <label v-for="[key,label] in afpFields" :key="key" class="ui-label">{{ label }}<input v-model.trim="attendance.afp_rates[key]" class="w-full"
+              :readonly="key === 'commission' && attendanceCommissionOnBalance" :required="attendance.paid_days > 0"></label>
           </template>
           <label class="ui-label sm:col-span-2">Referencia de asistencia y conceptos validados<input v-model.trim="attendance.reference" class="w-full" required maxlength="500"></label>
+        </fieldset>
+        <fieldset class="space-y-2 rounded-md border border-line p-3" :disabled="busy || !!monthly?.data.approved">
+          <legend class="px-1 text-sm font-semibold">Provisiones del mes</legend>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" :checked="!!attendance.provisions" @change="toggleProvisions"> Estimar con bases y tiempo computables validados
+          </label>
+          <div v-if="attendance.provisions" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <label v-for="[key, label] in provisionFields" :key="key" class="ui-label">{{ label }}
+              <input v-model.trim="attendance.provisions[key]" class="w-full" inputmode="decimal" required>
+            </label>
+            <label class="ui-label">Días equivalentes computables CTS
+              <input v-model.number="attendance.provisions.cts_days" type="number" min="0" max="30" required>
+            </label>
+            <label class="ui-label">Días equivalentes computables de vacaciones
+              <input v-model.number="attendance.provisions.vacation_days" type="number" min="0" max="30" required>
+            </label>
+            <div>
+              <label for="payroll-provision-coverage" class="ui-label">Cobertura para bonificación</label>
+              <UiSelect id="payroll-provision-coverage" v-model="attendance.provisions.coverage" :options="coverageOptions"
+                :disabled="busy || !!monthly?.data.approved" />
+            </div>
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="attendance.provisions.gratification_month" type="checkbox"> Mes completo computable para gratificación
+            </label>
+            <label class="ui-label sm:col-span-2">Sustento de las bases y días computables
+              <input v-model.trim="attendance.provisions.reference" class="w-full" maxlength="500" required>
+            </label>
+          </div>
         </fieldset>
         <button type="submit" class="ui-btn ui-btn-primary" :disabled="busy || !!monthly?.data.approved">Guardar cierre de asistencia</button>
       </form>
     </section>
+
+    <PayrollParametersView v-if="workspace && section === 'payroll-parameters'" :parameters="workspace.parameters" />
 
     <PayrollMonthlyView
       v-if="workspace && section === 'payroll-monthly'"
