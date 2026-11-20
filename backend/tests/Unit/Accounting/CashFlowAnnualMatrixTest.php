@@ -151,15 +151,17 @@ it('applies scoped account and area presentation rules without altering cash tot
             ]],
         ]
     );
-    $get = static function (array $statement, string $target): array {
+    $get = static function (array $statement, string $area, string $target): array {
         $candidates = array_values(array_filter($statement['monthly'][0]['groups'],
-            static fn (array $group): bool => ($group['concept_code'] ?? null) === $target));
+            static fn (array $group): bool => $group['code'] === $area
+                && ($group['concept_code'] ?? null) === $target));
         expect($candidates)->toHaveCount(1);
         return $candidates[0];
     };
-    expect($get($company, 'C0001')['inflow_local'])->toBe('100.0000');
-    expect($get($company, '1107')['inflow_local'])->toBe('50.0000');
-    expect($get($defaults, '1102')['inflow_local'])->toBe('100.0000');
+    expect($get($company, 'OPE-IN', 'C0001')['inflow_local'])->toBe('100.0000');
+    expect($get($company, 'OPE-OTHER', '1107')['inflow_local'])->toBe('50.0000');
+    expect($get($defaults, 'OPE-IN', '1102')['inflow_local'])->toBe('100.0000');
+    expect($get($defaults, 'OPE-OTHER', '1102')['inflow_local'])->toBe('50.0000');
     expect($defaults['totals'])->toBe($company['totals']);
     expect($company['is_reconciled'])->toBeTrue();
 });
